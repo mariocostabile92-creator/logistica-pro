@@ -1,0 +1,83 @@
+[
+  {
+    "user_id": "645c2f0e-36ab-4ccc-81c0-5f6f01978d56",
+    "data": "29/04/2026 15:54",
+    "depot": "Origgio , Varese",
+    "deliveries": [
+      "Lomazzo, Como",
+      "Saronno, Varese"
+    ],
+    "route": [
+      {
+        "address": "Saronno, Varese",
+        "lat": 45.6256764,
+        "lon": 9.0373283,
+        "km_from_previous": 5.74,
+        "minutes_from_previous": 9
+      },
+      {
+        "address": "Lomazzo, Como",
+        "lat": 45.6917739,
+        "lon": 9.0330073,
+        "km_from_previous": 12.01,
+        "minutes_from_previous": 12
+      }
+    ],
+    "totale_km": 17.75,
+    "totale_minuti": 21
+  },
+  {
+    "user_id": "645c2f0e-36ab-4ccc-81c0-5f6f01978d56",
+    "data": "29/04/2026 15:55",
+    "depot": "Origgio , Varese",
+    "deliveries": [
+      "Lomazzo, Como",
+      "Saronno, Varese"
+    ],
+    "route": [
+      {
+        "address": "Saronno, Varese",
+        "lat": 45.6256764,
+        "lon": 9.0373283,
+        "km_from_previous": 5.74,
+        "minutes_from_previous": 9
+      },
+      {
+        "address": "Lomazzo, Como",
+        "lat": 45.6917739,
+        "lon": 9.0330073,
+        "km_from_previous": 12.01,
+        "minutes_from_previous": 12
+      }
+    ],
+    "totale_km": 17.75,
+    "totale_minuti": 21
+  },
+  {
+    "user_id": "645c2f0e-36ab-4ccc-81c0-5f6f01978d56",
+    "data": "29/04/2026 15:57",
+    "depot": "Origgio , Varese",
+    "deliveries": [
+      "Lomazzo, Como",
+      "Saronno, Varese"
+    ],
+    "route": [
+      {
+        "address": "Saronno, Varese",
+        "lat": 45.6256764,
+        "lon": 9.0373283,
+        "km_from_previous": 5.74,
+        "minutes_from_previous": 9
+      },
+      {
+        "address": "Lomazzo, Como",
+        "lat": 45.6917739,
+        "lon": 9.0330073,
+        "km_from_previous": 12.01,
+        "minutes_from_previous": 12
+      }
+    ],
+    "totale_km": 17.75,
+    "totale_minuti": 21
+  }
+]
