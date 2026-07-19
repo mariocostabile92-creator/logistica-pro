@@ -1,0 +1,200 @@
+{
+  "adapter_id": "amazon",
+  "contract_version": "1.0",
+  "datasets": {
+    "planning": {
+      "driver_name": [
+        "driver",
+        "autista",
+        "nome driver",
+        "courier",
+        "nome autista"
+      ],
+      "vehicle_plate": [
+        "targa",
+        "plate",
+        "mezzo",
+        "furgone",
+        "van",
+        "vehicle"
+      ],
+      "station": [
+        "station",
+        "deposito",
+        "sede",
+        "hub",
+        "depot",
+        "delivery station"
+      ],
+      "route": [
+        "rotta",
+        "route",
+        "giro",
+        "itinerario",
+        "route code",
+        "route id"
+      ],
+      "cycle": [
+        "ciclo",
+        "wave",
+        "turno",
+        "shift",
+        "cycle"
+      ]
+    },
+    "fleet": {
+      "vehicle_plate": [
+        "targa",
+        "plate",
+        "mezzo",
+        "furgone",
+        "van",
+        "vehicle"
+      ],
+      "driver_name": [
+        "driver",
+        "autista",
+        "nome driver",
+        "assegnatario"
+      ],
+      "second_driver_name": [
+        "secondo driver",
+        "second driver",
+        "driver 2",
+        "secondo autista"
+      ],
+      "status": [
+        "stato",
+        "status",
+        "disponibilita",
+        "disponibilità",
+        "condizione"
+      ],
+      "station": [
+        "station",
+        "deposito",
+        "sede",
+        "hub"
+      ],
+      "workshop": [
+        "officina",
+        "garage",
+        "meccanico"
+      ],
+      "notes": [
+        "note",
+        "commenti",
+        "annotazioni"
+      ],
+      "key_available": [
+        "chiave",
+        "key",
+        "keys"
+      ],
+      "fuel_card": [
+        "carta carburante",
+        "fuel card",
+        "shell",
+        "carta fuel"
+      ],
+      "vehicle_model": [
+        "modello mezzo",
+        "modello",
+        "model"
+      ],
+      "expirations": [
+        "scadenze",
+        "scadenza",
+        "revisioni",
+        "assicurazione"
+      ]
+    }
+  },
+  "recognized_operational_units": [
+    "dlo1",
+    "dlo2",
+    "mxp",
+    "milano",
+    "roma",
+    "torino",
+    "bologna",
+    "deposito"
+  ],
+  "concept_mappings": [
+    {
+      "external_term": "route",
+      "core_concept": "task",
+      "compatibility_field": "route"
+    },
+    {
+      "external_term": "station",
+      "core_concept": "operational_unit",
+      "compatibility_field": "station"
+    },
+    {
+      "external_term": "wave",
+      "core_concept": "time_window",
+      "compatibility_field": "cycle"
+    },
+    {
+      "external_term": "cycle",
+      "core_concept": "time_window",
+      "compatibility_field": "cycle"
+    },
+    {
+      "external_term": "vehicle",
+      "core_concept": "asset",
+      "compatibility_field": "vehicle_plate"
+    },
+    {
+      "external_term": "driver",
+      "core_concept": "human_resource",
+      "compatibility_field": "driver_name"
+    },
+    {
+      "external_term": "yard",
+      "core_concept": "resource_pool",
+      "compatibility_field": null,
+      "lifecycle": "future"
+    },
+    {
+      "external_term": "dispatch",
+      "core_concept": "operation_state_transition",
+      "compatibility_field": null,
+      "lifecycle": "future"
+    },
+    {
+      "external_term": "scorecard",
+      "core_concept": "metric_observation",
+      "compatibility_field": null,
+      "lifecycle": "future"
+    }
+  ],
+  "event_mappings": [
+    {
+      "external_event": "abort",
+      "aliases": [
+        "abort",
+        "route_abort"
+      ],
+      "core_concept": "task_cancellation_event",
+      "compatibility_event": "route_aborted"
+    },
+    {
+      "external_event": "van_down",
+      "aliases": [
+        "van_down"
+      ],
+      "core_concept": "asset_unavailable_event",
+      "compatibility_event": "vehicle_unavailable"
+    },
+    {
+      "external_event": "driver_no_show",
+      "aliases": [
+        "driver_no_show"
+      ],
+      "core_concept": "human_resource_unavailable_event",
+      "compatibility_event": "driver_absent"
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+@media (max-width: 980px) {
+  .dashboard-layout,
+  .workflow,
+  .planning-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-toolbar,
+  .planning-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-actions,
+  .planning-actions {
+    justify-content: flex-start;
+  }
+
+  .planning-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assignment-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .assignment-table-wrap {
+    display: none;
+  }
+
+  .assignment-cards {
+    display: grid;
+    gap: 10px;
+  }
+
+  .planning-summary-grid,
+  .station-capacity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planning-command-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .command-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .app-header h1 {
+    font-size: 26px;
+  }
+
+  .app-shell {
+    width: min(100% - 24px, 1240px);
+    margin-top: 22px;
+  }
+
+  .summary-grid,
+  .readiness-facts,
+  .planning-summary-grid,
+  .station-capacity-grid,
+  .planning-actions,
+  .assignment-filters,
+  .simulator-form {
+    grid-template-columns: 1fr;
+  }
+
+  .readiness-facts span {
+    min-height: 0;
+  }
+
+  .button-row,
+  .dashboard-actions {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .dashboard-actions {
+    display: grid;
+  }
+
+  .dashboard-actions button {
+    width: 100%;
+  }
+
+  .planning-actions button,
+  .command-actions button,
+  .editor-actions button {
+    width: 100%;
+  }
+
+  .panel-heading,
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .section-heading.compact {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .simulator-form label:last-of-type,
+  .simulator-form .button-row {
+    grid-column: auto;
+  }
+
+  .editor-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .assignment-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,25 @@
+Station,Targa,Autista,Stato,Officina,Note
+DLO1,AA001AA,Driver 01,Operativo,,
+DLO1,AA002AA,Driver 02,Operativo,,
+DLO1,AA003AA,Driver 03,Operativo,,
+DLO1,AA004AA,Driver 04,Operativo,,
+DLO1,AA005AA,Driver 05,Operativo,,
+DLO1,AA006AA,Driver 06,Operativo,,
+DLO1,AA007AA,Driver 07,Operativo,,
+DLO1,AA008AA,Driver 08,Operativo,,
+DLO1,AA009AA,Driver 09,Operativo,,
+DLO1,AA010AA,Driver 10,Operativo,,
+DLO1,AA011AA,Driver 11,Riserva,,Mezzo riserva
+DLO1,AA012AA,Driver 12,Officina,Officina Nord,
+DLO1,AA013AA,,Bloccato,,Fermo operativo
+DLO2,BB001BB,Driver 13,Operativo,,
+DLO2,BB002BB,Driver 14,Operativo,,
+DLO2,BB003BB,Driver 15,Operativo,,
+DLO2,BB004BB,Driver 16,Operativo,,
+DLO2,BB005BB,Driver 17,Operativo,,
+DLO2,BB006BB,Driver 18,Operativo,,
+DLO2,BB007BB,Driver 19,Operativo,,
+DLO2,BB008BB,Driver 20,Operativo,,
+DLO2,BB009BB,Driver 21,Riserva,,Mezzo riserva
+DLO2,BB010BB,Driver 22,Riserva,,Mezzo riserva
+DLO2,BAD,,Officina,Officina Sud,Targa non valida sintetica

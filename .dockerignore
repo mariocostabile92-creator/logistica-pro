@@ -1,0 +1,12 @@
+.git
+.gitignore
+.pytest_cache
+**/__pycache__
+**/*.pyc
+**/.env
+**/.env.*
+!**/.env.example
+backend/venv
+backend/data
+backend/operations.sqlite3
+backend/tests

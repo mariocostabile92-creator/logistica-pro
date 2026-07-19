@@ -1,0 +1,255 @@
+.workspace-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 4px;
+  margin-bottom: 28px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.workspace-tab {
+  min-height: 38px;
+  padding: 0 16px;
+  background: transparent;
+  color: #34413e;
+}
+
+.workspace-tab.active {
+  background: var(--surface);
+  color: var(--accent-dark);
+  box-shadow: 0 1px 3px rgba(24, 36, 32, 0.16);
+}
+
+.fleet-section {
+  width: 100%;
+}
+
+.fleet-toolbar {
+  align-items: center;
+}
+
+.fleet-table-wrap {
+  margin-top: 20px;
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+}
+
+.fleet-table {
+  min-width: 1080px;
+}
+
+.fleet-table td {
+  vertical-align: middle;
+}
+
+.fleet-table .empty-state {
+  text-align: center;
+}
+
+.asset-token-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.asset-token {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid #c9d6d1;
+  border-radius: 999px;
+  background: #edf4f1;
+  color: #2d4841;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.asset-availability {
+  display: inline-block;
+  min-width: 96px;
+  padding: 6px 9px;
+  border-left: 4px solid var(--accent);
+  background: #edf4f1;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.fleet-row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.fleet-row-actions button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.fleet-asset-cards {
+  display: none;
+}
+
+.fleet-asset-detail {
+  margin-top: 32px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+
+.fleet-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fleet-detail-actions button {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.fleet-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 20px;
+}
+
+.fleet-detail-grid h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.fleet-document-list,
+.fleet-event-list {
+  display: grid;
+  gap: 8px;
+}
+
+.fleet-document-item,
+.fleet-event-item {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.fleet-document-item strong,
+.fleet-event-item strong,
+.fleet-document-item span,
+.fleet-event-item span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.fleet-document-item span,
+.fleet-event-item span {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.fleet-dialog label {
+  display: grid;
+  gap: 7px;
+  color: #344657;
+  font-weight: 700;
+}
+
+.fleet-dialog [hidden] {
+  display: none !important;
+}
+
+.fleet-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+textarea:focus-visible {
+  outline: 3px solid rgba(20, 117, 104, 0.28);
+  outline-offset: 2px;
+}
+
+.fleet-asset-card {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.fleet-asset-card h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.fleet-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 13px 0;
+}
+
+.fleet-card-grid span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.fleet-card-grid strong {
+  display: block;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .fleet-table-wrap {
+    display: none;
+  }
+
+  .fleet-asset-cards {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .fleet-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .workspace-tabs {
+    display: grid;
+    width: 100%;
+  }
+
+  .fleet-toolbar {
+    align-items: stretch;
+  }
+
+  .fleet-toolbar button,
+  .fleet-detail-actions button {
+    width: 100%;
+  }
+
+  .fleet-detail-actions,
+  .fleet-form-grid,
+  .fleet-card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

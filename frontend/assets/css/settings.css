@@ -1,0 +1,178 @@
+.workspace-tabs {
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+}
+
+.settings-section {
+  width: 100%;
+}
+
+.settings-toolbar {
+  align-items: center;
+}
+
+.settings-scope-form {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.settings-scope-form label {
+  display: grid;
+  gap: 7px;
+  color: #344657;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.settings-metadata {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-metadata > div {
+  min-width: 0;
+  padding: 16px;
+  border-right: 1px solid var(--border);
+}
+
+.settings-metadata > div:last-child {
+  border-right: 0;
+}
+
+.settings-metadata span,
+.settings-metadata strong {
+  display: block;
+}
+
+.settings-metadata span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.settings-metadata strong {
+  margin-top: 6px;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.settings-sections-heading {
+  margin-top: 30px;
+}
+
+.settings-sections-heading h3 {
+  margin: 0;
+}
+
+.settings-sections {
+  margin-top: 12px;
+}
+
+.settings-config-section {
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+}
+
+.settings-config-section h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.settings-value-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(240px, 1.7fr) 150px;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid #e2e7e4;
+  align-items: start;
+}
+
+.settings-value-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-value-key {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.settings-value-content {
+  color: #34413e;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.settings-value-source {
+  justify-self: start;
+  padding: 4px 8px;
+  border: 1px solid #c9d6d1;
+  border-radius: 999px;
+  background: #edf4f1;
+  color: #2d4841;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .settings-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-scope-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-scope-form button {
+    grid-column: 1 / -1;
+  }
+
+  .settings-metadata {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-metadata > div:nth-child(2) {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .workspace-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workspace-tab {
+    padding: 0 8px;
+  }
+
+  .settings-scope-form,
+  .settings-metadata,
+  .settings-value-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-scope-form button {
+    grid-column: auto;
+  }
+
+  .settings-metadata > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .settings-metadata > div:last-child {
+    border-bottom: 0;
+  }
+
+  .settings-value-row {
+    gap: 6px;
+    padding: 12px 0;
+  }
+}
