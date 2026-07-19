@@ -79,11 +79,17 @@ python -m pip install -r requirements-dev.txt
 Avvio backend:
 
 ```powershell
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
+$env:PORT = Read-Host "Porta locale"
+$env:BASE_URL = "http://127.0.0.1:$env:PORT"
+$env:API_URL = $env:BASE_URL
+python -m app.start
 ```
 
-Il backend pubblica anche il frontend. Aprire
-`http://127.0.0.1:8000/app/`.
+Il backend pubblica anche il frontend. Per aprirlo:
+
+```powershell
+Start-Process "$env:BASE_URL/app/"
+```
 
 Esecuzione completa dei test:
 
@@ -100,6 +106,7 @@ I file `.env` reali sono ignorati da Git.
 
 | Variabile | Locale | Produzione Railway |
 | --- | --- | --- |
+| `PORT` | porta libera scelta all'avvio | fornita automaticamente da Railway |
 | `APP_ENV` | `development` | `production` |
 | `DEBUG` | `false` | `false` |
 | `SECRET_KEY` | facoltativa | obbligatoria, almeno 32 caratteri |
@@ -152,7 +159,9 @@ Procedura:
 8. Avviare il deploy e verificare `GET /api/health`.
 9. Aprire l'applicazione all'indirizzo `https://<dominio>/app/`.
 
-Railway fornisce `PORT`; non deve essere impostata manualmente. La
+Railway fornisce `PORT`; non deve essere impostata manualmente. Il launcher
+`app.start` legge e valida direttamente la variabile, senza dipendere
+dall'espansione della shell e senza usare una porta predefinita. La
 configurazione usa `/api/health`, timeout 120 secondi, cinque retry e arresto
 graduale. Il primo startup crea in modo idempotente le tabelle Core,
 Configuration e Fleet. Gli startup successivi applicano gli stessi controlli

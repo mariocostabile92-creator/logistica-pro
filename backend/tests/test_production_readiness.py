@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app import start as server_start
 from app.api.routers import health as health_router
 from app.core.config import load_settings
 from app.core.database import (
@@ -161,10 +162,16 @@ def test_railway_configuration_and_secret_hygiene():
     railway = json.loads(
         (PROJECT_DIR / "railway.json").read_text(encoding="utf-8")
     )
+    dockerfile = (PROJECT_DIR / "Dockerfile").read_text(encoding="utf-8")
+    procfile = (PROJECT_DIR / "Procfile").read_text(encoding="utf-8").strip()
 
     assert railway["build"]["builder"] == "DOCKERFILE"
     assert railway["deploy"]["healthcheckPath"] == "/api/health"
-    assert "$PORT" in railway["deploy"]["startCommand"]
+    assert railway["deploy"]["startCommand"] == "python -m app.start"
+    assert 'CMD ["python", "-m", "app.start"]' in dockerfile
+    assert "EXPOSE 8000" not in dockerfile
+    assert "${PORT:-8000}" not in dockerfile
+    assert procfile == "web: cd backend && python -m app.start"
     assert not (PROJECT_DIR / "backend" / ".env").exists()
     assert not (PROJECT_DIR / "backend" / ".env.txt").exists()
     assert (PROJECT_DIR / "backend" / ".env.example").exists()
@@ -176,6 +183,44 @@ def test_railway_configuration_and_secret_hygiene():
         assert json.loads(
             (PROJECT_DIR / "backend" / filename).read_text(encoding="utf-8")
         ) == []
+
+
+def test_server_start_uses_validated_environment_port(monkeypatch):
+    captured = {}
+    monkeypatch.setenv("PORT", "43127")
+    monkeypatch.setattr(
+        server_start.uvicorn,
+        "run",
+        lambda application, **options: captured.update(
+            application=application,
+            **options,
+        ),
+    )
+
+    server_start.main()
+
+    assert captured == {
+        "application": "app.main:app",
+        "host": "0.0.0.0",
+        "port": 43127,
+        "proxy_headers": True,
+        "forwarded_allow_ips": "*",
+    }
+
+
+@pytest.mark.parametrize(
+    "environ",
+    (
+        {},
+        {"PORT": ""},
+        {"PORT": "$PORT"},
+        {"PORT": "0"},
+        {"PORT": "65536"},
+    ),
+)
+def test_server_start_rejects_missing_or_invalid_port(environ):
+    with pytest.raises(ValueError, match="PORT"):
+        server_start.port_from_environment(environ)
 
 
 def test_repository_has_no_recognizable_secret_literals():
