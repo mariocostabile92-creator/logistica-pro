@@ -254,6 +254,7 @@ def test_repository_has_no_recognizable_secret_literals():
     }
     ignored_parts = {
         ".git",
+        ".venv",
         ".pytest_cache",
         "__pycache__",
         "data",

@@ -135,19 +135,35 @@ export async function getFleetAssetEvents(assetId) {
 }
 
 
-export async function previewImport(file, datasetType, sheetName) {
+function appendImportOptions(
+  form,
+  {
+    sheetName = "",
+    headerRow = null,
+    columnMapping = [],
+  } = {},
+) {
+  if (sheetName) form.append("sheet_name", sheetName);
+  if (headerRow) form.append("header_row", String(headerRow));
+  if (columnMapping.length) {
+    form.append("column_mapping", JSON.stringify(columnMapping));
+  }
+}
+
+
+export async function previewImport(file, datasetType, options = {}) {
   const form = new FormData();
   form.append("file", file);
   form.append("dataset_type", datasetType);
-  if (sheetName) form.append("sheet_name", sheetName);
+  appendImportOptions(form, options);
   return parseResponse(await fetch(`${API_BASE}/api/imports/preview`, { method: "POST", body: form }));
 }
 
 
-export async function importDataset(file, datasetType, sheetName) {
+export async function importDataset(file, datasetType, options = {}) {
   const form = new FormData();
   form.append("file", file);
-  if (sheetName) form.append("sheet_name", sheetName);
+  appendImportOptions(form, options);
   return parseResponse(await fetch(`${API_BASE}/api/imports/${datasetType}`, { method: "POST", body: form }));
 }
 

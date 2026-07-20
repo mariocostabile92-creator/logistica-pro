@@ -1,6 +1,7 @@
 export const state = {
   planning: {
     imported: false,
+    validImport: false,
     rows: [],
   },
   fleet: {

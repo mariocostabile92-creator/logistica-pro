@@ -51,8 +51,8 @@ def test_preview_endpoint_with_workbook():
 
 def test_operations_dashboard_endpoints():
     planning = make_workbook(
-        ["Driver", "Targa", "Route"],
-        [["Driver Uno", "AB123CD", "R1"]],
+        ["Driver", "Targa", "Route", "Station"],
+        [["Driver Uno", "AB123CD", "R1", "DLO1"]],
     )
     fleet = make_workbook(
         ["Targa", "Autista", "Stato"],

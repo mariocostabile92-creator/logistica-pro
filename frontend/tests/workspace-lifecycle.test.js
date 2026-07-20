@@ -206,28 +206,22 @@ test("DEMO import requires reset before real files", () => {
 
 
 test("DEMO submit is intercepted before calling the import API", async () => {
-  const [planning, fleet] = await Promise.all([
-    frontendFile("assets/js/modules/import-planning.js"),
-    frontendFile("assets/js/modules/import-fleet.js"),
-  ]);
-  for (const source of [planning, fleet]) {
-    assert.match(source, /dataset\.workspaceState === "DEMO"/);
-    assert.match(source, /workspace:import-requested/);
-  }
+  const source = await frontendFile(
+    "assets/js/modules/import-workbook.js",
+  );
+  assert.match(source, /document\.body\.dataset\.workspaceState === "DEMO"/);
+  assert.match(source, /workspace:import-requested/);
 });
 
 
 test("reset restores onboarding and clears import presentation", async () => {
-  const [onboarding, planning, fleet] = await Promise.all([
+  const [onboarding, importer] = await Promise.all([
     frontendFile("assets/js/modules/onboarding.js"),
-    frontendFile("assets/js/modules/import-planning.js"),
-    frontendFile("assets/js/modules/import-fleet.js"),
+    frontendFile("assets/js/modules/import-workbook.js"),
   ]);
   assert.match(onboarding, /type: "workspace-reset"/);
-  assert.match(planning, /workspace:reset-completed/);
-  assert.match(fleet, /workspace:reset-completed/);
-  assert.match(planning, /status\.textContent = "In attesa"/);
-  assert.match(fleet, /status\.textContent = "In attesa"/);
+  assert.match(importer, /workspace:reset-completed/);
+  assert.match(importer, /setStatus\(elements, "In attesa"\)/);
 });
 
 

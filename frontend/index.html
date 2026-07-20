@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
   <link rel="stylesheet" href="./assets/css/briefing.css" />
   <link rel="stylesheet" href="./assets/css/workspace-lifecycle.css?v=5" />
+  <link rel="stylesheet" href="./assets/css/excel-import.css?v=1" />
   <link rel="stylesheet" href="./assets/css/responsive.css" />
 </head>
 <body data-home-state="loading" data-planning-state="loading">
@@ -472,9 +473,17 @@
             Scorta minima
             <input id="planningReserveThreshold" type="number" min="0" max="1000" value="1" />
           </label>
-          <button id="generatePlanningBtn" type="button">Genera Planning</button>
+          <button
+            id="generatePlanningBtn"
+            type="button"
+            aria-describedby="planningGenerateHint"
+            disabled
+          >Genera Planning</button>
         </div>
       </div>
+      <p id="planningGenerateHint" class="control-hint">
+        Importa prima un Planning operativo giornaliero valido.
+      </p>
 
       <div class="planning-command-bar">
         <div class="planning-identity">
@@ -804,17 +813,35 @@
             File planning
             <input id="planningFile" type="file" accept=".xlsx,.xls,.csv" required />
           </label>
-          <label>
-            Foglio
-            <select id="planningSheet">
-              <option value="">Automatico</option>
-            </select>
-          </label>
-          <div class="button-row">
-            <button type="button" id="planningPreviewBtn">Preview</button>
-            <button type="submit" class="secondary">Importa planning</button>
+          <div class="import-detection-grid">
+            <label>
+              Foglio
+              <select id="planningSheet">
+                <option value="">Automatico</option>
+              </select>
+            </label>
+            <label>
+              Riga intestazione
+              <input
+                id="planningHeaderRow"
+                type="number"
+                min="1"
+                max="100"
+                inputmode="numeric"
+                placeholder="Automatico"
+              />
+            </label>
           </div>
+          <div class="button-row">
+            <button type="button" id="planningPreviewBtn">Analizza file</button>
+            <button type="submit" class="secondary" disabled>Importa planning</button>
+          </div>
+          <button type="button" id="planningResetBtn" class="quiet import-reset">
+            Annulla selezione
+          </button>
         </form>
+        <div id="planningProfile" class="import-profile" aria-live="polite"></div>
+        <div id="planningIssues" class="import-issues" aria-live="polite"></div>
         <div id="planningMapping" class="mapping-grid"></div>
         <div id="planningPreview" class="table-wrap"></div>
       </article>
@@ -832,17 +859,35 @@
             File parco auto
             <input id="fleetFile" type="file" accept=".xlsx,.xls,.csv" required />
           </label>
-          <label>
-            Foglio
-            <select id="fleetSheet">
-              <option value="">Automatico</option>
-            </select>
-          </label>
-          <div class="button-row">
-            <button type="button" id="fleetPreviewBtn">Preview</button>
-            <button type="submit" class="secondary">Importa parco</button>
+          <div class="import-detection-grid">
+            <label>
+              Foglio
+              <select id="fleetSheet">
+                <option value="">Automatico</option>
+              </select>
+            </label>
+            <label>
+              Riga intestazione
+              <input
+                id="fleetHeaderRow"
+                type="number"
+                min="1"
+                max="100"
+                inputmode="numeric"
+                placeholder="Automatico"
+              />
+            </label>
           </div>
+          <div class="button-row">
+            <button type="button" id="fleetPreviewBtn">Analizza file</button>
+            <button type="submit" class="secondary" disabled>Importa parco</button>
+          </div>
+          <button type="button" id="fleetResetBtn" class="quiet import-reset">
+            Annulla selezione
+          </button>
         </form>
+        <div id="fleetProfile" class="import-profile" aria-live="polite"></div>
+        <div id="fleetIssues" class="import-issues" aria-live="polite"></div>
         <div id="fleetMapping" class="mapping-grid"></div>
         <div id="fleetPreview" class="table-wrap"></div>
       </article>

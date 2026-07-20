@@ -7,10 +7,12 @@ from app.utils.text_normalizer import compact_key, normalize_plate
 def normalize_planning_rows(
     rows: list[dict[str, object]],
     mapping: list[ColumnMappingSuggestion],
+    *,
+    row_numbers: list[int] | None = None,
 ) -> list[NormalizedPlanningRow]:
     field_by_column = confirmed_fields_by_column(mapping)
     normalized: list[NormalizedPlanningRow] = []
-    for index, row in enumerate(rows, start=2):
+    for offset, row in enumerate(rows):
         data: dict[str, object] = {}
         for column, value in row.items():
             field = field_by_column.get(column)
@@ -20,7 +22,11 @@ def normalize_planning_rows(
         plate = normalize_plate(data.get("vehicle_plate")) or None
         normalized.append(
             NormalizedPlanningRow(
-                row_number=index,
+                row_number=(
+                    row_numbers[offset]
+                    if row_numbers and offset < len(row_numbers)
+                    else offset + 2
+                ),
                 driver_name=driver,
                 driver_key=compact_key(driver) if driver else None,
                 vehicle_plate=plate,

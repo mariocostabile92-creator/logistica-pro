@@ -34,6 +34,23 @@ import { renderPlanningHistory } from "./planning-history.js";
 import { renderStationCapacity } from "./station-capacity.js";
 
 
+let hasValidPlanningImport = false;
+
+
+function setPlanningGenerationAvailable(available) {
+  hasValidPlanningImport = Boolean(available);
+  state.planning.validImport = hasValidPlanningImport;
+  const button = byId("generatePlanningBtn");
+  button.disabled = !hasValidPlanningImport;
+  if (hasValidPlanningImport) {
+    button.removeAttribute("title");
+  } else {
+    button.title = "Importa prima un Planning operativo giornaliero valido.";
+  }
+  byId("planningGenerateHint").hidden = hasValidPlanningImport;
+}
+
+
 export function renderPlanning(data) {
   state.planningOperational.data = data;
   byId("planningCommandActions").hidden = false;
@@ -153,6 +170,13 @@ async function reloadPlanning() {
 
 async function generateFromLatestImports() {
   const button = byId("generatePlanningBtn");
+  if (!hasValidPlanningImport) {
+    setMessage(
+      "Importa prima un Planning operativo giornaliero valido.",
+      "warning",
+    );
+    return;
+  }
   setLoading(button, true, "Generazione...");
   try {
     const threshold = Number(byId("planningReserveThreshold").value || 0);
@@ -169,6 +193,7 @@ async function generateFromLatestImports() {
     showPlanningActionError("planning.generate", error);
   } finally {
     setLoading(button, false);
+    setPlanningGenerationAvailable(hasValidPlanningImport);
   }
 }
 
@@ -265,6 +290,7 @@ async function loadLatestPlanning() {
 
 
 export function initPlanningPage() {
+  setPlanningGenerationAvailable(false);
   byId("generatePlanningBtn").addEventListener("click", generateFromLatestImports);
   byId("recalculatePlanningBtn").addEventListener("click", recalculateCurrentPlanning);
   byId("confirmPlanningBtn").addEventListener("click", confirmValidAssignments);
@@ -280,7 +306,10 @@ export function initPlanningPage() {
       byId("importsSection").scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
-  document.addEventListener("operations:data-imported", () => {
+  document.addEventListener("operations:data-imported", (event) => {
+    if (event.detail?.datasetType === "planning") {
+      setPlanningGenerationAvailable(true);
+    }
     if (state.planningOperational.data) {
       setText("planningTimestamp", "Nuovi dati importati. Genera una nuova proposta.");
       return;
@@ -292,6 +321,12 @@ export function initPlanningPage() {
   });
   document.addEventListener("demo:workspace-changed", () => {
     loadLatestPlanning();
+  });
+  document.addEventListener("workspace:status-changed", (event) => {
+    setPlanningGenerationAvailable(Boolean(event.detail.latest_planning_import));
+  });
+  document.addEventListener("workspace:reset-completed", () => {
+    setPlanningGenerationAvailable(false);
   });
   loadLatestPlanning();
 }
