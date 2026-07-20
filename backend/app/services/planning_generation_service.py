@@ -202,6 +202,7 @@ def _operation_date(
 def generate_planning(
     request: GeneratePlanningRequest,
     persist: bool = True,
+    actor: str = "system",
 ) -> PlanningBundle:
     planning_import = _resolve_import(request.planning_import_id, "planning")
     fleet_import = _resolve_import(request.fleet_import_id, "fleet")
@@ -303,7 +304,7 @@ def generate_planning(
         conflicts=conflicts,
         generation_metadata=metadata,
     )
-    return create_planning(bundle) if persist else bundle
+    return create_planning(bundle, actor=actor) if persist else bundle
 
 
 def source_resources_for_planning(

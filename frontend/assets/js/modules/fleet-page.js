@@ -215,6 +215,13 @@ export function initFleetPage() {
       byId("fleetPluginTimestamp").textContent = "Asset non disponibili.";
     }
   });
+  document.addEventListener("demo:workspace-changed", () => {
+    loaded = false;
+    refreshFleet().catch((error) => {
+      reportUnexpectedError("fleet.demo-refresh", error);
+      renderFleetFailure();
+    });
+  });
   byId("fleetViewState").addEventListener("click", (event) => {
     const action = event.target.closest("[data-view-action]")?.dataset.viewAction;
     if (action === "create-asset") openAssetEditor();

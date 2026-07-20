@@ -108,6 +108,11 @@ export function initOnboarding() {
       assetCount: event.detail.assetCount,
     });
   });
+  document.addEventListener("demo:workspace-changed", (event) => {
+    if (event.detail.status === "reset") {
+      updateOnboarding({ type: "workspace-reset" });
+    }
+  });
   document.addEventListener("workspace:view-changed", (event) => {
     activeWorkspace = event.detail.view;
     renderOnboarding();

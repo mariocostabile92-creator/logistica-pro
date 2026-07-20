@@ -13,6 +13,13 @@ export function createOnboardingState(overrides = {}) {
 
 
 export function applyOnboardingEvent(current, event) {
+  if (event.type === "workspace-reset") {
+    return createOnboardingState({
+      planningKnown: true,
+      fleetKnown: true,
+    });
+  }
+
   const next = { ...current };
 
   if (event.type === "planning-availability") {

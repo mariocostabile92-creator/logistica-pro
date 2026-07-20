@@ -191,5 +191,8 @@ export function initOperationsDashboard() {
     }
     renderDashboardEmpty();
   });
+  document.addEventListener("demo:workspace-changed", () => {
+    loadDashboard({ quiet: true });
+  });
   renderDashboardLoading();
 }

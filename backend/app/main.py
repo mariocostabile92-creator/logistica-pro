@@ -13,6 +13,8 @@ from app.core.configuration.repository import (
     init_schema as init_configuration_schema,
 )
 from app.core.database import init_db
+from app.demo.repository import init_schema as init_demo_schema
+from app.demo.router import router as demo_router
 from app.plugins.fleet.bootstrap import (
     initialize_fleet_plugin,
     register_fleet_plugin,
@@ -37,6 +39,7 @@ async def lifespan(app: FastAPI):
         init_db()
         init_configuration_schema()
         initialize_fleet_plugin()
+        init_demo_schema()
         yield
     finally:
         logger.info("Operations Engine stopped")
@@ -115,6 +118,7 @@ app.include_router(configuration.router)
 app.include_router(imports.router)
 app.include_router(operations.router)
 app.include_router(planning.router)
+app.include_router(demo_router)
 register_fleet_plugin(app)
 
 if FRONTEND_DIR.is_dir():

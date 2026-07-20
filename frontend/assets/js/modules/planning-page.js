@@ -274,5 +274,8 @@ export function initPlanningPage() {
       description: "Completa gli import necessari e genera la prima proposta operativa.",
     });
   });
+  document.addEventListener("demo:workspace-changed", () => {
+    loadLatestPlanning();
+  });
   loadLatestPlanning();
 }

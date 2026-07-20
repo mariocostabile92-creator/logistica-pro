@@ -26,6 +26,25 @@ export async function getHealth() {
 }
 
 
+export async function getDemoWorkspaceStatus() {
+  return parseResponse(await fetch(`${API_BASE}/api/demo/v1/status`));
+}
+
+
+export async function loadDemoWorkspace() {
+  return parseResponse(await fetch(`${API_BASE}/api/demo/v1/load`, {
+    method: "POST",
+  }));
+}
+
+
+export async function resetDemoWorkspace() {
+  return parseResponse(await fetch(`${API_BASE}/api/demo/v1/reset`, {
+    method: "POST",
+  }));
+}
+
+
 export async function getCurrentConfiguration(
   organizationId = "default",
   operationalUnitId = null,

@@ -176,3 +176,21 @@ def test_production_services_do_not_use_assignment_compatibility_module():
         paths,
         ("app.services.assignment_service",),
     )
+
+
+def test_platform_layers_do_not_depend_on_demo_support():
+    paths = [
+        path
+        for layer in (
+            "adapters",
+            "core",
+            "domain",
+            "importers",
+            "plugins",
+            "repositories",
+            "schemas",
+            "services",
+        )
+        for path in python_files(layer)
+    ]
+    assert_no_imports(paths, ("app.demo",))

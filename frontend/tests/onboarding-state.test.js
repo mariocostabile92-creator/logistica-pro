@@ -69,6 +69,33 @@ test("an existing planning restores all wizard prerequisites", () => {
 });
 
 
+test("demo reset immediately restores the empty onboarding state", () => {
+  const current = createOnboardingState({
+    planningKnown: true,
+    fleetKnown: true,
+    planningImported: true,
+    fleetImported: true,
+    planningGenerated: true,
+    dashboardAvailable: true,
+    assetCount: 11,
+  });
+
+  const reset = applyOnboardingEvent(current, {
+    type: "workspace-reset",
+  });
+  const view = deriveOnboardingView(reset);
+
+  assert.equal(view.loading, false);
+  assert.equal(view.showHero, true);
+  assert.deepEqual(view.steps, {
+    planningImported: false,
+    fleetImported: false,
+    planningGenerated: false,
+  });
+  assert.equal(view.checklist.systemOperational, false);
+});
+
+
 test("the onboarding closes only when the dashboard is operational", () => {
   let current = createOnboardingState({
     planningKnown: true,

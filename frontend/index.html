@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./assets/css/fleet.css" />
   <link rel="stylesheet" href="./assets/css/settings.css" />
   <link rel="stylesheet" href="./assets/css/onboarding.css" />
+  <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
   <link rel="stylesheet" href="./assets/css/responsive.css" />
 </head>
 <body>
@@ -146,6 +147,18 @@
           </aside>
         </div>
       </div>
+    </section>
+
+    <section
+      id="demoWorkspaceOperationsSection"
+      class="demo-workspace-section"
+      aria-label="Demo Workspace"
+    >
+      <div
+        class="demo-workspace-host"
+        data-demo-host="operations"
+        hidden
+      ></div>
     </section>
 
     <section id="planningSection" class="planning-section" aria-labelledby="planningTitle">
@@ -692,6 +705,12 @@
         </p>
       </header>
 
+      <div
+        class="demo-workspace-host demo-workspace-section"
+        data-demo-host="getting-started"
+        hidden
+      ></div>
+
       <div class="getting-started-grid">
         <section class="getting-started-block" aria-labelledby="whatIsTitle">
           <h3 id="whatIsTitle">Cos'è Operations Engine</h3>
@@ -754,6 +773,116 @@
         </section>
       </div>
     </section>
+
+    <template id="demoWorkspaceTemplate">
+      <article class="demo-workspace-card" data-demo-card>
+        <div class="demo-workspace-heading">
+          <div>
+            <p class="eyebrow">Demo Workspace</p>
+            <h3>Prova con dati demo</h3>
+          </div>
+          <span class="tag demo-workspace-badge" data-demo-badge>DEMO</span>
+        </div>
+        <p class="demo-workspace-copy">
+          Carica un ambiente sintetico e prova l'intero flusso senza usare dati reali.
+        </p>
+
+        <div class="demo-workspace-inactive" data-demo-inactive>
+          <p data-demo-status-copy>
+            Carica un ambiente sintetico e prova l'intero flusso senza usare dati reali.
+          </p>
+          <button type="button" data-demo-action="load">Carica demo</button>
+        </div>
+
+        <div
+          class="demo-workspace-loading"
+          data-demo-loading
+          aria-live="polite"
+          aria-busy="true"
+          hidden
+        >
+          <span class="demo-loading-indicator" aria-hidden="true"></span>
+          <strong>Preparazione del Demo Workspace in corso...</strong>
+        </div>
+
+        <div class="demo-workspace-active" data-demo-active hidden>
+          <div class="demo-workspace-summary" aria-label="Riepilogo Demo Workspace">
+            <div>
+              <span>Dataset</span>
+              <strong data-demo-field="version">--</strong>
+            </div>
+            <div>
+              <span>Task</span>
+              <strong data-demo-field="tasks">--</strong>
+            </div>
+            <div>
+              <span>Human Resource</span>
+              <strong data-demo-field="human-resources">--</strong>
+            </div>
+            <div>
+              <span>Asset</span>
+              <strong data-demo-field="assets">--</strong>
+            </div>
+            <div>
+              <span>Warning</span>
+              <strong data-demo-field="warnings">--</strong>
+            </div>
+            <div>
+              <span>Planning</span>
+              <strong data-demo-field="planning">--</strong>
+            </div>
+            <div>
+              <span>Caricato</span>
+              <strong data-demo-field="loaded-at">--</strong>
+            </div>
+          </div>
+          <div class="demo-workspace-actions">
+            <button type="button" data-demo-action="open-operations">
+              Apri Operations
+            </button>
+            <button type="button" class="secondary" data-demo-action="open-fleet">
+              Apri Fleet
+            </button>
+            <button type="button" class="secondary" data-demo-action="export">
+              Esporta CSV
+            </button>
+            <button
+              type="button"
+              class="demo-reset-button"
+              data-demo-action="reset"
+            >
+              Reset demo
+            </button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <dialog
+      id="demoResetDialog"
+      class="demo-reset-dialog"
+      aria-labelledby="demoResetTitle"
+    >
+      <form id="demoResetForm">
+        <p class="eyebrow">Conferma reset</p>
+        <h3 id="demoResetTitle">Vuoi rimuovere tutti e soli i dati demo?</h3>
+        <p>
+          Planning, import e Asset reali non verranno modificati.
+        </p>
+        <div class="demo-reset-actions">
+          <button id="cancelDemoResetBtn" type="button" class="secondary">
+            Annulla
+          </button>
+          <button
+            id="confirmDemoResetBtn"
+            type="submit"
+            class="demo-reset-button"
+          >
+            Reset demo
+          </button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="assetEditor" class="assignment-editor fleet-dialog">
       <form id="assetEditorForm" method="dialog">

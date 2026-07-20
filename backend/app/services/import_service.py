@@ -71,9 +71,28 @@ async def import_file(
 ) -> ImportResultResponse:
     content = await file.read()
     validate_upload(file, content)
+    return import_tabular_content(
+        content=content,
+        original_filename=file.filename or "upload",
+        dataset_type=dataset_type,
+        adapter=adapter,
+        sheet_name=sheet_name,
+    )
+
+
+def import_tabular_content(
+    *,
+    content: bytes,
+    original_filename: str,
+    dataset_type: str,
+    adapter: TabularImportAdapter,
+    sheet_name: str | None = None,
+) -> ImportResultResponse:
+    if dataset_type not in {"planning", "fleet"}:
+        raise ValueError("Tipo dataset non supportato.")
     table = read_tabular(
         content,
-        file.filename or "upload",
+        original_filename,
         sheet_name=sheet_name,
         preview_only=False,
     )
@@ -89,7 +108,7 @@ async def import_file(
     normalized_dicts = [row.model_dump() for row in normalized]
     import_id = save_import(
         dataset_type=dataset_type,
-        original_filename=file.filename or "upload",
+        original_filename=original_filename,
         sheet_name=table["selected_sheet"],
         column_mapping=[item.model_dump() for item in mapping],
         normalized_rows=normalized_dicts,

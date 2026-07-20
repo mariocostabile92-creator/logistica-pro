@@ -37,6 +37,8 @@ restano isolati in `backend/app/legacy`.
   senza rinominare API, database o Planning.
 - Schermata Settings in sola consultazione per versione, ambito e sezioni
   effettive.
+- Demo Workspace v1 con dataset sintetico deterministico, load e reset
+  idempotenti, Planning reale, Fleet, readiness ed export CSV.
 - Interfaccia responsive con tabella desktop e card mobile.
 
 ## Dati richiesti
@@ -119,6 +121,7 @@ I file `.env` reali sono ignorati da Git.
 | `LOG_LEVEL` | `INFO` | `INFO` |
 | `MAX_UPLOAD_SIZE_MB` | `8` | da `1` a `100`, consigliato `8` |
 | `FLEET_PLUGIN_ENABLED` | `true` | `true` |
+| `DEMO_WORKSPACE_ENABLED` | `true` o non impostata | `false` se non impostata |
 
 In produzione l'avvio viene interrotto se `DEBUG=true`, se manca
 `DATABASE_URL`, se `SECRET_KEY` e assente o troppo corta, oppure se
@@ -223,6 +226,33 @@ revoca una credenziale esposta.
 - `GET /api/operations/issues`
 - `GET /api/operations/capacity`
 - `GET /api/operations/readiness`
+
+## Demo Workspace v1
+
+La demo usa le pipeline reali e non viene caricata automaticamente. In locale
+e abilitata per default; in produzione richiede:
+
+```text
+DEMO_WORKSPACE_ENABLED=true
+```
+
+Endpoint:
+
+- `GET /api/demo/v1/status`
+- `POST /api/demo/v1/load`
+- `POST /api/demo/v1/reset`
+
+Caricamento locale con un solo comando:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "$env:BASE_URL/api/demo/v1/load"
+```
+
+La strategia di isolamento, il dataset `demo_dataset_v1`, il reset e la
+procedura Railway sono descritti in
+[`DEMO_WORKSPACE.md`](DEMO_WORKSPACE.md).
 
 ## API planning
 
