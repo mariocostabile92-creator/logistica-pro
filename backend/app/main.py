@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routers import configuration, health, imports, operations, planning
@@ -105,9 +105,9 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     )
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"status": "online", "app": "DSP Operations OS"}
+@app.get("/", response_model=dict[str, str])
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/app/", status_code=307)
 
 
 app.include_router(health.router)

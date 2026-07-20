@@ -158,6 +158,15 @@ def test_frontend_is_served_same_origin_with_security_headers():
     assert asset.headers["cache-control"] == "public, max-age=300"
 
 
+def test_root_redirects_to_frontend_and_public_entrypoints_remain_available():
+    response = client.get("/", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/app/"
+    assert client.get("/api/health").status_code == 200
+    assert client.get("/app/").status_code == 200
+
+
 def test_railway_configuration_and_secret_hygiene():
     railway = json.loads(
         (PROJECT_DIR / "railway.json").read_text(encoding="utf-8")
