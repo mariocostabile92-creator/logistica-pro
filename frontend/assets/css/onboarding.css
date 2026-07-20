@@ -1,0 +1,260 @@
+.workspace-tabs {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+}
+
+.onboarding-section,
+.getting-started-section {
+  width: 100%;
+}
+
+.onboarding-section {
+  margin-bottom: 34px;
+}
+
+.onboarding-hero {
+  padding: 28px;
+  border: 1px solid #b8cbc5;
+  border-left: 5px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.onboarding-hero h2 {
+  margin: 5px 0 0;
+  font-size: 28px;
+}
+
+.onboarding-hero p:not(.eyebrow) {
+  max-width: 720px;
+  margin: 10px 0 20px;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.onboarding-progress-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.7fr);
+  gap: 36px;
+  margin-top: 24px;
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.onboarding-progress-layout h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.onboarding-progress-layout .section-note {
+  margin-bottom: 18px;
+}
+
+.onboarding-steps,
+.onboarding-checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.onboarding-step {
+  min-width: 0;
+  padding: 4px 20px;
+}
+
+.onboarding-step:first-child {
+  padding-left: 0;
+}
+
+.onboarding-step + .onboarding-step {
+  border-left: 1px solid var(--border);
+}
+
+.onboarding-step-marker {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #aeb9b4;
+  border-radius: 50%;
+  color: #47534f;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.onboarding-step.completed .onboarding-step-marker {
+  border-color: var(--accent);
+  background: #d9f0e7;
+  color: var(--accent-dark);
+}
+
+.onboarding-step strong,
+.onboarding-step-status {
+  display: block;
+}
+
+.onboarding-step strong {
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.onboarding-step-status {
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.onboarding-step.completed .onboarding-step-status {
+  color: var(--accent-dark);
+}
+
+.onboarding-checklist {
+  display: grid;
+  gap: 12px;
+}
+
+.onboarding-checklist li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  gap: 8px;
+  color: #46534f;
+  font-size: 14px;
+}
+
+.checklist-marker {
+  color: #6b7773;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.onboarding-checklist li.completed {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.onboarding-checklist li.completed .checklist-marker {
+  color: var(--accent);
+}
+
+.getting-started-header {
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.getting-started-header h2 {
+  margin: 5px 0 0;
+  font-size: 28px;
+}
+
+.getting-started-header .section-note {
+  max-width: 760px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.getting-started-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 48px;
+}
+
+.getting-started-block {
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.getting-started-block h3 {
+  margin: 0 0 10px;
+  font-size: 19px;
+}
+
+.getting-started-block p,
+.getting-started-block li {
+  color: #46534f;
+  line-height: 1.6;
+}
+
+.getting-started-block ol {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.getting-started-block li + li {
+  margin-top: 8px;
+}
+
+.getting-started-faq {
+  grid-column: 1 / -1;
+}
+
+.getting-started-faq details {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.getting-started-faq summary {
+  color: #283632;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.getting-started-faq details p {
+  margin: 9px 0 0;
+}
+
+@media (max-width: 980px) {
+  .onboarding-progress-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .onboarding-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-step,
+  .onboarding-step:first-child {
+    padding: 15px 0;
+  }
+
+  .onboarding-step + .onboarding-step {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .getting-started-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .getting-started-faq {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .workspace-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .onboarding-hero {
+    padding: 22px 18px;
+  }
+
+  .onboarding-hero h2,
+  .getting-started-header h2 {
+    font-size: 24px;
+  }
+
+  .onboarding-hero button {
+    width: 100%;
+  }
+}

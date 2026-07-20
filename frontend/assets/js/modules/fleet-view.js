@@ -97,10 +97,10 @@ export function renderAssetList(assets) {
     showDataView("fleetViewState", "fleetDataView", false);
     renderViewState(byId("fleetViewState"), {
       state: "empty",
-      title: "Nessun asset registrato",
-      description: "Registra il primo asset per iniziare a gestirne disponibilità e documenti.",
-      actionLabel: "Registra asset",
-      action: "create-asset",
+      title: "Nessun Asset registrato.",
+      description: "Importa il parco mezzi.",
+      actionLabel: "Vai alle importazioni",
+      action: "open-imports",
     });
     return;
   }

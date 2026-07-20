@@ -30,9 +30,10 @@ async function loadConfiguration() {
     );
     state.configuration.data = configuration;
     renderConfiguration(configuration);
-    byId("settingsTimestamp").textContent = (
-      `Configurazione ${configuration.configuration_id}`
-    );
+    byId("settingsTimestamp").textContent = "Configurazione iniziale completata.";
+    document.dispatchEvent(new CustomEvent("configuration:availability-changed", {
+      detail: { available: true },
+    }));
     loaded = true;
     setMessage("");
   } catch (error) {
@@ -41,7 +42,10 @@ async function loadConfiguration() {
     });
     if (!expected) reportUnexpectedError("configuration.current", error);
     renderSettingsFailure();
-    byId("settingsTimestamp").textContent = "Configurazione non disponibile.";
+    byId("settingsTimestamp").textContent = "Configurazione da completare.";
+    document.dispatchEvent(new CustomEvent("configuration:availability-changed", {
+      detail: { available: false },
+    }));
     if (expected) {
       setMessage(userMessageForError(error), "warning");
     }

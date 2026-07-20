@@ -61,7 +61,10 @@ async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId)
   renderAssetList(response.items);
   byId("fleetPluginTimestamp").textContent = response.items.length
     ? `${response.items.length} asset registrati.`
-    : "Nessun asset registrato.";
+    : "Nessun Asset registrato.";
+  document.dispatchEvent(new CustomEvent("fleet:registry-loaded", {
+    detail: { assetCount: response.items.length },
+  }));
   if (selectedAssetId && response.items.some((item) => item.id === selectedAssetId)) {
     await showAsset(selectedAssetId);
   } else {
@@ -215,6 +218,14 @@ export function initFleetPage() {
   byId("fleetViewState").addEventListener("click", (event) => {
     const action = event.target.closest("[data-view-action]")?.dataset.viewAction;
     if (action === "create-asset") openAssetEditor();
+    if (action === "open-imports") {
+      document.dispatchEvent(new CustomEvent("workspace:navigate", {
+        detail: {
+          view: "operations",
+          targetId: "importsSection",
+        },
+      }));
+    }
     if (action === "retry-fleet") {
       refreshFleet().catch((error) => {
         reportUnexpectedError("fleet.list", error);

@@ -2,6 +2,7 @@ import { byId } from "../utils/dom.js";
 
 
 const OPERATIONS_SECTIONS = [
+  "onboardingSection",
   "planningSection",
   "dashboardSection",
   "importsSection",
@@ -11,6 +12,7 @@ const WORKSPACE_SECTIONS = {
   operations: OPERATIONS_SECTIONS,
   fleet: ["fleetPluginSection"],
   settings: ["settingsSection"],
+  "getting-started": ["gettingStartedSection"],
 };
 
 
@@ -37,5 +39,16 @@ export function initViewNavigation() {
     button.addEventListener("click", () => {
       showWorkspace(button.dataset.workspaceView);
     });
+  });
+  document.addEventListener("workspace:navigate", (event) => {
+    showWorkspace(event.detail.view);
+    if (event.detail.targetId) {
+      requestAnimationFrame(() => {
+        byId(event.detail.targetId).scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
   });
 }

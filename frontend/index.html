@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./assets/css/components.css" />
   <link rel="stylesheet" href="./assets/css/fleet.css" />
   <link rel="stylesheet" href="./assets/css/settings.css" />
+  <link rel="stylesheet" href="./assets/css/onboarding.css" />
   <link rel="stylesheet" href="./assets/css/responsive.css" />
 </head>
 <body>
@@ -46,7 +47,106 @@
       >
         Settings
       </button>
+      <button
+        type="button"
+        class="workspace-tab"
+        data-workspace-view="getting-started"
+        aria-selected="false"
+      >
+        Getting Started
+      </button>
     </nav>
+
+    <section
+      id="onboardingSection"
+      class="onboarding-section"
+      aria-labelledby="onboardingTitle"
+    >
+      <div
+        id="onboardingLoading"
+        class="view-state loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span class="visually-hidden">Verifica configurazione iniziale</span>
+        <div class="skeleton-grid" aria-hidden="true">
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+        </div>
+        <span class="skeleton-line" aria-hidden="true"></span>
+      </div>
+
+      <div id="onboardingContent" hidden>
+        <article id="onboardingHero" class="onboarding-hero" hidden>
+          <p class="eyebrow">Private Beta</p>
+          <h2 id="onboardingTitle">Benvenuto in Operations Engine</h2>
+          <p>
+            Per iniziare importa un Planning e lo stato del tuo parco mezzi.
+          </p>
+          <button id="startImportBtn" type="button">Inizia importazione</button>
+        </article>
+
+        <div class="onboarding-progress-layout">
+          <section aria-labelledby="onboardingStepsTitle">
+            <h3 id="onboardingStepsTitle">Primi passi</h3>
+            <p class="section-note">Completa il flusso iniziale nell'ordine indicato.</p>
+            <ol class="onboarding-steps">
+              <li
+                class="onboarding-step"
+                data-onboarding-step="planning"
+                data-step-number="1"
+              >
+                <span class="onboarding-step-marker" aria-hidden="true">1</span>
+                <strong>Import Planning</strong>
+                <span class="onboarding-step-status">Da completare</span>
+              </li>
+              <li
+                class="onboarding-step"
+                data-onboarding-step="fleet"
+                data-step-number="2"
+              >
+                <span class="onboarding-step-marker" aria-hidden="true">2</span>
+                <strong>Import Fleet</strong>
+                <span class="onboarding-step-status">Da completare</span>
+              </li>
+              <li
+                class="onboarding-step"
+                data-onboarding-step="generate"
+                data-step-number="3"
+              >
+                <span class="onboarding-step-marker" aria-hidden="true">3</span>
+                <strong>Genera il primo Planning</strong>
+                <span class="onboarding-step-status">Da completare</span>
+              </li>
+            </ol>
+          </section>
+
+          <aside aria-labelledby="onboardingChecklistTitle">
+            <h3 id="onboardingChecklistTitle">Checklist iniziale</h3>
+            <p class="section-note">Stato di attivazione del sistema.</p>
+            <ul class="onboarding-checklist">
+              <li data-onboarding-check="planning">
+                <span class="checklist-marker" aria-hidden="true">&#9633;</span>
+                <span>Planning importato</span>
+              </li>
+              <li data-onboarding-check="fleet">
+                <span class="checklist-marker" aria-hidden="true">&#9633;</span>
+                <span>Fleet importata</span>
+              </li>
+              <li data-onboarding-check="planning-generated">
+                <span class="checklist-marker" aria-hidden="true">&#9633;</span>
+                <span>Primo planning generato</span>
+              </li>
+              <li data-onboarding-check="operational">
+                <span class="checklist-marker" aria-hidden="true">&#9633;</span>
+                <span>Sistema operativo</span>
+              </li>
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </section>
 
     <section id="planningSection" class="planning-section" aria-labelledby="planningTitle">
       <div class="section-heading planning-toolbar">
@@ -575,6 +675,83 @@
       <div id="settingsSections" class="settings-sections">
         <div class="empty-state">Nessuna configurazione disponibile.</div>
       </div>
+      </div>
+    </section>
+
+    <section
+      id="gettingStartedSection"
+      class="getting-started-section"
+      aria-labelledby="gettingStartedTitle"
+      hidden
+    >
+      <header class="getting-started-header">
+        <p class="eyebrow">Guida Private Beta</p>
+        <h2 id="gettingStartedTitle">Getting Started</h2>
+        <p class="section-note">
+          Le informazioni essenziali per completare il primo ciclo operativo.
+        </p>
+      </header>
+
+      <div class="getting-started-grid">
+        <section class="getting-started-block" aria-labelledby="whatIsTitle">
+          <h3 id="whatIsTitle">Cos'è Operations Engine</h3>
+          <p>
+            Operations Engine è un motore operativo configurabile che normalizza
+            dati, prepara il planning e rende leggibili readiness e criticità.
+            Non impone un workflow aziendale e mantiene separati Core, Adapter e Plugin.
+          </p>
+        </section>
+
+        <section class="getting-started-block" aria-labelledby="howWorksTitle">
+          <h3 id="howWorksTitle">Come funziona</h3>
+          <p>
+            Il sistema importa i dati operativi, riconosce le colonne, normalizza
+            risorse e asset e genera una proposta di planning verificabile prima
+            della conferma.
+          </p>
+        </section>
+
+        <section class="getting-started-block" aria-labelledby="workflowTitle">
+          <h3 id="workflowTitle">Workflow consigliato</h3>
+          <ol>
+            <li>Importa il Planning giornaliero e controlla il mapping.</li>
+            <li>Importa lo stato del parco mezzi e verifica i dati riconosciuti.</li>
+            <li>Genera il primo Planning e controlla assegnazioni e criticità.</li>
+            <li>Calcola lo stato operativo e verifica la readiness.</li>
+          </ol>
+        </section>
+
+        <section
+          class="getting-started-block getting-started-faq"
+          aria-labelledby="faqTitle"
+        >
+          <h3 id="faqTitle">FAQ iniziale</h3>
+          <details>
+            <summary>Quali file posso importare?</summary>
+            <p>Planning e Fleet accettano file XLSX, XLS e CSV.</p>
+          </details>
+          <details>
+            <summary>Devo usare nomi colonna precisi?</summary>
+            <p>
+              No. Il sistema propone un mapping e segnala le colonne che richiedono
+              conferma.
+            </p>
+          </details>
+          <details>
+            <summary>Il Planning modifica automaticamente i dati?</summary>
+            <p>
+              No. Le decisioni restano verificabili e le modifiche operative
+              richiedono un'azione esplicita.
+            </p>
+          </details>
+          <details>
+            <summary>Dove controllo gli Asset?</summary>
+            <p>
+              La sezione Fleet mostra registry, disponibilità, capability,
+              documenti e cronologia.
+            </p>
+          </details>
+        </section>
       </div>
     </section>
 

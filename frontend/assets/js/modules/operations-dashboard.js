@@ -74,6 +74,9 @@ function renderDashboard(data) {
   renderReadiness(readiness);
   renderOperationalIssues(byId("conflicts"), issues);
   byId("metricDetail").textContent = dashboardDetail("readiness", data);
+  document.dispatchEvent(new CustomEvent("operations:dashboard-updated", {
+    detail: { available: true },
+  }));
 }
 
 
@@ -89,8 +92,8 @@ function renderDashboardLoading() {
 
 
 function renderDashboardEmpty({
-  title = "Stato operativo non disponibile",
-  description = "Importa planning e parco mezzi per popolare la dashboard.",
+  title = "Nessun planning disponibile.",
+  description = "Importa il primo file per iniziare.",
   actionLabel = "Vai alle importazioni",
   action = "open-imports",
 } = {}) {
@@ -104,6 +107,9 @@ function renderDashboardEmpty({
     actionLabel,
     action,
   });
+  document.dispatchEvent(new CustomEvent("operations:dashboard-updated", {
+    detail: { available: false },
+  }));
 }
 
 
@@ -118,6 +124,9 @@ function renderDashboardFailure() {
     actionLabel: "Riprova",
     action: "retry-dashboard",
   });
+  document.dispatchEvent(new CustomEvent("operations:dashboard-updated", {
+    detail: { available: false },
+  }));
 }
 
 
@@ -173,14 +182,14 @@ export function initOperationsDashboard() {
       loadDashboard({ quiet: true });
       return;
     }
-    renderDashboardEmpty({
-      title: event.detail.failed
-        ? "Planning non disponibile"
-        : "Nessun planning disponibile",
-      description: event.detail.failed
-        ? "La dashboard sarà disponibile quando il planning sarà nuovamente raggiungibile."
-        : "Importa i dati e genera il primo planning per iniziare.",
-    });
+    if (event.detail.failed) {
+      renderDashboardEmpty({
+        title: "Planning non disponibile",
+        description: "La dashboard sarà disponibile quando il planning sarà nuovamente raggiungibile.",
+      });
+      return;
+    }
+    renderDashboardEmpty();
   });
   renderDashboardLoading();
 }
