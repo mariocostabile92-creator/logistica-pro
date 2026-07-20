@@ -21,6 +21,10 @@ from app.plugins.fleet.interfaces.schemas import (
     AssetUpdateRequest,
     AvailabilityObservationRequest,
 )
+from app.workspace.status_service import (
+    DemoWorkspaceResetRequiredError,
+    ensure_real_data_write_allowed,
+)
 
 
 router = APIRouter(
@@ -45,12 +49,21 @@ def assets() -> AssetListResponse:
 )
 def create(request: AssetCreateRequest) -> Asset:
     try:
+        ensure_real_data_write_allowed()
         return create_asset(
             request.model_dump(exclude={"actor"}),
             actor=request.actor,
         )
     except AssetIdentifierConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except DemoWorkspaceResetRequiredError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "DEMO_WORKSPACE_RESET_REQUIRED",
+                "message": str(exc),
+            },
+        ) from exc
 
 
 @router.get("/assets/{asset_id}", response_model=Asset)

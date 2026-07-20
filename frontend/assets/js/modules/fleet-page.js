@@ -229,6 +229,15 @@ export function initFleetPage() {
       renderAssetList([], { demoEnabled });
     }
   });
+  document.addEventListener("workspace:status-changed", (event) => {
+    demoEnabled = Boolean(
+      event.detail.demo_enabled
+      && event.detail.workspace_state === "EMPTY"
+    );
+    if (loaded && state.fleetPlugin.assets.length === 0) {
+      renderAssetList([], { demoEnabled });
+    }
+  });
   byId("fleetViewState").addEventListener("click", (event) => {
     const action = event.target.closest("[data-view-action]")?.dataset.viewAction;
     if (action === "create-asset") openAssetEditor();

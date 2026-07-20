@@ -48,6 +48,12 @@ export function initFleetImport() {
       return;
     }
     const submitBtn = form.querySelector('button[type="submit"]');
+    if (document.body.dataset.workspaceState === "DEMO") {
+      document.dispatchEvent(new CustomEvent("workspace:import-requested", {
+        detail: { opener: submitBtn },
+      }));
+      return;
+    }
     setLoading(submitBtn, true, "Import...");
     try {
       const data = await importDataset(fileInput.files[0], "fleet", sheetSelect.value);
@@ -65,5 +71,15 @@ export function initFleetImport() {
     } finally {
       setLoading(submitBtn, false);
     }
+  });
+
+  document.addEventListener("workspace:reset-completed", () => {
+    form.reset();
+    state.fleet.imported = false;
+    state.fleet.rows = [];
+    status.textContent = "In attesa";
+    status.className = "tag";
+    byId("fleetMapping").replaceChildren();
+    byId("fleetPreview").replaceChildren();
   });
 }

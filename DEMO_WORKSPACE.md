@@ -31,7 +31,7 @@ Application/Infrastructure della Private Beta.
 ```text
 backend/app/demo/
   dataset_factory.py  dataset deterministico e validazione
-  repository.py       registro centrale e reset selettivo
+  repository.py       registro centrale e recupero load parziale
   router.py           endpoint Private Beta v1
   schemas.py          contratti HTTP tipizzati
   service.py          orchestrazione dei casi d'uso load/status/reset
@@ -89,7 +89,8 @@ Il caricamento e idempotente. Se il workspace e gia `ready` e tutte le entita
 registrate esistono, la risposta restituisce lo stesso planning senza creare
 duplicati.
 
-Il reset e idempotente. Richiamarlo piu volte restituisce conteggi pari a zero.
+Il reset e idempotente e delega al Workspace Lifecycle quando lo stato
+corrente e `DEMO`. Richiamarlo piu volte restituisce conteggi pari a zero.
 
 ## Variabile ambiente
 
@@ -121,7 +122,7 @@ Esiste un registro centrale `demo_workspaces` con:
 - audit minimo delle transizioni;
 - summary tipizzata della demo.
 
-Gli altri record hanno marker gia disponibili:
+Gli altri record hanno marker gia disponibili per il recupero del loader:
 
 - import: filename deterministico `DEMO__...` e firma esatta degli ID Task o
   delle targhe normalizzate attese;
@@ -133,27 +134,26 @@ Gli altri record hanno marker gia disponibili:
   viene rimosso per cascade;
 - snapshot dashboard: riferisce gli import demo.
 
-Il registro e la fonte primaria. I marker deterministici consentono il recupero
-da un arresto tra creazione di un record e aggiornamento del registro. Un
-filename uguale ma con contenuto normalizzato diverso non viene considerato
-demo e non viene eliminato.
+Il registro e la fonte primaria. Workspace Lifecycle determina la provenienza
+tramite ID persistiti e relazioni; non usa il filename. I marker deterministici
+servono soltanto a recuperare un load interrotto tra creazione del record e
+aggiornamento del registro.
 
 ## Reset
 
-Il reset esegue una sola transazione repository per le cancellazioni e usa
-soltanto ID registrati o relazioni verso import demo verificati.
+Il percorso standard delega a `POST /api/workspace/v1/reset`, che elimina
+tutto il workspace operativo in una singola transazione e preserva il
+Configuration Engine. Il registro demo viene eliminato e lo status demo torna
+`no_demo`.
 
-Ordine:
+Il caricamento demo e bloccato quando esistono dati di produzione; gli import
+reali e la creazione di nuovi Asset sono bloccati mentre la demo e attiva.
+Questo impedisce nuovi workspace misti.
 
-1. operation snapshot demo;
-2. Planning demo, con cascade su assignment, eventi, versioni e briefing;
-3. Asset demo, con cascade su documenti ed eventi;
-4. import demo;
-5. aggiornamento del registro allo stato `reset`.
-
-Configurazioni, Asset non demo, import reali e Planning reali non vengono
-toccati. Un test crea dati non demo prima del load e verifica che esistano
-ancora dopo il reset.
+Solo per un eventuale workspace storico gia misto, l'endpoint demo mantiene
+una bonifica selettiva compatibile. Non e un flusso supportato per nuovi dati.
+Dettagli e ordine completo sono in
+[`WORKSPACE_LIFECYCLE.md`](WORKSPACE_LIFECYCLE.md).
 
 ## Errori e transazioni
 
@@ -201,7 +201,7 @@ Invoke-RestMethod -Method Post -Uri "$env:BASE_URL/api/demo/v1/reset"
 ```
 
 La stessa sequenza e disponibile nella UI attraverso `Carica demo`,
-`Apri Operations`, `Apri Fleet`, `Esporta CSV` e `Reset demo`.
+`Apri Operations`, `Apri Fleet`, `Esporta CSV` e `Ripristina workspace`.
 
 ## Railway
 
@@ -219,7 +219,7 @@ Verificare quindi:
 1. `GET /api/health`;
 2. `GET /api/demo/v1/status`;
 3. load, dashboard, Planning, Fleet ed export;
-4. reset e ritorno allo stato iniziale.
+4. reset e ritorno allo stato `EMPTY`.
 
 Per disabilitare la demo impostare `false` o rimuovere la variabile in
 produzione.

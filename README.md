@@ -41,6 +41,8 @@ restano isolati in `backend/app/legacy`.
   idempotenti, Planning reale, Fleet, readiness ed export CSV.
 - Daily Operations Briefing v1 deterministico con priorità, source references,
   raccomandazioni non distruttive, audit minimo e stato demo derivato.
+- Workspace Lifecycle v1 con stati `EMPTY`, `DEMO` e `PRODUCTION`, badge
+  globale, reset transazionale auditabile e configurazioni preservate.
 - Interfaccia responsive con tabella desktop e card mobile.
 
 ## Dati richiesti
@@ -169,8 +171,9 @@ Railway fornisce `PORT`; non deve essere impostata manualmente. Il launcher
 dall'espansione della shell e senza usare una porta predefinita. La
 configurazione usa `/api/health`, timeout 120 secondi, cinque retry e arresto
 graduale. Il primo startup crea in modo idempotente le tabelle Core,
-Configuration, Fleet, Demo e Daily Operations Briefing. Gli startup successivi
-applicano gli stessi controlli senza cancellare dati.
+Configuration, Fleet, Demo, Daily Operations Briefing e audit Workspace
+Lifecycle. Gli startup successivi applicano gli stessi controlli senza
+cancellare dati.
 
 ### Database
 
@@ -229,6 +232,23 @@ revoca una credenziale esposta.
 - `GET /api/operations/capacity`
 - `GET /api/operations/readiness`
 
+## Workspace Lifecycle v1
+
+Il backend espone lo stato operativo corrente e impedisce nuovi workspace con
+dati demo e reali mescolati.
+
+- `GET /api/workspace/v1/status`
+- `POST /api/workspace/v1/reset`
+
+Il reset rimuove import, Planning, Assignment, eventi, snapshot, analisi,
+Briefing, Asset e registro demo in una transazione. Le versioni del
+Configuration Engine non vengono eliminate. Un workspace gia vuoto restituisce
+successo con conteggi a zero.
+
+Stati, ordine di cancellazione, audit, rollback, concorrenza e procedura
+Railway sono descritti in
+[`WORKSPACE_LIFECYCLE.md`](WORKSPACE_LIFECYCLE.md).
+
 ## Demo Workspace v1
 
 La demo usa le pipeline reali e non viene caricata automaticamente. In locale
@@ -252,8 +272,8 @@ Invoke-RestMethod `
   -Uri "$env:BASE_URL/api/demo/v1/load"
 ```
 
-La strategia di isolamento, il dataset `demo_dataset_v1`, il reset e la
-procedura Railway sono descritti in
+La strategia di isolamento, il dataset `demo_dataset_v1`, la delega al reset
+globale e la procedura Railway sono descritti in
 [`DEMO_WORKSPACE.md`](DEMO_WORKSPACE.md).
 
 ## Daily Operations Briefing v1
@@ -521,6 +541,8 @@ dalle fixture sintetiche. Nessun dato personale reale viene distribuito.
   transazione batch.
 - L'actor e locale e generico: autenticazione e ruoli non fanno parte di
   questa fase.
+- Il lock Workspace Reset e locale al processo. Il deploy corrente usa un
+  solo processo; piu repliche richiederebbero un lock transazionale condiviso.
 - L'export disponibile e CSV; non e presente un export XLSX.
 
 ## Esclusioni intenzionali

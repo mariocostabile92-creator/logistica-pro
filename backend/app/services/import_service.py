@@ -11,6 +11,7 @@ from app.schemas.import_schema import (
     ImportResultResponse,
 )
 from app.services.normalization_service import suggest_mapping
+from app.workspace.status_service import ensure_real_data_write_allowed
 
 
 def _mapping_for(
@@ -69,6 +70,7 @@ async def import_file(
     adapter: TabularImportAdapter,
     sheet_name: str | None = None,
 ) -> ImportResultResponse:
+    ensure_real_data_write_allowed()
     content = await file.read()
     validate_upload(file, content)
     return import_tabular_content(

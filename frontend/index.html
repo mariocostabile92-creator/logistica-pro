@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./assets/css/onboarding.css" />
   <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
   <link rel="stylesheet" href="./assets/css/briefing.css" />
+  <link rel="stylesheet" href="./assets/css/workspace-lifecycle.css?v=5" />
   <link rel="stylesheet" href="./assets/css/responsive.css" />
 </head>
 <body data-home-state="loading" data-planning-state="loading">
@@ -60,9 +61,53 @@
       </nav>
 
       <div class="app-header-actions">
-        <span id="headerDemoBadge" class="header-demo-badge" hidden>
-          Demo attiva
-        </span>
+        <details id="workspaceMenu" class="workspace-menu">
+          <summary
+            id="workspaceMenuSummary"
+            aria-label="Stato e azioni del workspace"
+          >
+            <span
+              id="workspaceStatusBadge"
+              class="workspace-status-badge loading"
+            >
+              <span aria-hidden="true"></span>
+              <span id="workspaceStatusLabel">Verifica workspace</span>
+            </span>
+          </summary>
+          <div class="workspace-menu-panel">
+            <strong id="workspaceMenuTitle">Workspace</strong>
+            <p id="workspaceMenuDescription">
+              Caricamento dello stato operativo.
+            </p>
+            <div
+              id="workspaceHeaderActions"
+              class="workspace-header-actions"
+            >
+              <button
+                type="button"
+                data-workspace-action="import"
+                hidden
+              >Importa dati</button>
+              <button
+                type="button"
+                data-workspace-action="load-demo"
+                class="secondary"
+                hidden
+              >Carica demo</button>
+              <button
+                type="button"
+                data-workspace-action="new-day"
+                hidden
+              >Nuova giornata operativa</button>
+              <button
+                type="button"
+                data-workspace-action="reset"
+                class="danger-quiet"
+                hidden
+              >Ripristina workspace</button>
+            </div>
+          </div>
+        </details>
         <div id="healthStatus" class="status-pill">Backend non verificato</div>
         <button
           id="configurationNavBtn"
@@ -78,6 +123,61 @@
   </header>
 
   <main class="app-shell">
+    <section
+      id="workspaceCurrentSection"
+      class="workspace-current-section"
+      aria-labelledby="workspaceCurrentTitle"
+    >
+      <article
+        id="workspaceCurrentCard"
+        class="workspace-current-card loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <header class="workspace-current-heading">
+          <div>
+            <p class="eyebrow">Contesto operativo</p>
+            <h2 id="workspaceCurrentTitle">Workspace corrente</h2>
+          </div>
+          <span
+            id="workspaceCardBadge"
+            class="workspace-card-badge loading"
+          >Verifica in corso</span>
+        </header>
+        <div id="workspaceCardLoading" class="workspace-card-loading">
+          <span class="skeleton-line" aria-hidden="true"></span>
+        </div>
+        <p id="workspaceCardEmpty" hidden>
+          Nessun dato operativo caricato.
+        </p>
+        <dl id="workspaceCardFacts" class="workspace-card-facts"></dl>
+        <div id="workspaceCardActions" class="workspace-card-actions">
+          <button
+            type="button"
+            data-workspace-action="import"
+            hidden
+          >Importa dati</button>
+          <button
+            type="button"
+            data-workspace-action="load-demo"
+            class="secondary"
+            hidden
+          >Carica demo</button>
+          <button
+            type="button"
+            data-workspace-action="new-day"
+            hidden
+          >Nuova giornata operativa</button>
+          <button
+            type="button"
+            data-workspace-action="reset"
+            class="danger-quiet"
+            hidden
+          >Ripristina workspace</button>
+        </div>
+      </article>
+    </section>
+
     <section
       id="onboardingSection"
       class="onboarding-section"
@@ -1151,7 +1251,7 @@
               class="demo-reset-button"
               data-demo-action="reset"
             >
-              Reset demo
+              Ripristina workspace
             </button>
           </div>
         </div>
@@ -1159,27 +1259,109 @@
     </template>
 
     <dialog
-      id="demoResetDialog"
-      class="demo-reset-dialog"
-      aria-labelledby="demoResetTitle"
+      id="workspaceImportDialog"
+      class="workspace-choice-dialog"
+      aria-labelledby="workspaceImportTitle"
+      aria-describedby="workspaceImportDescription"
     >
-      <form id="demoResetForm">
-        <p class="eyebrow">Conferma reset</p>
-        <h3 id="demoResetTitle">Vuoi rimuovere tutti e soli i dati demo?</h3>
-        <p>
-          Planning, import e Asset reali non verranno modificati.
-        </p>
-        <div class="demo-reset-actions">
-          <button id="cancelDemoResetBtn" type="button" class="secondary">
-            Annulla
-          </button>
+      <form id="workspaceImportForm">
+        <p class="eyebrow">Dati operativi</p>
+        <h3 id="workspaceImportTitle">Importa nuovi dati</h3>
+        <p id="workspaceImportDescription"></p>
+        <div class="workspace-dialog-actions">
           <button
-            id="confirmDemoResetBtn"
+            id="cancelWorkspaceImportBtn"
+            type="button"
+            class="secondary"
+          >Annulla</button>
+          <button
+            id="continueWorkspaceImportBtn"
+            type="button"
+            class="secondary"
+          >Continua nel workspace corrente</button>
+          <button
+            id="resetAndImportBtn"
             type="submit"
-            class="demo-reset-button"
-          >
-            Reset demo
-          </button>
+          >Ripristina e importa</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog
+      id="workspaceResetDialog"
+      class="workspace-reset-dialog"
+      aria-labelledby="workspaceResetTitle"
+      aria-describedby="workspaceResetDescription"
+    >
+      <form id="workspaceResetForm">
+        <p class="eyebrow">Azione distruttiva</p>
+        <h3 id="workspaceResetTitle">Ripristina workspace</h3>
+        <p id="workspaceResetDescription">
+          Questa operazione rimuover&agrave; tutti i dati operativi correnti
+          e riporter&agrave; Operations Engine allo stato iniziale.
+        </p>
+        <p id="workspaceResetIntent" class="workspace-reset-intent"></p>
+
+        <div class="workspace-reset-impact">
+          <section aria-labelledby="workspaceRemovedTitle">
+            <h4 id="workspaceRemovedTitle">Saranno rimossi</h4>
+            <ul>
+              <li>import Planning e Fleet;</li>
+              <li>Planning, versioni e Assignment;</li>
+              <li>conflitti, snapshot, Capacity e Readiness persistite;</li>
+              <li>eventi operativi e Briefing;</li>
+              <li>Asset, eventi e documenti operativi;</li>
+              <li>dati, riferimenti e registri Demo Workspace;</li>
+              <li>metadati temporanei collegati.</li>
+            </ul>
+          </section>
+          <section aria-labelledby="workspacePreservedTitle">
+            <h4 id="workspacePreservedTitle">Non saranno rimossi</h4>
+            <ul>
+              <li>Configuration Engine e relative versioni;</li>
+              <li>nomenclature e capability configurate;</li>
+              <li>policy di riserva e priorit&agrave;;</li>
+              <li>mapping e impostazioni applicative;</li>
+              <li>struttura dei Plugin;</li>
+              <li>configurazione Railway.</li>
+            </ul>
+          </section>
+        </div>
+
+        <label for="workspaceResetConfirmation">
+          Scrivi <strong>RIPRISTINA</strong> per confermare
+          <input
+            id="workspaceResetConfirmation"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            aria-describedby="workspaceResetConfirmationHint"
+          />
+        </label>
+        <p
+          id="workspaceResetConfirmationHint"
+          class="workspace-reset-hint"
+        >
+          Il pulsante si abilita solo con la parola esatta.
+        </p>
+        <p
+          id="workspaceResetProgress"
+          class="workspace-reset-progress"
+          role="status"
+          aria-live="polite"
+        ></p>
+        <div class="workspace-dialog-actions">
+          <button
+            id="cancelWorkspaceResetBtn"
+            type="button"
+            class="secondary"
+          >Annulla</button>
+          <button
+            id="confirmWorkspaceResetBtn"
+            type="submit"
+            class="danger"
+            disabled
+          >Ripristina workspace</button>
         </div>
       </form>
     </dialog>

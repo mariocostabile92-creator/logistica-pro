@@ -9,6 +9,7 @@ import { initPlanningPage } from "./modules/planning-page.js";
 import { initPlanningImport } from "./modules/import-planning.js";
 import { initSettingsPage } from "./modules/settings-page.js";
 import { initViewNavigation } from "./modules/view-navigation.js";
+import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js";
 import { byId } from "./utils/dom.js";
 
 
@@ -35,4 +36,5 @@ initFleetPage();
 initSettingsPage();
 initViewNavigation();
 initDemoWorkspace();
+initWorkspaceLifecycle();
 checkHealth();

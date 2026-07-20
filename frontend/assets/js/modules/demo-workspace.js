@@ -2,7 +2,6 @@ import {
   downloadPlanningCsv,
   getDemoWorkspaceStatus,
   loadDemoWorkspace,
-  resetDemoWorkspace,
 } from "../api.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import {
@@ -18,6 +17,7 @@ import {
 
 
 let demoState = createDemoWorkspaceState();
+let workspaceAllowsDemo = true;
 
 
 function demoHosts() {
@@ -56,9 +56,8 @@ function renderSummary(card, summary) {
 
 function renderDemoWorkspace() {
   const view = deriveDemoWorkspaceView(demoState);
-  byId("headerDemoBadge").hidden = !view.active;
   demoHosts().forEach((host) => {
-    host.hidden = view.hidden;
+    host.hidden = view.hidden || (!view.active && !workspaceAllowsDemo);
   });
   demoCards().forEach((card) => {
     card.classList.toggle("active", view.active);
@@ -104,6 +103,7 @@ async function loadDemo() {
       summary: response.summary,
     });
     notifyWorkspaceChanged("ready", response.summary);
+    document.dispatchEvent(new CustomEvent("workspace:refresh-requested"));
     setMessage("Demo Workspace pronto.", "success");
   } catch (error) {
     const presentation = userErrorPresentation("demo.load", error, {
@@ -115,32 +115,6 @@ async function loadDemo() {
       message: presentation.message,
     });
     setMessage(presentation.message, presentation.tone);
-  }
-}
-
-
-async function resetDemo() {
-  const submit = byId("confirmDemoResetBtn");
-  setLoading(submit, true, "Reset...");
-  updateDemoState({ type: "operation-started" });
-  try {
-    await resetDemoWorkspace();
-    byId("demoResetDialog").close();
-    updateDemoState({ type: "reset-completed" });
-    notifyWorkspaceChanged("reset");
-    setMessage("I dati demo sono stati rimossi.", "success");
-  } catch (error) {
-    const presentation = userErrorPresentation("demo.reset", error, {
-      statuses: [400, 409, 422, 500],
-      codes: ["DEMO_RESET_FAILED"],
-    });
-    updateDemoState({
-      type: "operation-failed",
-      message: presentation.message,
-    });
-    setMessage(presentation.message, presentation.tone);
-  } finally {
-    setLoading(submit, false);
   }
 }
 
@@ -182,7 +156,9 @@ async function handleDemoAction(event) {
     await exportDemo(button);
   }
   if (action === "reset") {
-    byId("demoResetDialog").showModal();
+    document.dispatchEvent(new CustomEvent("workspace:reset-requested", {
+      detail: { opener: button },
+    }));
   }
 }
 
@@ -218,12 +194,16 @@ export function initDemoWorkspace() {
   });
   document.addEventListener("click", handleDemoAction);
   document.addEventListener("demo:load-requested", loadDemo);
-  byId("demoResetForm").addEventListener("submit", (event) => {
-    event.preventDefault();
-    resetDemo();
+  document.addEventListener("workspace:reset-completed", () => {
+    updateDemoState({ type: "reset-completed" });
+    inspectDemoWorkspace();
   });
-  byId("cancelDemoResetBtn").addEventListener("click", () => {
-    byId("demoResetDialog").close();
+  document.addEventListener("workspace:status-changed", (event) => {
+    workspaceAllowsDemo = (
+      event.detail.workspace_state === "EMPTY"
+      || event.detail.workspace_state === "DEMO"
+    );
+    renderDemoWorkspace();
   });
   renderDemoWorkspace();
   inspectDemoWorkspace();

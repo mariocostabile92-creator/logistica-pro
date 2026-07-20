@@ -223,7 +223,7 @@ def test_reset_removes_all_and_only_registered_demo_data():
     assert _database_count("fleet_assets") == 0
     status = client.get(f"{BASE_URL}/status").json()
     assert status["present"] is False
-    assert status["status"] == "reset"
+    assert status["status"] == "no_demo"
 
 
 def test_reset_is_idempotent():
@@ -237,7 +237,7 @@ def test_reset_is_idempotent():
     assert not any(second.json()["removed"].values())
 
 
-def test_reset_preserves_non_demo_imports_planning_and_assets():
+def test_demo_load_is_blocked_when_production_data_exists():
     real_rows = simple_rows(routes=1, drivers=1, vehicles=2)
     real_import_ids = save_normalized_imports(*real_rows)
     real_planning = generate_planning(
@@ -259,18 +259,17 @@ def test_reset_preserves_non_demo_imports_planning_and_assets():
         },
         actor="test_operator",
     )
-    _load_demo()
+    load = client.post(f"{BASE_URL}/load")
 
-    reset = client.post(f"{BASE_URL}/reset")
-
-    assert reset.status_code == 200
+    assert load.status_code == 409
+    assert load.json()["detail"]["code"] == "DEMO_WORKSPACE_NOT_EMPTY"
     assert get_import(real_import_ids[0]) is not None
     assert get_import(real_import_ids[1]) is not None
     assert get_planning_record(real_planning.planning.id) is not None
     assert get_asset(real_asset.id) is not None
 
 
-def test_reset_preserves_non_demo_import_with_colliding_filename():
+def test_demo_load_does_not_use_a_colliding_filename_as_provenance():
     planning_filename, _ = demo_import_filenames(build_demo_dataset())
     colliding_import_id = save_import(
         dataset_type="planning",
@@ -284,12 +283,9 @@ def test_reset_preserves_non_demo_import_with_colliding_filename():
             }
         ],
     )
-    _load_demo()
+    load = client.post(f"{BASE_URL}/load")
 
-    reset = client.post(f"{BASE_URL}/reset")
-
-    assert reset.status_code == 200
-    assert reset.json()["removed"]["imports"] == 2
+    assert load.status_code == 409
     assert get_import(colliding_import_id) is not None
 
 

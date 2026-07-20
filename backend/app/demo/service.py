@@ -44,6 +44,13 @@ from app.services.import_service import import_tabular_content
 from app.services.operations_engine import evaluate_latest_operations
 from app.services.planning_generation_service import generate_planning
 from app.utils.date_utils import utc_now_iso
+from app.workspace.models import WorkspaceState
+from app.workspace.reset_service import reset_workspace
+from app.workspace.status_service import (
+    ProductionWorkspaceNotEmptyError,
+    ensure_demo_load_allowed,
+    get_workspace_status,
+)
 
 
 logger = logging.getLogger("operations_engine.demo")
@@ -55,6 +62,10 @@ class DemoWorkspaceLoadError(RuntimeError):
 
 
 class DemoWorkspaceResetError(RuntimeError):
+    pass
+
+
+class DemoWorkspaceConflictError(RuntimeError):
     pass
 
 
@@ -269,6 +280,10 @@ def _cleanup(
 def load_demo_workspace() -> DemoLoadResponse:
     dataset = build_demo_dataset()
     with _LOAD_LOCK:
+        try:
+            ensure_demo_load_allowed()
+        except ProductionWorkspaceNotEmptyError as exc:
+            raise DemoWorkspaceConflictError(str(exc)) from exc
         current = repository.get_workspace(dataset.workspace_id)
         if (
             current
@@ -433,6 +448,32 @@ def reset_demo_workspace() -> DemoResetResponse:
     dataset = build_demo_dataset()
     with _LOAD_LOCK:
         current = repository.get_workspace(dataset.workspace_id)
+        workspace_status = get_workspace_status()
+        if workspace_status.workspace_state == WorkspaceState.DEMO:
+            try:
+                reset = reset_workspace(actor=DEMO_CREATED_BY)
+            except Exception as exc:
+                logger.exception(
+                    "Delegated demo workspace reset failed workspace_id=%s",
+                    dataset.workspace_id,
+                )
+                raise DemoWorkspaceResetError(
+                    "Il reset demo non e stato completato."
+                ) from exc
+            removed = reset.removed_counts
+            return DemoResetResponse(
+                demo_workspace_id=dataset.workspace_id,
+                idempotent=reset.idempotent,
+                removed=DemoRemovedCounts(
+                    imports=removed.imports,
+                    plannings=removed.plannings,
+                    operation_snapshots=removed.operation_snapshots,
+                    fleet_assets=removed.fleet_assets,
+                ),
+            )
+
+        # Compatibility remediation for a legacy mixed workspace. New mixed
+        # workspaces are blocked at their write entry points.
         created_at = (
             current["created_at"] if current else utc_now_iso()
         )

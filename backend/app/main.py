@@ -21,6 +21,8 @@ from app.plugins.fleet.bootstrap import (
     initialize_fleet_plugin,
     register_fleet_plugin,
 )
+from app.workspace.repository import init_schema as init_workspace_schema
+from app.workspace.router import router as workspace_router
 
 
 logging.basicConfig(
@@ -43,6 +45,7 @@ async def lifespan(app: FastAPI):
         initialize_fleet_plugin()
         init_briefing_schema()
         init_demo_schema()
+        init_workspace_schema()
         yield
     finally:
         logger.info("Operations Engine stopped")
@@ -123,6 +126,7 @@ app.include_router(operations.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)
+app.include_router(workspace_router)
 register_fleet_plugin(app)
 
 if FRONTEND_DIR.is_dir():

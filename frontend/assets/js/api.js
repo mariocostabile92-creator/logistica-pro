@@ -26,6 +26,18 @@ export async function getHealth() {
 }
 
 
+export async function getWorkspaceStatus() {
+  return parseResponse(await fetch(`${API_BASE}/api/workspace/v1/status`));
+}
+
+
+export async function resetWorkspace() {
+  return parseResponse(await fetch(`${API_BASE}/api/workspace/v1/reset`, {
+    method: "POST",
+  }));
+}
+
+
 export async function getLatestDailyBriefing() {
   return parseResponse(await fetch(`${API_BASE}/api/briefing/v1/daily/latest`));
 }

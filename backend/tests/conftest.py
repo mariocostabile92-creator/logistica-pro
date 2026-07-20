@@ -20,6 +20,7 @@ from app.core.configuration.repository import (
 )
 from app.demo.repository import init_schema as init_demo_schema
 from app.plugins.fleet.infrastructure.repository import init_schema as init_fleet_schema
+from app.workspace.repository import init_schema as init_workspace_schema
 
 
 @pytest.fixture(autouse=True)
@@ -29,7 +30,9 @@ def reset_database():
     init_fleet_schema()
     init_briefing_schema()
     init_demo_schema()
+    init_workspace_schema()
     with db_session() as conn:
+        conn.execute("DELETE FROM workspace_reset_audits")
         conn.execute("DELETE FROM demo_workspaces")
         conn.execute("DELETE FROM configuration_versions")
         conn.execute("DELETE FROM fleet_asset_events")

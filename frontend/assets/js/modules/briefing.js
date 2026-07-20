@@ -377,6 +377,9 @@ async function fetchBriefing({ generate = false } = {}) {
     }
     if (requestId === briefingRequestId) {
       updateBriefing({ type: "load-completed", briefing: response });
+      document.dispatchEvent(new CustomEvent("briefing:changed", {
+        detail: { available: response.status !== "unavailable" },
+      }));
     }
   } catch (error) {
     const presentation = userErrorPresentation(
@@ -451,6 +454,15 @@ export function initBriefing() {
     updateBriefing({
       type: "demo-availability",
       enabled: event.detail.enabled,
+    });
+  });
+  document.addEventListener("workspace:status-changed", (event) => {
+    updateBriefing({
+      type: "demo-availability",
+      enabled: (
+        event.detail.demo_enabled
+        && event.detail.workspace_state === "EMPTY"
+      ),
     });
   });
   document.addEventListener("demo:workspace-changed", (event) => {

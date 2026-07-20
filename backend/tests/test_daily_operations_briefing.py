@@ -322,14 +322,11 @@ def test_demo_workspace_produces_expected_real_briefing_and_reset_removes_it():
     assert latest.json()["status"] == "unavailable"
 
 
-def test_demo_reset_preserves_real_briefing():
+def test_demo_load_is_blocked_when_a_real_briefing_exists():
     real_planning = _generate_planning()
     real_briefing = _generate_briefing(real_planning.planning.id)
     loaded = client.post("/api/demo/v1/load")
-    assert loaded.status_code == 200
-    _generate_briefing(loaded.json()["summary"]["planning_id"])
-
-    assert client.post("/api/demo/v1/reset").status_code == 200
+    assert loaded.status_code == 409
 
     latest = client.get(f"{BASE_URL}/latest").json()
     assert latest["briefing_id"] == real_briefing["briefing_id"]
@@ -377,7 +374,10 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
     existing_paths = {
         path: value
         for path, value in paths.items()
-        if not path.startswith("/api/briefing/")
+        if (
+            not path.startswith("/api/briefing/")
+            and not path.startswith("/api/workspace/")
+        )
     }
     digest = hashlib.sha256(
         json.dumps(

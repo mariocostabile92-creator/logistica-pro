@@ -48,6 +48,12 @@ export function initPlanningImport() {
       return;
     }
     const submitBtn = form.querySelector('button[type="submit"]');
+    if (document.body.dataset.workspaceState === "DEMO") {
+      document.dispatchEvent(new CustomEvent("workspace:import-requested", {
+        detail: { opener: submitBtn },
+      }));
+      return;
+    }
     setLoading(submitBtn, true, "Import...");
     try {
       const data = await importDataset(fileInput.files[0], "planning", sheetSelect.value);
@@ -65,5 +71,15 @@ export function initPlanningImport() {
     } finally {
       setLoading(submitBtn, false);
     }
+  });
+
+  document.addEventListener("workspace:reset-completed", () => {
+    form.reset();
+    state.planning.imported = false;
+    state.planning.rows = [];
+    status.textContent = "In attesa";
+    status.className = "tag";
+    byId("planningMapping").replaceChildren();
+    byId("planningPreview").replaceChildren();
   });
 }

@@ -6,6 +6,7 @@ from app.demo.schemas import (
     DemoStatusResponse,
 )
 from app.demo.service import (
+    DemoWorkspaceConflictError,
     DemoWorkspaceLoadError,
     DemoWorkspaceResetError,
     get_demo_status,
@@ -42,6 +43,14 @@ def load() -> DemoLoadResponse:
                 "message": str(exc),
             },
         ) from exc
+    except DemoWorkspaceConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "DEMO_WORKSPACE_NOT_EMPTY",
+                "message": str(exc),
+            },
+        ) from exc
 
 
 @router.post("/reset", response_model=DemoResetResponse)
@@ -57,4 +66,3 @@ def reset() -> DemoResetResponse:
                 "message": str(exc),
             },
         ) from exc
-

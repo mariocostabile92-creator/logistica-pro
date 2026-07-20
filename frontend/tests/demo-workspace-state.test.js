@@ -116,12 +116,12 @@ test("page contains demo controls and accessible reset confirmation", async () =
   assert.match(html, /Apri Operations/);
   assert.match(html, /Apri Fleet/);
   assert.match(html, /Esporta CSV/);
-  assert.match(html, /Reset demo/);
+  assert.match(html, /Ripristina workspace/);
   assert.match(
     html,
-    /Vuoi rimuovere tutti e soli i dati demo\?/,
+    /Questa operazione rimuover&agrave; tutti i dati operativi correnti/,
   );
-  assert.match(html, /<dialog[\s\S]*id="demoResetDialog"/);
+  assert.match(html, /<dialog[\s\S]*id="workspaceResetDialog"/);
 });
 
 
@@ -143,7 +143,7 @@ test("demo module reuses navigation and export without window confirm", async ()
 
   assert.match(source, /downloadPlanningCsv/);
   assert.match(source, /workspace:navigate/);
-  assert.match(source, /showModal\(\)/);
+  assert.match(source, /workspace:reset-requested/);
   assert.doesNotMatch(source, /window\.confirm/);
   assert.doesNotMatch(source, /console\.(error|warn)/);
   assert.match(css, /@media \(max-width: 980px\)/);
