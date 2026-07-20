@@ -11,6 +11,7 @@ _IDENTITY_TABLES = {
     "analyses",
     "assignments",
     "configuration_versions",
+    "daily_briefings",
     "fleet_asset_documents",
     "fleet_asset_events",
     "fleet_assets",

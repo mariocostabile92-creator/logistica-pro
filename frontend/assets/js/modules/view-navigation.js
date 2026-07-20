@@ -3,6 +3,7 @@ import { byId } from "../utils/dom.js";
 
 const OPERATIONS_SECTIONS = [
   "onboardingSection",
+  "briefingSection",
   "demoWorkspaceOperationsSection",
   "planningSection",
   "dashboardSection",

@@ -129,6 +129,8 @@ Gli altri record hanno marker gia disponibili:
   `demo_workspace_loader`;
 - Planning: import sorgente registrati e versione creata con actor demo;
 - assignment, eventi e versioni: dipendono dal Planning demo;
+- Daily Operations Briefing: dipende dal Planning demo con foreign key e
+  viene rimosso per cascade;
 - snapshot dashboard: riferisce gli import demo.
 
 Il registro e la fonte primaria. I marker deterministici consentono il recupero
@@ -144,7 +146,7 @@ soltanto ID registrati o relazioni verso import demo verificati.
 Ordine:
 
 1. operation snapshot demo;
-2. Planning demo, con cascade su assignment, eventi e versioni;
+2. Planning demo, con cascade su assignment, eventi, versioni e briefing;
 3. Asset demo, con cascade su documenti ed eventi;
 4. import demo;
 5. aggiornamento del registro allo stato `reset`.

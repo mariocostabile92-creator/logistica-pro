@@ -87,6 +87,13 @@ function notifyWorkspaceChanged(status, summary = null) {
 }
 
 
+function notifyDemoAvailability(enabled) {
+  document.dispatchEvent(new CustomEvent("demo:availability-changed", {
+    detail: { enabled },
+  }));
+}
+
+
 async function loadDemo() {
   updateDemoState({ type: "operation-started" });
   try {
@@ -182,6 +189,7 @@ async function handleDemoAction(event) {
 async function inspectDemoWorkspace() {
   try {
     const response = await getDemoWorkspaceStatus();
+    notifyDemoAvailability(true);
     updateDemoState({
       type: "status-loaded",
       status: response.status,
@@ -189,6 +197,7 @@ async function inspectDemoWorkspace() {
     });
   } catch (error) {
     if (isExpectedApiError(error, { statuses: [404] })) {
+      notifyDemoAvailability(false);
       updateDemoState({ type: "disabled" });
       return;
     }
@@ -207,6 +216,7 @@ export function initDemoWorkspace() {
     host.append(template.content.cloneNode(true));
   });
   document.addEventListener("click", handleDemoAction);
+  document.addEventListener("demo:load-requested", loadDemo);
   byId("demoResetForm").addEventListener("submit", (event) => {
     event.preventDefault();
     resetDemo();

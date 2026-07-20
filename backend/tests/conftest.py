@@ -14,6 +14,7 @@ os.environ["OPERATIONS_DB_PATH"] = str(TEST_DATABASE_PATH)
 os.environ.setdefault("DEMO_WORKSPACE_ENABLED", "true")
 
 from app.core.database import db_session, init_db
+from app.briefing.repository import init_schema as init_briefing_schema
 from app.core.configuration.repository import (
     init_schema as init_configuration_schema,
 )
@@ -26,6 +27,7 @@ def reset_database():
     init_db()
     init_configuration_schema()
     init_fleet_schema()
+    init_briefing_schema()
     init_demo_schema()
     with db_session() as conn:
         conn.execute("DELETE FROM demo_workspaces")
@@ -33,6 +35,7 @@ def reset_database():
         conn.execute("DELETE FROM fleet_asset_events")
         conn.execute("DELETE FROM fleet_asset_documents")
         conn.execute("DELETE FROM fleet_assets")
+        conn.execute("DELETE FROM daily_briefings")
         conn.execute("DELETE FROM planning_events")
         conn.execute("DELETE FROM planning_versions")
         conn.execute("DELETE FROM assignments")

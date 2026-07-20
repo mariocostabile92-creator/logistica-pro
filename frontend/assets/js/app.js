@@ -1,4 +1,5 @@
 import { getHealth } from "./api.js";
+import { initBriefing } from "./modules/briefing.js";
 import { initFleetImport } from "./modules/import-fleet.js";
 import { initFleetPage } from "./modules/fleet-page.js";
 import { initDemoWorkspace } from "./modules/demo-workspace.js";
@@ -26,6 +27,7 @@ async function checkHealth() {
 
 initPlanningImport();
 initFleetImport();
+initBriefing();
 initOnboarding();
 initOperationsDashboard();
 initPlanningPage();

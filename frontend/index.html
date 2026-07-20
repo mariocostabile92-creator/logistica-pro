@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="./assets/css/settings.css" />
   <link rel="stylesheet" href="./assets/css/onboarding.css" />
   <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
+  <link rel="stylesheet" href="./assets/css/briefing.css" />
   <link rel="stylesheet" href="./assets/css/responsive.css" />
 </head>
 <body>
@@ -146,6 +147,142 @@
             </ul>
           </aside>
         </div>
+      </div>
+    </section>
+
+    <section
+      id="briefingSection"
+      class="briefing-section"
+      aria-labelledby="briefingTitle"
+    >
+      <header class="briefing-heading">
+        <div>
+          <p class="eyebrow">Daily Operations Briefing</p>
+          <h2 id="briefingTitle">Cosa richiede la tua attenzione oggi</h2>
+        </div>
+        <button id="refreshBriefingBtn" type="button" class="secondary">
+          Aggiorna briefing
+        </button>
+      </header>
+
+      <div
+        id="briefingViewState"
+        class="briefing-view-state loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div id="briefingLoading">
+          <span class="visually-hidden">Caricamento briefing operativo</span>
+          <div class="briefing-skeleton" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+        <div id="briefingStateContent" class="briefing-empty" hidden>
+          <strong id="briefingStateTitle">Nessun briefing disponibile</strong>
+          <p id="briefingStateDescription">
+            Il briefing sarà disponibile dopo la creazione del primo planning.
+          </p>
+          <div id="briefingStateActions" class="briefing-empty-actions">
+            <button id="briefingImportBtn" type="button">Importa dati</button>
+            <button
+              id="briefingDemoBtn"
+              type="button"
+              class="secondary"
+              hidden
+            >
+              Carica demo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="briefingDataView" hidden>
+        <div class="briefing-hero">
+          <div class="briefing-hero-copy">
+            <div class="briefing-badges">
+              <span
+                id="briefingAttentionBadge"
+                class="briefing-attention-badge unavailable"
+              >
+                Non disponibile
+              </span>
+              <span id="briefingDemoBadge" class="tag" hidden>DEMO</span>
+            </div>
+            <p id="briefingExecutiveSummary" class="briefing-summary"></p>
+            <p id="briefingAttentionReason" class="briefing-reason"></p>
+            <p id="briefingMetadata" class="section-note"></p>
+          </div>
+
+          <div class="briefing-snapshots">
+            <section aria-labelledby="briefingReadinessTitle">
+              <span id="briefingReadinessTitle">Readiness</span>
+              <strong id="briefingReadinessLevel">--</strong>
+              <small id="briefingReadinessIssues">--</small>
+            </section>
+            <section aria-labelledby="briefingCapacityTitle">
+              <span id="briefingCapacityTitle">Margine Capacity</span>
+              <strong id="briefingCapacityMargin">--</strong>
+              <small id="briefingCapacityDetail">--</small>
+            </section>
+          </div>
+        </div>
+
+        <div class="briefing-metrics" aria-label="Riepilogo briefing">
+          <div>
+            <span>Criticità</span>
+            <strong id="briefingCriticalCount">0</strong>
+          </div>
+          <div>
+            <span>Attenzione</span>
+            <strong id="briefingAttentionCount">0</strong>
+          </div>
+          <div>
+            <span>Informazioni</span>
+            <strong id="briefingInformationCount">0</strong>
+          </div>
+          <div>
+            <span>Azioni consigliate</span>
+            <strong id="briefingActionCount">0</strong>
+          </div>
+        </div>
+
+        <div class="briefing-list-heading">
+          <h3>Priorità operative</h3>
+          <div
+            class="briefing-filters"
+            role="group"
+            aria-label="Filtra priorità briefing"
+          >
+            <button
+              type="button"
+              class="active"
+              data-briefing-filter="all"
+              aria-pressed="true"
+            >Tutto</button>
+            <button
+              type="button"
+              data-briefing-filter="critical"
+              aria-pressed="false"
+            >Critico</button>
+            <button
+              type="button"
+              data-briefing-filter="attention"
+              aria-pressed="false"
+            >Attenzione</button>
+            <button
+              type="button"
+              data-briefing-filter="information"
+              aria-pressed="false"
+            >Informazioni</button>
+          </div>
+        </div>
+        <div
+          id="briefingIssueList"
+          class="briefing-issue-list"
+          aria-live="polite"
+        ></div>
       </div>
     </section>
 

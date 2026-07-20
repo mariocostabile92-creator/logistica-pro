@@ -39,6 +39,8 @@ restano isolati in `backend/app/legacy`.
   effettive.
 - Demo Workspace v1 con dataset sintetico deterministico, load e reset
   idempotenti, Planning reale, Fleet, readiness ed export CSV.
+- Daily Operations Briefing v1 deterministico con priorità, source references,
+  raccomandazioni non distruttive, audit minimo e stato demo derivato.
 - Interfaccia responsive con tabella desktop e card mobile.
 
 ## Dati richiesti
@@ -167,8 +169,8 @@ Railway fornisce `PORT`; non deve essere impostata manualmente. Il launcher
 dall'espansione della shell e senza usare una porta predefinita. La
 configurazione usa `/api/health`, timeout 120 secondi, cinque retry e arresto
 graduale. Il primo startup crea in modo idempotente le tabelle Core,
-Configuration e Fleet. Gli startup successivi applicano gli stessi controlli
-senza cancellare dati.
+Configuration, Fleet, Demo e Daily Operations Briefing. Gli startup successivi
+applicano gli stessi controlli senza cancellare dati.
 
 ### Database
 
@@ -253,6 +255,26 @@ Invoke-RestMethod `
 La strategia di isolamento, il dataset `demo_dataset_v1`, il reset e la
 procedura Railway sono descritti in
 [`DEMO_WORKSPACE.md`](DEMO_WORKSPACE.md).
+
+## Daily Operations Briefing v1
+
+Il briefing operativo legge Planning, Assignment, conflitti, alternative,
+Readiness, Capacity, Asset, eventi e configurazione già disponibili. Non
+ricalcola i motori esistenti, non applica raccomandazioni e non usa provider
+AI.
+
+Endpoint:
+
+- `GET /api/briefing/v1/daily/latest`
+- `POST /api/briefing/v1/daily/generate`
+
+Senza Planning `GET latest` restituisce HTTP 200 con stato tipizzato
+`unavailable`. La generazione è idempotente: fonti invariate restituiscono lo
+stesso briefing; una modifica reale crea una nuova revisione.
+
+Modelli, ranking, source references, persistenza, comportamento demo e limiti
+sono descritti in
+[`DAILY_OPERATIONS_BRIEFING.md`](DAILY_OPERATIONS_BRIEFING.md).
 
 ## API planning
 

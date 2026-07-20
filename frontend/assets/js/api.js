@@ -26,6 +26,21 @@ export async function getHealth() {
 }
 
 
+export async function getLatestDailyBriefing() {
+  return parseResponse(await fetch(`${API_BASE}/api/briefing/v1/daily/latest`));
+}
+
+
+export async function generateDailyBriefing(planningId = null) {
+  const payload = planningId ? { planning_id: planningId } : {};
+  return parseResponse(await fetch(`${API_BASE}/api/briefing/v1/daily/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+
 export async function getDemoWorkspaceStatus() {
   return parseResponse(await fetch(`${API_BASE}/api/demo/v1/status`));
 }

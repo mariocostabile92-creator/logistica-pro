@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routers import configuration, health, imports, operations, planning
+from app.briefing.repository import init_schema as init_briefing_schema
+from app.briefing.router import router as briefing_router
 from app.core.config import FRONTEND_DIR, SETTINGS
 from app.core.configuration.repository import (
     init_schema as init_configuration_schema,
@@ -39,6 +41,7 @@ async def lifespan(app: FastAPI):
         init_db()
         init_configuration_schema()
         initialize_fleet_plugin()
+        init_briefing_schema()
         init_demo_schema()
         yield
     finally:
@@ -119,6 +122,7 @@ app.include_router(imports.router)
 app.include_router(operations.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
+app.include_router(briefing_router)
 register_fleet_plugin(app)
 
 if FRONTEND_DIR.is_dir():
