@@ -4,6 +4,7 @@ import {
 } from "../api.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
+import { operationalCodeLabel } from "../utils/formatters.js";
 import {
   applyBriefingEvent,
   createBriefingState,
@@ -16,16 +17,16 @@ let briefingRequestId = 0;
 
 
 const ATTENTION_LABELS = {
-  stable: "Stabile",
-  attention: "Attenzione",
-  critical: "Critico",
-  unavailable: "Non disponibile",
+  stable: "Operazioni stabili",
+  attention: "Richiede attenzione",
+  critical: "Situazione critica",
+  unavailable: "Dati non disponibili",
 };
 
 const READINESS_LABELS = {
-  green: "Pronta (green)",
-  yellow: "Attenzione (yellow)",
-  red: "Critica (red)",
+  green: "Pronta",
+  yellow: "Attenzione",
+  red: "Critica",
 };
 
 const SEVERITY_LABELS = {
@@ -60,6 +61,28 @@ function localizedTimestamp(value) {
   return Number.isNaN(parsed.getTime())
     ? value
     : parsed.toLocaleString("it-IT");
+}
+
+
+function userFacingCopy(value) {
+  return String(value ?? "")
+    .replaceAll("Human Resources", "Risorse")
+    .replaceAll("Human Resource", "Risorsa")
+    .replaceAll("Sostituzione Risorsa", "Sostituzione della Risorsa")
+    .replaceAll("Warning Assignment", "Segnalazione assegnazione")
+    .replaceAll("presenta il warning", "presenta un avviso")
+    .replaceAll("Livello attention:", "Richiede attenzione:")
+    .replaceAll("Livello critical:", "Situazione critica:")
+    .replaceAll("Readiness yellow", "Readiness in attenzione")
+    .replaceAll("Readiness red", "Readiness critica")
+    .replaceAll("issue high o medium", "segnalazioni prioritarie")
+    .replaceAll("Severità high", "Severità alta")
+    .replaceAll("Severità medium", "Severità media")
+    .replaceAll("warning", "avviso")
+    .replace(
+      /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g,
+      (code) => operationalCodeLabel(code),
+    );
 }
 
 
@@ -108,8 +131,12 @@ function renderSummary(briefing) {
   const badge = byId("briefingAttentionBadge");
   badge.className = `briefing-attention-badge ${level}`;
   badge.textContent = ATTENTION_LABELS[level] || level;
-  byId("briefingExecutiveSummary").textContent = briefing.executive_summary;
-  byId("briefingAttentionReason").textContent = briefing.attention_reason;
+  byId("briefingExecutiveSummary").textContent = userFacingCopy(
+    briefing.executive_summary,
+  );
+  byId("briefingAttentionReason").textContent = userFacingCopy(
+    briefing.attention_reason,
+  );
   byId("briefingMetadata").textContent = (
     `Planning ${briefing.planning_id} · versione `
     + `${briefing.planning_version} · ${briefing.operation_date} · `
@@ -127,7 +154,7 @@ function renderSummary(briefing) {
   setSnapshotField(
     "briefingReadinessIssues",
     readiness.available
-      ? `${readiness.blocking_issues} bloccanti · ${readiness.warnings} warning`
+      ? `${readiness.blocking_issues} bloccanti · ${readiness.warnings} avvisi`
       : readiness.reasons[0],
   );
 
@@ -166,10 +193,10 @@ function renderFacts(facts) {
   const list = element("dl", "briefing-facts");
   facts.forEach((fact) => {
     const row = element("div", "briefing-fact");
-    const term = element("dt", "", fact.label);
+    const term = element("dt", "", userFacingCopy(fact.label));
     const value = typeof fact.value === "object"
       ? JSON.stringify(fact.value)
-      : String(fact.value);
+      : userFacingCopy(fact.value);
     const definition = element("dd", "", value);
     const provenance = element(
       "span",
@@ -227,7 +254,7 @@ function renderSection(section) {
   const heading = element("div");
   heading.append(
     element("span", "briefing-priority", `Priorità ${section.priority}`),
-    element("h3", "", section.title),
+    element("h3", "", userFacingCopy(section.title)),
   );
   const badge = element(
     "span",
@@ -237,14 +264,14 @@ function renderSection(section) {
   header.append(heading, badge);
   card.append(
     header,
-    element("p", "briefing-issue-summary", section.summary),
+    element("p", "briefing-issue-summary", userFacingCopy(section.summary)),
   );
   if (section.facts.length) card.append(renderFacts(section.facts));
 
   const rationale = element("div", "briefing-rationale");
   rationale.append(
     element("strong", "", "Perché conta"),
-    element("p", "", section.rationale),
+    element("p", "", userFacingCopy(section.rationale)),
   );
   card.append(rationale);
 
@@ -252,7 +279,7 @@ function renderSection(section) {
     const recommendation = element("div", "briefing-recommendation");
     recommendation.append(
       element("strong", "", "Azione consigliata"),
-      element("p", "", section.recommendation.text),
+      element("p", "", userFacingCopy(section.recommendation.text)),
       element(
         "small",
         "",
@@ -271,7 +298,7 @@ function renderSection(section) {
     element(
       "p",
       "briefing-ranking",
-      section.ranking_explanation,
+      userFacingCopy(section.ranking_explanation),
     ),
     footer,
   );
@@ -299,6 +326,16 @@ function renderSections(view) {
 function renderAvailable(view) {
   showBriefingSurface("data");
   renderSummary(view.briefing);
+  const allIssuesButton = byId("briefingAllIssuesBtn");
+  allIssuesButton.hidden = !view.hasMore;
+  allIssuesButton.textContent = view.expanded
+    ? "Mostra solo le priorità"
+    : `Vedi tutte le criticità (${view.totalSections})`;
+  allIssuesButton.setAttribute("aria-expanded", String(view.expanded));
+  byId("briefingFilters").hidden = !view.expanded;
+  byId("briefingPrioritySummary").textContent = view.expanded
+    ? `${view.totalSections} elementi ordinati per priorità.`
+    : `Le prime ${Math.min(3, view.totalSections)} priorità operative.`;
   document.querySelectorAll("[data-briefing-filter]").forEach((button) => {
     const active = button.dataset.briefingFilter === view.selectedFilter;
     button.classList.toggle("active", active);
@@ -373,6 +410,10 @@ async function refreshBriefing() {
 
 
 function handleBriefingClick(event) {
+  if (event.target.closest("#briefingAllIssuesBtn")) {
+    updateBriefing({ type: "expanded-toggled" });
+    return;
+  }
   const filter = event.target.closest("[data-briefing-filter]");
   if (filter) {
     updateBriefing({

@@ -1,20 +1,30 @@
-.workspace-tabs {
-  grid-template-columns: repeat(3, minmax(120px, 1fr));
-}
-
 .settings-section {
   width: 100%;
 }
 
 .settings-toolbar {
-  align-items: center;
+  align-items: flex-start;
+}
+
+.settings-scope-disclosure {
+  width: min(560px, 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.settings-scope-disclosure > summary {
+  padding: 12px 14px;
+  color: var(--accent-dark);
+  font-weight: 700;
 }
 
 .settings-scope-form {
   display: grid;
-  grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr) auto;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto;
   align-items: end;
   gap: 10px;
+  padding: 0 14px 14px;
 }
 
 .settings-scope-form label {
@@ -28,19 +38,18 @@
 .settings-metadata {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 24px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  margin-top: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--border);
+  gap: 1px;
+  overflow: hidden;
 }
 
 .settings-metadata > div {
   min-width: 0;
   padding: 16px;
-  border-right: 1px solid var(--border);
-}
-
-.settings-metadata > div:last-child {
-  border-right: 0;
+  background: var(--surface);
 }
 
 .settings-metadata span,
@@ -70,24 +79,91 @@
 }
 
 .settings-sections {
-  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
 }
 
 .settings-config-section {
-  padding: 18px 0;
-  border-top: 1px solid var(--border);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
-.settings-config-section h3 {
-  margin: 0 0 10px;
+.settings-config-section > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 24px;
+  align-items: center;
+  gap: 20px;
+  padding: 17px 18px;
+  list-style: none;
+}
+
+.settings-config-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-config-section > summary::after {
+  content: "+";
+  grid-column: 3;
+  color: var(--accent-dark);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.settings-config-section[open] > summary::after {
+  content: "−";
+}
+
+.settings-config-section[open] > summary {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-subtle);
+}
+
+.settings-section-copy strong,
+.settings-section-copy span,
+.settings-section-meta span {
+  display: block;
+}
+
+.settings-section-copy strong {
   font-size: 17px;
+}
+
+.settings-section-copy span {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.settings-section-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-section-status {
+  padding: 4px 8px;
+  border: 1px solid #c9d6d1;
+  border-radius: 999px;
+  background: #edf4f1;
+  color: #2d4841;
+}
+
+.settings-config-body {
+  padding: 8px 18px 16px;
 }
 
 .settings-value-row {
   display: grid;
   grid-template-columns: minmax(180px, 0.8fr) minmax(240px, 1.7fr) 150px;
   gap: 16px;
-  padding: 9px 0;
+  padding: 11px 0;
   border-bottom: 1px solid #e2e7e4;
   align-items: start;
 }
@@ -126,53 +202,44 @@
     flex-direction: column;
   }
 
-  .settings-scope-form {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .settings-scope-form button {
-    grid-column: 1 / -1;
+  .settings-scope-disclosure {
+    width: 100%;
   }
 
   .settings-metadata {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .settings-metadata > div:nth-child(2) {
-    border-right: 0;
+@media (max-width: 720px) {
+  .settings-config-section > summary {
+    grid-template-columns: 1fr auto;
+  }
+
+  .settings-section-meta {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .settings-config-section > summary::after {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
 
 @media (max-width: 620px) {
-  .workspace-tabs {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .workspace-tab {
-    padding: 0 8px;
-  }
-
   .settings-scope-form,
   .settings-metadata,
   .settings-value-row {
     grid-template-columns: 1fr;
   }
 
-  .settings-scope-form button {
-    grid-column: auto;
-  }
-
-  .settings-metadata > div {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .settings-metadata > div:last-child {
-    border-bottom: 0;
+  .settings-config-body {
+    padding: 6px 14px 14px;
   }
 
   .settings-value-row {
     gap: 6px;
-    padding: 12px 0;
   }
 }

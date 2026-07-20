@@ -11,6 +11,7 @@ export function createBriefingState(overrides = {}) {
     phase: "loading",
     briefing: null,
     filter: "all",
+    expanded: false,
     error: null,
     demoEnabled: false,
     ...overrides,
@@ -35,8 +36,16 @@ export function applyBriefingEvent(current, event) {
     next.phase = "error";
     next.error = event.message;
   }
-  if (event.type === "filter-selected" && FILTER_SEVERITIES[event.filter]) {
+  if (
+    event.type === "filter-selected"
+    && Object.hasOwn(FILTER_SEVERITIES, event.filter)
+  ) {
     next.filter = event.filter;
+    next.expanded = true;
+  }
+  if (event.type === "expanded-toggled") {
+    next.expanded = !current.expanded;
+    if (!next.expanded) next.filter = "all";
   }
   if (event.type === "demo-availability") {
     next.demoEnabled = Boolean(event.enabled);
@@ -46,6 +55,7 @@ export function applyBriefingEvent(current, event) {
     next.briefing = event.briefing || null;
     next.error = null;
     next.filter = "all";
+    next.expanded = false;
   }
   return next;
 }
@@ -67,6 +77,9 @@ export function deriveBriefingView(current) {
     current.phase === "available"
     && briefing?.status === "available"
   );
+  const filteredSections = available
+    ? filterBriefingSections(briefing.sections, current.filter)
+    : [];
   return {
     loading: current.phase === "loading",
     error: current.phase === "error",
@@ -77,10 +90,12 @@ export function deriveBriefingView(current) {
       || "Il briefing sarà disponibile dopo la creazione del primo planning.",
     showDemoAction: current.demoEnabled,
     selectedFilter: current.filter,
-    sections: available
-      ? filterBriefingSections(briefing.sections, current.filter)
-      : [],
+    expanded: current.expanded,
+    totalSections: available ? briefing.sections.length : 0,
+    hasMore: available && briefing.sections.length > 3,
+    sections: current.expanded
+      ? filteredSections
+      : filteredSections.slice(0, 3),
     briefing,
   };
 }
-

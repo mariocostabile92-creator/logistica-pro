@@ -26,6 +26,18 @@ const SOURCE_LABELS = {
 };
 
 
+const SECTION_DESCRIPTIONS = {
+  nomenclature: "Etichette usate per descrivere il dominio operativo.",
+  capabilities: "Capability disponibili per Asset e Risorse.",
+  asset_states: "Stati osservabili nel ciclo di vita degli Asset.",
+  severities: "Livelli usati per classificare le criticità.",
+  readiness_levels: "Livelli sintetici della prontezza operativa.",
+  reserve_policy: "Soglie che proteggono la capacità di riserva.",
+  priorities: "Livelli disponibili per ordinare il lavoro.",
+  generic_mappings: "Soglie e mapping condivisi dagli import generici.",
+};
+
+
 function formatTimestamp(value) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime())
@@ -63,11 +75,27 @@ function renderValue(item) {
 
 
 function renderSection(section) {
+  const inherited = section.values.every(
+    (item) => item.source === "platform_default",
+  );
   return `
-    <section class="settings-config-section">
-      <h3>${escapeHtml(SECTION_LABELS[section.key] || section.key)}</h3>
-      ${section.values.map(renderValue).join("")}
-    </section>
+    <details class="settings-config-section">
+      <summary>
+        <span class="settings-section-copy">
+          <strong>${escapeHtml(SECTION_LABELS[section.key] || section.key)}</strong>
+          <span>${escapeHtml(SECTION_DESCRIPTIONS[section.key] || "Configurazione disponibile per questo ambito.")}</span>
+        </span>
+        <span class="settings-section-meta">
+          <span>${section.values.length} elementi</span>
+          <span class="settings-section-status">
+            ${inherited ? "Default piattaforma" : "Ambito personalizzato"}
+          </span>
+        </span>
+      </summary>
+      <div class="settings-config-body">
+        ${section.values.map(renderValue).join("")}
+      </div>
+    </details>
   `;
 }
 

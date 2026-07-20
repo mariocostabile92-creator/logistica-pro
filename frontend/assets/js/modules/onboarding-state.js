@@ -56,18 +56,21 @@ export function deriveOnboardingView(current) {
   const systemOperational = (
     current.planningGenerated && current.dashboardAvailable
   );
-  const systemEmpty = (
-    !loading
-    && !current.planningImported
-    && !current.fleetImported
-    && !current.planningGenerated
-    && current.assetCount === 0
-  );
+  let activeStep = null;
+  if (!current.planningImported) activeStep = "planning";
+  else if (!current.fleetImported) activeStep = "fleet";
+  else if (!current.planningGenerated) activeStep = "generate";
 
   return {
     loading,
-    showOnboarding: !systemOperational,
-    showHero: systemEmpty,
+    homeState: loading
+      ? "loading"
+      : current.planningGenerated
+        ? "ready"
+        : "setup",
+    showOnboarding: !current.planningGenerated,
+    showHero: !loading && !current.planningGenerated,
+    activeStep,
     steps: {
       planningImported: current.planningImported,
       fleetImported: current.fleetImported,

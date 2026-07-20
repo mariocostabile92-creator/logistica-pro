@@ -27,6 +27,8 @@ test("first access with an empty database shows hero and incomplete progress", (
 
   assert.equal(view.loading, false);
   assert.equal(view.showHero, true);
+  assert.equal(view.homeState, "setup");
+  assert.equal(view.activeStep, "planning");
   assert.deepEqual(view.steps, {
     planningImported: false,
     fleetImported: false,
@@ -48,7 +50,8 @@ test("planning and fleet imports complete the first two wizard steps", () => {
   });
   const view = deriveOnboardingView(current);
 
-  assert.equal(view.showHero, false);
+  assert.equal(view.showHero, true);
+  assert.equal(view.activeStep, "generate");
   assert.equal(view.steps.planningImported, true);
   assert.equal(view.steps.fleetImported, true);
   assert.equal(view.steps.planningGenerated, false);
@@ -66,6 +69,8 @@ test("an existing planning restores all wizard prerequisites", () => {
   assert.equal(view.steps.planningImported, true);
   assert.equal(view.steps.fleetImported, true);
   assert.equal(view.steps.planningGenerated, true);
+  assert.equal(view.showOnboarding, false);
+  assert.equal(view.homeState, "ready");
 });
 
 
@@ -87,6 +92,7 @@ test("demo reset immediately restores the empty onboarding state", () => {
 
   assert.equal(view.loading, false);
   assert.equal(view.showHero, true);
+  assert.equal(view.activeStep, "planning");
   assert.deepEqual(view.steps, {
     planningImported: false,
     fleetImported: false,
@@ -96,7 +102,7 @@ test("demo reset immediately restores the empty onboarding state", () => {
 });
 
 
-test("the onboarding closes only when the dashboard is operational", () => {
+test("the onboarding closes after the first Planning is generated", () => {
   let current = createOnboardingState({
     planningKnown: true,
     fleetKnown: true,
@@ -104,7 +110,7 @@ test("the onboarding closes only when the dashboard is operational", () => {
     fleetImported: true,
     planningGenerated: true,
   });
-  assert.equal(deriveOnboardingView(current).showOnboarding, true);
+  assert.equal(deriveOnboardingView(current).showOnboarding, false);
 
   current = applyOnboardingEvent(current, {
     type: "dashboard-availability",
@@ -117,15 +123,20 @@ test("the onboarding closes only when the dashboard is operational", () => {
 });
 
 
-test("the page contains the required hero, wizard and checklist copy", async () => {
+test("the page contains the simplified sequential onboarding", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
   assert.match(html, /Benvenuto in Operations Engine/);
-  assert.match(html, /Per iniziare importa un Planning e lo stato del tuo parco mezzi\./);
-  assert.match(html, /Inizia importazione/);
-  assert.match(html, /Import Planning/);
-  assert.match(html, /Import Fleet/);
+  assert.match(
+    html,
+    /Completa i tre passaggi iniziali per preparare la prima giornata/,
+  );
+  assert.match(html, /Importa Planning/);
+  assert.match(html, /Importa Fleet/);
   assert.match(html, /Genera il primo Planning/);
-  assert.match(html, /Sistema operativo/);
-  assert.match(html, /Getting Started/);
+  assert.match(html, /data-onboarding-action="planning"/);
+  assert.match(html, /data-onboarding-action="fleet"/);
+  assert.match(html, /data-onboarding-action="generate"/);
+  assert.doesNotMatch(html, /Checklist iniziale/);
+  assert.match(html, />Learn</);
 });

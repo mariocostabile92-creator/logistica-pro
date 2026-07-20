@@ -9,46 +9,57 @@ import {
 
 
 let onboardingState = createOnboardingState();
-let activeWorkspace = "operations";
+let activeWorkspace = "home";
 
 
-function renderStep(key, completed) {
+function renderStep(key, completed, active) {
   const item = document.querySelector(`[data-onboarding-step="${key}"]`);
   item.classList.toggle("completed", completed);
+  item.classList.toggle("active", active);
+  item.classList.toggle("locked", !completed && !active);
   item.querySelector(".onboarding-step-marker").textContent = completed
     ? "\u2713"
     : item.dataset.stepNumber;
   item.querySelector(".onboarding-step-status").textContent = completed
     ? "Completato"
-    : "Da completare";
-}
-
-
-function renderChecklistItem(key, completed) {
-  const item = document.querySelector(`[data-onboarding-check="${key}"]`);
-  item.classList.toggle("completed", completed);
-  item.querySelector(".checklist-marker").textContent = completed
-    ? "\u2713"
-    : "\u25A1";
+    : active
+      ? "Passaggio attivo"
+      : "In attesa";
+  item.querySelector(".onboarding-step-action").hidden = !active;
 }
 
 
 function renderOnboarding() {
   const view = deriveOnboardingView(onboardingState);
+  document.body.dataset.homeState = view.homeState;
+  document.body.dataset.planningState = view.loading
+    ? "loading"
+    : view.steps.planningGenerated
+      ? "ready"
+      : "empty";
   byId("onboardingSection").hidden = (
-    activeWorkspace !== "operations" || !view.showOnboarding
+    activeWorkspace !== "home" || !view.showOnboarding
   );
   byId("onboardingLoading").hidden = !view.loading;
   byId("onboardingContent").hidden = view.loading;
   byId("onboardingHero").hidden = !view.showHero;
+  byId("importsDisclosure").open = !view.steps.planningGenerated;
 
-  renderStep("planning", view.steps.planningImported);
-  renderStep("fleet", view.steps.fleetImported);
-  renderStep("generate", view.steps.planningGenerated);
-  renderChecklistItem("planning", view.checklist.planningImported);
-  renderChecklistItem("fleet", view.checklist.fleetImported);
-  renderChecklistItem("planning-generated", view.checklist.planningGenerated);
-  renderChecklistItem("operational", view.checklist.systemOperational);
+  renderStep(
+    "planning",
+    view.steps.planningImported,
+    view.activeStep === "planning",
+  );
+  renderStep(
+    "fleet",
+    view.steps.fleetImported,
+    view.activeStep === "fleet",
+  );
+  renderStep(
+    "generate",
+    view.steps.planningGenerated,
+    view.activeStep === "generate",
+  );
 }
 
 
@@ -76,12 +87,23 @@ async function inspectFleetRegistry() {
 
 
 export function initOnboarding() {
-  byId("startImportBtn").addEventListener("click", () => {
-    byId("importsSection").scrollIntoView({
-      behavior: "smooth",
-      block: "start",
+  byId("onboardingSection").addEventListener("click", (event) => {
+    const action = event.target.closest("[data-onboarding-action]")
+      ?.dataset.onboardingAction;
+    if (!action) return;
+    const targets = {
+      planning: ["importsSection", "planningFile"],
+      fleet: ["importsSection", "fleetFile"],
+      generate: ["planningSection", "generatePlanningBtn"],
+    };
+    const [targetId, focusId] = targets[action];
+    document.dispatchEvent(new CustomEvent("workspace:navigate", {
+      detail: { view: "operations", targetId },
+    }));
+    requestAnimationFrame(() => {
+      if (targetId === "importsSection") byId("importsDisclosure").open = true;
+      byId(focusId).focus({ preventScroll: true });
     });
-    byId("planningFile").focus({ preventScroll: true });
   });
 
   document.addEventListener("planning:availability-changed", (event) => {

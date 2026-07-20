@@ -5,8 +5,10 @@
   color: #1d2624;
   --bg: #f3f5f4;
   --surface: #ffffff;
+  --surface-subtle: #f8faf9;
   --surface-strong: #e9eeeb;
   --border: #d4dbd7;
+  --border-strong: #b9c5c0;
   --text-muted: #62706b;
   --accent: #147568;
   --accent-dark: #0d584f;
@@ -14,6 +16,17 @@
   --warning: #a86608;
   --info: #2d6690;
   --header: #202725;
+  --stable-bg: #dceee6;
+  --stable-text: #185843;
+  --attention-bg: #fff0d2;
+  --attention-text: #784800;
+  --critical-bg: #f7dedb;
+  --critical-text: #8d2822;
+  --unavailable-bg: #e7ebe9;
+  --unavailable-text: #4d5a56;
+  --shadow-sm: 0 1px 3px rgba(24, 36, 32, 0.1);
+  --shadow-md: 0 10px 28px rgba(24, 36, 32, 0.08);
+  --radius: 8px;
 }
 
 * {
@@ -28,6 +41,8 @@ body {
   margin: 0;
   min-width: 320px;
   background: var(--bg);
+  font-size: 16px;
+  line-height: 1.45;
 }
 
 h1,
@@ -44,18 +59,42 @@ select {
 }
 
 button {
-  min-height: 44px;
+  min-height: 42px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--accent);
   color: #fff;
   font-weight: 700;
   cursor: pointer;
-  padding: 0 18px;
+  padding: 0 16px;
+  transition: background-color 140ms ease, border-color 140ms ease,
+    box-shadow 140ms ease, color 140ms ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-dark);
 }
 
 button.secondary {
-  background: #274c77;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: #26332f;
+}
+
+button.secondary:hover:not(:disabled) {
+  border-color: #82948d;
+  background: #edf2ef;
+}
+
+button.quiet {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--accent-dark);
+}
+
+button.quiet:hover:not(:disabled) {
+  border-color: var(--border);
+  background: var(--surface-strong);
 }
 
 button:disabled {
@@ -69,7 +108,29 @@ button[data-loading="true"] {
 
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+a:focus-visible {
   outline: 3px solid rgba(20, 117, 104, 0.28);
   outline-offset: 2px;
+}
+
+a {
+  color: var(--accent-dark);
+}
+
+summary {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

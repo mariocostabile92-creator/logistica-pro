@@ -4,13 +4,18 @@ import {
   renderViewState,
   showDataView,
 } from "../utils/dom.js";
+import { assetValueLabel } from "../utils/formatters.js";
 
 
 function capabilitiesMarkup(capabilities) {
   if (!capabilities.length) return '<span class="section-note">Nessuna</span>';
   return `
     <div class="asset-token-list">
-      ${capabilities.map((item) => `<span class="asset-token">${escapeHtml(item)}</span>`).join("")}
+      ${capabilities.map((item) => `
+        <span class="asset-token" title="${escapeHtml(item)}">
+          ${escapeHtml(assetValueLabel(item))}
+        </span>
+      `).join("")}
     </div>
   `;
 }
@@ -44,14 +49,65 @@ function timestamp(value) {
 }
 
 
+function availabilityLabel(value) {
+  return {
+    available: "Disponibile",
+    unavailable: "Indisponibile",
+    maintenance: "Manutenzione",
+    reserve: "Riserva",
+  }[value] || value;
+}
+
+
+export function fleetSummary(assets, today = new Date()) {
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() + 30);
+  const normalizedCutoff = cutoff.toISOString().slice(0, 10);
+  let documentsAttention = 0;
+  for (const asset of assets) {
+    for (const document of asset.documents) {
+      if (
+        document.expires_on
+        && document.expires_on <= normalizedCutoff
+      ) {
+        documentsAttention += 1;
+      }
+    }
+  }
+  const available = assets.filter(
+    (asset) => asset.availability === "available",
+  ).length;
+  const reserve = assets.filter(
+    (asset) => asset.availability === "reserve",
+  ).length;
+  return {
+    total: assets.length,
+    available,
+    reserve,
+    unavailable: assets.length - available - reserve,
+    documentsAttention,
+  };
+}
+
+
+function renderFleetSummary(assets) {
+  const summary = fleetSummary(assets);
+  byId("fleetTotalAssets").textContent = summary.total;
+  byId("fleetAvailableAssets").textContent = summary.available;
+  byId("fleetUnavailableAssets").textContent = summary.unavailable;
+  byId("fleetReserveAssets").textContent = summary.reserve;
+  byId("fleetDocumentsAttention").textContent = summary.documentsAttention;
+}
+
+
 function assetRow(asset) {
   return `
     <tr>
       <td><strong>${escapeHtml(asset.external_identifier)}</strong></td>
       <td>${escapeHtml(asset.plate || "—")}</td>
-      <td>${escapeHtml(asset.category || "—")}</td>
-      <td>${escapeHtml(asset.status)}</td>
-      <td><span class="asset-availability">${escapeHtml(asset.availability)}</span></td>
+      <td>${escapeHtml(assetValueLabel(asset.category) || "—")}</td>
+      <td>${escapeHtml(assetValueLabel(asset.status))}</td>
+      <td><span class="asset-availability">${escapeHtml(availabilityLabel(asset.availability))}</span></td>
       <td>${capabilitiesMarkup(asset.capabilities)}</td>
       <td>${asset.documents.length}</td>
       <td>${escapeHtml(timestamp(asset.updated_at))}</td>
@@ -73,9 +129,9 @@ function assetCard(asset) {
       <h3>${escapeHtml(asset.external_identifier)}</h3>
       <div class="fleet-card-grid">
         <div><span>Targa</span><strong>${escapeHtml(asset.plate || "—")}</strong></div>
-        <div><span>Categoria</span><strong>${escapeHtml(asset.category || "—")}</strong></div>
-        <div><span>Stato</span><strong>${escapeHtml(asset.status)}</strong></div>
-        <div><span>Disponibilità</span><strong>${escapeHtml(asset.availability)}</strong></div>
+        <div><span>Categoria</span><strong>${escapeHtml(assetValueLabel(asset.category) || "—")}</strong></div>
+        <div><span>Stato</span><strong>${escapeHtml(assetValueLabel(asset.status))}</strong></div>
+        <div><span>Disponibilità</span><strong>${escapeHtml(availabilityLabel(asset.availability))}</strong></div>
         <div><span>Documenti</span><strong>${asset.documents.length}</strong></div>
       </div>
       ${capabilitiesMarkup(asset.capabilities)}
@@ -89,7 +145,7 @@ function assetCard(asset) {
 }
 
 
-export function renderAssetList(assets) {
+export function renderAssetList(assets, { demoEnabled = false } = {}) {
   const tableBody = byId("fleetAssetTableBody");
   const cards = byId("fleetAssetCards");
   if (!assets.length) {
@@ -97,15 +153,20 @@ export function renderAssetList(assets) {
     showDataView("fleetViewState", "fleetDataView", false);
     renderViewState(byId("fleetViewState"), {
       state: "empty",
-      title: "Nessun Asset registrato.",
-      description: "Importa il parco mezzi.",
-      actionLabel: "Vai alle importazioni",
+      title: "Il tuo parco Asset comparirà qui",
+      description: "Importa il parco mezzi oppure prova il workspace demo.",
+      actionLabel: "Importa Fleet",
       action: "open-imports",
+      actionTone: "primary",
+      secondaryActionLabel: demoEnabled ? "Carica demo" : "",
+      secondaryAction: demoEnabled ? "load-demo" : "",
+      visual: "fleet",
     });
     return;
   }
   byId("createAssetBtn").hidden = false;
   showDataView("fleetViewState", "fleetDataView", true);
+  renderFleetSummary(assets);
   tableBody.innerHTML = assets.map(assetRow).join("");
   cards.innerHTML = assets.map(assetCard).join("");
 }

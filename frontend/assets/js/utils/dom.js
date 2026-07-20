@@ -37,6 +37,10 @@ export function renderViewState(
     description = "",
     actionLabel = "",
     action = "",
+    actionTone = "secondary",
+    secondaryActionLabel = "",
+    secondaryAction = "",
+    visual = "",
   } = {},
 ) {
   container.hidden = false;
@@ -54,19 +58,43 @@ export function renderViewState(
     `;
     return;
   }
+  const visualMarkup = visual === "fleet"
+    ? `
+      <div class="fleet-empty-visual" aria-hidden="true">
+        <span class="fleet-empty-cab"></span>
+        <span class="fleet-empty-body"></span>
+        <span class="fleet-empty-wheel first"></span>
+        <span class="fleet-empty-wheel second"></span>
+      </div>
+    `
+    : "";
   container.innerHTML = `
+    ${visualMarkup}
     <div class="view-state-copy">
       <strong>${escapeHtml(title)}</strong>
       <p>${escapeHtml(description)}</p>
     </div>
-    ${actionLabel ? `
+    ${(actionLabel || secondaryActionLabel) ? `
+      <div class="view-state-actions">
+      ${actionLabel ? `
       <button
         type="button"
-        class="secondary view-state-action"
+        class="${actionTone === "primary" ? "" : "secondary"} view-state-action"
         data-view-action="${escapeHtml(action)}"
       >
         ${escapeHtml(actionLabel)}
       </button>
+      ` : ""}
+      ${secondaryActionLabel ? `
+        <button
+          type="button"
+          class="quiet view-state-action"
+          data-view-action="${escapeHtml(secondaryAction)}"
+        >
+          ${escapeHtml(secondaryActionLabel)}
+        </button>
+      ` : ""}
+      </div>
     ` : ""}
   `;
 }

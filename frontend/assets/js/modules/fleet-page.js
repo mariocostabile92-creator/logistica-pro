@@ -23,6 +23,7 @@ import {
 
 
 let loaded = false;
+let demoEnabled = false;
 
 
 function showFleetActionError(context, error) {
@@ -58,7 +59,7 @@ async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId)
   renderFleetLoading();
   const response = await listFleetAssets();
   state.fleetPlugin.assets = response.items;
-  renderAssetList(response.items);
+  renderAssetList(response.items, { demoEnabled });
   byId("fleetPluginTimestamp").textContent = response.items.length
     ? `${response.items.length} asset registrati.`
     : "Nessun Asset registrato.";
@@ -222,6 +223,12 @@ export function initFleetPage() {
       renderFleetFailure();
     });
   });
+  document.addEventListener("demo:availability-changed", (event) => {
+    demoEnabled = Boolean(event.detail.enabled);
+    if (loaded && state.fleetPlugin.assets.length === 0) {
+      renderAssetList([], { demoEnabled });
+    }
+  });
   byId("fleetViewState").addEventListener("click", (event) => {
     const action = event.target.closest("[data-view-action]")?.dataset.viewAction;
     if (action === "create-asset") openAssetEditor();
@@ -232,6 +239,13 @@ export function initFleetPage() {
           targetId: "importsSection",
         },
       }));
+      requestAnimationFrame(() => {
+        byId("importsDisclosure").open = true;
+        byId("fleetFile").focus({ preventScroll: true });
+      });
+    }
+    if (action === "load-demo") {
+      document.dispatchEvent(new CustomEvent("demo:load-requested"));
     }
     if (action === "retry-fleet") {
       refreshFleet().catch((error) => {

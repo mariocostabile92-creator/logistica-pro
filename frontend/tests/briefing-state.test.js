@@ -67,6 +67,32 @@ test("available sections always preserve backend priority order", () => {
 });
 
 
+test("Home shows at most three priorities until the user expands them", () => {
+  const extendedBriefing = {
+    ...availableBriefing,
+    sections: [
+      ...sections,
+      { priority: 4, severity: "medium", issue_code: "FOUR" },
+      { priority: 5, severity: "low", issue_code: "FIVE" },
+    ],
+  };
+  let state = applyBriefingEvent(createBriefingState(), {
+    type: "load-completed",
+    briefing: extendedBriefing,
+  });
+  let view = deriveBriefingView(state);
+
+  assert.equal(view.hasMore, true);
+  assert.equal(view.sections.length, 3);
+  assert.deepEqual(view.sections.map((item) => item.priority), [1, 2, 3]);
+
+  state = applyBriefingEvent(state, { type: "expanded-toggled" });
+  view = deriveBriefingView(state);
+  assert.equal(view.expanded, true);
+  assert.equal(view.sections.length, 5);
+});
+
+
 test("critical attention and information filters are deterministic", () => {
   assert.deepEqual(
     filterBriefingSections(sections, "critical")
@@ -154,6 +180,7 @@ test("page includes hero metrics filters empty CTA and live regions", async () =
   assert.match(html, /Carica demo/);
   assert.match(html, /Criticità/);
   assert.match(html, /Azioni consigliate/);
+  assert.match(html, /Vedi tutte le criticità/);
   assert.match(html, /data-briefing-filter="critical"/);
   assert.match(html, /data-briefing-filter="attention"/);
   assert.match(html, /data-briefing-filter="information"/);
@@ -171,7 +198,8 @@ test("rendering uses DOM text APIs and exposes sources and action links", async 
   assert.match(source, /replaceChildren/);
   assert.match(source, /briefingIssueList/);
   assert.match(source, /Fonti verificate/);
-  assert.match(source, /Attenzione \(yellow\)/);
+  assert.match(source, /yellow: "Attenzione"/);
+  assert.doesNotMatch(source, /Attenzione \(yellow\)/);
   assert.match(source, /workspace:navigate/);
   assert.doesNotMatch(source, /innerHTML|insertAdjacentHTML/);
   assert.doesNotMatch(source, /console\.(error|warn)/);

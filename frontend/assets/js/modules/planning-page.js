@@ -37,8 +37,10 @@ import { renderStationCapacity } from "./station-capacity.js";
 export function renderPlanning(data) {
   state.planningOperational.data = data;
   byId("planningCommandActions").hidden = false;
+  byId("planningActionsHint").hidden = true;
   showDataView("planningViewState", "planningDataView", true);
   renderPlanningBoard(data);
+  setPlanningControlsDisabled(false);
   renderStationCapacity(data.station_capacity);
   renderPlanningHistory(data.history);
   refreshAssignmentFilters(data);
@@ -52,14 +54,26 @@ export function renderPlanning(data) {
 
 
 function setPlanningControlsDisabled(disabled) {
-  byId("recalculatePlanningBtn").disabled = disabled;
-  byId("confirmPlanningBtn").disabled = disabled;
-  byId("exportPlanningBtn").disabled = disabled;
+  const controls = [
+    byId("recalculatePlanningBtn"),
+    byId("confirmPlanningBtn"),
+    byId("exportPlanningBtn"),
+  ];
+  controls.forEach((control) => {
+    control.disabled = disabled;
+    if (disabled) {
+      control.title = "Disponibile dopo la generazione del Planning.";
+    } else {
+      control.removeAttribute("title");
+    }
+  });
+  byId("planningActionsHint").hidden = !disabled;
 }
 
 
 function renderPlanningLoading() {
   byId("planningCommandActions").hidden = true;
+  byId("planningActionsHint").hidden = true;
   showDataView("planningViewState", "planningDataView", false);
   setText("planningTimestamp", "Verifica dell'ultimo planning in corso...");
   setText("planningVersion", "Versione --");
@@ -80,7 +94,7 @@ function renderPlanningEmpty({
 } = {}) {
   state.planningOperational.data = null;
   state.planningOperational.filteredAssignments = [];
-  byId("planningCommandActions").hidden = true;
+  byId("planningCommandActions").hidden = false;
   showDataView("planningViewState", "planningDataView", false);
   setText("planningTimestamp", "Ultimo planning: nessun dato.");
   setText("planningVersion", "Versione --");
@@ -92,7 +106,7 @@ function renderPlanningEmpty({
     state: "empty",
     title,
     description,
-    actionLabel: "Vai alle importazioni",
+    actionLabel: "Apri import dati",
     action: "open-imports",
   });
   document.dispatchEvent(new CustomEvent("planning:availability-changed", {
@@ -104,6 +118,7 @@ function renderPlanningEmpty({
 function renderPlanningFailure() {
   state.planningOperational.data = null;
   byId("planningCommandActions").hidden = true;
+  byId("planningActionsHint").hidden = true;
   showDataView("planningViewState", "planningDataView", false);
   setText("planningTimestamp", "Ultimo planning non disponibile.");
   const chip = byId("planningStatusChip");
@@ -261,6 +276,7 @@ export function initPlanningPage() {
     const action = event.target.closest("[data-view-action]")?.dataset.viewAction;
     if (action === "retry-planning") loadLatestPlanning();
     if (action === "open-imports") {
+      byId("importsDisclosure").open = true;
       byId("importsSection").scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });

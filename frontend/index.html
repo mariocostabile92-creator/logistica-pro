@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DSP Operations OS</title>
+  <meta name="legacy-app-title" content="DSP Operations OS" />
+  <title>Operations Engine</title>
   <link rel="stylesheet" href="./assets/css/base.css" />
   <link rel="stylesheet" href="./assets/css/layout.css" />
   <link rel="stylesheet" href="./assets/css/components.css" />
@@ -14,51 +15,69 @@
   <link rel="stylesheet" href="./assets/css/briefing.css" />
   <link rel="stylesheet" href="./assets/css/responsive.css" />
 </head>
-<body>
+<body data-home-state="loading" data-planning-state="loading">
   <header class="app-header">
-    <div>
-      <p class="eyebrow">Last-mile control room</p>
-      <h1>DSP Operations OS</h1>
+    <div class="app-header-inner">
+      <div class="product-brand">
+        <p class="eyebrow">Private Beta</p>
+        <h1>Operations Engine</h1>
+      </div>
+
+      <nav class="workspace-tabs" aria-label="Navigazione principale">
+        <button
+          type="button"
+          class="workspace-tab active"
+          data-workspace-view="home"
+          aria-selected="true"
+          aria-current="page"
+        >
+          Home
+        </button>
+        <button
+          type="button"
+          class="workspace-tab"
+          data-workspace-view="operations"
+          aria-selected="false"
+        >
+          Operations
+        </button>
+        <button
+          type="button"
+          class="workspace-tab"
+          data-workspace-view="fleet"
+          aria-selected="false"
+        >
+          Fleet
+        </button>
+        <button
+          type="button"
+          class="workspace-tab"
+          data-workspace-view="learn"
+          aria-selected="false"
+        >
+          Learn
+        </button>
+      </nav>
+
+      <div class="app-header-actions">
+        <span id="headerDemoBadge" class="header-demo-badge" hidden>
+          Demo attiva
+        </span>
+        <div id="healthStatus" class="status-pill">Backend non verificato</div>
+        <button
+          id="configurationNavBtn"
+          type="button"
+          class="header-config-button"
+          data-workspace-view="settings"
+          aria-selected="false"
+        >
+          Configurazione
+        </button>
+      </div>
     </div>
-    <div id="healthStatus" class="status-pill">Backend non verificato</div>
   </header>
 
   <main class="app-shell">
-    <nav class="workspace-tabs" aria-label="Aree di lavoro">
-      <button
-        type="button"
-        class="workspace-tab active"
-        data-workspace-view="operations"
-        aria-selected="true"
-      >
-        Operations
-      </button>
-      <button
-        type="button"
-        class="workspace-tab"
-        data-workspace-view="fleet"
-        aria-selected="false"
-      >
-        Fleet
-      </button>
-      <button
-        type="button"
-        class="workspace-tab"
-        data-workspace-view="settings"
-        aria-selected="false"
-      >
-        Settings
-      </button>
-      <button
-        type="button"
-        class="workspace-tab"
-        data-workspace-view="getting-started"
-        aria-selected="false"
-      >
-        Getting Started
-      </button>
-    </nav>
-
     <section
       id="onboardingSection"
       class="onboarding-section"
@@ -80,19 +99,21 @@
       </div>
 
       <div id="onboardingContent" hidden>
-        <article id="onboardingHero" class="onboarding-hero" hidden>
-          <p class="eyebrow">Private Beta</p>
-          <h2 id="onboardingTitle">Benvenuto in Operations Engine</h2>
-          <p>
-            Per iniziare importa un Planning e lo stato del tuo parco mezzi.
-          </p>
-          <button id="startImportBtn" type="button">Inizia importazione</button>
-        </article>
+        <article id="onboardingHero" class="onboarding-hero">
+          <div class="onboarding-intro">
+            <p class="eyebrow">Configura la prima giornata</p>
+            <h2 id="onboardingTitle">Benvenuto in Operations Engine</h2>
+            <p>
+              Completa i tre passaggi iniziali per preparare la prima giornata
+              operativa.
+            </p>
+          </div>
 
-        <div class="onboarding-progress-layout">
           <section aria-labelledby="onboardingStepsTitle">
-            <h3 id="onboardingStepsTitle">Primi passi</h3>
-            <p class="section-note">Completa il flusso iniziale nell'ordine indicato.</p>
+            <div class="onboarding-steps-heading">
+              <h3 id="onboardingStepsTitle">Inizia da qui</h3>
+              <p class="section-note">Ti mostriamo una sola azione alla volta.</p>
+            </div>
             <ol class="onboarding-steps">
               <li
                 class="onboarding-step"
@@ -100,8 +121,19 @@
                 data-step-number="1"
               >
                 <span class="onboarding-step-marker" aria-hidden="true">1</span>
-                <strong>Import Planning</strong>
-                <span class="onboarding-step-status">Da completare</span>
+                <div class="onboarding-step-copy">
+                  <strong>Importa Planning</strong>
+                  <span>Carica il file con attività e risorse della giornata.</span>
+                  <span class="onboarding-step-status">Da completare</span>
+                </div>
+                <button
+                  type="button"
+                  class="onboarding-step-action"
+                  data-onboarding-action="planning"
+                  hidden
+                >
+                  Importa Planning
+                </button>
               </li>
               <li
                 class="onboarding-step"
@@ -109,8 +141,19 @@
                 data-step-number="2"
               >
                 <span class="onboarding-step-marker" aria-hidden="true">2</span>
-                <strong>Import Fleet</strong>
-                <span class="onboarding-step-status">Da completare</span>
+                <div class="onboarding-step-copy">
+                  <strong>Importa Fleet</strong>
+                  <span>Registra disponibilità e stato degli Asset.</span>
+                  <span class="onboarding-step-status">In attesa</span>
+                </div>
+                <button
+                  type="button"
+                  class="onboarding-step-action"
+                  data-onboarding-action="fleet"
+                  hidden
+                >
+                  Importa Fleet
+                </button>
               </li>
               <li
                 class="onboarding-step"
@@ -118,35 +161,23 @@
                 data-step-number="3"
               >
                 <span class="onboarding-step-marker" aria-hidden="true">3</span>
-                <strong>Genera il primo Planning</strong>
-                <span class="onboarding-step-status">Da completare</span>
+                <div class="onboarding-step-copy">
+                  <strong>Genera il primo Planning</strong>
+                  <span>Prepara una proposta operativa da verificare.</span>
+                  <span class="onboarding-step-status">In attesa</span>
+                </div>
+                <button
+                  type="button"
+                  class="onboarding-step-action"
+                  data-onboarding-action="generate"
+                  hidden
+                >
+                  Vai alla generazione
+                </button>
               </li>
             </ol>
           </section>
-
-          <aside aria-labelledby="onboardingChecklistTitle">
-            <h3 id="onboardingChecklistTitle">Checklist iniziale</h3>
-            <p class="section-note">Stato di attivazione del sistema.</p>
-            <ul class="onboarding-checklist">
-              <li data-onboarding-check="planning">
-                <span class="checklist-marker" aria-hidden="true">&#9633;</span>
-                <span>Planning importato</span>
-              </li>
-              <li data-onboarding-check="fleet">
-                <span class="checklist-marker" aria-hidden="true">&#9633;</span>
-                <span>Fleet importata</span>
-              </li>
-              <li data-onboarding-check="planning-generated">
-                <span class="checklist-marker" aria-hidden="true">&#9633;</span>
-                <span>Primo planning generato</span>
-              </li>
-              <li data-onboarding-check="operational">
-                <span class="checklist-marker" aria-hidden="true">&#9633;</span>
-                <span>Sistema operativo</span>
-              </li>
-            </ul>
-          </aside>
-        </div>
+        </article>
       </div>
     </section>
 
@@ -249,33 +280,51 @@
         </div>
 
         <div class="briefing-list-heading">
-          <h3>Priorità operative</h3>
-          <div
-            class="briefing-filters"
-            role="group"
-            aria-label="Filtra priorità briefing"
-          >
+          <div>
+            <h3>Priorità operative</h3>
+            <p id="briefingPrioritySummary" class="section-note">
+              Le tre priorità più importanti.
+            </p>
+          </div>
+          <div class="briefing-list-controls">
             <button
+              id="briefingAllIssuesBtn"
               type="button"
-              class="active"
-              data-briefing-filter="all"
-              aria-pressed="true"
-            >Tutto</button>
-            <button
-              type="button"
-              data-briefing-filter="critical"
-              aria-pressed="false"
-            >Critico</button>
-            <button
-              type="button"
-              data-briefing-filter="attention"
-              aria-pressed="false"
-            >Attenzione</button>
-            <button
-              type="button"
-              data-briefing-filter="information"
-              aria-pressed="false"
-            >Informazioni</button>
+              class="secondary"
+              aria-expanded="false"
+              aria-controls="briefingIssueList"
+            >
+              Vedi tutte le criticità
+            </button>
+            <div
+              id="briefingFilters"
+              class="briefing-filters"
+              role="group"
+              aria-label="Filtra priorità briefing"
+              hidden
+            >
+              <button
+                type="button"
+                class="active"
+                data-briefing-filter="all"
+                aria-pressed="true"
+              >Tutto</button>
+              <button
+                type="button"
+                data-briefing-filter="critical"
+                aria-pressed="false"
+              >Critico</button>
+              <button
+                type="button"
+                data-briefing-filter="attention"
+                aria-pressed="false"
+              >Attenzione</button>
+              <button
+                type="button"
+                data-briefing-filter="information"
+                aria-pressed="false"
+              >Informazioni</button>
+            </div>
           </div>
         </div>
         <div
@@ -287,22 +336,27 @@
     </section>
 
     <section
-      id="demoWorkspaceOperationsSection"
+      id="demoWorkspaceHomeSection"
       class="demo-workspace-section"
       aria-label="Demo Workspace"
     >
       <div
         class="demo-workspace-host"
-        data-demo-host="operations"
+        data-demo-host="home"
         hidden
       ></div>
     </section>
 
-    <section id="planningSection" class="planning-section" aria-labelledby="planningTitle">
+    <section
+      id="planningSection"
+      class="planning-section"
+      aria-labelledby="planningTitle"
+      hidden
+    >
       <div class="section-heading planning-toolbar">
         <div>
-          <p class="eyebrow">Area di lavoro</p>
-          <h2 id="planningTitle">Planning Operativo</h2>
+          <p class="eyebrow">Operations</p>
+          <h2 id="planningTitle">Esecuzione operativa</h2>
           <p id="planningTimestamp" class="section-note">Nessun planning generato.</p>
         </div>
         <div class="planning-actions">
@@ -311,14 +365,14 @@
             <input id="planningOperationDate" type="date" />
           </label>
           <label>
-            Station
+            Operational Unit
             <input id="planningStation" type="text" placeholder="Tutte" />
           </label>
           <label>
-            Riserva
+            Scorta minima
             <input id="planningReserveThreshold" type="number" min="0" max="1000" value="1" />
           </label>
-          <button id="generatePlanningBtn" type="button">Genera planning</button>
+          <button id="generatePlanningBtn" type="button">Genera Planning</button>
         </div>
       </div>
 
@@ -328,11 +382,32 @@
           <span id="planningVersion">Versione --</span>
         </div>
         <div id="planningCommandActions" class="command-actions">
-          <button id="recalculatePlanningBtn" type="button" class="secondary" disabled>Ricalcola</button>
-          <button id="confirmPlanningBtn" type="button" class="secondary" disabled>Conferma assegnazioni</button>
-          <button id="exportPlanningBtn" type="button" disabled>Esporta CSV</button>
+          <button
+            id="recalculatePlanningBtn"
+            type="button"
+            class="secondary"
+            aria-describedby="planningActionsHint"
+            disabled
+          >Ricalcola</button>
+          <button
+            id="confirmPlanningBtn"
+            type="button"
+            class="secondary"
+            aria-describedby="planningActionsHint"
+            disabled
+          >Conferma assegnazioni</button>
+          <button
+            id="exportPlanningBtn"
+            type="button"
+            class="quiet"
+            aria-describedby="planningActionsHint"
+            disabled
+          >Esporta CSV</button>
         </div>
       </div>
+      <p id="planningActionsHint" class="control-hint">
+        Le azioni secondarie sono disponibili dopo la generazione del Planning.
+      </p>
 
       <div
         id="planningViewState"
@@ -352,7 +427,7 @@
       <div id="planningDataView" hidden>
       <div id="planningSummary" class="planning-summary-grid">
         <div class="planning-metric">
-          <span>Rotte</span>
+          <span>Task</span>
           <strong id="planningRoutesValue">--</strong>
         </div>
         <div class="planning-metric">
@@ -369,28 +444,9 @@
         </div>
       </div>
 
-      <section class="capacity-section" aria-labelledby="stationCapacityTitle">
-        <div class="section-heading compact">
-          <h3 id="stationCapacityTitle">Capacity per station</h3>
-        </div>
-        <div id="stationCapacity" class="station-capacity-grid">
-          <div class="empty-state">Nessuna capacità station disponibile.</div>
-        </div>
-      </section>
-
-      <section class="planning-issues-section" aria-labelledby="planningIssuesTitle">
-        <div class="section-heading compact">
-          <h3 id="planningIssuesTitle">Problemi planning</h3>
-          <span id="planningIssuesCount" class="count-badge">0</span>
-        </div>
-        <div id="planningIssues" class="planning-issues-list">
-          <div class="empty-state">Nessun problema planning disponibile.</div>
-        </div>
-      </section>
-
       <div class="assignment-filters" aria-label="Filtri assegnazioni">
         <label>
-          Station
+          Operational Unit
           <select id="assignmentFilterStation">
             <option value="">Tutte</option>
           </select>
@@ -402,19 +458,19 @@
           </select>
         </label>
         <label>
-          Driver
+          Risorsa
           <input id="assignmentFilterDriver" type="search" />
         </label>
         <label>
-          Mezzo
+          Asset
           <input id="assignmentFilterVehicle" type="search" />
         </label>
         <label>
           Problemi
           <select id="assignmentFilterProblems">
             <option value="">Tutti</option>
-            <option value="critical">Con warning</option>
-            <option value="unassigned">Rotte scoperte</option>
+            <option value="critical">Con avvisi</option>
+            <option value="unassigned">Task non assegnati</option>
             <option value="manual">Modifiche manuali</option>
           </select>
         </label>
@@ -425,14 +481,14 @@
           <table class="assignment-table">
             <thead>
               <tr>
-                <th>Station</th>
-                <th>Route</th>
-                <th>Cycle/Wave</th>
-                <th>Driver</th>
-                <th>Vehicle</th>
+                <th>Operational Unit</th>
+                <th>Task</th>
+                <th>Finestra</th>
+                <th>Risorsa</th>
+                <th>Asset</th>
                 <th>Stato</th>
                 <th>Origine</th>
-                <th>Warning</th>
+                <th>Avvisi</th>
                 <th>Alternative</th>
                 <th>Azioni</th>
               </tr>
@@ -442,6 +498,25 @@
         </div>
         <div id="assignmentCards" class="assignment-cards"></div>
       </div>
+
+      <section class="planning-issues-section" aria-labelledby="planningIssuesTitle">
+        <div class="section-heading compact">
+          <h3 id="planningIssuesTitle">Criticità del Planning</h3>
+          <span id="planningIssuesCount" class="count-badge">0</span>
+        </div>
+        <div id="planningIssues" class="planning-issues-list">
+          <div class="empty-state">Nessuna criticità disponibile.</div>
+        </div>
+      </section>
+
+      <section class="capacity-section" aria-labelledby="stationCapacityTitle">
+        <div class="section-heading compact">
+          <h3 id="stationCapacityTitle">Capacity per Operational Unit</h3>
+        </div>
+        <div id="stationCapacity" class="station-capacity-grid">
+          <div class="empty-state">Nessun dato Capacity disponibile.</div>
+        </div>
+      </section>
 
       <div class="planning-secondary-grid">
         <section class="simulator-panel" aria-labelledby="simulatorTitle">
@@ -455,9 +530,9 @@
             <label>
               Evento
               <select id="eventType">
-                <option value="driver_absent">Driver assente</option>
-                <option value="vehicle_unavailable">Mezzo KO</option>
-                <option value="route_aborted">Abort rotta</option>
+                <option value="driver_absent">Risorsa assente</option>
+                <option value="vehicle_unavailable">Asset non disponibile</option>
+                <option value="route_aborted">Annullamento Task</option>
               </select>
             </label>
             <label>
@@ -494,11 +569,16 @@
       </div>
     </section>
 
-    <section id="dashboardSection" class="dashboard-section" aria-labelledby="dashboardTitle">
+    <section
+      id="dashboardSection"
+      class="dashboard-section"
+      aria-labelledby="dashboardTitle"
+      hidden
+    >
       <div class="section-heading dashboard-toolbar">
         <div>
           <p class="eyebrow">Stato operativo</p>
-          <h2 id="dashboardTitle">Operations Summary</h2>
+          <h2 id="dashboardTitle">Stato operativo</h2>
           <p id="dashboardTimestamp" class="section-note">Nessuna analisi disponibile.</p>
         </div>
         <div class="dashboard-actions">
@@ -530,17 +610,17 @@
         <div class="dashboard-main">
           <div id="summary" class="summary-grid" aria-label="Riepilogo operativo">
             <button class="metric-card" type="button" data-dashboard-card="routes" aria-pressed="false">
-              <span>Rotte</span>
+              <span>Task</span>
               <strong id="routesValue">--</strong>
               <small id="routesMeta">In attesa dei dati</small>
             </button>
             <button class="metric-card" type="button" data-dashboard-card="drivers" aria-pressed="false">
-              <span>Driver</span>
+              <span>Risorse</span>
               <strong id="driversValue">--</strong>
               <small id="driversMeta">In attesa dei dati</small>
             </button>
             <button class="metric-card" type="button" data-dashboard-card="vehicles" aria-pressed="false">
-              <span>Mezzi operativi</span>
+              <span>Asset operativi</span>
               <strong id="vehiclesValue">--</strong>
               <small id="vehiclesMeta">In attesa dei dati</small>
             </button>
@@ -554,7 +634,7 @@
             <div class="section-heading compact">
               <div>
                 <p class="eyebrow">Priorità</p>
-                <h2 id="issuesTitle">Operational Issues</h2>
+                <h2 id="issuesTitle">Criticità operative</h2>
               </div>
               <span id="issuesCount" class="count-badge">0</span>
             </div>
@@ -593,13 +673,23 @@
       </div>
     </section>
 
-    <section id="importsSection" class="imports-section" aria-labelledby="importsTitle">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Dati operativi</p>
-          <h2 id="importsTitle">Importazione operativa</h2>
-        </div>
-      </div>
+    <section
+      id="importsSection"
+      class="imports-section"
+      aria-labelledby="importsTitle"
+      hidden
+    >
+      <details id="importsDisclosure" class="data-source-disclosure" open>
+        <summary>
+          <span>
+            <span class="eyebrow">Dati operativi</span>
+            <strong id="importsTitle">Gestisci dati di origine</strong>
+          </span>
+          <span class="disclosure-summary-copy">
+            Importa o aggiorna Planning e Fleet
+          </span>
+        </summary>
+        <div class="data-source-disclosure-content">
       <div class="workflow">
       <article class="panel" data-import-card="planning">
         <div class="panel-heading">
@@ -657,6 +747,8 @@
         <div id="fleetPreview" class="table-wrap"></div>
       </article>
       </div>
+        </div>
+      </details>
     </section>
 
     <section
@@ -668,10 +760,10 @@
       <div class="section-heading fleet-toolbar">
         <div>
           <p class="eyebrow">Asset lifecycle</p>
-          <h2 id="fleetPluginTitle">Fleet</h2>
+          <h2 id="fleetPluginTitle">Parco Asset</h2>
           <p id="fleetPluginTimestamp" class="section-note">Asset non caricati.</p>
         </div>
-        <button id="createAssetBtn" type="button">Nuovo asset</button>
+        <button id="createAssetBtn" type="button">Nuovo Asset</button>
       </div>
 
       <div
@@ -690,6 +782,29 @@
       </div>
 
       <div id="fleetDataView" hidden>
+      <div id="fleetSummary" class="fleet-summary" aria-label="Riepilogo Fleet">
+        <div>
+          <span>Asset totali</span>
+          <strong id="fleetTotalAssets">0</strong>
+        </div>
+        <div>
+          <span>Disponibili</span>
+          <strong id="fleetAvailableAssets">0</strong>
+        </div>
+        <div>
+          <span>Indisponibili</span>
+          <strong id="fleetUnavailableAssets">0</strong>
+        </div>
+        <div>
+          <span>Riserva</span>
+          <strong id="fleetReserveAssets">0</strong>
+        </div>
+        <div>
+          <span>Documenti in attenzione</span>
+          <strong id="fleetDocumentsAttention">0</strong>
+          <small>Scaduti o entro 30 giorni</small>
+        </div>
+      </div>
       <div class="fleet-table-wrap">
         <table class="fleet-table">
           <thead>
@@ -753,34 +868,37 @@
     >
       <div class="section-heading settings-toolbar">
         <div>
-          <p class="eyebrow">Configuration Engine v1</p>
-          <h2 id="settingsTitle">Settings</h2>
+          <p class="eyebrow">Configuration Engine</p>
+          <h2 id="settingsTitle">Configurazione</h2>
           <p id="settingsTimestamp" class="section-note">
             Configurazione non caricata.
           </p>
         </div>
-        <form id="settingsScopeForm" class="settings-scope-form">
-          <label>
-            Organizzazione
-            <input
-              id="settingsOrganization"
-              type="text"
-              value="default"
-              maxlength="120"
-              required
-            />
-          </label>
-          <label>
-            Operational Unit
-            <input
-              id="settingsOperationalUnit"
-              type="text"
-              maxlength="120"
-              placeholder="Globale"
-            />
-          </label>
-          <button type="submit">Carica</button>
-        </form>
+        <details class="settings-scope-disclosure">
+          <summary>Cambia ambito</summary>
+          <form id="settingsScopeForm" class="settings-scope-form">
+            <label>
+              Organizzazione
+              <input
+                id="settingsOrganization"
+                type="text"
+                value="default"
+                maxlength="120"
+                required
+              />
+            </label>
+            <label>
+              Operational Unit
+              <input
+                id="settingsOperationalUnit"
+                type="text"
+                maxlength="120"
+                placeholder="Globale"
+              />
+            </label>
+            <button type="submit">Carica</button>
+          </form>
+        </details>
       </div>
 
       <div
@@ -819,7 +937,12 @@
       </div>
 
       <div class="section-heading compact settings-sections-heading">
-        <h3>Sezioni disponibili</h3>
+        <div>
+          <h3>Impostazioni disponibili</h3>
+          <p class="section-note">
+            Apri una sezione per consultarne i valori. La schermata è read-only.
+          </p>
+        </div>
         <span id="settingsSectionCount" class="count-badge">0</span>
       </div>
       <div id="settingsSections" class="settings-sections">
@@ -831,22 +954,26 @@
     <section
       id="gettingStartedSection"
       class="getting-started-section"
-      aria-labelledby="gettingStartedTitle"
+      aria-labelledby="learnTitle"
       hidden
     >
       <header class="getting-started-header">
-        <p class="eyebrow">Guida Private Beta</p>
-        <h2 id="gettingStartedTitle">Getting Started</h2>
+        <p class="eyebrow">Operations Academy</p>
+        <h2 id="learnTitle">Learn</h2>
         <p class="section-note">
-          Le informazioni essenziali per completare il primo ciclo operativo.
+          Concetti e passaggi essenziali per lavorare con Operations Engine.
         </p>
       </header>
 
-      <div
-        class="demo-workspace-host demo-workspace-section"
-        data-demo-host="getting-started"
-        hidden
-      ></div>
+      <nav class="learn-index" aria-label="Indice Learn">
+        <a href="#whatIsTitle">Panoramica</a>
+        <a href="#workflowTitle">Workflow</a>
+        <a href="#learnImportTitle">Import</a>
+        <a href="#learnPlanningTitle">Planning</a>
+        <a href="#learnFleetTitle">Fleet</a>
+        <a href="#learnBriefingTitle">Briefing</a>
+        <a href="#faqTitle">FAQ</a>
+      </nav>
 
       <div class="getting-started-grid">
         <section class="getting-started-block" aria-labelledby="whatIsTitle">
@@ -875,6 +1002,42 @@
             <li>Genera il primo Planning e controlla assegnazioni e criticità.</li>
             <li>Calcola lo stato operativo e verifica la readiness.</li>
           </ol>
+        </section>
+
+        <section class="getting-started-block" aria-labelledby="learnImportTitle">
+          <p class="eyebrow">Dati</p>
+          <h3 id="learnImportTitle">Import dei dati</h3>
+          <p>
+            Carica Planning e Fleet, controlla il mapping proposto e conferma
+            soltanto i dati riconosciuti.
+          </p>
+        </section>
+
+        <section class="getting-started-block" aria-labelledby="learnPlanningTitle">
+          <p class="eyebrow">Operations</p>
+          <h3 id="learnPlanningTitle">Planning</h3>
+          <p>
+            Genera una proposta, verifica assegnazioni e criticità, poi conferma
+            esplicitamente le decisioni operative.
+          </p>
+        </section>
+
+        <section class="getting-started-block" aria-labelledby="learnFleetTitle">
+          <p class="eyebrow">Asset</p>
+          <h3 id="learnFleetTitle">Fleet</h3>
+          <p>
+            Consulta disponibilità, capability, documenti e cronologia degli
+            Asset senza mescolare il loro ciclo di vita con il Planning.
+          </p>
+        </section>
+
+        <section class="getting-started-block" aria-labelledby="learnBriefingTitle">
+          <p class="eyebrow">Home</p>
+          <h3 id="learnBriefingTitle">Briefing operativo</h3>
+          <p>
+            Leggi ciò che richiede attenzione, verifica le fonti e apri la
+            schermata pertinente prima di prendere una decisione.
+          </p>
         </section>
 
         <section
@@ -953,7 +1116,7 @@
               <strong data-demo-field="tasks">--</strong>
             </div>
             <div>
-              <span>Human Resource</span>
+              <span>Risorse</span>
               <strong data-demo-field="human-resources">--</strong>
             </div>
             <div>
@@ -961,7 +1124,7 @@
               <strong data-demo-field="assets">--</strong>
             </div>
             <div>
-              <span>Warning</span>
+              <span>Avvisi</span>
               <strong data-demo-field="warnings">--</strong>
             </div>
             <div>
@@ -1163,17 +1326,17 @@
         <div class="editor-heading">
           <div>
             <p class="eyebrow">Modifica assegnazione</p>
-            <h3 id="editorRoute">Route</h3>
+            <h3 id="editorRoute">Task</h3>
           </div>
           <button id="closeAssignmentEditorBtn" type="button" class="icon-button" aria-label="Chiudi">×</button>
         </div>
         <input id="editorAssignmentId" type="hidden" />
         <label>
-          Driver
+          Risorsa
           <select id="editorDriver"></select>
         </label>
         <label>
-          Mezzo
+          Asset
           <select id="editorVehicle"></select>
         </label>
         <label>
@@ -1186,8 +1349,8 @@
         </label>
         <div id="editorAlternatives" class="editor-alternatives"></div>
         <div class="editor-actions">
-          <button id="removeDriverBtn" type="button" class="secondary">Rimuovi driver</button>
-          <button id="removeVehicleBtn" type="button" class="secondary">Rimuovi mezzo</button>
+          <button id="removeDriverBtn" type="button" class="secondary">Rimuovi Risorsa</button>
+          <button id="removeVehicleBtn" type="button" class="secondary">Rimuovi Asset</button>
           <button type="submit">Salva</button>
         </div>
       </form>

@@ -20,8 +20,8 @@ import { renderOperationalIssues } from "./conflicts.js";
 function dashboardDetail(card, data) {
   const { summary, capacity, readiness } = data;
   const details = {
-    routes: `${summary.routes} rotte previste con ${summary.operational_vehicles} mezzi operativi disponibili.`,
-    drivers: `${summary.drivers} driver riconosciuti per ${summary.routes} rotte. Margine driver: ${signedNumber(capacity.driver_margin)}.`,
+    routes: `${summary.routes} Task previsti con ${summary.operational_vehicles} Asset operativi disponibili.`,
+    drivers: `${summary.drivers} Risorse riconosciute per ${summary.routes} Task. Margine Risorse: ${signedNumber(capacity.driver_margin)}.`,
     vehicles: `${summary.physical_vehicles} mezzi fisici, ${summary.operational_vehicles} operativi e ${summary.blocked_vehicles} bloccati.`,
     readiness: readiness.reasons.join(" "),
   };
@@ -60,7 +60,7 @@ function renderDashboard(data) {
   setText("routesValue", summary.routes);
   setText("routesMeta", `${summary.critical_issues} criticità`);
   setText("driversValue", summary.drivers);
-  setText("driversMeta", `${signedNumber(capacity.driver_margin)} rispetto alle rotte`);
+  setText("driversMeta", `${signedNumber(capacity.driver_margin)} rispetto ai Task`);
   setText("vehiclesValue", summary.operational_vehicles);
   setText("vehiclesMeta", `${summary.physical_vehicles} fisici · ${summary.blocked_vehicles} bloccati`);
   setText("physicalVehiclesValue", summary.physical_vehicles);
@@ -163,6 +163,7 @@ export function initOperationsDashboard() {
       loadDashboard();
     }
     if (action === "open-imports") {
+      byId("importsDisclosure").open = true;
       byId("importsSection").scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });

@@ -1,8 +1,7 @@
 .briefing-section {
   width: 100%;
-  margin: 28px 0 34px;
-  padding: 28px 0 34px;
-  border-top: 1px solid var(--border);
+  margin: 0 0 36px;
+  padding: 0 0 36px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -17,7 +16,7 @@
 .briefing-heading h2 {
   max-width: 760px;
   margin: 4px 0 0;
-  font-size: 28px;
+  font-size: 34px;
 }
 
 .briefing-view-state {
@@ -98,9 +97,14 @@
   grid-template-columns: minmax(0, 1.5fr) minmax(330px, 0.7fr);
   gap: 24px;
   margin-top: 20px;
-  padding: 28px 0;
+  padding: 28px;
   border-top: 4px solid #34413d;
+  border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .briefing-badges {
@@ -123,23 +127,23 @@
 }
 
 .briefing-attention-badge.stable {
-  background: #dceee6;
-  color: #185843;
+  background: var(--stable-bg);
+  color: var(--stable-text);
 }
 
 .briefing-attention-badge.attention {
-  background: #fff0d2;
-  color: #784800;
+  background: var(--attention-bg);
+  color: var(--attention-text);
 }
 
 .briefing-attention-badge.critical {
-  background: #f7dedb;
-  color: #8d2822;
+  background: var(--critical-bg);
+  color: var(--critical-text);
 }
 
 .briefing-attention-badge.unavailable {
-  background: #e7ebe9;
-  color: #4d5a56;
+  background: var(--unavailable-bg);
+  color: var(--unavailable-text);
 }
 
 .briefing-summary {
@@ -228,6 +232,14 @@
   margin-top: 28px;
 }
 
+.briefing-list-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .briefing-list-heading h3 {
   margin: 0;
   font-size: 20px;
@@ -263,11 +275,12 @@
 }
 
 .briefing-issue-card {
-  padding: 18px;
+  padding: 20px;
   border: 1px solid var(--border);
   border-left: 5px solid #66736e;
   border-radius: 8px;
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .briefing-issue-card.severity-blocker,
@@ -445,6 +458,10 @@
     grid-template-columns: 1fr;
   }
 
+  .briefing-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .briefing-skeleton {
     grid-template-columns: 1.4fr 0.8fr;
   }
@@ -471,6 +488,15 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .briefing-list-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .briefing-list-controls > button {
+    width: 100%;
+  }
+
   .briefing-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -482,7 +508,7 @@
 
 @media (max-width: 620px) {
   .briefing-section {
-    padding-top: 22px;
+    padding-top: 0;
   }
 
   .briefing-heading h2 {

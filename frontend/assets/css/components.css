@@ -20,8 +20,8 @@
   border-radius: 999px;
   background: #dfeaf2;
   color: #17324d;
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 6px 10px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -54,7 +54,7 @@
 input,
 select {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 9px 10px;
@@ -124,7 +124,9 @@ td {
 }
 
 th {
-  background: #eef3f7;
+  background: #edf2ef;
+  color: #34423d;
+  font-size: 13px;
 }
 
 .metric-card {
@@ -328,7 +330,8 @@ th {
   min-height: 92px;
   padding: 24px;
   border: 1px dashed #b9c3be;
-  border-radius: 8px;
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
   color: var(--text-muted);
   display: grid;
   place-items: center;
@@ -348,11 +351,12 @@ th {
 }
 
 .view-state {
-  min-height: 168px;
+  min-height: 176px;
   margin-top: 20px;
-  padding: 30px 4px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -368,13 +372,17 @@ th {
   background: #fff8f7;
 }
 
+.view-state.empty {
+  box-shadow: var(--shadow-sm);
+}
+
 .view-state-copy {
   max-width: 680px;
 }
 
 .view-state-copy strong {
   display: block;
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .view-state-copy p {
@@ -385,6 +393,13 @@ th {
 
 .view-state-action {
   flex: 0 0 auto;
+}
+
+.view-state-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .skeleton-grid {
@@ -521,8 +536,9 @@ th {
   min-height: 104px;
   padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   justify-content: space-between;

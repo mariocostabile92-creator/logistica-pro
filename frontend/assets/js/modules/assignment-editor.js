@@ -25,7 +25,7 @@ function populateEditor(assignment) {
     ...(assignment.alternatives || []),
   ].filter((item, index, list) => item.plate && list.findIndex((other) => other.plate === item.plate) === index);
 
-  byId("editorDriver").innerHTML = option("", "Nessun driver", !assignment.driver_id)
+  byId("editorDriver").innerHTML = option("", "Nessuna Risorsa", !assignment.driver_id)
     + drivers.map((item) => option(item.id, item.name, item.id === assignment.driver_id)).join("");
   byId("editorVehicle").innerHTML = option("", "Nessun mezzo", !assignment.plate)
     + vehicles.map((item) => option(item.plate, item.plate, item.plate === assignment.plate)).join("");

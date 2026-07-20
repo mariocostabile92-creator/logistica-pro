@@ -56,6 +56,7 @@ function renderSummary(card, summary) {
 
 function renderDemoWorkspace() {
   const view = deriveDemoWorkspaceView(demoState);
+  byId("headerDemoBadge").hidden = !view.active;
   demoHosts().forEach((host) => {
     host.hidden = view.hidden;
   });
