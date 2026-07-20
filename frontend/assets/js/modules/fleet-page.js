@@ -10,13 +10,25 @@ import {
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import {
+  reportUnexpectedError,
+  userErrorPresentation,
+} from "../utils/errors.js";
+import {
   hideAssetDetail,
   renderAssetDetail,
   renderAssetList,
+  renderFleetFailure,
+  renderFleetLoading,
 } from "./fleet-view.js";
 
 
 let loaded = false;
+
+
+function showFleetActionError(context, error) {
+  const presentation = userErrorPresentation(context, error);
+  setMessage(presentation.message, presentation.tone);
+}
 
 
 function capabilitiesFromInput() {
@@ -43,10 +55,13 @@ async function showAsset(assetId) {
 
 
 async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId) {
+  renderFleetLoading();
   const response = await listFleetAssets();
   state.fleetPlugin.assets = response.items;
   renderAssetList(response.items);
-  byId("fleetPluginTimestamp").textContent = `${response.items.length} Asset registrati.`;
+  byId("fleetPluginTimestamp").textContent = response.items.length
+    ? `${response.items.length} asset registrati.`
+    : "Nessun asset registrato.";
   if (selectedAssetId && response.items.some((item) => item.id === selectedAssetId)) {
     await showAsset(selectedAssetId);
   } else {
@@ -106,7 +121,7 @@ async function submitAsset(event) {
     await refreshFleet(asset.id);
     setMessage("");
   } catch (error) {
-    setMessage(error.message);
+    showFleetActionError("fleet.save-asset", error);
   } finally {
     setLoading(submit, false);
   }
@@ -135,7 +150,7 @@ async function submitAvailability(event) {
     await refreshFleet(assetId);
     setMessage("");
   } catch (error) {
-    setMessage(error.message);
+    showFleetActionError("fleet.observe-availability", error);
   } finally {
     setLoading(submit, false);
   }
@@ -167,7 +182,7 @@ async function submitDocument(event) {
     await refreshFleet(assetId);
     setMessage("");
   } catch (error) {
-    setMessage(error.message);
+    showFleetActionError("fleet.add-document", error);
   } finally {
     setLoading(submit, false);
   }
@@ -181,7 +196,7 @@ async function handleAssetSelection(event) {
     await showAsset(Number(button.dataset.assetId));
     setMessage("");
   } catch (error) {
-    setMessage(error.message);
+    showFleetActionError("fleet.asset-detail", error);
   }
 }
 
@@ -192,7 +207,19 @@ export function initFleetPage() {
     try {
       await refreshFleet();
     } catch (error) {
-      setMessage(error.message);
+      reportUnexpectedError("fleet.list", error);
+      renderFleetFailure();
+      byId("fleetPluginTimestamp").textContent = "Asset non disponibili.";
+    }
+  });
+  byId("fleetViewState").addEventListener("click", (event) => {
+    const action = event.target.closest("[data-view-action]")?.dataset.viewAction;
+    if (action === "create-asset") openAssetEditor();
+    if (action === "retry-fleet") {
+      refreshFleet().catch((error) => {
+        reportUnexpectedError("fleet.list", error);
+        renderFleetFailure();
+      });
     }
   });
   byId("createAssetBtn").addEventListener("click", () => openAssetEditor());

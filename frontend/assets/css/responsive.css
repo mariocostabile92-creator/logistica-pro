@@ -125,4 +125,34 @@
   .assignment-card-grid {
     grid-template-columns: 1fr;
   }
+
+  .view-state {
+    min-height: 180px;
+    align-items: stretch;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .view-state-action {
+    width: 100%;
+  }
+
+  .skeleton-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-block {
+    height: 38px;
+  }
+
+  .skeleton-line {
+    display: none;
+  }
+
+  .message {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100% - 24px);
+  }
 }

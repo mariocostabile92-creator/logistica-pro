@@ -1,6 +1,7 @@
 import { patchPlanningAssignment } from "../api.js";
 import { state } from "../state.js";
 import { byId, escapeHtml, setLoading, setMessage } from "../utils/dom.js";
+import { userErrorPresentation } from "../utils/errors.js";
 
 
 let currentAssignment = null;
@@ -70,7 +71,8 @@ async function saveEditor(overrides = {}) {
     setMessage("");
     await onSavedCallback?.();
   } catch (error) {
-    setMessage(error.message);
+    const presentation = userErrorPresentation("planning.assignment-editor", error);
+    setMessage(presentation.message, presentation.tone);
   } finally {
     setLoading(submit, false);
   }

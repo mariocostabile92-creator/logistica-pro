@@ -2,9 +2,19 @@ import { applyPlanningEvent, simulatePlanningEvent } from "../api.js";
 import { changeDiff } from "../components/change-diff.js";
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
+import {
+  ExpectedUserError,
+  userErrorPresentation,
+} from "../utils/errors.js";
 
 
 let onPlanningUpdated = null;
+
+
+function showSimulationError(context, error) {
+  const presentation = userErrorPresentation(context, error);
+  setMessage(presentation.message, presentation.tone);
+}
 
 
 function entityTypeFor(eventType) {
@@ -27,9 +37,13 @@ function currentRequest() {
 
 async function runSimulation() {
   const planningId = state.planningOperational.data?.planning?.id;
-  if (!planningId) throw new Error("Genera prima un planning operativo.");
+  if (!planningId) {
+    throw new ExpectedUserError("Genera prima un planning operativo.");
+  }
   const request = currentRequest();
-  if (!request.entity_id || !request.reason) throw new Error("Entità e motivo sono obbligatori.");
+  if (!request.entity_id || !request.reason) {
+    throw new ExpectedUserError("Entità e motivo sono obbligatori.");
+  }
   const simulation = await simulatePlanningEvent(planningId, request);
   state.planningOperational.simulation = { request, simulation };
   byId("simulationResult").innerHTML = changeDiff(simulation.diff);
@@ -45,7 +59,7 @@ export async function startQuickSimulation(eventType, assignment) {
       ? assignment.plate
       : assignment.route_id;
   if (!entity) {
-    setMessage("L'assegnazione non contiene l'entità richiesta.");
+    setMessage("L'assegnazione non contiene l'entità richiesta.", "warning");
     return;
   }
   byId("eventType").value = eventType;
@@ -56,7 +70,7 @@ export async function startQuickSimulation(eventType, assignment) {
     byId("simulatorTitle").scrollIntoView({ behavior: "smooth", block: "start" });
     setMessage("");
   } catch (error) {
-    setMessage(error.message);
+    showSimulationError("planning.quick-simulation", error);
   }
 }
 
@@ -79,7 +93,7 @@ export function initExceptionSimulator(onUpdated) {
       await runSimulation();
       setMessage("");
     } catch (error) {
-      setMessage(error.message);
+      showSimulationError("planning.simulation", error);
     } finally {
       setLoading(button, false);
     }
@@ -97,7 +111,7 @@ export function initExceptionSimulator(onUpdated) {
       await onPlanningUpdated(response.planning);
       setMessage("");
     } catch (error) {
-      setMessage(error.message);
+      showSimulationError("planning.apply-simulation", error);
     } finally {
       setLoading(button, false);
     }

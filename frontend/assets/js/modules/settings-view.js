@@ -1,4 +1,9 @@
-import { byId, escapeHtml } from "../utils/dom.js";
+import {
+  byId,
+  escapeHtml,
+  renderViewState,
+  showDataView,
+} from "../utils/dom.js";
 
 
 const SECTION_LABELS = {
@@ -68,6 +73,7 @@ function renderSection(section) {
 
 
 export function renderConfiguration(configuration) {
+  showDataView("settingsViewState", "settingsDataView", true);
   byId("settingsVersion").textContent = `v${configuration.version.number}`;
   byId("settingsUpdatedAt").textContent = formatTimestamp(
     configuration.version.created_at,
@@ -80,4 +86,25 @@ export function renderConfiguration(configuration) {
   byId("settingsSections").innerHTML = configuration.sections.length
     ? configuration.sections.map(renderSection).join("")
     : '<div class="empty-state">Nessuna configurazione disponibile.</div>';
+}
+
+
+export function renderSettingsLoading() {
+  showDataView("settingsViewState", "settingsDataView", false);
+  renderViewState(byId("settingsViewState"), {
+    state: "loading",
+    title: "Caricamento configurazione",
+  });
+}
+
+
+export function renderSettingsFailure() {
+  showDataView("settingsViewState", "settingsDataView", false);
+  renderViewState(byId("settingsViewState"), {
+    state: "error",
+    title: "Impossibile caricare la configurazione",
+    description: "Il servizio non ha completato il caricamento. Riprova tra poco.",
+    actionLabel: "Riprova",
+    action: "retry-settings",
+  });
 }

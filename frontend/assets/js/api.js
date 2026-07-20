@@ -1,3 +1,6 @@
+import { ApiError } from "./utils/errors.js";
+
+
 const API_BASE = globalThis.OPERATIONS_API_URL || "";
 
 
@@ -8,7 +11,11 @@ async function parseResponse(response) {
     const message = typeof detail === "object"
       ? detail.message || detail.code
       : detail;
-    throw new Error(message || "Operazione non riuscita.");
+    throw new ApiError(message || "Operazione non riuscita.", {
+      status: response.status,
+      code: typeof detail === "object" ? detail.code || null : null,
+      detail,
+    });
   }
   return data;
 }

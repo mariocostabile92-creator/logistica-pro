@@ -1,4 +1,9 @@
-import { byId, escapeHtml } from "../utils/dom.js";
+import {
+  byId,
+  escapeHtml,
+  renderViewState,
+  showDataView,
+} from "../utils/dom.js";
 
 
 function capabilitiesMarkup(capabilities) {
@@ -88,14 +93,44 @@ export function renderAssetList(assets) {
   const tableBody = byId("fleetAssetTableBody");
   const cards = byId("fleetAssetCards");
   if (!assets.length) {
-    tableBody.innerHTML = `
-      <tr><td colspan="9" class="empty-state">Nessun Asset disponibile.</td></tr>
-    `;
-    cards.innerHTML = '<div class="empty-state">Nessun Asset disponibile.</div>';
+    byId("createAssetBtn").hidden = true;
+    showDataView("fleetViewState", "fleetDataView", false);
+    renderViewState(byId("fleetViewState"), {
+      state: "empty",
+      title: "Nessun asset registrato",
+      description: "Registra il primo asset per iniziare a gestirne disponibilità e documenti.",
+      actionLabel: "Registra asset",
+      action: "create-asset",
+    });
     return;
   }
+  byId("createAssetBtn").hidden = false;
+  showDataView("fleetViewState", "fleetDataView", true);
   tableBody.innerHTML = assets.map(assetRow).join("");
   cards.innerHTML = assets.map(assetCard).join("");
+}
+
+
+export function renderFleetLoading() {
+  byId("createAssetBtn").hidden = true;
+  showDataView("fleetViewState", "fleetDataView", false);
+  renderViewState(byId("fleetViewState"), {
+    state: "loading",
+    title: "Caricamento asset",
+  });
+}
+
+
+export function renderFleetFailure() {
+  byId("createAssetBtn").hidden = true;
+  showDataView("fleetViewState", "fleetDataView", false);
+  renderViewState(byId("fleetViewState"), {
+    state: "error",
+    title: "Impossibile caricare gli asset",
+    description: "Il servizio non ha completato il caricamento. Riprova tra poco.",
+    actionLabel: "Riprova",
+    action: "retry-fleet",
+  });
 }
 
 

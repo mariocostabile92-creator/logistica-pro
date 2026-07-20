@@ -1,7 +1,14 @@
 import { importDataset, previewImport } from "../api.js";
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
+import { userErrorPresentation } from "../utils/errors.js";
 import { renderMapping, renderPreview, renderSheets } from "./import-preview.js";
+
+
+function showImportError(context, error) {
+  const presentation = userErrorPresentation(context, error);
+  setMessage(presentation.message, presentation.tone);
+}
 
 
 export function initFleetImport() {
@@ -12,7 +19,10 @@ export function initFleetImport() {
   const status = byId("fleetState");
 
   previewBtn.addEventListener("click", async () => {
-    if (!fileInput.files.length) return setMessage("Seleziona un file parco auto.");
+    if (!fileInput.files.length) {
+      setMessage("Seleziona un file parco auto.", "warning");
+      return;
+    }
     setLoading(previewBtn, true, "Lettura...");
     try {
       const data = await previewImport(fileInput.files[0], "fleet", sheetSelect.value);
@@ -25,7 +35,7 @@ export function initFleetImport() {
     } catch (error) {
       status.textContent = "Errore";
       status.className = "tag error";
-      setMessage(error.message);
+      showImportError("imports.preview-fleet", error);
     } finally {
       setLoading(previewBtn, false);
     }
@@ -33,7 +43,10 @@ export function initFleetImport() {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!fileInput.files.length) return setMessage("Seleziona un file parco auto.");
+    if (!fileInput.files.length) {
+      setMessage("Seleziona un file parco auto.", "warning");
+      return;
+    }
     const submitBtn = form.querySelector('button[type="submit"]');
     setLoading(submitBtn, true, "Import...");
     try {
@@ -48,7 +61,7 @@ export function initFleetImport() {
     } catch (error) {
       status.textContent = "Errore";
       status.className = "tag error";
-      setMessage(error.message);
+      showImportError("imports.fleet", error);
     } finally {
       setLoading(submitBtn, false);
     }

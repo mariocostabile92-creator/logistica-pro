@@ -1,6 +1,18 @@
 import { getOperationsDashboard } from "../api.js";
 import { state } from "../state.js";
-import { byId, escapeHtml, setLoading, setMessage, setText } from "../utils/dom.js";
+import {
+  byId,
+  escapeHtml,
+  renderViewState,
+  setLoading,
+  setMessage,
+  setText,
+  showDataView,
+} from "../utils/dom.js";
+import {
+  isExpectedApiError,
+  reportUnexpectedError,
+} from "../utils/errors.js";
 import { readinessLabel, riskLabel, signedNumber } from "../utils/formatters.js";
 import { renderOperationalIssues } from "./conflicts.js";
 
@@ -43,6 +55,7 @@ function renderReadiness(readiness) {
 
 function renderDashboard(data) {
   state.dashboard.data = data;
+  showDataView("dashboardViewState", "dashboardDataView", true);
   const { summary, capacity, readiness, issues } = data;
   setText("routesValue", summary.routes);
   setText("routesMeta", `${summary.critical_issues} criticità`);
@@ -64,17 +77,69 @@ function renderDashboard(data) {
 }
 
 
+function renderDashboardLoading() {
+  state.dashboard.data = null;
+  showDataView("dashboardViewState", "dashboardDataView", false);
+  setText("dashboardTimestamp", "Caricamento dello stato operativo...");
+  renderViewState(byId("dashboardViewState"), {
+    state: "loading",
+    title: "Caricamento stato operativo",
+  });
+}
+
+
+function renderDashboardEmpty({
+  title = "Stato operativo non disponibile",
+  description = "Importa planning e parco mezzi per popolare la dashboard.",
+  actionLabel = "Vai alle importazioni",
+  action = "open-imports",
+} = {}) {
+  state.dashboard.data = null;
+  showDataView("dashboardViewState", "dashboardDataView", false);
+  setText("dashboardTimestamp", "Dashboard: nessun dato.");
+  renderViewState(byId("dashboardViewState"), {
+    state: "empty",
+    title,
+    description,
+    actionLabel,
+    action,
+  });
+}
+
+
+function renderDashboardFailure() {
+  state.dashboard.data = null;
+  showDataView("dashboardViewState", "dashboardDataView", false);
+  setText("dashboardTimestamp", "Stato operativo non disponibile.");
+  renderViewState(byId("dashboardViewState"), {
+    state: "error",
+    title: "Impossibile caricare la dashboard",
+    description: "Il servizio non ha completato il caricamento. Riprova tra poco.",
+    actionLabel: "Riprova",
+    action: "retry-dashboard",
+  });
+}
+
+
 async function loadDashboard({ quiet = false } = {}) {
   const button = byId("analyzeBtn");
   if (!quiet) setLoading(button, true, "Calcolo...");
+  renderDashboardLoading();
   try {
     const threshold = Number(byId("reserveThreshold").value || 0);
     const data = await getOperationsDashboard(threshold);
     renderDashboard(data);
     setMessage("");
   } catch (error) {
-    setText("dashboardTimestamp", error.message);
-    if (!quiet) setMessage(error.message);
+    if (isExpectedApiError(error, {
+      statuses: [400],
+      messages: ["Nessun planning importato", "Nessun parco auto importato"],
+    })) {
+      renderDashboardEmpty();
+      return;
+    }
+    reportUnexpectedError("operations.dashboard", error);
+    renderDashboardFailure();
   } finally {
     if (!quiet) setLoading(button, false);
   }
@@ -83,11 +148,39 @@ async function loadDashboard({ quiet = false } = {}) {
 
 export function initOperationsDashboard() {
   byId("analyzeBtn").addEventListener("click", () => loadDashboard());
+  byId("dashboardViewState").addEventListener("click", (event) => {
+    const action = event.target.closest("[data-view-action]")?.dataset.viewAction;
+    if (action === "retry-dashboard" || action === "calculate-dashboard") {
+      loadDashboard();
+    }
+    if (action === "open-imports") {
+      byId("importsSection").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
   document.querySelectorAll("[data-dashboard-card]").forEach((button) => {
     button.addEventListener("click", () => selectDashboardCard(button.dataset.dashboardCard));
   });
   document.addEventListener("operations:data-imported", () => {
-    setText("dashboardTimestamp", "Dati aggiornati. Lo stato operativo deve essere ricalcolato.");
+    renderDashboardEmpty({
+      title: "Dati aggiornati",
+      description: "Calcola lo stato operativo per aggiornare readiness e criticità.",
+      actionLabel: "Calcola stato operativo",
+      action: "calculate-dashboard",
+    });
   });
-  loadDashboard({ quiet: true });
+  document.addEventListener("planning:availability-changed", (event) => {
+    if (event.detail.hasPlanning) {
+      loadDashboard({ quiet: true });
+      return;
+    }
+    renderDashboardEmpty({
+      title: event.detail.failed
+        ? "Planning non disponibile"
+        : "Nessun planning disponibile",
+      description: event.detail.failed
+        ? "La dashboard sarà disponibile quando il planning sarà nuovamente raggiungibile."
+        : "Importa i dati e genera il primo planning per iniziare.",
+    });
+  });
+  renderDashboardLoading();
 }

@@ -77,13 +77,29 @@
           <span id="planningStatusChip" class="planning-status neutral">Non generato</span>
           <span id="planningVersion">Versione --</span>
         </div>
-        <div class="command-actions">
+        <div id="planningCommandActions" class="command-actions">
           <button id="recalculatePlanningBtn" type="button" class="secondary" disabled>Ricalcola</button>
           <button id="confirmPlanningBtn" type="button" class="secondary" disabled>Conferma assegnazioni</button>
           <button id="exportPlanningBtn" type="button" disabled>Esporta CSV</button>
         </div>
       </div>
 
+      <div
+        id="planningViewState"
+        class="view-state loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span class="visually-hidden">Caricamento ultimo planning</span>
+        <div class="skeleton-grid" aria-hidden="true">
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+        </div>
+        <span class="skeleton-line" aria-hidden="true"></span>
+      </div>
+
+      <div id="planningDataView" hidden>
       <div id="planningSummary" class="planning-summary-grid">
         <div class="planning-metric">
           <span>Rotte</span>
@@ -225,6 +241,7 @@
           </div>
         </section>
       </div>
+      </div>
     </section>
 
     <section id="dashboardSection" class="dashboard-section" aria-labelledby="dashboardTitle">
@@ -243,6 +260,22 @@
         </div>
       </div>
 
+      <div
+        id="dashboardViewState"
+        class="view-state loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span class="visually-hidden">Caricamento stato operativo</span>
+        <div class="skeleton-grid" aria-hidden="true">
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+        </div>
+        <span class="skeleton-line" aria-hidden="true"></span>
+      </div>
+
+      <div id="dashboardDataView" hidden>
       <div class="dashboard-layout">
         <div class="dashboard-main">
           <div id="summary" class="summary-grid" aria-label="Riepilogo operativo">
@@ -306,6 +339,7 @@
             <p>Nessuna regola valutata.</p>
           </div>
         </aside>
+      </div>
       </div>
     </section>
 
@@ -390,6 +424,22 @@
         <button id="createAssetBtn" type="button">Nuovo asset</button>
       </div>
 
+      <div
+        id="fleetViewState"
+        class="view-state loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span class="visually-hidden">Caricamento asset</span>
+        <div class="skeleton-grid" aria-hidden="true">
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+        </div>
+        <span class="skeleton-line" aria-hidden="true"></span>
+      </div>
+
+      <div id="fleetDataView" hidden>
       <div class="fleet-table-wrap">
         <table class="fleet-table">
           <thead>
@@ -413,6 +463,7 @@
         </table>
       </div>
       <div id="fleetAssetCards" class="fleet-asset-cards"></div>
+      </div>
 
       <section
         id="fleetAssetDetail"
@@ -482,6 +533,22 @@
         </form>
       </div>
 
+      <div
+        id="settingsViewState"
+        class="view-state loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span class="visually-hidden">Caricamento configurazione</span>
+        <div class="skeleton-grid" aria-hidden="true">
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+        </div>
+        <span class="skeleton-line" aria-hidden="true"></span>
+      </div>
+
+      <div id="settingsDataView" hidden>
       <div class="settings-metadata" aria-label="Metadati configurazione">
         <div>
           <span>Versione</span>
@@ -507,6 +574,7 @@
       </div>
       <div id="settingsSections" class="settings-sections">
         <div class="empty-state">Nessuna configurazione disponibile.</div>
+      </div>
       </div>
     </section>
 
@@ -682,7 +750,7 @@
       </form>
     </dialog>
 
-    <div id="message" class="message" role="status"></div>
+    <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
   <script type="module" src="./assets/js/app.js"></script>

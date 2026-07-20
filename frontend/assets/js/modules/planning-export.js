@@ -1,6 +1,7 @@
 import { downloadPlanningCsv } from "../api.js";
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
+import { userErrorPresentation } from "../utils/errors.js";
 
 
 export function initPlanningExport() {
@@ -13,7 +14,8 @@ export function initPlanningExport() {
       await downloadPlanningCsv(planningId);
       setMessage("");
     } catch (error) {
-      setMessage(error.message);
+      const presentation = userErrorPresentation("planning.export", error);
+      setMessage(presentation.message, presentation.tone);
     } finally {
       setLoading(button, false);
     }
