@@ -1,5 +1,9 @@
 # Demo Workspace v1
 
+**Governance canonica:** [Operations Engine Vision](OPERATIONS_ENGINE_VISION.md),
+[Product Screen Contracts](PRODUCT_SCREEN_CONTRACTS.md) e
+[Development Sprint Rules](DEVELOPMENT_SPRINT_RULES.md).
+
 ## Scopo
 
 Il Demo Workspace consente di provare il flusso completo della Private Beta

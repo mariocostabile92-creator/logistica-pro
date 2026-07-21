@@ -2,13 +2,33 @@
 
 **Release Candidate v1.0 - Private Beta**
 
-Piattaforma modulare per operations last-mile. Importa planning, turni e stato
-del parco, gestisce disponibilita Workforce e lifecycle Asset, costruisce una
-proposta operativa spiegabile e consente correzioni, simulazioni, ricalcolo ed
-export CSV.
+**Operations Engine è il sistema operativo del responsabile operativo.**
+
+La piattaforma organizza dati, risorse, task e decisioni spiegabili senza
+imporre il workflow di un singolo settore. Il last-mile e il primo contesto
+servito e Amazon e il primo Adapter, non il prodotto. Excel resta un ponte di
+ingresso e uscita, non la fonte definitiva del modello operativo.
 
 Il vecchio ottimizzatore e il router gratuito non sono usati dal nuovo core e
 restano isolati in `backend/app/legacy`.
+
+## Product Vision and Roadmap
+
+Questi documenti sono canonici per ogni sviluppo successivo:
+
+- [Operations Engine Vision](OPERATIONS_ENGINE_VISION.md)
+- [Operations Engine Roadmap](OPERATIONS_ENGINE_ROADMAP.md)
+- [Core, Adapter e Plugin Boundaries](CORE_ADAPTER_PLUGIN_BOUNDARIES.md)
+- [Operational Unit Model](OPERATIONAL_UNIT_MODEL.md)
+- [Product Screen Contracts](PRODUCT_SCREEN_CONTRACTS.md)
+- [Development Sprint Rules](DEVELOPMENT_SPRINT_RULES.md)
+- [Mission Control Product Contract](MISSION_CONTROL_PRODUCT_CONTRACT.md)
+
+L'audit corrente di conformita e disponibile in
+[Roadmap Alignment Audit](ROADMAP_ALIGNMENT_AUDIT.md). La Costituzione resta
+[Operations Engine Philosophy](OPERATIONS_ENGINE_PHILOSOPHY.md); i documenti
+di fase descrivono implementazioni e decisioni puntuali, non sostituiscono la
+roadmap ufficiale.
 
 ## Funzioni disponibili
 
@@ -70,7 +90,8 @@ timestamp dell'import planning e dichiara la fonte in `generation_metadata`.
 Dal repository:
 
 ```powershell
-cd C:\Users\Mario\Desktop\logistica-mvp
+$repo = Read-Host "Percorso del repository Operations Engine"
+Set-Location $repo
 ```
 
 Creazione e attivazione dell'ambiente virtuale:
@@ -105,7 +126,7 @@ Start-Process "$env:BASE_URL/app/"
 Esecuzione completa dei test:
 
 ```powershell
-cd C:\Users\Mario\Desktop\logistica-mvp\backend
+Set-Location (Join-Path $repo "backend")
 .\venv\Scripts\python.exe -m pytest -q
 ```
 
@@ -425,8 +446,8 @@ $body = @{
   configuration = @{
     reserve_vehicle_threshold_global = 1
     reserve_vehicle_threshold_by_station = @{
-      DLO1 = 2
-      DLO2 = 1
+      "UNIT-A" = 2
+      "UNIT-B" = 1
     }
     prefer_habitual_vehicle = $true
     preserve_imported_assignment = $true
@@ -446,18 +467,21 @@ $planning = Invoke-RestMethod `
 $planning.planning.id
 ```
 
-Per una sola station aggiungere `station = "DLO1"` al body.
+Per una sola station aggiungere `station = "UNIT-A"` al body. Il valore e un
+identificatore sintetico: in produzione deve provenire dalla configurazione
+dell'organizzazione e dall'Adapter attivo.
 
 ### Modificare e confermare un'assegnazione
 
 ```powershell
 $planningId = $planning.planning.id
 $assignmentId = $planning.assignments[0].id
+$env:TEST_ASSET_PLATE = Read-Host "Targa Asset di test"
 
 $patch = @{
   driver_id = "driver-01"
   driver_name = "Driver 01"
-  plate = "AA001AA"
+  plate = $env:TEST_ASSET_PLATE
   confirm = $true
   manual_override = $true
   note = "Sostituzione confermata dal responsabile"
@@ -483,7 +507,7 @@ La simulazione non modifica il planning.
 $event = @{
   event_type = "vehicle_unavailable"
   entity_type = "vehicle"
-  entity_id = "AA001AA"
+  entity_id = $env:TEST_ASSET_PLATE
   reason = "Mezzo fermo prima del loadout"
   actor = "local_operator"
 } | ConvertTo-Json

@@ -1,5 +1,9 @@
 # Daily Operations Briefing v1
 
+**Governance canonica:** [Mission Control Product Contract](MISSION_CONTROL_PRODUCT_CONTRACT.md),
+[Product Screen Contracts](PRODUCT_SCREEN_CONTRACTS.md) e
+[Core, Adapter e Plugin Boundaries](CORE_ADAPTER_PLUGIN_BOUNDARIES.md).
+
 ## Scopo
 
 Daily Operations Briefing risponde alla domanda:

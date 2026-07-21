@@ -7,6 +7,12 @@
 **Perimetro:** backend, frontend, importatori, planning, persistenza, legacy e
 test del repository `logistica-mvp`
 
+> Questo e un report storico point-in-time. Non viene riscritto per riflettere
+> le fasi successive. Per lo stato corrente usare
+> [Roadmap Alignment Audit](ROADMAP_ALIGNMENT_AUDIT.md),
+> [Operations Engine Roadmap](OPERATIONS_ENGINE_ROADMAP.md) e
+> [Core, Adapter e Plugin Boundaries](CORE_ADAPTER_PLUGIN_BOUNDARIES.md).
+
 ---
 
 ## 1. Executive Summary
@@ -186,7 +192,7 @@ mantenere un contratto esistente.
 | `AMAZON_PLANNING_FIELD_ALIASES` | Amazon Adapter |
 | `AMAZON_EVENT_ALIASES` | Amazon Adapter |
 | mapping `route_abort`, `van_down`, `driver_no_show` | Amazon Adapter |
-| codici station noti come `DLO1` e `DLO2` | configurazione organizzazione o Adapter |
+| codici Station specifici del cliente | configurazione Organization/Operational Unit o Adapter |
 | interpretazione Amazon di station, route e wave | Amazon Adapter |
 | futuri yard, dispatch e scorecard | Amazon Adapter |
 | formati Excel proprietari Amazon | inbound Amazon Adapter |

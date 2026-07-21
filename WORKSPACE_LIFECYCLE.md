@@ -1,5 +1,9 @@
 # Workspace Lifecycle v1
 
+**Governance canonica:** [Operations Engine Roadmap](OPERATIONS_ENGINE_ROADMAP.md),
+[Operational Unit Model](OPERATIONAL_UNIT_MODEL.md) e
+[Development Sprint Rules](DEVELOPMENT_SPRINT_RULES.md).
+
 ## Scopo
 
 Workspace Lifecycle e un servizio Core che rende esplicito il contesto

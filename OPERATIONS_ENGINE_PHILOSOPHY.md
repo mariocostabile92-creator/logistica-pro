@@ -8,6 +8,11 @@
 **Scopo:** stabilire i confini, le dipendenze e i criteri decisionali che ogni
 evoluzione futura deve rispettare.
 
+**Documenti canonici collegati:** [Vision](OPERATIONS_ENGINE_VISION.md),
+[Roadmap ufficiale](OPERATIONS_ENGINE_ROADMAP.md),
+[confini Core/Adapter/Plugin](CORE_ADAPTER_PLUGIN_BOUNDARIES.md) e
+[regole di sprint](DEVELOPMENT_SPRINT_RULES.md).
+
 Questo documento non descrive una singola release. Definisce l'identità
 tecnica del prodotto e prevale sulle convenienze locali di una funzionalità,
 di un cliente o di un'integrazione.
@@ -612,6 +617,12 @@ scadenza o una condizione di rimozione.
 ---
 
 ## 7. Roadmap Tecnica
+
+Questa sezione conserva la sequenza architetturale originaria della
+Costituzione. Stato, numerazione e criteri di avanzamento correnti sono
+definiti esclusivamente nella
+[Operations Engine Roadmap](OPERATIONS_ENGINE_ROADMAP.md), che prevale in caso
+di differenza senza riscrivere la storia di questo documento.
 
 La roadmap descrive una sequenza architetturale. Non autorizza a costruire una
 fase senza criteri di ingresso e uscita verificabili.

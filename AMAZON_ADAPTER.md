@@ -6,8 +6,9 @@
 - **Versione contratto:** `1.0`
 - **Adapter ID:** `amazon`
 - **Stato:** attivo per gli import tabellari esistenti
-- **Documenti vincolanti:** `OPERATIONS_ENGINE_PHILOSOPHY.md` e
-  `ARCHITECTURE_ALIGNMENT_REPORT.md`
+- **Documenti vincolanti:** [Operations Engine Philosophy](OPERATIONS_ENGINE_PHILOSOPHY.md),
+  [Core, Adapter e Plugin Boundaries](CORE_ADAPTER_PLUGIN_BOUNDARIES.md) e
+  [Operational Unit Model](OPERATIONAL_UNIT_MODEL.md)
 
 Amazon Adapter e' il livello anticorruzione tra il vocabolario Amazon e i
 contratti neutrali di Operations Engine. Amazon non e' il prodotto e non

@@ -1,5 +1,9 @@
 # Workforce Planning v1
 
+**Governance canonica:** [Operations Engine Roadmap](OPERATIONS_ENGINE_ROADMAP.md),
+[Core, Adapter e Plugin Boundaries](CORE_ADAPTER_PLUGIN_BOUNDARIES.md) e
+[Product Screen Contracts](PRODUCT_SCREEN_CONTRACTS.md).
+
 ## Scopo
 
 Workforce Planning e il plugin che descrive disponibilita, turni, assenze,
@@ -139,4 +143,3 @@ sintetici.
 - nessuna notifica automatica;
 - nessuna Assignment creata dal plugin;
 - nessun matching probabilistico di persone con identita ambigua.
-

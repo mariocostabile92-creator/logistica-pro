@@ -1,5 +1,9 @@
 # Intelligent Fleet Registry v1
 
+**Governance canonica:** [Operations Engine Roadmap](OPERATIONS_ENGINE_ROADMAP.md),
+[Core, Adapter e Plugin Boundaries](CORE_ADAPTER_PLUGIN_BOUNDARIES.md) e
+[Product Screen Contracts](PRODUCT_SCREEN_CONTRACTS.md).
+
 ## Scopo
 
 Intelligent Fleet Registry estende il Fleet Plugin esistente. Trasforma un
@@ -152,4 +156,3 @@ aggiorna entrambi atomicamente, ma i due contratti restano distinti.
 - nessuna deduzione ambigua applicata automaticamente;
 - nessuna creazione di Human Resource da note Fleet;
 - nessuna decisione o Assignment operativa.
-

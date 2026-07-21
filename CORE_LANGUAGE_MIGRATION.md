@@ -5,8 +5,10 @@
 - **Fase:** ponte di compatibilita' v1
 - **Ambito:** linguaggio interno del dominio
 - **Comportamento pubblico:** invariato
-- **Documenti vincolanti:** `OPERATIONS_ENGINE_PHILOSOPHY.md`,
-  `ARCHITECTURE_ALIGNMENT_REPORT.md`, `AMAZON_ADAPTER.md`
+- **Documenti vincolanti:** [Operations Engine Philosophy](OPERATIONS_ENGINE_PHILOSOPHY.md),
+  [Core, Adapter e Plugin Boundaries](CORE_ADAPTER_PLUGIN_BOUNDARIES.md),
+  [Operational Unit Model](OPERATIONAL_UNIT_MODEL.md) e
+  [Amazon Adapter](AMAZON_ADAPTER.md)
 
 Questo documento definisce l'inizio della migrazione dal vocabolario verticale
 esistente al linguaggio neutrale di Operations Engine.

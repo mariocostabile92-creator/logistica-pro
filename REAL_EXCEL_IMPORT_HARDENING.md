@@ -1,5 +1,10 @@
 # Real Excel Import Hardening v1
 
+**Governance canonica:** [Operations Engine Vision](OPERATIONS_ENGINE_VISION.md),
+[Operations Engine Roadmap](OPERATIONS_ENGINE_ROADMAP.md) e
+[Development Sprint Rules](DEVELOPMENT_SPRINT_RULES.md). Excel e un ponte,
+non il prodotto ne il modello del dominio.
+
 ## Scopo
 
 Questa release rende deterministica e comprensibile l'analisi di workbook
