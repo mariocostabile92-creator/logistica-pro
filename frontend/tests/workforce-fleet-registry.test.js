@@ -8,7 +8,10 @@ import {
   workforceStatusLabel,
   workforceSummary,
 } from "../assets/js/modules/workforce-view.js";
-import { workforceTimeLabel } from "../assets/js/modules/workforce-calendar-view.js";
+import {
+  nextWorkforceCellPosition,
+  workforceTimeLabel,
+} from "../assets/js/modules/workforce-calendar-view.js";
 import { workforceAnomalies } from "../assets/js/modules/workforce-insights-view.js";
 
 
@@ -92,6 +95,57 @@ test("Workforce calendar supports day week person and side-panel edits", async (
   assert.match(html, /id="workforceDetailPanel"[\s\S]*?id="workforceStatusEditor"/);
   assert.match(html, /id="workforceDetailPanel"[\s\S]*?id="workforceMemberEditor"/);
   assert.equal(workforceTimeLabel({ start_time: "08:00", end_time: "17:00" }), "08:00–17:00");
+});
+
+
+test("Workforce shift editing is compact immediate and keyboard accessible", async () => {
+  const [html, page, detail, calendar] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/js/modules/workforce-page.js"),
+    frontendFile("assets/js/modules/workforce-detail-panel.js"),
+    frontendFile("assets/js/modules/workforce-calendar-view.js"),
+  ]);
+  const editor = html.slice(
+    html.indexOf('id="workforceStatusEditor"'),
+    html.indexOf('id="workforceMemberDetail"'),
+  );
+  for (const id of [
+    "workforceStatusPerson", "workforceStatusDateLabel", "workforceShiftCode",
+    "workforceStatusNotes", "workforceStatusSave", "workforceStatusCancel",
+  ]) {
+    assert.match(editor, new RegExp(`id="${id}"`));
+  }
+  assert.equal((editor.match(/name="workforceStatusCode"/g) || []).length, 8);
+  assert.doesNotMatch(editor, /workforceStatus(Time|Source)|<textarea/);
+  assert.match(detail, /surface\.show\(selectedChoice\)/);
+  assert.match(detail, /event\.key !== "Enter"/);
+  assert.match(detail, /requestSubmit\(byId\("workforceStatusSave"\)\)/);
+  assert.match(page, /updateCurrentStatus\(savedStatus\)/);
+  assert.match(page, /window\.requestAnimationFrame\(focusSelectedCell\)/);
+  assert.match(page, /refreshCoverageAfterStatusSave\(/);
+  assert.match(page, /const coverage = await getWorkforceCoverage\(dateFrom, dateTo\)/);
+  const submitStart = page.indexOf("async function submitStatus");
+  const submitBody = page.slice(submitStart, page.indexOf("async function submitMember", submitStart));
+  assert.doesNotMatch(submitBody, /loadCalendar\(/);
+  assert.match(calendar, /aria-pressed="\$\{selected\}"/);
+  assert.match(calendar, /event\.key === "Enter"[\s\S]*?button\.click\(\)/);
+  assert.match(calendar, /target\.focus\(\{ preventScroll: true \}\)/);
+});
+
+
+test("Workforce cell arrow navigation remains inside calendar bounds", () => {
+  assert.deepEqual(
+    nextWorkforceCellPosition({ row: 1, column: 2 }, "ArrowRight", 3, 7),
+    { row: 1, column: 3 },
+  );
+  assert.deepEqual(
+    nextWorkforceCellPosition({ row: 0, column: 0 }, "ArrowUp", 3, 7),
+    { row: 0, column: 0 },
+  );
+  assert.deepEqual(
+    nextWorkforceCellPosition({ row: 2, column: 6 }, "ArrowDown", 3, 7),
+    { row: 2, column: 6 },
+  );
 });
 
 
@@ -211,7 +265,7 @@ test("Workforce layout is bounded, wide and responsive", async () => {
     frontendFile("assets/css/workforce-responsive.css"),
   ]);
   assert.match(layout, /width: min\(1500px, calc\(100% - 48px\)\)/);
-  assert.match(calendar, /height: clamp\(560px,[\s\S]*?680px\)/);
+  assert.match(calendar, /height: clamp\(590px,[\s\S]*?720px\)/);
   assert.match(calendar, /position: sticky/);
   assert.match(calendar, /\.workforce-day-list/);
   assert.match(panel, /\.workforce-detail-panel/);

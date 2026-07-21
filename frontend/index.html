@@ -11,10 +11,10 @@
   <link rel="stylesheet" href="./assets/css/fleet.css" />
   <link rel="stylesheet" href="./assets/css/fleet-sync.css" />
   <link rel="stylesheet" href="./assets/css/workforce.css?v=4" />
-  <link rel="stylesheet" href="./assets/css/workforce-layout.css?v=2" />
-  <link rel="stylesheet" href="./assets/css/workforce-calendar.css?v=2" />
-  <link rel="stylesheet" href="./assets/css/workforce-panel.css?v=2" />
-  <link rel="stylesheet" href="./assets/css/workforce-responsive.css?v=4" />
+  <link rel="stylesheet" href="./assets/css/workforce-layout.css?v=3" />
+  <link rel="stylesheet" href="./assets/css/workforce-calendar.css?v=3" />
+  <link rel="stylesheet" href="./assets/css/workforce-panel.css?v=3" />
+  <link rel="stylesheet" href="./assets/css/workforce-responsive.css?v=5" />
   <link rel="stylesheet" href="./assets/css/settings.css" />
   <link rel="stylesheet" href="./assets/css/onboarding.css" />
   <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
@@ -1088,9 +1088,6 @@
         >
           <div id="workforceDesk" class="workforce-desk">
             <div class="workforce-calendar-stage">
-              <div class="workforce-calendar-meta">
-                <h3>Calendario</h3>
-              </div>
               <div id="workforceCalendar" class="workforce-calendar-wrap"></div>
             </div>
 
@@ -1123,44 +1120,35 @@
               <form id="workforceStatusEditor" class="workforce-status-editor" hidden>
                 <input id="workforceStatusId" type="hidden" />
                 <input id="workforceStatusMemberId" type="hidden" />
+                <input id="workforceStatusDate" type="hidden" />
                 <input id="workforceStartTime" type="hidden" />
                 <input id="workforceEndTime" type="hidden" />
-                <label>
-                  Data
-                  <input id="workforceStatusDate" type="date" required />
-                </label>
-                <label>
-                  Stato
-                  <select id="workforceStatusCode" required>
-                    <option value="available">Disponibile</option>
-                    <option value="scheduled">Programmato</option>
-                    <option value="rest">Riposo</option>
-                    <option value="holiday">Ferie</option>
-                    <option value="sickness">Malattia</option>
-                    <option value="leave">Permesso</option>
-                    <option value="unavailable">Non disponibile</option>
-                    <option value="unknown">Da verificare</option>
-                  </select>
-                </label>
+                <div class="workforce-status-context">
+                  <div><span>Persona</span><strong id="workforceStatusPerson">--</strong></div>
+                  <div><span>Data</span><strong id="workforceStatusDateLabel">--</strong></div>
+                </div>
+                <fieldset class="workforce-status-fieldset">
+                  <legend>Stato</legend>
+                  <div class="workforce-status-choices">
+                    <label><input type="radio" name="workforceStatusCode" value="scheduled" /><span>Programmato</span></label>
+                    <label><input type="radio" name="workforceStatusCode" value="rest" /><span>Riposo</span></label>
+                    <label><input type="radio" name="workforceStatusCode" value="available" /><span>Disponibile</span></label>
+                    <label><input type="radio" name="workforceStatusCode" value="holiday" /><span>Ferie</span></label>
+                    <label><input type="radio" name="workforceStatusCode" value="sickness" /><span>Malattia</span></label>
+                    <label><input type="radio" name="workforceStatusCode" value="leave" /><span>Permesso</span></label>
+                    <label><input type="radio" name="workforceStatusCode" value="unavailable" /><span>Non disponibile</span></label>
+                    <label><input type="radio" name="workforceStatusCode" value="unknown" /><span>Da verificare</span></label>
+                  </div>
+                </fieldset>
                 <label>
                   Turno
-                  <input id="workforceShiftCode" type="text" maxlength="80" />
+                  <input id="workforceShiftCode" type="text" list="workforceShiftOptions" maxlength="80" autocomplete="off" />
+                  <datalist id="workforceShiftOptions"></datalist>
                 </label>
-                <div class="workforce-readonly-field">
-                  <span>Orario</span>
-                  <strong id="workforceStatusTime">Non disponibile</strong>
-                </div>
-                <label>
-                  Nota
-                  <textarea id="workforceStatusNotes" maxlength="1000" rows="4"></textarea>
-                </label>
-                <div class="workforce-readonly-field">
-                  <span>Provenienza</span>
-                  <strong id="workforceStatusSource">Non disponibile</strong>
-                </div>
+                <label>Nota<input id="workforceStatusNotes" type="text" maxlength="1000" /></label>
                 <div class="workforce-editor-actions">
                   <button id="workforceStatusCancel" type="button" class="quiet">Annulla</button>
-                  <button type="submit">Salva</button>
+                  <button id="workforceStatusSave" type="submit">Salva</button>
                 </div>
               </form>
 

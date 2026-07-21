@@ -31,8 +31,8 @@ body.workforce-surface-open {
 }
 
 .workforce-detail-panel {
-  max-height: clamp(560px, calc(100vh - 340px), 680px);
-  padding: 18px;
+  max-height: clamp(590px, calc(100vh - 310px), 720px);
+  padding: 15px;
   overflow: auto;
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
@@ -85,7 +85,7 @@ body[data-active-workspace="workforce"] .message.success {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 14px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -97,12 +97,8 @@ body[data-active-workspace="workforce"] .message.success {
 .workforce-status-editor,
 .workforce-member-editor {
   display: grid;
-  gap: 13px;
-  padding-top: 16px;
-}
-
-.workforce-status-editor textarea {
-  resize: vertical;
+  gap: 11px;
+  padding-top: 12px;
 }
 
 .workforce-status-editor[hidden],
@@ -111,23 +107,102 @@ body[data-active-workspace="workforce"] .message.success {
   display: none;
 }
 
-.workforce-readonly-field {
+.workforce-status-context {
   display: grid;
-  gap: 4px;
-  padding: 10px 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
-.workforce-readonly-field span {
+.workforce-status-context > div {
+  min-width: 0;
+}
+
+.workforce-status-context span,
+.workforce-status-fieldset legend {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.workforce-readonly-field strong {
+.workforce-status-context strong {
+  display: block;
+  margin-top: 3px;
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.workforce-status-context > div:last-child {
+  text-align: right;
+}
+
+.workforce-status-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.workforce-status-fieldset legend {
+  margin-bottom: 6px;
+}
+
+.workforce-status-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.workforce-status-choices label {
+  position: relative;
+  display: block;
+  min-width: 0;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.workforce-status-choices input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.workforce-status-choices span {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-subtle);
+  font-size: 12px;
+  font-weight: 700;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.workforce-status-choices span:hover {
+  border-color: var(--border-strong);
+  background: #fff;
+}
+
+.workforce-status-choices input:checked + span {
+  border-color: var(--accent);
+  background: #e5f2ee;
+  box-shadow: inset 3px 0 0 var(--accent);
+  color: var(--accent-dark);
+}
+
+.workforce-status-choices input:focus-visible + span {
+  outline: 3px solid rgb(20 117 104 / 28%);
+  outline-offset: 2px;
+}
+
+.workforce-status-editor .workforce-editor-actions {
+  justify-content: flex-end;
+  padding-top: 2px;
 }
 
 .workforce-member-detail {

@@ -4,14 +4,31 @@ import { createWorkforceSurface } from "./workforce-surface.js";
 import { workforceStatusLabel } from "./workforce-view.js";
 
 
-export function initWorkforceDetailPanel({ getStatuses }) {
+function readableDate(value) {
+  return new Intl.DateTimeFormat("it-IT", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
+
+export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () => {} }) {
   let selectedMember = null;
+  let preserveSelectionOnClose = false;
 
   function clearSelection() {
     byId("workforceDesk").dataset.detailOpen = "false";
-    byId("workforceCalendar").querySelectorAll(".is-selected").forEach((element) => {
-      element.classList.remove("is-selected");
-    });
+    if (!preserveSelectionOnClose) {
+      byId("workforceCalendar").querySelectorAll(".is-selected").forEach((element) => {
+        element.classList.remove("is-selected");
+        element.setAttribute("aria-pressed", "false");
+      });
+      onSelectionCleared();
+    }
+    preserveSelectionOnClose = false;
     byId("workforceStatusEditor").hidden = true;
     byId("workforceMemberDetail").hidden = true;
     byId("workforceMemberEditor").hidden = true;
@@ -24,26 +41,52 @@ export function initWorkforceDetailPanel({ getStatuses }) {
     onClose: clearSelection,
   });
 
+  function populateShiftOptions(currentShift) {
+    const shifts = [...new Set(
+      getStatuses().map((item) => item.shift_code).filter(Boolean),
+    )].sort((left, right) => left.localeCompare(right, "it"));
+    if (currentShift && !shifts.includes(currentShift)) shifts.unshift(currentShift);
+    const list = byId("workforceShiftOptions");
+    list.replaceChildren(...shifts.map((shift) => {
+      const option = document.createElement("option");
+      option.value = shift;
+      option.label = shift.replace(/[_-]+/g, " ").toLocaleLowerCase("it")
+        .replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase("it"));
+      return option;
+    }));
+  }
+
+  function selectStatusChoice(code) {
+    const choices = [...document.querySelectorAll('[name="workforceStatusCode"]')];
+    const selected = choices.find((choice) => choice.value === code)
+      || choices.find((choice) => choice.value === "unknown");
+    if (selected) selected.checked = true;
+    return selected;
+  }
+
   function openStatus({ member, status, date, trigger }) {
+    preserveSelectionOnClose = true;
     clearSelection();
     trigger.classList.add("is-selected");
+    trigger.setAttribute("aria-pressed", "true");
     const form = byId("workforceStatusEditor");
     form.reset();
-    byId("workforceDetailKind").textContent = "Stato giornaliero";
-    byId("workforceDetailTitle").textContent = member.display_name;
+    byId("workforceDetailKind").textContent = "Planning turni";
+    byId("workforceDetailTitle").textContent = "Modifica turno";
     byId("workforceStatusId").value = status?.status_id || "";
     byId("workforceStatusMemberId").value = member.workforce_member_id;
     byId("workforceStatusDate").value = status?.date || date;
-    byId("workforceStatusCode").value = status?.status_code || "unknown";
+    byId("workforceStatusPerson").textContent = member.display_name;
+    byId("workforceStatusDateLabel").textContent = readableDate(status?.date || date);
+    const selectedChoice = selectStatusChoice(status?.status_code || "unknown");
     byId("workforceShiftCode").value = status?.shift_code || "";
+    populateShiftOptions(status?.shift_code || "");
     byId("workforceStartTime").value = status?.start_time || "";
     byId("workforceEndTime").value = status?.end_time || "";
     byId("workforceStatusNotes").value = status?.notes || "";
-    byId("workforceStatusTime").textContent = workforceTimeLabel(status) || "Non disponibile";
-    byId("workforceStatusSource").textContent = status?.source_reference || "Non disponibile";
     form.hidden = false;
     byId("workforceDesk").dataset.detailOpen = "true";
-    surface.show(byId("workforceStatusCode"));
+    surface.show(selectedChoice);
   }
 
   function recentMemberHistory(memberId) {
@@ -105,9 +148,19 @@ export function initWorkforceDetailPanel({ getStatuses }) {
     byId("workforceMemberEditor").hidden = false;
     byId("workforceMemberRole").focus();
   });
+  byId("workforceStatusEditor").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.repeat || event.isComposing) return;
+    if (event.target.closest("button")) return;
+    event.preventDefault();
+    byId("workforceStatusEditor").requestSubmit(byId("workforceStatusSave"));
+  });
 
   return {
     close: surface.hide,
+    completeStatusSave() {
+      preserveSelectionOnClose = true;
+      surface.hide({ restoreFocus: false });
+    },
     openMember,
     openStatus,
   };

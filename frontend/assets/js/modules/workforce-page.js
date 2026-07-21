@@ -14,7 +14,10 @@ import {
   setMessage,
 } from "../utils/dom.js";
 import { isExpectedApiError, userErrorPresentation } from "../utils/errors.js";
-import { renderWorkforceCalendar } from "./workforce-calendar-view.js";
+import {
+  renderWorkforceCalendar,
+  workforceCellKey,
+} from "./workforce-calendar-view.js";
 import { initWorkforceDetailPanel } from "./workforce-detail-panel.js";
 import { initWorkforceImportFlow } from "./workforce-import-flow.js";
 import {
@@ -48,6 +51,7 @@ let anomalyLimit = ANOMALY_PAGE_SIZE;
 let workforceImportFlow = null;
 let workforceDetailPanel = null;
 let feedbackTimeout = null;
+let selectedCellKey = null;
 
 
 function errorMessage(context, error) {
@@ -212,10 +216,68 @@ function renderData() {
     members,
     statuses,
     viewMode,
-    workforceDetailPanel.openStatus,
+    (details) => {
+      selectedCellKey = workforceCellKey(
+        details.member.workforce_member_id,
+        details.date,
+      );
+      workforceDetailPanel.openStatus(details);
+    },
     workforceDetailPanel.openMember,
+    {
+      selectedCellKey,
+      onSelectCell: (key) => { selectedCellKey = key; },
+    },
   );
   renderActiveTab();
+}
+
+
+function updateCurrentStatus(savedStatus) {
+  const index = currentData.statuses.findIndex((item) => (
+    item.status_id === savedStatus.status_id
+    || (
+      item.workforce_member_id === savedStatus.workforce_member_id
+      && item.date === savedStatus.date
+    )
+  ));
+  currentData.statuses = index === -1
+    ? [...currentData.statuses, savedStatus]
+    : currentData.statuses.map((item, itemIndex) => (
+      itemIndex === index ? savedStatus : item
+    ));
+}
+
+
+function focusSelectedCell() {
+  if (!selectedCellKey) return;
+  const selected = [...byId("workforceCalendar").querySelectorAll("[data-workforce-cell-key]")]
+    .find((button) => button.dataset.workforceCellKey === selectedCellKey);
+  if (!selected) return;
+  selected.focus({ preventScroll: true });
+  selected.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+
+async function refreshCoverageAfterStatusSave(dateFrom, dateTo) {
+  try {
+    const coverage = await getWorkforceCoverage(dateFrom, dateTo);
+    if (
+      byId("workforceDateFrom").value !== dateFrom
+      || byId("workforceDateTo").value !== dateTo
+    ) return;
+    currentData.coverage = coverage.items;
+    renderWorkforceSummary(workforceSummary(
+      currentData.members,
+      currentData.statuses,
+      currentData.coverage,
+    ));
+    if (activeTab === "coverage") {
+      renderWorkforceCoverage(byId("workforceCoverage"), currentData.coverage);
+    }
+  } catch (error) {
+    errorMessage("workforce.load-calendar", error);
+  }
 }
 
 
@@ -240,6 +302,7 @@ function selectedCalendarWindow() {
 async function loadCalendar(range = null) {
   if (!currentStatus?.member_count) return;
   const { dateFrom, dateTo } = range || selectedCalendarWindow();
+  selectedCellKey = null;
   workforceDetailPanel.close({ restoreFocus: false });
   byId("workforceDateFrom").value = dateFrom;
   byId("workforceDateTo").value = dateTo;
@@ -317,25 +380,33 @@ async function refresh() {
 
 async function submitStatus(event) {
   event.preventDefault();
-  const submit = event.submitter;
+  const submit = event.submitter || byId("workforceStatusSave");
   setLoading(submit, true, "Salvataggio...");
   try {
-    await saveWorkforceDayStatus(Number(byId("workforceStatusId").value || 0), {
+    const selectedStatus = document.querySelector('[name="workforceStatusCode"]:checked');
+    const savedStatus = await saveWorkforceDayStatus(Number(byId("workforceStatusId").value || 0), {
       workforce_member_id: Number(byId("workforceStatusMemberId").value),
       date: byId("workforceStatusDate").value,
-      status_code: byId("workforceStatusCode").value,
+      status_code: selectedStatus?.value || "unknown",
       shift_code: byId("workforceShiftCode").value.trim() || null,
       start_time: byId("workforceStartTime").value || null,
       end_time: byId("workforceEndTime").value || null,
       notes: byId("workforceStatusNotes").value.trim() || null,
       source_reference: "manual",
     });
-    workforceDetailPanel.close();
-    await loadCalendar({
-      dateFrom: byId("workforceDateFrom").value,
-      dateTo: byId("workforceDateTo").value,
-    });
+    selectedCellKey = workforceCellKey(
+      savedStatus.workforce_member_id,
+      savedStatus.date,
+    );
+    updateCurrentStatus(savedStatus);
+    workforceDetailPanel.completeStatusSave();
+    renderData();
+    window.requestAnimationFrame(focusSelectedCell);
     showWorkforceFeedback("Modifica salvata");
+    refreshCoverageAfterStatusSave(
+      byId("workforceDateFrom").value,
+      byId("workforceDateTo").value,
+    );
   } catch (error) {
     errorMessage("workforce.save-status", error);
   } finally {
@@ -401,6 +472,7 @@ function handleTabKeydown(event) {
 export function initWorkforcePage() {
   workforceDetailPanel = initWorkforceDetailPanel({
     getStatuses: () => currentData.statuses,
+    onSelectionCleared: () => { selectedCellKey = null; },
   });
   workforceImportFlow = initWorkforceImportFlow({
     onImported: async () => {
@@ -467,6 +539,7 @@ export function initWorkforcePage() {
     calendarLoaded = false;
     currentStatus = null;
     currentData = { members: [], statuses: [], coverage: [] };
+    selectedCellKey = null;
     workforceImportFlow.reset();
     refresh();
   });

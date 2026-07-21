@@ -21,6 +21,26 @@ function shortDate(value) {
 }
 
 
+export function workforceCellKey(memberId, date) {
+  return `${memberId}:${date}`;
+}
+
+
+export function nextWorkforceCellPosition(
+  { row, column },
+  key,
+  rowCount,
+  columnCount,
+) {
+  const position = { row, column };
+  if (key === "ArrowUp") position.row = Math.max(0, row - 1);
+  if (key === "ArrowDown") position.row = Math.min(rowCount - 1, row + 1);
+  if (key === "ArrowLeft") position.column = Math.max(0, column - 1);
+  if (key === "ArrowRight") position.column = Math.min(columnCount - 1, column + 1);
+  return position;
+}
+
+
 export function workforceTimeLabel(status) {
   if (!status?.start_time && !status?.end_time) return "";
   if (status.start_time && status.end_time) return `${status.start_time}–${status.end_time}`;
@@ -35,20 +55,26 @@ function resourceMeta(member) {
 }
 
 
-function statusButton(member, day, status) {
+function statusButton(member, day, status, rowIndex, columnIndex, selectedCellKey) {
   const code = status?.status_code || "unknown";
   const label = workforceStatusLabel(code);
   const time = workforceTimeLabel(status);
   const primary = status?.shift_code || label;
   const secondary = [status?.shift_code ? label : "", time].filter(Boolean).join(" · ");
   const detail = [label, status?.shift_code, time].filter(Boolean).join(", ");
+  const key = workforceCellKey(member.workforce_member_id, day);
+  const selected = key === selectedCellKey;
   return `
     <button
       type="button"
-      class="workforce-status-button ${escapeHtml(code)}"
+      class="workforce-status-button ${escapeHtml(code)}${selected ? " is-selected" : ""}"
       data-workforce-status-id="${status?.status_id || ""}"
       data-workforce-member-id="${member.workforce_member_id}"
       data-workforce-date="${day}"
+      data-workforce-cell-key="${escapeHtml(key)}"
+      data-workforce-row="${rowIndex}"
+      data-workforce-column="${columnIndex}"
+      aria-pressed="${selected}"
       aria-label="${escapeHtml(`${member.display_name}, ${day}, ${detail}`)}"
       title="${escapeHtml(detail)}"
     >
@@ -71,15 +97,15 @@ function memberButton(member) {
 }
 
 
-function renderDayList(members, date, byKey) {
+function renderDayList(members, date, byKey, selectedCellKey) {
   return `
     <div class="workforce-day-list" role="list" aria-label="Planning del ${escapeHtml(date)}">
-      ${members.map((member) => {
+      ${members.map((member, rowIndex) => {
         const status = byKey.get(`${member.workforce_member_id}:${date}`);
         return `
           <article class="workforce-day-card" role="listitem">
             <div class="workforce-day-person">${memberButton(member)}</div>
-            <div class="workforce-day-status">${statusButton(member, date, status)}</div>
+            <div class="workforce-day-status">${statusButton(member, date, status, rowIndex, 0, selectedCellKey)}</div>
           </article>
         `;
       }).join("")}
@@ -88,7 +114,7 @@ function renderDayList(members, date, byKey) {
 }
 
 
-function renderTable(members, dates, byKey) {
+function renderTable(members, dates, byKey, selectedCellKey) {
   return `
     <table class="workforce-calendar-table">
       <caption class="visually-hidden">Planning turni per risorsa e giornata</caption>
@@ -97,12 +123,19 @@ function renderTable(members, dates, byKey) {
         ${dates.map((day) => `<th scope="col"><span>${escapeHtml(shortDate(day))}</span><small>${escapeHtml(day)}</small></th>`).join("")}
       </tr></thead>
       <tbody>
-        ${members.map((member) => `
+        ${members.map((member, rowIndex) => `
           <tr>
             <th scope="row">${memberButton(member)}</th>
-            ${dates.map((day) => `
+            ${dates.map((day, columnIndex) => `
               <td class="workforce-calendar-cell">
-                ${statusButton(member, day, byKey.get(`${member.workforce_member_id}:${day}`))}
+                ${statusButton(
+                  member,
+                  day,
+                  byKey.get(`${member.workforce_member_id}:${day}`),
+                  rowIndex,
+                  columnIndex,
+                  selectedCellKey,
+                )}
               </td>
             `).join("")}
           </tr>
@@ -120,6 +153,7 @@ export function renderWorkforceCalendar(
   mode,
   onEditStatus,
   onEditMember,
+  { selectedCellKey = null, onSelectCell = () => {} } = {},
 ) {
   const dates = selectedDates(statuses, mode);
   if (!members.length) {
@@ -134,11 +168,22 @@ export function renderWorkforceCalendar(
     statuses.map((item) => [`${item.workforce_member_id}:${item.date}`, item]),
   );
   container.innerHTML = mode === "day"
-    ? renderDayList(members, dates[0], byKey)
-    : renderTable(members, dates, byKey);
+    ? renderDayList(members, dates[0], byKey, selectedCellKey)
+    : renderTable(members, dates, byKey, selectedCellKey);
 
-  container.querySelectorAll("[data-workforce-member-id]").forEach((button) => {
+  const statusButtons = [...container.querySelectorAll("[data-workforce-member-id]")];
+  const markSelected = (button) => {
+    statusButtons.forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-selected", selected);
+      item.setAttribute("aria-pressed", String(selected));
+    });
+    onSelectCell(button.dataset.workforceCellKey);
+  };
+
+  statusButtons.forEach((button) => {
     button.addEventListener("click", () => {
+      markSelected(button);
       const memberId = Number(button.dataset.workforceMemberId);
       const statusId = Number(button.dataset.workforceStatusId || 0);
       onEditStatus({
@@ -147,6 +192,32 @@ export function renderWorkforceCalendar(
         date: button.dataset.workforceDate,
         trigger: button,
       });
+    });
+    button.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        button.click();
+        return;
+      }
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const next = nextWorkforceCellPosition(
+        {
+          row: Number(button.dataset.workforceRow),
+          column: Number(button.dataset.workforceColumn),
+        },
+        event.key,
+        members.length,
+        dates.length,
+      );
+      const target = statusButtons.find((item) => (
+        Number(item.dataset.workforceRow) === next.row
+        && Number(item.dataset.workforceColumn) === next.column
+      ));
+      if (!target || target === button) return;
+      markSelected(target);
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: "nearest", inline: "nearest" });
     });
   });
   container.querySelectorAll("[data-workforce-member-edit]").forEach((button) => {

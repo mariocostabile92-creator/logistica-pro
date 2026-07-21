@@ -253,22 +253,13 @@ body[data-active-workspace="workforce"] .app-shell {
 }
 
 .workforce-desk[data-detail-open="true"] {
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 324px);
 }
 
 .workforce-calendar-stage {
   min-width: 0;
 }
 
-.workforce-calendar-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 8px;
-}
-
-.workforce-calendar-meta h3,
 .workforce-panel-heading h3 {
   margin: 0;
   font-size: 17px;
