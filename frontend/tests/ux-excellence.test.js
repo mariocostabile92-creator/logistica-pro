@@ -90,10 +90,11 @@ test("Fleet summary is deterministic and empty state supports demo", async () =>
     available: 1,
     reserve: 1,
     maintenance: 1,
-    unavailable: 1,
+    unavailable: 0,
     documentsAttention: 2,
   });
-  assert.match(source, /Il tuo parco Asset comparirà qui/);
+  assert.match(source, /Nessun mezzo registrato/);
+  assert.match(source, /Importa Stato Parco/);
   assert.match(source, /secondaryActionLabel: demoEnabled/);
   assert.match(source, /visual: "fleet"/);
   assert.equal(assetValueLabel("light_van"), "Furgone leggero");

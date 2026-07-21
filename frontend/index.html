@@ -1235,26 +1235,29 @@
     >
       <div class="section-heading fleet-toolbar">
         <div>
-          <p class="eyebrow">Asset lifecycle</p>
-          <h2 id="fleetPluginTitle">Parco Asset</h2>
-          <p id="fleetPluginTimestamp" class="section-note">Asset non caricati.</p>
+          <p class="eyebrow">Fleet workspace</p>
+          <h2 id="fleetPluginTitle">Parco Mezzi</h2>
+          <p id="fleetPluginTimestamp" class="section-note">Ultimo aggiornamento non disponibile.</p>
         </div>
         <div class="fleet-toolbar-actions">
-          <button id="fleetSyncToggle" type="button">Sincronizza stato parco</button>
-          <button id="createAssetBtn" type="button" class="secondary">Nuovo Asset</button>
+          <label class="fleet-search" for="fleetSearchInput">
+            <span class="visually-hidden">Cerca mezzo</span>
+            <input id="fleetSearchInput" type="search" placeholder="Cerca mezzo" autocomplete="off" />
+          </label>
+          <button id="fleetSyncToggle" type="button">Aggiorna da Excel</button>
+          <button id="fleetExportBtn" type="button" class="secondary">Esporta</button>
         </div>
       </div>
 
-      <section
+      <dialog
         id="fleetSyncPanel"
         class="fleet-sync-panel"
         aria-labelledby="fleetSyncTitle"
-        hidden
       >
         <div class="section-heading compact">
           <div>
             <p class="eyebrow">Import intelligente</p>
-            <h3 id="fleetSyncTitle">Sincronizza Asset Registry</h3>
+            <h3 id="fleetSyncTitle">Aggiorna da Excel</h3>
           </div>
           <button id="fleetSyncClose" type="button" class="quiet">Chiudi</button>
         </div>
@@ -1288,7 +1291,7 @@
           <button type="button" data-fleet-sync-filter="SENSITIVE">Sensibili esclusi</button>
         </div>
         <div id="fleetSyncDiff" class="fleet-sync-diff"></div>
-      </section>
+      </dialog>
 
       <div
         id="fleetViewState"
@@ -1308,7 +1311,7 @@
       <div id="fleetDataView" hidden>
       <div id="fleetSummary" class="fleet-summary" aria-label="Riepilogo Fleet">
         <div>
-          <span>Asset totali</span>
+          <span>Totale mezzi</span>
           <strong id="fleetTotalAssets">0</strong>
         </div>
         <div>
@@ -1316,16 +1319,12 @@
           <strong id="fleetAvailableAssets">0</strong>
         </div>
         <div>
-          <span>Indisponibili</span>
-          <strong id="fleetUnavailableAssets">0</strong>
-        </div>
-        <div>
-          <span>Riserva</span>
-          <strong id="fleetReserveAssets">0</strong>
-        </div>
-        <div>
           <span>In officina</span>
           <strong id="fleetMaintenanceAssets">0</strong>
+        </div>
+        <div>
+          <span>Indisponibili</span>
+          <strong id="fleetUnavailableAssets">0</strong>
         </div>
         <div>
           <span>Documenti in attenzione</span>
@@ -1333,32 +1332,35 @@
           <small>Scaduti o entro 30 giorni</small>
         </div>
         <div>
-          <span>Modifiche ultimo import</span>
+          <span>Nuovi aggiornamenti</span>
           <strong id="fleetRecentUpdates">0</strong>
         </div>
+        <strong id="fleetReserveAssets" hidden>0</strong>
+        <strong id="fleetUnresolvedConflicts" hidden>0</strong>
+      </div>
+      <div class="fleet-registry-heading">
         <div>
-          <span>Conflitti da risolvere</span>
-          <strong id="fleetUnresolvedConflicts">0</strong>
+          <p class="eyebrow">Asset Registry</p>
+          <h3>Registro mezzi</h3>
+          <p id="fleetRegistryCount" class="section-note">0 mezzi</p>
         </div>
+        <button id="createAssetBtn" type="button" class="quiet">Nuovo Asset</button>
       </div>
       <div class="fleet-table-wrap">
         <table class="fleet-table">
+          <caption class="visually-hidden">Registro operativo del parco mezzi</caption>
           <thead>
             <tr>
-              <th>Identificativo</th>
               <th>Targa</th>
-              <th>Categoria</th>
               <th>Stato</th>
-              <th>Disponibilità</th>
-              <th>Capability</th>
-              <th>Documenti</th>
-              <th>Aggiornato</th>
-              <th>Azioni</th>
+              <th>Driver associato</th>
+              <th>Categoria</th>
+              <th>Ultimo aggiornamento</th>
             </tr>
           </thead>
           <tbody id="fleetAssetTableBody">
             <tr>
-              <td colspan="9" class="empty-state">Nessun Asset disponibile.</td>
+              <td colspan="5" class="empty-state">Nessun mezzo disponibile.</td>
             </tr>
           </tbody>
         </table>
@@ -1366,11 +1368,10 @@
       <div id="fleetAssetCards" class="fleet-asset-cards"></div>
       </div>
 
-      <section
+      <dialog
         id="fleetAssetDetail"
         class="fleet-asset-detail"
         aria-labelledby="fleetAssetDetailTitle"
-        hidden
       >
         <div class="section-heading compact">
           <div>
@@ -1381,8 +1382,27 @@
             <button id="editAssetBtn" type="button" class="secondary">Modifica</button>
             <button id="observeAvailabilityBtn" type="button" class="secondary">Disponibilità</button>
             <button id="addAssetDocumentBtn" type="button">Documento</button>
+            <button id="fleetAssetDetailClose" type="button" class="quiet fleet-detail-close" aria-label="Chiudi dettaglio" title="Chiudi">&times;</button>
           </div>
         </div>
+        <dl class="fleet-detail-summary">
+          <div>
+            <dt>Targa</dt>
+            <dd id="fleetAssetPlate">—</dd>
+          </div>
+          <div>
+            <dt>Driver</dt>
+            <dd id="fleetAssetDriver">Non disponibile</dd>
+          </div>
+          <div>
+            <dt>Stato</dt>
+            <dd id="fleetAssetAvailability">Da verificare</dd>
+          </div>
+          <div>
+            <dt>Note</dt>
+            <dd id="fleetAssetNote">Nessuna nota</dd>
+          </div>
+        </dl>
         <div class="fleet-detail-grid">
           <section aria-labelledby="assetDocumentsTitle">
             <h3 id="assetDocumentsTitle">Documenti</h3>
@@ -1393,7 +1413,7 @@
             <div id="fleetAssetEvents" class="fleet-event-list"></div>
           </section>
         </div>
-      </section>
+      </dialog>
     </section>
 
     <section

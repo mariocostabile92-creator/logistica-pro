@@ -16,6 +16,8 @@ import {
   userErrorPresentation,
 } from "../utils/errors.js";
 import {
+  filterFleetAssets,
+  fleetRegistryCsv,
   hideAssetDetail,
   renderAssetDetail,
   renderAssetList,
@@ -26,20 +28,47 @@ import {
 
 let loaded = false;
 let demoEnabled = false;
+let searchTerm = "";
+let latestFleetImportAt = null;
 
 
-async function refreshSyncSummary() {
+async function refreshSyncSummary(hasAssets) {
+  if (!hasAssets) {
+    byId("fleetRecentUpdates").textContent = "0";
+    byId("fleetUnresolvedConflicts").textContent = "0";
+    return null;
+  }
   try {
     const latest = await getLatestFleetSync();
     const summary = latest.summary || {};
     byId("fleetRecentUpdates").textContent = Number(summary.created_assets || 0)
       + Number(summary.updated_assets || 0);
     byId("fleetUnresolvedConflicts").textContent = summary.unresolved_conflicts || 0;
+    return latest;
   } catch (error) {
     if (!isExpectedApiError(error, { statuses: [404] })) throw error;
     byId("fleetRecentUpdates").textContent = "0";
     byId("fleetUnresolvedConflicts").textContent = "0";
+    return null;
   }
+}
+
+
+function fleetTimestamp(value) {
+  if (!value) return "Ultimo aggiornamento non disponibile.";
+  const parsed = new Date(value);
+  const label = Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("it-IT");
+  return `Ultimo aggiornamento: ${label}`;
+}
+
+
+function renderFilteredFleet() {
+  const filtered = filterFleetAssets(state.fleetPlugin.assets, searchTerm);
+  renderAssetList(filtered, {
+    allAssets: state.fleetPlugin.assets,
+    demoEnabled,
+    searchTerm,
+  });
 }
 
 
@@ -76,11 +105,17 @@ async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId)
   renderFleetLoading();
   const response = await listFleetAssets();
   state.fleetPlugin.assets = response.items;
-  await refreshSyncSummary();
-  renderAssetList(response.items, { demoEnabled });
-  byId("fleetPluginTimestamp").textContent = response.items.length
-    ? `${response.items.length} asset registrati.`
-    : "Nessun Asset registrato.";
+  const latestSync = await refreshSyncSummary(
+    response.items.length > 0 && document.body.dataset.workspaceState !== "DEMO",
+  );
+  renderFilteredFleet();
+  const latestAssetUpdate = response.items.reduce(
+    (latest, item) => !latest || item.updated_at > latest ? item.updated_at : latest,
+    "",
+  );
+  byId("fleetPluginTimestamp").textContent = fleetTimestamp(
+    latestSync?.imported_at || latestFleetImportAt || latestAssetUpdate,
+  );
   document.dispatchEvent(new CustomEvent("fleet:registry-loaded", {
     detail: { assetCount: response.items.length },
   }));
@@ -212,14 +247,44 @@ async function submitDocument(event) {
 
 
 async function handleAssetSelection(event) {
-  const button = event.target.closest("[data-fleet-action='select']");
-  if (!button) return;
+  const target = event.target.closest("[data-fleet-action='select']");
+  if (!target) return;
   try {
-    await showAsset(Number(button.dataset.assetId));
+    await showAsset(Number(target.dataset.assetId));
     setMessage("");
   } catch (error) {
     showFleetActionError("fleet.asset-detail", error);
   }
+}
+
+
+function handleAssetSelectionKeydown(event) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const target = event.target.closest("[data-fleet-action='select']");
+  if (!target) return;
+  event.preventDefault();
+  target.click();
+}
+
+
+function exportFleetRegistry() {
+  if (!state.fleetPlugin.assets.length) return;
+  const now = new Date();
+  const dateStamp = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+  const blob = new Blob(["\uFEFF", fleetRegistryCsv(state.fleetPlugin.assets)], {
+    type: "text/csv;charset=utf-8",
+  });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `parco-mezzi-${dateStamp}.csv`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
 }
 
 
@@ -244,16 +309,17 @@ export function initFleetPage() {
   document.addEventListener("demo:availability-changed", (event) => {
     demoEnabled = Boolean(event.detail.enabled);
     if (loaded && state.fleetPlugin.assets.length === 0) {
-      renderAssetList([], { demoEnabled });
+      renderFilteredFleet();
     }
   });
   document.addEventListener("workspace:status-changed", (event) => {
+    latestFleetImportAt = event.detail.latest_fleet_import?.imported_at || null;
     demoEnabled = Boolean(
       event.detail.demo_enabled
       && event.detail.workspace_state === "EMPTY"
     );
     if (loaded && state.fleetPlugin.assets.length === 0) {
-      renderAssetList([], { demoEnabled });
+      renderFilteredFleet();
     }
   });
   document.addEventListener("fleet:sync-completed", () => {
@@ -265,6 +331,9 @@ export function initFleetPage() {
   byId("fleetViewState").addEventListener("click", (event) => {
     const action = event.target.closest("[data-view-action]")?.dataset.viewAction;
     if (action === "create-asset") openAssetEditor();
+    if (action === "sync-fleet") {
+      document.dispatchEvent(new CustomEvent("fleet:sync-requested"));
+    }
     if (action === "open-imports") {
       document.dispatchEvent(new CustomEvent("workspace:navigate", {
         detail: {
@@ -288,8 +357,15 @@ export function initFleetPage() {
     }
   });
   byId("createAssetBtn").addEventListener("click", () => openAssetEditor());
+  byId("fleetSearchInput").addEventListener("input", (event) => {
+    searchTerm = event.target.value;
+    renderFilteredFleet();
+  });
+  byId("fleetExportBtn").addEventListener("click", exportFleetRegistry);
   byId("fleetAssetTableBody").addEventListener("click", handleAssetSelection);
+  byId("fleetAssetTableBody").addEventListener("keydown", handleAssetSelectionKeydown);
   byId("fleetAssetCards").addEventListener("click", handleAssetSelection);
+  byId("fleetAssetDetailClose").addEventListener("click", hideAssetDetail);
   byId("editAssetBtn").addEventListener("click", () => openAssetEditor(selectedAsset()));
   byId("observeAvailabilityBtn").addEventListener("click", () => {
     openAvailabilityEditor(selectedAsset());

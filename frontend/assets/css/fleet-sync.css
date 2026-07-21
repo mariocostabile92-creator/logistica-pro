@@ -1,16 +1,23 @@
 .fleet-toolbar-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
 .fleet-sync-panel {
-  margin: 18px 0 28px;
-  padding: 20px;
+  width: min(1120px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 22px;
+  overflow: auto;
   border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: var(--radius);
+  border-top: 4px solid var(--accent);
+  border-radius: 8px;
   background: var(--surface);
+  color: var(--text);
 }
 
 .fleet-sync-form {
@@ -126,6 +133,12 @@
 }
 
 @media (max-width: 720px) {
+  .fleet-sync-panel {
+    width: calc(100% - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+  }
+
   .fleet-sync-form,
   .fleet-sync-row {
     grid-template-columns: 1fr;

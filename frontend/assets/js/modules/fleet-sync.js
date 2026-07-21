@@ -32,8 +32,9 @@ function showError(context, error) {
 
 function open(fileValue = null) {
   routedFile = fileValue || routedFile;
-  byId("fleetSyncPanel").hidden = false;
-  byId("fleetSyncPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  const panel = byId("fleetSyncPanel");
+  if (!panel.open) panel.showModal();
+  requestAnimationFrame(() => byId("fleetSyncFile").focus({ preventScroll: true }));
 }
 
 
@@ -121,7 +122,9 @@ async function confirm(event) {
     document.dispatchEvent(new CustomEvent("operations:data-imported", {
       detail: { datasetType: "fleet" },
     }));
-    setMessage("");
+    byId("fleetSyncPanel").close();
+    setMessage("Parco mezzi aggiornato.", "success");
+    requestAnimationFrame(() => byId("fleetSearchInput").focus({ preventScroll: true }));
   } catch (error) {
     showError("fleet.sync-confirm", error);
   } finally {
@@ -133,7 +136,7 @@ async function confirm(event) {
 export function initFleetSync() {
   byId("fleetSyncToggle").addEventListener("click", () => open());
   byId("fleetSyncClose").addEventListener("click", () => {
-    byId("fleetSyncPanel").hidden = true;
+    byId("fleetSyncPanel").close();
   });
   byId("fleetSyncAnalyze").addEventListener("click", analyze);
   byId("fleetSyncForm").addEventListener("submit", confirm);
@@ -167,6 +170,6 @@ export function initFleetSync() {
     preview = null;
     selectedRows = new Set();
     byId("fleetSyncForm").reset();
-    byId("fleetSyncPanel").hidden = true;
+    if (byId("fleetSyncPanel").open) byId("fleetSyncPanel").close();
   });
 }
