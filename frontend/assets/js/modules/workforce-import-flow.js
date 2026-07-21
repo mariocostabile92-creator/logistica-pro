@@ -8,6 +8,7 @@ import {
   clearWorkforceImportPreview,
   renderWorkforceImportPreview,
 } from "./workforce-view.js";
+import { createWorkforceSurface } from "./workforce-surface.js";
 
 
 let routedFile = null;
@@ -15,6 +16,7 @@ let importPreview = null;
 let analyzing = false;
 let importing = false;
 let afterImport = async () => {};
+let importSurface = null;
 
 
 function selectedFile() {
@@ -41,7 +43,7 @@ function resetPanel() {
 
 function close({ reset = false } = {}) {
   if (analyzing || importing) return;
-  byId("workforceImportPanel").hidden = true;
+  importSurface.hide();
   if (reset) resetPanel();
 }
 
@@ -138,20 +140,25 @@ async function open(file = null, { analyzeFile = false } = {}) {
   if (analyzing || importing) return;
   resetPanel();
   routedFile = file;
-  byId("workforceImportPanel").hidden = false;
+  importSurface.show(byId("workforceFile"));
   if (routedFile) {
     byId("workforceImportState").innerHTML = `
       <p class="import-notice ok"><strong>Planning turni riconosciuto.</strong>
       Il file selezionato e pronto per l'analisi.</p>
     `;
   }
-  byId("workforceImportPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   if (analyzeFile && file) await analyze();
 }
 
 
 export function initWorkforceImportFlow({ onImported }) {
   afterImport = onImported;
+  importSurface = createWorkforceSurface({
+    surface: byId("workforceImportPanel"),
+    backdrop: byId("workforceImportBackdrop"),
+    canClose: () => !analyzing && !importing,
+    lockScroll: true,
+  });
   byId("workforceImportToggle").addEventListener("click", () => open());
   byId("workforceImportClose").addEventListener("click", () => close());
   byId("workforceAnalyzeBtn").addEventListener("click", analyze);

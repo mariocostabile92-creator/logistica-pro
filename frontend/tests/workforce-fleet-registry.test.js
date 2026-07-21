@@ -8,6 +8,8 @@ import {
   workforceStatusLabel,
   workforceSummary,
 } from "../assets/js/modules/workforce-view.js";
+import { workforceTimeLabel } from "../assets/js/modules/workforce-calendar-view.js";
+import { workforceAnomalies } from "../assets/js/modules/workforce-insights-view.js";
 
 
 const frontendFile = (path) => readFile(
@@ -28,24 +30,24 @@ test("Workforce is a primary routed workspace without replacing Operations", asy
 });
 
 
-test("Workforce page exposes EMPTY import READY landing and on-demand calendar", async () => {
+test("Workforce READY is a calendar-first workspace with compact controls", async () => {
   const [html, page] = await Promise.all([
     frontendFile("index.html"),
     frontendFile("assets/js/modules/workforce-page.js"),
   ]);
   for (const id of [
-    "workforceViewState", "workforceReadyView", "workforceOpenCalendarBtn",
-    "workforceImportToggle", "workforceCalendarView",
+    "workforceViewState", "workforceReadyView", "workforceImportToggle",
     "workforceSummary", "workforceDateFrom", "workforceDateTo",
-    "workforceCalendar", "workforceCoverage", "workforceAbsences",
-    "workforceContracts", "workforceChanges", "workforceImportForm",
-    "workforceExportBtn",
+    "workforceCalendar", "workforceCoverage", "workforceAnomalies",
+    "workforceImportForm", "workforceExportBtn", "workforceTodayBtn",
+    "workforcePreviousBtn", "workforceNextBtn", "workforceDatePicker",
   ]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
-  assert.match(page, /Non hai ancora importato un planning turni/);
-  assert.match(html, /Apri calendario/);
+  assert.match(page, /Importa il planning esistente oppure crea il primo planning/);
+  assert.doesNotMatch(html, /Apri calendario/);
   assert.match(html, /Aggiorna da Excel/);
+  assert.match(page, /await loadCalendar\(\)/);
 });
 
 
@@ -56,23 +58,27 @@ test("Workforce summary is deterministic and uses backend availability", () => {
       { availability: true, status_code: "scheduled" },
       { availability: false, status_code: "sickness" },
     ],
-    [{ margin: -1 }],
+    [{ margin: -1 }, { margin: 2 }],
   );
   assert.deepEqual(summary, {
     members: 2,
     available: 1,
     scheduled: 1,
+    rest: 0,
     absent: 1,
+    deficit: 1,
     margin: -1,
+    coverageConfigured: true,
   });
   assert.equal(workforceStatusLabel("holiday"), "Ferie");
 });
 
 
-test("Workforce calendar supports day week person and manual audited edits", async () => {
-  const [html, page] = await Promise.all([
+test("Workforce calendar supports day week person and side-panel edits", async () => {
+  const [html, page, detail] = await Promise.all([
     frontendFile("index.html"),
     frontendFile("assets/js/modules/workforce-page.js"),
+    frontendFile("assets/js/modules/workforce-detail-panel.js"),
   ]);
   for (const mode of ["day", "week", "person"]) {
     assert.match(html, new RegExp(`data-workforce-view-mode="${mode}"`));
@@ -80,6 +86,26 @@ test("Workforce calendar supports day week person and manual audited edits", asy
   assert.match(page, /saveWorkforceDayStatus/);
   assert.match(page, /updateWorkforceMember/);
   assert.match(page, /source_reference: "manual"/);
+  assert.match(page, /workforceDetailPanel\.openStatus/);
+  assert.match(detail, /surface\.show/);
+  assert.match(detail, /surface\.requestClose/);
+  assert.match(html, /id="workforceDetailPanel"[\s\S]*?id="workforceStatusEditor"/);
+  assert.match(html, /id="workforceDetailPanel"[\s\S]*?id="workforceMemberEditor"/);
+  assert.equal(workforceTimeLabel({ start_time: "08:00", end_time: "17:00" }), "08:00-17:00");
+});
+
+
+test("Workforce main tabs default to Calendar and hide secondary panels", async () => {
+  const [html, page] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/js/modules/workforce-page.js"),
+  ]);
+  assert.match(html, /id="workforceCalendarTab"[\s\S]*?aria-selected="true"/);
+  assert.match(html, /id="workforceCoveragePanel"[\s\S]*?hidden/);
+  assert.match(html, /id="workforceAnomaliesPanel"[\s\S]*?hidden/);
+  assert.match(page, /const TAB_ORDER = \["calendar", "coverage", "anomalies"\]/);
+  assert.match(page, /panel\.hidden = panel\.dataset\.workforcePanel !== activeTab/);
+  assert.match(page, /handleTabKeydown/);
 });
 
 
@@ -117,17 +143,18 @@ test("Workforce import shows recognized sheets and a strictly bounded preview", 
 });
 
 
-test("Workforce initial load is summary-only and calendar data is deferred", async () => {
+test("Workforce initial READY load is limited to the active calendar period", async () => {
   const source = await frontendFile("assets/js/modules/workforce-page.js");
-  const refreshStart = source.indexOf("async function refresh()");
-  const submitStart = source.indexOf("async function submitStatus", refreshStart);
   const calendarStart = source.indexOf("async function loadCalendar");
-  const refreshBody = source.slice(refreshStart, submitStart);
+  const refreshStart = source.indexOf("async function refresh()", calendarStart);
   const calendarBody = source.slice(calendarStart, refreshStart);
-  assert.match(refreshBody, /getWorkforceStatus\(\)/);
-  assert.doesNotMatch(refreshBody, /listWorkforceMembers|getWorkforceCalendar|getWorkforceCoverage/);
+  const refreshBody = source.slice(refreshStart, source.indexOf("async function submitStatus", refreshStart));
   assert.match(calendarBody, /getWorkforceCalendar\(dateFrom, dateTo\)/);
+  assert.match(calendarBody, /getWorkforceCoverage\(dateFrom, dateTo\)/);
   assert.match(calendarBody, /listWorkforceMembers\(\)/);
+  assert.doesNotMatch(calendarBody, /getWorkforceChanges/);
+  assert.match(refreshBody, /getWorkforceStatus\(\)/);
+  assert.match(refreshBody, /await loadCalendar\(\)/);
 });
 
 
@@ -138,16 +165,75 @@ test("Workforce import has loading guards and closes after success", async () =>
   assert.match(source, /setBusy\("import"\)/);
   assert.match(source, /close\(\{ reset: true \}\)/);
   const page = await frontendFile("assets/js/modules/workforce-page.js");
-  assert.match(page, /setPageState\(status\.member_count \? PAGE_STATES\.READY : PAGE_STATES\.EMPTY/);
+  assert.match(page, /setPageState\(PAGE_STATES\.READY, status\)/);
+  assert.match(page, /setPageState\(PAGE_STATES\.EMPTY, status\)/);
 });
 
 
 test("Workforce visible language translates internal states", async () => {
-  const source = await frontendFile("assets/js/modules/workforce-view.js");
-  assert.match(source, /requirement_unavailable: "Fabbisogno non disponibile"/);
+  const [source, insights] = await Promise.all([
+    frontendFile("assets/js/modules/workforce-view.js"),
+    frontendFile("assets/js/modules/workforce-insights-view.js"),
+  ]);
+  assert.match(insights, /requirement_unavailable: "Fabbisogno non configurato"/);
   assert.match(source, /scheduled: "Programmato"/);
   assert.match(source, /rest: "Riposo"/);
+  assert.equal(workforceStatusLabel("unavailable"), "Non disponibile");
   assert.equal(workforceStatusLabel("not-an-enum"), "Da verificare");
+});
+
+
+test("Workforce anomalies are categorized and initially bounded to 25", async () => {
+  const statuses = Array.from({ length: 30 }, (_, index) => ({
+    workforce_member_id: 1,
+    date: `2026-07-${String((index % 7) + 20).padStart(2, "0")}`,
+    status_code: index % 2 ? "sickness" : "rest",
+  }));
+  const result = workforceAnomalies(statuses, [{ workforce_member_id: 1, display_name: "Risorsa Test" }]);
+  assert.equal(result.total, 30);
+  assert.equal(result.counts.absence, 15);
+  assert.equal(result.counts.rest, 15);
+  const [page, insights] = await Promise.all([
+    frontendFile("assets/js/modules/workforce-page.js"),
+    frontendFile("assets/js/modules/workforce-insights-view.js"),
+  ]);
+  assert.match(page, /const ANOMALY_PAGE_SIZE = 25/);
+  assert.match(insights, /result\.items\.slice\(0, limit\)/);
+  assert.match(page, /anomalyLimit \+= ANOMALY_PAGE_SIZE/);
+});
+
+
+test("Workforce layout is bounded, wide and responsive", async () => {
+  const [layout, calendar, panel, responsive] = await Promise.all([
+    frontendFile("assets/css/workforce-layout.css"),
+    frontendFile("assets/css/workforce-calendar.css"),
+    frontendFile("assets/css/workforce-panel.css"),
+    frontendFile("assets/css/workforce-responsive.css"),
+  ]);
+  assert.match(layout, /width: min\(1500px, calc\(100% - 48px\)\)/);
+  assert.match(calendar, /height: clamp\(560px,[\s\S]*?680px\)/);
+  assert.match(calendar, /position: sticky/);
+  assert.match(calendar, /\.workforce-day-list/);
+  assert.match(panel, /\.workforce-detail-panel/);
+  assert.match(responsive, /@media \(max-width: 1180px\)/);
+  assert.match(responsive, /@media \(max-width: 720px\)/);
+  assert.match(responsive, /@media \(max-width: 620px\)/);
+});
+
+
+test("Workforce dialogs trap focus and expose accessible tabs and tables", async () => {
+  const [html, surface, calendar] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/js/modules/workforce-surface.js"),
+    frontendFile("assets/js/modules/workforce-calendar-view.js"),
+  ]);
+  assert.match(html, /id="workforceImportPanel"[\s\S]*?role="dialog"[\s\S]*?aria-modal="true"/);
+  assert.match(html, /role="tablist" aria-label="Aree Planning turni"/);
+  assert.match(html, /role="tabpanel"/);
+  assert.match(surface, /event\.key !== "Tab"/);
+  assert.match(surface, /event\.key === "Escape"/);
+  assert.match(calendar, /<caption class="visually-hidden">/);
+  assert.match(calendar, /scope="row"/);
 });
 
 

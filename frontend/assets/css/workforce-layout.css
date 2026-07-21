@@ -1,0 +1,219 @@
+body[data-active-workspace="workforce"] .app-shell {
+  width: min(1500px, calc(100% - 48px));
+}
+
+.workforce-workspace {
+  margin-top: 18px;
+}
+
+.workforce-command-bar,
+.workforce-period-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workforce-command-bar {
+  justify-content: space-between;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-period-nav label {
+  grid-template-columns: auto minmax(138px, 1fr);
+  align-items: center;
+}
+
+.workforce-period-nav input {
+  min-height: 36px;
+}
+
+.segmented-control {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #edf1ef;
+}
+
+.segmented-control button {
+  min-height: 34px;
+  padding: 0 11px;
+  background: transparent;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.segmented-control button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.workforce-kpis {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin: 14px 0 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.workforce-kpis > div {
+  min-width: 0;
+  padding: 11px 14px;
+  border-right: 1px solid var(--border);
+}
+
+.workforce-kpis > div:last-child {
+  border-right: 0;
+}
+
+.workforce-kpis dt {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.workforce-kpis dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.workforce-requirement-notice {
+  margin: 8px 0 0;
+  color: #73551d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workforce-tabs {
+  display: flex;
+  gap: 22px;
+  margin-top: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-tabs button {
+  min-height: 42px;
+  padding: 0 2px;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.workforce-tabs button.active {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+.workforce-tab-panel {
+  padding-top: 14px;
+}
+
+.workforce-desk {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+.workforce-desk[data-detail-open="true"] {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+}
+
+.workforce-calendar-stage {
+  min-width: 0;
+}
+
+.workforce-calendar-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.workforce-calendar-meta h3,
+.workforce-panel-heading h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.workforce-panel-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.workforce-panel-heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+.workforce-coverage-table {
+  max-height: 580px;
+  overflow: auto;
+  border: 1px solid var(--border);
+}
+
+.workforce-coverage-table table {
+  min-width: 900px;
+}
+
+.workforce-coverage-table th,
+.workforce-coverage-table td {
+  padding: 11px 12px;
+  text-align: left;
+}
+
+.workforce-coverage-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #edf1ef;
+}
+
+.workforce-coverage-status {
+  font-weight: 800;
+}
+
+.workforce-coverage-status.deficit {
+  color: #8c2f2f;
+}
+
+.workforce-anomaly-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.workforce-anomaly-categories span {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+#workforceAnomalies {
+  max-height: 500px;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+}
+
+#workforceAnomaliesMore {
+  margin-top: 12px;
+}

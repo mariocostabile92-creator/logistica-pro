@@ -27,6 +27,7 @@ const WORKSPACE_SECTIONS = {
 function showWorkspace(view) {
   const selectedView = WORKSPACE_SECTIONS[view] ? view : "home";
   const activeSections = WORKSPACE_SECTIONS[selectedView];
+  document.body.dataset.activeWorkspace = selectedView;
   for (const sectionId of Object.values(WORKSPACE_SECTIONS).flat()) {
     byId(sectionId).hidden = !activeSections.includes(sectionId);
   }

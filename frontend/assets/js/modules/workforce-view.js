@@ -8,15 +8,8 @@ const STATUS_LABELS = {
   holiday: "Ferie",
   sickness: "Malattia",
   leave: "Permesso",
-  unavailable: "Indisponibile",
+  unavailable: "Non disponibile",
   unknown: "Da verificare",
-};
-
-const COVERAGE_LABELS = {
-  covered: "Copertura adeguata",
-  surplus: "Margine disponibile",
-  deficit: "Copertura insufficiente",
-  requirement_unavailable: "Fabbisogno non disponibile",
 };
 
 const SHEET_ROLE_LABELS = {
@@ -26,13 +19,6 @@ const SHEET_ROLE_LABELS = {
   requirements: "Fabbisogno",
   ignored: "Non importato",
 };
-
-const CHANGE_LABELS = {
-  workforce_import: "Dato importato",
-  workforce_import_update: "Dato aggiornato da import",
-  manual_update: "Modifica manuale",
-};
-
 
 function integer(value) {
   return new Intl.NumberFormat("it-IT").format(Number(value) || 0);
@@ -91,16 +77,25 @@ export function workforceCalendarWindow(latestImport, today = new Date()) {
 export function workforceSummary(members, statuses, coverage) {
   const available = statuses.filter((item) => item.availability).length;
   const scheduled = statuses.filter((item) => item.status_code === "scheduled").length;
-  const absent = statuses.filter((item) => !item.availability).length;
+  const rest = statuses.filter((item) => item.status_code === "rest").length;
+  const absent = statuses.filter((item) => (
+    ["holiday", "sickness", "leave", "unavailable"].includes(item.status_code)
+  )).length;
   const margins = coverage
     .map((item) => item.margin)
     .filter((item) => Number.isFinite(item));
+  const deficit = margins.reduce((total, margin) => (
+    margin < 0 ? total + Math.abs(margin) : total
+  ), 0);
   return {
     members: members.length,
     available,
     scheduled,
+    rest,
     absent,
+    deficit: margins.length ? deficit : null,
     margin: margins.length ? Math.min(...margins) : null,
+    coverageConfigured: margins.length > 0,
   };
 }
 
@@ -108,24 +103,12 @@ export function workforceSummary(members, statuses, coverage) {
 export function renderWorkforceLanding(status) {
   const latest = status.latest_import || {};
   const summary = latest.summary || {};
-  const attentionCount = (
-    Number(summary.excluded_rows || 0)
-    + (Array.isArray(summary.confirmation_columns) ? summary.confirmation_columns.length : 0)
-  );
-  document.getElementById("workforceReadyMemberCount").textContent = integer(status.member_count);
-  document.getElementById("workforceReadyPeriod").textContent = summary.date_from
+  const period = summary.date_from
     ? `${summary.date_from} - ${summary.date_to || summary.date_from}`
-    : "Non disponibile";
-  document.getElementById("workforceReadyStatusCount").textContent = integer(summary.status_count);
-  document.getElementById("workforceReadyContractCount").textContent = integer(summary.contracts_detected);
-  document.getElementById("workforceReadyAbsenceCount").textContent = integer(summary.absences_detected);
-  document.getElementById("workforceReadyUpdatedAt").textContent = localTimestamp(latest.imported_at);
-  document.getElementById("workforceReadySource").textContent = latest.source || "Excel";
-  const attention = document.getElementById("workforceReadyAttention");
-  attention.hidden = attentionCount === 0;
-  attention.textContent = attentionCount
-    ? `${integer(attentionCount)} elementi richiedono attenzione.`
-    : "";
+    : "periodo non disponibile";
+  document.getElementById("workforceTimestamp").textContent = (
+    `${period} - aggiornato ${localTimestamp(latest.imported_at)}`
+  );
 }
 
 
@@ -133,130 +116,15 @@ export function renderWorkforceSummary(summary) {
   document.getElementById("workforceMemberCount").textContent = summary.members;
   document.getElementById("workforceAvailableCount").textContent = summary.available;
   document.getElementById("workforceScheduledCount").textContent = summary.scheduled;
+  document.getElementById("workforceRestCount").textContent = summary.rest;
   document.getElementById("workforceAbsentCount").textContent = summary.absent;
-  document.getElementById("workforceMarginValue").textContent = summary.margin ?? "--";
-}
-
-
-function selectedDates(statuses, mode) {
-  const dates = [...new Set(statuses.map((item) => item.date))].sort();
-  if (mode === "day") return dates.slice(0, 1);
-  if (mode === "week") return dates.slice(0, 7);
-  return dates.slice(0, 14);
-}
-
-
-export function renderWorkforceCalendar(
-  container,
-  members,
-  statuses,
-  mode,
-  onEditStatus,
-  onEditMember,
-) {
-  const dates = selectedDates(statuses, mode);
-  if (!members.length) {
-    container.innerHTML = '<p class="empty-state">Nessuna risorsa Workforce disponibile.</p>';
-    return;
-  }
-  if (!dates.length) {
-    container.innerHTML = '<p class="empty-state">Nessun turno disponibile nel periodo selezionato.</p>';
-    return;
-  }
-  const byKey = new Map(
-    statuses.map((item) => [`${item.workforce_member_id}:${item.date}`, item]),
+  document.getElementById("workforceDeficitValue").textContent = (
+    summary.coverageConfigured ? summary.deficit : "Non configurato"
   );
-  container.innerHTML = `
-    <table class="workforce-calendar-table">
-      <thead><tr>
-        <th>Risorsa</th>
-        ${dates.map((day) => `<th>${escapeHtml(day)}</th>`).join("")}
-      </tr></thead>
-      <tbody>
-        ${members.map((member) => `
-          <tr>
-            <td>
-              <strong>${escapeHtml(member.display_name)}</strong>
-              <small>${escapeHtml(member.role || member.employment_type || "Risorsa")}</small>
-              <button type="button" class="quiet" data-workforce-member-edit="${member.workforce_member_id}">Modifica profilo</button>
-            </td>
-            ${dates.map((day) => {
-              const status = byKey.get(`${member.workforce_member_id}:${day}`);
-              const code = status?.status_code || "unknown";
-              return `
-                <td class="workforce-calendar-cell">
-                  <button
-                    type="button"
-                    class="${escapeHtml(code)}"
-                    data-workforce-status-id="${status?.status_id || ""}"
-                    data-workforce-member-id="${member.workforce_member_id}"
-                    data-workforce-date="${day}"
-                  >
-                    <strong>${escapeHtml(workforceStatusLabel(code))}</strong>
-                    <small>${escapeHtml(status?.shift_code || "")}</small>
-                  </button>
-                </td>
-              `;
-            }).join("")}
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
-  `;
-  container.querySelectorAll("[data-workforce-member-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const statusId = Number(button.dataset.workforceStatusId || 0);
-      onEditStatus({
-        member: members.find((item) => item.workforce_member_id === Number(button.dataset.workforceMemberId)),
-        status: statusId ? statuses.find((item) => item.status_id === statusId) : null,
-        date: button.dataset.workforceDate,
-      });
-    });
-  });
-  container.querySelectorAll("[data-workforce-member-edit]").forEach((button) => {
-    button.addEventListener("click", () => {
-      onEditMember(members.find(
-        (item) => item.workforce_member_id === Number(button.dataset.workforceMemberEdit),
-      ));
-    });
-  });
-}
-
-
-export function renderWorkforceLists({ coverage, statuses, members, changes }) {
-  const coverageEl = document.getElementById("workforceCoverage");
-  coverageEl.innerHTML = coverage.length
-    ? coverage.slice(0, 7).map((item) => `
-        <div>
-          <strong>${escapeHtml(item.date)} - ${escapeHtml(COVERAGE_LABELS[item.status] || "Da verificare")}</strong>
-          <span>Richieste ${item.required ?? "--"}, disponibili ${item.available}, margine ${item.margin ?? "--"}</span>
-        </div>
-      `).join("")
-    : '<div><strong>Fabbisogno non disponibile.</strong><span>Importalo o configuralo prima di valutare il margine.</span></div>';
-
-  const memberById = new Map(members.map((item) => [item.workforce_member_id, item]));
-  const absences = statuses.filter((item) => !item.availability);
-  document.getElementById("workforceAbsences").innerHTML = absences.length
-    ? absences.slice(0, 12).map((item) => `
-        <div><strong>${escapeHtml(memberById.get(item.workforce_member_id)?.display_name || "Risorsa")}</strong>
-        <span>${escapeHtml(item.date)} - ${escapeHtml(workforceStatusLabel(item.status_code))}</span></div>
-      `).join("")
-    : '<div><strong>Nessuna assenza rilevata.</strong></div>';
-
-  const contracts = members.filter((item) => item.contract_end || item.employment_type);
-  document.getElementById("workforceContracts").innerHTML = contracts.length
-    ? contracts.slice(0, 12).map((item) => `
-        <div><strong>${escapeHtml(item.display_name)}</strong>
-        <span>${escapeHtml(item.employment_type || "Contratto")} - scadenza ${escapeHtml(item.contract_end || "non disponibile")}</span></div>
-      `).join("")
-    : '<div><strong>Nessun contratto strutturato disponibile.</strong></div>';
-
-  document.getElementById("workforceChanges").innerHTML = changes.length
-    ? changes.slice(0, 12).map((item) => `
-        <div><strong>${escapeHtml(CHANGE_LABELS[item.reason] || "Aggiornamento registrato")}</strong>
-        <span>${escapeHtml(localTimestamp(item.timestamp))}</span></div>
-      `).join("")
-    : '<div><strong>Nessuna modifica registrata.</strong></div>';
+  document.getElementById("workforceMarginValue").textContent = (
+    summary.coverageConfigured ? summary.margin : "Non configurato"
+  );
+  document.getElementById("workforceRequirementNotice").hidden = summary.coverageConfigured;
 }
 
 

@@ -1,0 +1,130 @@
+.workforce-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: rgb(18 29 26 / 58%);
+}
+
+.workforce-import-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 71;
+  width: min(920px, calc(100% - 40px));
+  max-height: calc(100vh - 64px);
+  padding: 22px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgb(14 27 23 / 25%);
+  transform: translate(-50%, -50%);
+}
+
+body.workforce-surface-open {
+  overflow: hidden;
+}
+
+.workforce-detail-panel {
+  max-height: clamp(560px, calc(100vh - 340px), 680px);
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  background: var(--surface);
+}
+
+.workforce-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-detail-header h3 {
+  margin: 4px 0 0;
+  font-size: 18px;
+}
+
+.workforce-status-editor,
+.workforce-member-editor {
+  display: grid;
+  gap: 13px;
+  padding-top: 16px;
+}
+
+.workforce-status-editor textarea {
+  resize: vertical;
+}
+
+.workforce-status-editor[hidden],
+.workforce-member-editor[hidden],
+.workforce-member-detail[hidden] {
+  display: none;
+}
+
+.workforce-readonly-field {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-readonly-field span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workforce-readonly-field strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.workforce-member-detail {
+  padding-top: 16px;
+}
+
+.workforce-member-detail dl {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.workforce-member-detail dl > div {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-member-detail dt {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workforce-member-detail dd {
+  margin: 4px 0 0;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.workforce-recent-history {
+  margin: 18px 0;
+}
+
+.workforce-recent-history h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.workforce-detail-backdrop {
+  display: none;
+}

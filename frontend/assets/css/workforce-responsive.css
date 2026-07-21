@@ -1,0 +1,182 @@
+@media (max-width: 1180px) {
+  .workforce-desk[data-detail-open="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workforce-detail-backdrop:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 58;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    background: rgb(18 29 26 / 38%);
+  }
+
+  .workforce-detail-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 59;
+    width: min(390px, calc(100% - 48px));
+    max-height: 100vh;
+    height: 100vh;
+    box-shadow: -16px 0 48px rgb(14 27 23 / 20%);
+  }
+}
+
+@media (max-width: 980px) {
+  .workforce-command-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workforce-period-nav {
+    flex-wrap: wrap;
+  }
+
+  .workforce-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .workforce-kpis > div {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .workforce-import-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workforce-sheet-roles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  body[data-active-workspace="workforce"] .app-shell {
+    width: calc(100% - 24px);
+  }
+
+  .workforce-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workforce-header-actions {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .workforce-period-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workforce-period-nav label {
+    grid-column: 1 / 3;
+    grid-template-columns: 1fr;
+  }
+
+  .workforce-period-nav #workforceRefreshBtn {
+    align-self: end;
+  }
+
+  .segmented-control {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .workforce-kpis {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .workforce-kpis > div {
+    flex: 0 0 112px;
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+  }
+
+  .workforce-kpis > div:last-child {
+    border-right: 0;
+  }
+
+  .workforce-tabs {
+    gap: 0;
+  }
+
+  .workforce-tabs button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 6px;
+  }
+
+  .workforce-calendar-meta,
+  .workforce-panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workforce-calendar-wrap {
+    height: min(600px, calc(100vh - 300px));
+    min-height: 430px;
+  }
+
+  .workforce-day-list {
+    grid-template-columns: 1fr;
+  }
+
+  .workforce-day-card {
+    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.8fr);
+  }
+
+  .workforce-detail-panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: 84vh;
+    border-left: 1px solid var(--border);
+    border-top: 4px solid var(--accent);
+    box-shadow: 0 -16px 48px rgb(14 27 23 / 20%);
+  }
+
+  .workforce-import-panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 90vh;
+    border-left: 1px solid var(--border);
+    border-top: 4px solid var(--accent);
+    border-radius: 0;
+    transform: none;
+  }
+
+  .workforce-import-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .workforce-import-summary,
+  .workforce-sheet-roles {
+    grid-template-columns: 1fr;
+  }
+
+  .workforce-day-card {
+    grid-template-columns: 1fr;
+  }
+
+  .workforce-header-actions button:first-child {
+    min-width: 0;
+  }
+
+  .workforce-kpis dd {
+    font-size: 17px;
+  }
+}

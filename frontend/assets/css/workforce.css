@@ -5,111 +5,16 @@
 }
 
 .workforce-toolbar,
-.workforce-command-bar,
-.workforce-actions,
-.workforce-period,
+.workforce-header-actions,
 .workforce-editor-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.workforce-actions,
+.workforce-header-actions,
 .workforce-editor-actions {
   flex-wrap: wrap;
-}
-
-.workforce-ready-card {
-  margin-top: 18px;
-  padding: 24px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.workforce-ready-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.workforce-ready-heading h3 {
-  margin: 8px 0 4px;
-  font-size: 22px;
-}
-
-.workforce-ready-heading p {
-  margin: 0;
-  color: var(--text-muted);
-}
-
-.workforce-ready-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border: 1px solid #91b5a9;
-  border-radius: 999px;
-  background: #e8f3ef;
-  color: #145f4d;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.workforce-ready-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.workforce-ready-facts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  margin: 22px 0 0;
-  border-top: 1px solid var(--border);
-  border-left: 1px solid var(--border);
-}
-
-.workforce-ready-facts > div {
-  min-width: 0;
-  padding: 14px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.workforce-ready-facts dt {
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.workforce-ready-facts dd {
-  margin: 6px 0 0;
-  overflow-wrap: anywhere;
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.workforce-ready-attention {
-  margin: 16px 0 0;
-  padding: 10px 12px;
-  border-left: 3px solid #b68025;
-  background: #fbf4e7;
-  color: #694d1d;
-  font-weight: 700;
-}
-
-.workforce-import-panel {
-  margin: 18px 0 26px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--surface);
 }
 
 .workforce-import-form {
@@ -121,7 +26,8 @@
 }
 
 .workforce-import-form label,
-.workforce-period label,
+.workforce-period-nav label,
+.workforce-panel-heading label,
 .workforce-status-editor label,
 .workforce-member-editor label {
   display: grid;
@@ -156,12 +62,15 @@
 }
 
 .workforce-import-summary span,
-.workforce-import-summary strong {
+.workforce-import-summary strong,
+.workforce-sheet-role strong,
+.workforce-sheet-role span {
   display: block;
   overflow-wrap: anywhere;
 }
 
-.workforce-import-summary span {
+.workforce-import-summary span,
+.workforce-sheet-role span {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
@@ -176,7 +85,7 @@
 .workforce-calendar-loading {
   display: grid;
   gap: 10px;
-  padding: 18px 0;
+  padding: 18px;
 }
 
 .workforce-import-issues {
@@ -197,8 +106,7 @@
   color: var(--text-muted);
 }
 
-.workforce-sheet-roles,
-.workforce-summary {
+.workforce-sheet-roles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
@@ -209,45 +117,17 @@
   background: var(--border);
 }
 
-.workforce-sheet-role,
-.workforce-summary > div {
+.workforce-sheet-role {
   min-width: 0;
-  padding: 14px;
+  padding: 12px;
   background: var(--surface);
-}
-
-.workforce-sheet-role strong,
-.workforce-sheet-role span,
-.workforce-summary span,
-.workforce-summary strong {
-  display: block;
-  overflow-wrap: anywhere;
-}
-
-.workforce-sheet-role span,
-.workforce-summary span {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.workforce-summary strong {
-  margin-top: 6px;
-  font-size: 26px;
-}
-
-.workforce-matrix-wrap,
-.workforce-calendar-wrap {
-  margin-top: 18px;
-  overflow: auto;
-  border: 1px solid var(--border);
 }
 
 .workforce-matrix-wrap {
   max-height: 280px;
-}
-
-.workforce-calendar-wrap {
-  max-height: 540px;
+  margin-top: 18px;
+  overflow: auto;
+  border: 1px solid var(--border);
 }
 
 .workforce-sample-label {
@@ -258,108 +138,12 @@
   font-size: 12px;
 }
 
-.workforce-matrix-wrap table,
-.workforce-calendar-table {
+.workforce-matrix-wrap table {
   min-width: 820px;
 }
 
-.workforce-calendar-table th:first-child,
-.workforce-calendar-table td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--surface);
-}
-
-.workforce-calendar-cell {
-  min-width: 104px;
-}
-
-.workforce-calendar-cell button {
-  width: 100%;
-  min-height: 42px;
-  padding: 7px;
-  border-left: 4px solid #8a9692;
-  border-radius: 3px;
-  background: #f1f4f3;
-  color: var(--text);
-  font-size: 12px;
-  text-align: left;
-}
-
-.workforce-calendar-cell button.available,
-.workforce-calendar-cell button.scheduled {
-  border-left-color: var(--accent);
-  background: #eaf3f0;
-}
-
-.workforce-calendar-cell button.holiday,
-.workforce-calendar-cell button.leave {
-  border-left-color: #b68025;
-  background: #fbf4e7;
-}
-
-.workforce-calendar-cell button.sickness,
-.workforce-calendar-cell button.unavailable {
-  border-left-color: #a64040;
-  background: #f9ecec;
-}
-
-.workforce-command-bar {
-  justify-content: space-between;
-  margin-top: 20px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.workforce-calendar-view {
-  margin-top: 28px;
-  padding-top: 22px;
-  border-top: 1px solid var(--border);
-}
-
-.workforce-calendar-heading {
-  align-items: flex-start;
-}
-
-.segmented-control {
-  display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #edf1ef;
-  overflow-x: auto;
-}
-
-.segmented-control button {
-  min-height: 34px;
-  padding: 0 11px;
-  background: transparent;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.segmented-control button.active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
-}
-
-.workforce-secondary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 26px;
-  margin-top: 28px;
-}
-
-.workforce-secondary-grid h3 {
-  margin: 0 0 8px;
-  font-size: 17px;
-}
-
 .workforce-list > div {
-  padding: 10px 0;
+  padding: 11px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -374,101 +158,16 @@
   font-size: 12px;
 }
 
-.workforce-status-editor,
-.workforce-member-editor {
+.workforce-calendar-error,
+.workforce-requirement-empty {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) repeat(4, minmax(120px, 0.7fr)) auto;
-  gap: 12px;
-  align-items: end;
-  margin-top: 14px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  background: var(--surface);
+  justify-items: start;
+  gap: 8px;
+  padding: 20px;
+  color: var(--text-muted);
 }
 
-.workforce-status-editor[hidden],
-.workforce-member-editor[hidden] {
-  display: none;
-}
-
-@media (max-width: 980px) {
-  .workforce-ready-facts,
-  .workforce-import-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .workforce-summary,
-  .workforce-sheet-roles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .workforce-status-editor,
-  .workforce-member-editor {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .workforce-summary > div:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 720px) {
-  .workforce-ready-heading {
-    flex-direction: column;
-  }
-
-  .workforce-ready-actions {
-    justify-content: flex-start;
-  }
-
-  .workforce-command-bar,
-  .workforce-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .workforce-import-form,
-  .workforce-secondary-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 620px) {
-  .workforce-ready-card,
-  .workforce-import-panel {
-    padding: 16px;
-  }
-
-  .workforce-ready-actions,
-  .workforce-ready-facts,
-  .workforce-import-summary {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  .workforce-ready-actions button {
-    width: 100%;
-  }
-
-  .workforce-actions,
-  .workforce-period,
-  .workforce-status-editor,
-  .workforce-member-editor,
-  .workforce-summary,
-  .workforce-sheet-roles {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .workforce-actions button,
-  .workforce-period button,
-  .workforce-editor-actions button {
-    width: 100%;
-  }
-
-  .workforce-summary > div:last-child:nth-child(odd) {
-    grid-column: auto;
-  }
+.workforce-calendar-error strong,
+.workforce-requirement-empty strong {
+  color: var(--text);
 }
