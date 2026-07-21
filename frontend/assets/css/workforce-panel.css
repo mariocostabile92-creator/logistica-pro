@@ -23,6 +23,7 @@
   background: var(--surface);
   box-shadow: 0 24px 70px rgb(14 27 23 / 25%);
   transform: translate(-50%, -50%);
+  animation: workforce-modal-in 180ms ease-out;
 }
 
 body.workforce-surface-open {
@@ -36,6 +37,47 @@ body.workforce-surface-open {
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   background: var(--surface);
+  animation: workforce-panel-in 180ms ease-out;
+}
+
+@keyframes workforce-modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes workforce-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+body[data-active-workspace="workforce"] .message.success {
+  animation: workforce-feedback-in 180ms ease-out;
+}
+
+@keyframes workforce-feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .workforce-detail-header {

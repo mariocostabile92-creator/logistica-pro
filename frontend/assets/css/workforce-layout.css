@@ -6,6 +6,11 @@ body[data-active-workspace="workforce"] .app-shell {
   margin-top: 18px;
 }
 
+.workforce-toolbar h2 {
+  margin-bottom: 4px;
+  font-size: 28px;
+}
+
 .workforce-command-bar,
 .workforce-period-nav {
   display: flex;
@@ -15,14 +20,46 @@ body[data-active-workspace="workforce"] .app-shell {
 
 .workforce-command-bar {
   justify-content: space-between;
-  padding: 12px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .workforce-period-nav label {
   grid-template-columns: auto minmax(138px, 1fr);
   align-items: center;
+}
+
+.workforce-week-nav {
+  width: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 19px;
+}
+
+.workforce-today-btn {
+  min-height: 38px;
+  padding-inline: 15px;
+  font-weight: 800;
+}
+
+.workforce-period-focus {
+  min-width: 225px;
+  padding: 0 10px;
+  color: var(--text);
+  font-size: 15px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.workforce-date-jump span {
+  white-space: nowrap;
 }
 
 .workforce-period-nav input {
@@ -45,6 +82,12 @@ body[data-active-workspace="workforce"] .app-shell {
   background: transparent;
   color: var(--text-muted);
   white-space: nowrap;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.segmented-control button:hover {
+  background: rgb(255 255 255 / 65%);
+  color: var(--text);
 }
 
 .segmented-control button.active {
@@ -56,34 +99,98 @@ body[data-active-workspace="workforce"] .app-shell {
 .workforce-kpis {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
   margin: 14px 0 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
 }
 
 .workforce-kpis > div {
+  display: grid;
+  align-content: space-between;
   min-width: 0;
-  padding: 11px 14px;
-  border-right: 1px solid var(--border);
-}
-
-.workforce-kpis > div:last-child {
-  border-right: 0;
+  min-height: 88px;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgb(14 27 23 / 5%);
 }
 
 .workforce-kpis dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
 }
 
+.workforce-kpis dt::before {
+  display: inline-grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 4px;
+  background: var(--kpi-icon-bg, #e8eeec);
+  color: var(--kpi-icon-color, #41534d);
+  content: "#";
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.workforce-kpis [data-kpi="scheduled"] {
+  --kpi-icon-bg: #e4f2ec;
+  --kpi-icon-color: #12634f;
+}
+
+.workforce-kpis [data-kpi="scheduled"] dt::before {
+  content: "\2713";
+}
+
+.workforce-kpis [data-kpi="available"] {
+  --kpi-icon-bg: #e8f0f7;
+  --kpi-icon-color: #245d8c;
+}
+
+.workforce-kpis [data-kpi="available"] dt::before {
+  content: "+";
+}
+
+.workforce-kpis [data-kpi="rest"] dt::before {
+  content: "\2013";
+}
+
+.workforce-kpis [data-kpi="absent"] {
+  --kpi-icon-bg: #f8e9e9;
+  --kpi-icon-color: #8c2f2f;
+}
+
+.workforce-kpis [data-kpi="absent"] dt::before {
+  content: "!";
+}
+
+.workforce-kpis [data-kpi="deficit"] {
+  --kpi-icon-bg: #fbf1df;
+  --kpi-icon-color: #825314;
+}
+
+.workforce-kpis [data-kpi="deficit"] dt::before {
+  content: "\2212";
+}
+
+.workforce-kpis [data-kpi="margin"] {
+  --kpi-icon-bg: #efeaf5;
+  --kpi-icon-color: #69468e;
+}
+
+.workforce-kpis [data-kpi="margin"] dt::before {
+  content: "\2195";
+}
+
 .workforce-kpis dd {
-  margin: 4px 0 0;
+  margin: 8px 0 0;
   overflow-wrap: anywhere;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -108,6 +215,12 @@ body[data-active-workspace="workforce"] .app-shell {
   border-radius: 0;
   background: transparent;
   color: var(--text-muted);
+  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.workforce-tabs button:hover {
+  background: #f1f5f3;
+  color: var(--text);
 }
 
 .workforce-tabs button.active {
@@ -117,6 +230,19 @@ body[data-active-workspace="workforce"] .app-shell {
 
 .workforce-tab-panel {
   padding-top: 14px;
+  animation: workforce-tab-in 160ms ease-out;
+}
+
+@keyframes workforce-tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .workforce-desk {
@@ -185,11 +311,45 @@ body[data-active-workspace="workforce"] .app-shell {
 }
 
 .workforce-coverage-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #eef1f0;
+  color: #41534d;
+  font-size: 12px;
   font-weight: 800;
 }
 
+.workforce-coverage-status::before {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.workforce-coverage-status.covered,
+.workforce-coverage-status.surplus {
+  background: #e4f2ec;
+  color: #12634f;
+}
+
+.workforce-coverage-status.attention {
+  background: #fbf1df;
+  color: #825314;
+}
+
 .workforce-coverage-status.deficit {
+  background: #f8e9e9;
   color: #8c2f2f;
+}
+
+.workforce-coverage-status.requirement_unavailable {
+  background: #edf0f2;
+  color: #52616a;
 }
 
 .workforce-anomaly-categories {
@@ -206,6 +366,20 @@ body[data-active-workspace="workforce"] .app-shell {
   background: var(--surface);
   color: var(--text-muted);
   font-size: 12px;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.workforce-anomaly-categories .absence,
+.workforce-anomaly-categories .unavailable {
+  border-color: #e5b9b5;
+  background: #fff8f7;
+  color: #76251f;
+}
+
+.workforce-anomaly-categories .unknown {
+  border-color: #cdbde0;
+  background: #f5f1f8;
+  color: #654285;
 }
 
 #workforceAnomalies {

@@ -11,10 +11,10 @@
   <link rel="stylesheet" href="./assets/css/fleet.css" />
   <link rel="stylesheet" href="./assets/css/fleet-sync.css" />
   <link rel="stylesheet" href="./assets/css/workforce.css?v=4" />
-  <link rel="stylesheet" href="./assets/css/workforce-layout.css?v=1" />
-  <link rel="stylesheet" href="./assets/css/workforce-calendar.css?v=1" />
-  <link rel="stylesheet" href="./assets/css/workforce-panel.css?v=1" />
-  <link rel="stylesheet" href="./assets/css/workforce-responsive.css?v=3" />
+  <link rel="stylesheet" href="./assets/css/workforce-layout.css?v=2" />
+  <link rel="stylesheet" href="./assets/css/workforce-calendar.css?v=2" />
+  <link rel="stylesheet" href="./assets/css/workforce-panel.css?v=2" />
+  <link rel="stylesheet" href="./assets/css/workforce-responsive.css?v=4" />
   <link rel="stylesheet" href="./assets/css/settings.css" />
   <link rel="stylesheet" href="./assets/css/onboarding.css" />
   <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
@@ -1004,11 +1004,24 @@
       <article id="workforceReadyView" class="workforce-workspace" hidden>
         <div class="workforce-command-bar">
           <div class="workforce-period-nav" aria-label="Navigazione periodo">
-            <button id="workforceTodayBtn" type="button" class="quiet">Oggi</button>
-            <button id="workforcePreviousBtn" type="button" class="quiet">Precedente</button>
-            <button id="workforceNextBtn" type="button" class="quiet">Successiva</button>
-            <label>
-              Data
+            <button
+              id="workforcePreviousBtn"
+              type="button"
+              class="workforce-week-nav"
+              aria-label="Settimana precedente"
+              title="Settimana precedente"
+            >&larr;</button>
+            <button id="workforceTodayBtn" type="button" class="secondary workforce-today-btn">Oggi</button>
+            <button
+              id="workforceNextBtn"
+              type="button"
+              class="workforce-week-nav"
+              aria-label="Settimana successiva"
+              title="Settimana successiva"
+            >&rarr;</button>
+            <strong id="workforceCalendarWindow" class="workforce-period-focus" aria-live="polite"></strong>
+            <label class="workforce-date-jump">
+              Vai alla data
               <input id="workforceDatePicker" type="date" />
             </label>
             <button id="workforceRefreshBtn" type="button">Vai</button>
@@ -1023,13 +1036,13 @@
         </div>
 
         <dl id="workforceSummary" class="workforce-kpis" aria-label="Indicatori del periodo">
-          <div><dt>Risorse</dt><dd id="workforceMemberCount">0</dd></div>
-          <div><dt>Programmate</dt><dd id="workforceScheduledCount">0</dd></div>
-          <div><dt>Disponibili</dt><dd id="workforceAvailableCount">0</dd></div>
-          <div><dt>Riposo</dt><dd id="workforceRestCount">0</dd></div>
-          <div><dt>Assenti</dt><dd id="workforceAbsentCount">0</dd></div>
-          <div><dt>Deficit</dt><dd id="workforceDeficitValue">--</dd></div>
-          <div><dt>Margine</dt><dd id="workforceMarginValue">--</dd></div>
+          <div data-kpi="resources"><dt>Risorse</dt><dd id="workforceMemberCount">0</dd></div>
+          <div data-kpi="scheduled"><dt>Programmate</dt><dd id="workforceScheduledCount">0</dd></div>
+          <div data-kpi="available"><dt>Disponibili</dt><dd id="workforceAvailableCount">0</dd></div>
+          <div data-kpi="rest"><dt>Riposo</dt><dd id="workforceRestCount">0</dd></div>
+          <div data-kpi="absent"><dt>Assenti</dt><dd id="workforceAbsentCount">0</dd></div>
+          <div data-kpi="deficit"><dt>Deficit</dt><dd id="workforceDeficitValue">--</dd></div>
+          <div data-kpi="margin"><dt>Margine</dt><dd id="workforceMarginValue">--</dd></div>
         </dl>
         <p id="workforceRequirementNotice" class="workforce-requirement-notice" hidden>
           Fabbisogno non configurato
@@ -1077,7 +1090,6 @@
             <div class="workforce-calendar-stage">
               <div class="workforce-calendar-meta">
                 <h3>Calendario</h3>
-                <p id="workforceCalendarWindow" class="section-note"></p>
               </div>
               <div id="workforceCalendar" class="workforce-calendar-wrap"></div>
             </div>
@@ -1206,8 +1218,8 @@
         >
           <div class="workforce-panel-heading">
             <div>
-              <h3>Anomalie del periodo</h3>
-              <p id="workforceAnomalySummary">Nessuna anomalia caricata.</p>
+              <h3>Eventi del periodo</h3>
+              <p id="workforceAnomalySummary">Nessun evento caricato.</p>
             </div>
             <label>
               Categoria

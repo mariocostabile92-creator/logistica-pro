@@ -68,6 +68,10 @@
   background-color: #f8faf9;
 }
 
+.workforce-calendar-table tbody tr {
+  transition: background-color 160ms ease;
+}
+
 .workforce-member-button {
   display: block;
   width: 100%;
@@ -102,23 +106,25 @@
 
 .workforce-calendar-cell {
   min-width: 122px;
-  height: 68px;
-  padding: 5px;
+  height: 78px;
+  padding: 7px;
   background: var(--surface);
 }
 
 .workforce-status-button {
+  --status-color: #71807b;
   display: grid;
   align-content: center;
   width: 100%;
-  min-height: 54px;
-  padding: 7px 8px;
+  min-height: 62px;
+  padding: 8px 9px;
   border: 1px solid transparent;
-  border-left: 4px solid #71807b;
+  border-left: 4px solid var(--status-color);
   border-radius: 3px;
   background: #eef1f0;
   color: var(--text);
   text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .workforce-status-button strong,
@@ -130,39 +136,74 @@
 }
 
 .workforce-status-button strong {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .workforce-status-button span {
-  margin-top: 2px;
+  margin-top: 4px;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
-.workforce-status-button.available,
+.workforce-status-badge {
+  display: flex !important;
+  align-items: center;
+  gap: 7px;
+}
+
+.workforce-status-badge::before {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: var(--status-color);
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 75%);
+  content: "";
+}
+
+.workforce-status-button:hover {
+  border-color: var(--status-color);
+  box-shadow: 0 3px 10px rgb(14 27 23 / 10%);
+  transform: translateY(-1px);
+}
+
 .workforce-status-button.scheduled {
-  border-left-color: #16745f;
+  --status-color: #16745f;
   background: #e7f2ee;
 }
 
+.workforce-status-button.available {
+  --status-color: #245d8c;
+  background: #e8f0f7;
+}
+
 .workforce-status-button.rest {
-  border-left-color: #5f6e77;
+  --status-color: #5f6e77;
   background: #edf0f2;
 }
 
-.workforce-status-button.holiday,
-.workforce-status-button.leave {
-  border-left-color: #9b6819;
+.workforce-status-button.holiday {
+  --status-color: #9b6819;
   background: #fbf1df;
 }
 
-.workforce-status-button.sickness,
-.workforce-status-button.unavailable {
-  border-left-color: #9b3636;
+.workforce-status-button.leave {
+  --status-color: #b45b24;
+  background: #fbecdf;
+}
+
+.workforce-status-button.sickness {
+  --status-color: #a13232;
   background: #f8e9e9;
 }
 
+.workforce-status-button.unavailable {
+  --status-color: #74404b;
+  background: #f3e9eb;
+}
+
 .workforce-status-button.unknown {
-  border-left-color: #73519a;
+  --status-color: #73519a;
   background: #f0ebf5;
 }
 
@@ -186,8 +227,13 @@
   gap: 12px;
   align-items: center;
   min-width: 0;
-  padding: 12px;
+  padding: 15px 14px;
   background: var(--surface);
+  transition: background-color 160ms ease;
+}
+
+.workforce-day-card:hover {
+  background: #f8faf9;
 }
 
 .workforce-day-person,

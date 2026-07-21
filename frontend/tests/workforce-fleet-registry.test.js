@@ -91,7 +91,7 @@ test("Workforce calendar supports day week person and side-panel edits", async (
   assert.match(detail, /surface\.requestClose/);
   assert.match(html, /id="workforceDetailPanel"[\s\S]*?id="workforceStatusEditor"/);
   assert.match(html, /id="workforceDetailPanel"[\s\S]*?id="workforceMemberEditor"/);
-  assert.equal(workforceTimeLabel({ start_time: "08:00", end_time: "17:00" }), "08:00-17:00");
+  assert.equal(workforceTimeLabel({ start_time: "08:00", end_time: "17:00" }), "08:00–17:00");
 });
 
 
@@ -175,7 +175,7 @@ test("Workforce visible language translates internal states", async () => {
     frontendFile("assets/js/modules/workforce-view.js"),
     frontendFile("assets/js/modules/workforce-insights-view.js"),
   ]);
-  assert.match(insights, /requirement_unavailable: "Fabbisogno non configurato"/);
+  assert.match(insights, /requirement_unavailable: "Non configurato"/);
   assert.match(source, /scheduled: "Programmato"/);
   assert.match(source, /rest: "Riposo"/);
   assert.equal(workforceStatusLabel("unavailable"), "Non disponibile");
@@ -218,6 +218,31 @@ test("Workforce layout is bounded, wide and responsive", async () => {
   assert.match(responsive, /@media \(max-width: 1180px\)/);
   assert.match(responsive, /@media \(max-width: 720px\)/);
   assert.match(responsive, /@media \(max-width: 620px\)/);
+});
+
+
+test("Workforce polish keeps operational signals compact and accessible", async () => {
+  const [html, page, calendar, insights, layout, calendarCss, panelCss] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/js/modules/workforce-page.js"),
+    frontendFile("assets/js/modules/workforce-calendar-view.js"),
+    frontendFile("assets/js/modules/workforce-insights-view.js"),
+    frontendFile("assets/css/workforce-layout.css"),
+    frontendFile("assets/css/workforce-calendar.css"),
+    frontendFile("assets/css/workforce-panel.css"),
+  ]);
+  assert.match(html, /aria-label="Settimana precedente"[\s\S]*?&larr;/);
+  assert.match(html, /id="workforceCalendarWindow" class="workforce-period-focus"/);
+  assert.equal((html.match(/data-kpi=/g) || []).length, 7);
+  assert.match(calendar, /class="workforce-status-badge"/);
+  assert.match(calendarCss, /\.workforce-status-badge::before/);
+  assert.match(insights, /covered: "Coperto"/);
+  assert.match(insights, /deficit: "Scoperto"/);
+  assert.match(insights, /eventi registrati nel periodo selezionato/);
+  assert.match(page, /showWorkforceFeedback\("Modifica salvata"\)/);
+  assert.match(page, /}, 3200\)/);
+  assert.match(layout, /transition:[^;]*160ms/);
+  assert.match(panelCss, /180ms ease-out/);
 });
 
 

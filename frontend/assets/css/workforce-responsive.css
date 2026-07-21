@@ -40,10 +40,6 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .workforce-kpis > div {
-    border-bottom: 1px solid var(--border);
-  }
-
   .workforce-import-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -73,6 +69,18 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .workforce-week-nav,
+  .workforce-today-btn {
+    width: 100%;
+  }
+
+  .workforce-period-focus {
+    grid-column: 1 / -1;
+    min-width: 0;
+    min-height: 34px;
+    padding: 8px 6px 2px;
+  }
+
   .workforce-period-nav label {
     grid-column: 1 / 3;
     grid-template-columns: 1fr;
@@ -95,13 +103,8 @@
   }
 
   .workforce-kpis > div {
-    flex: 0 0 112px;
-    border-right: 1px solid var(--border);
-    border-bottom: 0;
-  }
-
-  .workforce-kpis > div:last-child {
-    border-right: 0;
+    flex: 0 0 142px;
+    min-height: 82px;
   }
 
   .workforce-tabs {
@@ -143,6 +146,7 @@
     border-left: 1px solid var(--border);
     border-top: 4px solid var(--accent);
     box-shadow: 0 -16px 48px rgb(14 27 23 / 20%);
+    animation-name: workforce-sheet-in;
   }
 
   .workforce-import-panel {
@@ -155,6 +159,19 @@
     border-top: 4px solid var(--accent);
     border-radius: 0;
     transform: none;
+    animation-name: workforce-sheet-in;
+  }
+
+  @keyframes workforce-sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .workforce-import-form {

@@ -47,12 +47,23 @@ let activeTab = "calendar";
 let anomalyLimit = ANOMALY_PAGE_SIZE;
 let workforceImportFlow = null;
 let workforceDetailPanel = null;
+let feedbackTimeout = null;
 
 
 function errorMessage(context, error) {
   const presentation = userErrorPresentation(context, error);
   setMessage(presentation.message, presentation.tone);
   return presentation.message;
+}
+
+
+function showWorkforceFeedback(message) {
+  const content = `✔ ${message}`;
+  window.clearTimeout(feedbackTimeout);
+  setMessage(content, "success");
+  feedbackTimeout = window.setTimeout(() => {
+    if (byId("message").textContent === content) setMessage("");
+  }, 3200);
 }
 
 
@@ -75,6 +86,17 @@ function addDays(value, days) {
   const date = utcDate(value);
   date.setUTCDate(date.getUTCDate() + days);
   return isoDate(date);
+}
+
+
+function periodLabel(dateFrom, dateTo) {
+  const formatter = new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  return `${formatter.format(utcDate(dateFrom))} – ${formatter.format(utcDate(dateTo))}`;
 }
 
 
@@ -222,7 +244,7 @@ async function loadCalendar(range = null) {
   byId("workforceDateFrom").value = dateFrom;
   byId("workforceDateTo").value = dateTo;
   byId("workforceDatePicker").value = dateFrom;
-  byId("workforceCalendarWindow").textContent = `${dateFrom} - ${dateTo}`;
+  byId("workforceCalendarWindow").textContent = periodLabel(dateFrom, dateTo);
   byId("workforceTimestamp").textContent = `Periodo attivo ${dateFrom} - ${dateTo}`;
   byId("workforceCalendar").innerHTML = `
     <div class="workforce-calendar-loading" aria-busy="true" aria-label="Caricamento calendario">
@@ -313,7 +335,7 @@ async function submitStatus(event) {
       dateFrom: byId("workforceDateFrom").value,
       dateTo: byId("workforceDateTo").value,
     });
-    setMessage("Modifica Workforce registrata.", "success");
+    showWorkforceFeedback("Modifica salvata");
   } catch (error) {
     errorMessage("workforce.save-status", error);
   } finally {
@@ -342,7 +364,7 @@ async function submitMember(event) {
       dateFrom: byId("workforceDateFrom").value,
       dateTo: byId("workforceDateTo").value,
     });
-    setMessage("Profilo Workforce aggiornato.", "success");
+    showWorkforceFeedback("Profilo salvato");
   } catch (error) {
     errorMessage("workforce.save-member", error);
   } finally {
@@ -388,6 +410,7 @@ export function initWorkforcePage() {
       }));
       await refresh();
     },
+    onSuccess: showWorkforceFeedback,
   });
   byId("workforceRefreshBtn").addEventListener("click", () => {
     loadFromAnchor(byId("workforceDatePicker").value);

@@ -3,10 +3,11 @@ import { workforceStatusLabel } from "./workforce-view.js";
 
 
 const COVERAGE_LABELS = {
-  covered: "Copertura adeguata",
-  surplus: "Margine disponibile",
-  deficit: "Copertura insufficiente",
-  requirement_unavailable: "Fabbisogno non configurato",
+  covered: "Coperto",
+  surplus: "Coperto",
+  attention: "Attenzione",
+  deficit: "Scoperto",
+  requirement_unavailable: "Non configurato",
 };
 
 const ANOMALY_LABELS = {
@@ -76,12 +77,12 @@ export function renderWorkforceCoverage(container, coverage) {
       <tbody>${coverage.slice(0, 14).map((item) => `
         <tr>
           <th scope="row">${escapeHtml(item.date)}</th>
-          <td>${item.required ?? "Non configurato"}</td>
+          <td>${item.status === "requirement_unavailable" ? "--" : item.required ?? "--"}</td>
           <td>${item.available}</td>
           <td>${item.scheduled}</td>
           <td>${item.unavailable}</td>
           <td>${Number.isFinite(item.margin) && item.margin < 0 ? Math.abs(item.margin) : 0}</td>
-          <td>${item.margin ?? "Non configurato"}</td>
+          <td>${item.status === "requirement_unavailable" ? "--" : item.margin ?? "--"}</td>
           <td><span class="workforce-coverage-status ${escapeHtml(item.status)}">${escapeHtml(COVERAGE_LABELS[item.status] || "Da verificare")}</span></td>
           <td>${item.limitations?.length ? escapeHtml(item.limitations.join(", ")) : "Nessuna"}</td>
         </tr>
@@ -101,9 +102,9 @@ export function renderWorkforceAnomalies({
   limit = 25,
 }) {
   const result = workforceAnomalies(statuses, members, filter);
-  summaryElement.textContent = `${result.total} elementi nel periodo selezionato.`;
+  summaryElement.textContent = `${result.total} eventi registrati nel periodo selezionato.`;
   categoriesElement.innerHTML = Object.entries(result.counts).map(([category, count]) => `
-    <span><strong>${count}</strong> ${escapeHtml(ANOMALY_LABELS[category])}</span>
+    <span class="${escapeHtml(category)}"><strong>${count}</strong> ${escapeHtml(ANOMALY_LABELS[category])}</span>
   `).join("");
   const visibleItems = result.items.slice(0, limit);
   container.innerHTML = visibleItems.length
@@ -113,6 +114,6 @@ export function renderWorkforceAnomalies({
           <span>${escapeHtml(item.date)}${item.shift_code ? ` - ${escapeHtml(item.shift_code)}` : ""}</span>
         </div>
       `).join("")
-    : '<div><strong>Nessun elemento per il filtro selezionato.</strong></div>';
+    : '<div><strong>Nessun evento per il filtro selezionato.</strong></div>';
   return { hasMore: result.items.length > limit, visibleCount: visibleItems.length };
 }

@@ -16,6 +16,7 @@ let importPreview = null;
 let analyzing = false;
 let importing = false;
 let afterImport = async () => {};
+let notifySuccess = (message) => setMessage(message, "success");
 let importSurface = null;
 
 
@@ -123,7 +124,7 @@ async function confirm(event) {
     setBusy();
     close({ reset: true });
     await afterImport();
-    setMessage("Planning turni importato.", "success");
+    notifySuccess("Aggiornamento completato.");
   } catch (error) {
     const message = presentError("workforce.import", error);
     byId("workforceImportState").innerHTML = `
@@ -151,8 +152,9 @@ async function open(file = null, { analyzeFile = false } = {}) {
 }
 
 
-export function initWorkforceImportFlow({ onImported }) {
+export function initWorkforceImportFlow({ onImported, onSuccess }) {
   afterImport = onImported;
+  notifySuccess = onSuccess || notifySuccess;
   importSurface = createWorkforceSurface({
     surface: byId("workforceImportPanel"),
     backdrop: byId("workforceImportBackdrop"),

@@ -23,7 +23,7 @@ function shortDate(value) {
 
 export function workforceTimeLabel(status) {
   if (!status?.start_time && !status?.end_time) return "";
-  if (status.start_time && status.end_time) return `${status.start_time}-${status.end_time}`;
+  if (status.start_time && status.end_time) return `${status.start_time}–${status.end_time}`;
   return status.start_time || status.end_time;
 }
 
@@ -37,8 +37,11 @@ function resourceMeta(member) {
 
 function statusButton(member, day, status) {
   const code = status?.status_code || "unknown";
+  const label = workforceStatusLabel(code);
   const time = workforceTimeLabel(status);
-  const detail = [workforceStatusLabel(code), status?.shift_code, time].filter(Boolean).join(", ");
+  const primary = status?.shift_code || label;
+  const secondary = [status?.shift_code ? label : "", time].filter(Boolean).join(" · ");
+  const detail = [label, status?.shift_code, time].filter(Boolean).join(", ");
   return `
     <button
       type="button"
@@ -47,10 +50,10 @@ function statusButton(member, day, status) {
       data-workforce-member-id="${member.workforce_member_id}"
       data-workforce-date="${day}"
       aria-label="${escapeHtml(`${member.display_name}, ${day}, ${detail}`)}"
+      title="${escapeHtml(detail)}"
     >
-      <strong>${escapeHtml(workforceStatusLabel(code))}</strong>
-      ${status?.shift_code ? `<span>${escapeHtml(status.shift_code)}</span>` : ""}
-      ${time ? `<span>${escapeHtml(time)}</span>` : ""}
+      <strong class="workforce-status-badge">${escapeHtml(primary)}</strong>
+      ${secondary ? `<span>${escapeHtml(secondary)}</span>` : ""}
     </button>
   `;
 }
