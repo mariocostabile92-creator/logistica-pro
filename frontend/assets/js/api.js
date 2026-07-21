@@ -135,6 +135,121 @@ export async function getFleetAssetEvents(assetId) {
 }
 
 
+export async function getWorkforceStatus() {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/status`));
+}
+
+
+export async function listWorkforceMembers() {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/members`));
+}
+
+
+export async function getWorkforceCalendar(dateFrom = "", dateTo = "") {
+  const params = new URLSearchParams();
+  if (dateFrom) params.set("date_from", dateFrom);
+  if (dateTo) params.set("date_to", dateTo);
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/calendar?${params}`));
+}
+
+
+export async function getWorkforceCoverage(dateFrom = "", dateTo = "") {
+  const params = new URLSearchParams();
+  if (dateFrom) params.set("date_from", dateFrom);
+  if (dateTo) params.set("date_to", dateTo);
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/coverage?${params}`));
+}
+
+
+export async function getWorkforceChanges() {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/changes`));
+}
+
+
+export async function previewWorkforceImport(file) {
+  const form = new FormData();
+  form.append("file", file);
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/import/preview`, {
+    method: "POST",
+    body: form,
+  }));
+}
+
+
+export async function confirmWorkforceImport(file, fingerprint) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("confirmed_fingerprint", fingerprint);
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/import`, {
+    method: "POST",
+    body: form,
+  }));
+}
+
+
+export async function saveWorkforceDayStatus(statusId, payload) {
+  const path = statusId
+    ? `/api/plugins/workforce/v1/day-status/${statusId}`
+    : "/api/plugins/workforce/v1/day-status";
+  return parseResponse(await fetch(`${API_BASE}${path}`, {
+    method: statusId ? "PATCH" : "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+
+export async function updateWorkforceMember(memberId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/members/${memberId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+
+export async function downloadWorkforceExport(section = "calendar") {
+  const response = await fetch(`${API_BASE}/api/plugins/workforce/v1/export?section=${encodeURIComponent(section)}`);
+  if (!response.ok) return parseResponse(response);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `workforce-${section}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+
+export async function previewFleetSync(file, options = {}) {
+  const form = new FormData();
+  form.append("file", file);
+  appendImportOptions(form, options);
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/fleet/v1/sync/preview`, {
+    method: "POST",
+    body: form,
+  }));
+}
+
+
+export async function confirmFleetSync(file, fingerprint, selectedRows, options = {}) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("confirmed_fingerprint", fingerprint);
+  form.append("selected_rows", JSON.stringify(selectedRows));
+  appendImportOptions(form, options);
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/fleet/v1/sync/confirm`, {
+    method: "POST",
+    body: form,
+  }));
+}
+
+
+export async function getLatestFleetSync() {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/fleet/v1/sync/latest`));
+}
+
+
 function appendImportOptions(
   form,
   {

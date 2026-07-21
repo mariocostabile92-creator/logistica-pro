@@ -1,0 +1,1 @@
+"""Workforce persistence adapters."""

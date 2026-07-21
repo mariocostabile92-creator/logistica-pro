@@ -55,6 +55,7 @@ export function initWorkbookImport({
   fileMissingMessage,
   importedEventType,
   stateKey,
+  expectedTarget,
 }) {
   const elements = {
     form: byId(`${prefix}Form`),
@@ -128,6 +129,21 @@ export function initWorkbookImport({
         : "Non rilevata";
       renderProfile(elements.profile, data);
       renderIssues(elements.issues, data.blocking_reasons, data.warnings);
+      if (["workforce", "fleet_registry"].includes(data.recommended_target)) {
+        const routeButton = document.createElement("button");
+        routeButton.type = "button";
+        routeButton.className = "import-route-action";
+        routeButton.textContent = data.recommended_action_label;
+        routeButton.addEventListener("click", () => {
+          const eventName = data.recommended_target === "workforce"
+            ? "workforce:import-requested"
+            : "fleet:sync-requested";
+          document.dispatchEvent(new CustomEvent(eventName, {
+            detail: { file: elements.file.files[0] },
+          }));
+        });
+        elements.issues.appendChild(routeButton);
+      }
       const typeMismatch = data.blocking_reasons.some(
         (item) => item.code === "WORKBOOK_TYPE_MISMATCH",
       );
@@ -138,11 +154,17 @@ export function initWorkbookImport({
         { disabled: typeMismatch },
       );
       renderPreview(elements.preview, data.sample_rows);
-      setAnalyzedState({ ready: true, allowed: data.import_allowed });
+      const routedElsewhere = data.recommended_target !== expectedTarget;
+      setAnalyzedState({
+        ready: true,
+        allowed: data.import_allowed && !routedElsewhere,
+      });
       setStatus(
         elements,
-        data.import_allowed ? "Pronto all'import" : "Verifica necessaria",
-        data.import_allowed ? "ok" : "warning",
+        data.import_allowed && !routedElsewhere
+          ? "Pronto all'import"
+          : "Instradato al modulo corretto",
+        data.import_allowed && !routedElsewhere ? "ok" : "warning",
       );
       elements.previewButton.textContent = "Rianalizza";
       elements.previewButton.dataset.label = "Rianalizza";

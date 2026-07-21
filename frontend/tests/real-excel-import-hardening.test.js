@@ -40,7 +40,7 @@ test("all explicit workbook types have readable labels", () => {
   );
   assert.equal(
     workbookTypeLabel("WORKFORCE_SCHEDULE"),
-    "Programmazione turni driver",
+    "Planning turni Workforce",
   );
   assert.equal(workbookTypeLabel("FLEET_REGISTRY"), "Registro Fleet");
   assert.equal(

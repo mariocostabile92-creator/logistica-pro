@@ -13,8 +13,16 @@ OPERATIONAL_DELETE_ORDER = (
     "plannings",
     "operation_snapshots",
     "analyses",
+    "workforce_changes",
+    "workforce_day_statuses",
+    "workforce_requirements",
+    "workforce_members",
+    "workforce_imports",
     "fleet_asset_documents",
+    "fleet_sync_event_fingerprints",
     "fleet_asset_events",
+    "fleet_sync_runs",
+    "fleet_asset_metadata",
     "fleet_assets",
     "imports",
     "demo_workspaces",
@@ -204,6 +212,9 @@ def _latest_operational_update(conn) -> str | None:
         "SELECT MAX(created_at) AS value FROM operation_snapshots",
         "SELECT MAX(updated_at) AS value FROM plannings",
         "SELECT MAX(updated_at) AS value FROM fleet_assets",
+        "SELECT MAX(imported_at) AS value FROM workforce_imports",
+        "SELECT MAX(updated_at) AS value FROM workforce_members",
+        "SELECT MAX(imported_at) AS value FROM fleet_sync_runs",
         "SELECT MAX(generated_at) AS value FROM daily_briefings",
         "SELECT MAX(updated_at) AS value FROM demo_workspaces",
     )
@@ -250,6 +261,9 @@ def read_inventory() -> dict[str, Any]:
         )
         non_demo_data = (
             non_demo_relational_data
+            or counts["workforce_members"] > 0
+            or counts["workforce_day_statuses"] > 0
+            or counts["workforce_imports"] > 0
             or (
                 counts["analyses"] > 0
                 and not analyses_are_demo_derived
@@ -263,6 +277,10 @@ def read_inventory() -> dict[str, Any]:
                 "operation_snapshots",
                 "plannings",
                 "fleet_assets",
+                "workforce_members",
+                "workforce_day_statuses",
+                "workforce_imports",
+                "fleet_sync_runs",
                 "daily_briefings",
             )
         )
@@ -280,6 +298,7 @@ def read_inventory() -> dict[str, Any]:
                 else 0
             ),
             "asset_count": asset_count,
+            "workforce_member_count": counts["workforce_members"],
             "planning_count": counts["plannings"],
             "briefing_count": counts["daily_briefings"],
             "last_operational_update": _latest_operational_update(conn),

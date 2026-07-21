@@ -28,8 +28,8 @@
 
 .app-header .workspace-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(94px, 1fr));
-  width: min(500px, 100%);
+  grid-template-columns: repeat(5, minmax(94px, 1fr));
+  width: min(620px, 100%);
   margin: 0;
   padding: 3px;
   border: 1px solid #43514c;

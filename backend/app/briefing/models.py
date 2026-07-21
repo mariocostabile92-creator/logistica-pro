@@ -55,12 +55,15 @@ class SourceType(str, Enum):
     FLEET_DOCUMENT = "fleet_document"
     PLANNING_EVENT = "planning_event"
     CONFIGURATION = "configuration"
+    WORKFORCE = "workforce"
+    FLEET_SYNC = "fleet_sync"
 
 
 class WorkspaceTarget(str, Enum):
     OPERATIONS = "operations"
     FLEET = "fleet"
     SETTINGS = "settings"
+    WORKFORCE = "workforce"
 
 
 class SourceReference(BaseModel):

@@ -15,11 +15,17 @@ _IDENTITY_TABLES = {
     "fleet_asset_documents",
     "fleet_asset_events",
     "fleet_assets",
+    "fleet_sync_runs",
     "imports",
     "operation_snapshots",
     "planning_events",
     "planning_versions",
     "plannings",
+    "workforce_changes",
+    "workforce_day_statuses",
+    "workforce_imports",
+    "workforce_members",
+    "workforce_requirements",
 }
 
 

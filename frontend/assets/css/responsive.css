@@ -78,14 +78,16 @@
   }
 
   .app-header .workspace-tabs {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 2px;
   }
 
   .workspace-tab {
     min-width: 0;
-    padding: 0 5px;
-    font-size: 12px;
+    padding: 0 2px;
+    font-size: 10px;
+    overflow-wrap: normal;
+    white-space: nowrap;
   }
 
   .app-header-actions {

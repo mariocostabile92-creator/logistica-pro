@@ -41,7 +41,12 @@ def test_safe_defaults_are_typed_valid_and_explainable():
 
     assert configuration.version.number == 0
     assert configuration.metadata.fallback_used is True
-    assert len(configuration.sections) == 8
+    assert len(configuration.sections) == 11
+    assert {section.key for section in configuration.sections} >= {
+        "workforce_statuses",
+        "workforce_shift_codes",
+        "fleet_registry",
+    }
     assert configuration.metadata.validation_status == "valid"
     assert configuration.metadata.applied_versions == []
     assert configuration_value(

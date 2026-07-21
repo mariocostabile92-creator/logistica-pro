@@ -73,6 +73,7 @@ def get_workspace_status() -> WorkspaceStatusResponse:
         ),
         task_count=int(inventory["task_count"]),
         asset_count=int(inventory["asset_count"]),
+        workforce_member_count=int(inventory["workforce_member_count"]),
         planning_count=int(inventory["planning_count"]),
         briefing_count=int(inventory["briefing_count"]),
         last_operational_update=inventory["last_operational_update"],

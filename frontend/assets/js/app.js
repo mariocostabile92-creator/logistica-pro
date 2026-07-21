@@ -2,6 +2,7 @@ import { getHealth } from "./api.js";
 import { initBriefing } from "./modules/briefing.js";
 import { initFleetImport } from "./modules/import-fleet.js";
 import { initFleetPage } from "./modules/fleet-page.js";
+import { initFleetSync } from "./modules/fleet-sync.js";
 import { initDemoWorkspace } from "./modules/demo-workspace.js";
 import { initOnboarding } from "./modules/onboarding.js";
 import { initOperationsDashboard } from "./modules/operations-dashboard.js";
@@ -10,6 +11,7 @@ import { initPlanningImport } from "./modules/import-planning.js";
 import { initSettingsPage } from "./modules/settings-page.js";
 import { initViewNavigation } from "./modules/view-navigation.js";
 import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js";
+import { initWorkforcePage } from "./modules/workforce-page.js";
 import { byId } from "./utils/dom.js";
 
 
@@ -33,6 +35,8 @@ initOnboarding();
 initOperationsDashboard();
 initPlanningPage();
 initFleetPage();
+initFleetSync();
+initWorkforcePage();
 initSettingsPage();
 initViewNavigation();
 initDemoWorkspace();

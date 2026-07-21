@@ -8,5 +8,6 @@ export function initFleetImport() {
     fileMissingMessage: "Seleziona un file parco auto.",
     importedEventType: "fleet",
     stateKey: "fleet",
+    expectedTarget: "fleet_snapshot_legacy",
   });
 }

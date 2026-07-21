@@ -156,6 +156,28 @@ def test_plugin_domain_does_not_depend_on_outer_plugin_layers():
     )
 
 
+def test_workforce_domain_does_not_depend_on_outer_plugin_layers():
+    assert_no_imports(
+        python_files("plugins", "workforce", "domain"),
+        (
+            "app.plugins.workforce.application",
+            "app.plugins.workforce.infrastructure",
+            "app.plugins.workforce.interfaces",
+            "app.adapters",
+        ),
+    )
+
+
+def test_workforce_application_does_not_depend_on_interfaces_or_adapters():
+    assert_no_imports(
+        python_files("plugins", "workforce", "application"),
+        (
+            "app.adapters",
+            "app.plugins.workforce.interfaces",
+        ),
+    )
+
+
 def test_plugin_application_does_not_depend_on_interfaces_or_adapters():
     assert_no_imports(
         python_files("plugins", "fleet", "application"),

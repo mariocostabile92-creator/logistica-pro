@@ -10,3 +10,5 @@ backend/data/*.sqlite3
 backend/operations.sqlite3
 Planning driver_*.xlsx
 stato parco auto_*.xlsx
+qa-local/
+*.qa.sqlite3

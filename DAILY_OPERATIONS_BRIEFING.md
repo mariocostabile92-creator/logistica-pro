@@ -87,6 +87,10 @@ Le fonti consentite e usate sono:
 - Capacity per Operational Unit già presente nel Planning;
 - Asset e documenti esposti dal servizio applicativo pubblico del Fleet
   Plugin;
+- snapshot pubblico Workforce con assenze, copertura, deficit, contratti in
+  scadenza e capability mancanti;
+- snapshot pubblico Fleet Sync con indisponibili, manutenzione, riserva,
+  conflitti, documenti in attenzione e aggiornamenti recenti;
 - configurazione effettiva restituita dal Configuration Engine.
 
 La demo non è importata dal modulo briefing. `is_demo` deriva dai marker degli
@@ -222,8 +226,14 @@ Il fingerprint SHA-256 include:
 - snapshot operativo compatibile, senza ID e timestamp tecnici che non
   cambiano il contenuto;
 - Asset e documenti Fleet esposti;
+- snapshot pubblici Workforce e Fleet Sync;
 - configurazione effettiva;
 - indicatore demo derivato.
+
+Il Briefing non ricalcola questi conteggi. Li riceve dai servizi applicativi
+pubblici dei plugin e aggiunge sezioni `WORKFORCE_DEFICIT`,
+`WORKFORCE_ATTENTION` o `FLEET_REGISTRY_ATTENTION` soltanto quando i relativi
+snapshot richiedono attenzione.
 
 Se il fingerprint esiste, `POST generate` restituisce il record persistito,
 incluso lo stesso `generated_at`. Non viene creato un duplicato.

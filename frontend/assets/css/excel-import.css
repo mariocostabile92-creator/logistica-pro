@@ -110,6 +110,10 @@
   font-size: 13px;
 }
 
+.import-route-action {
+  margin-top: 8px;
+}
+
 .import-notice.blocking {
   border-left-color: var(--danger);
   background: #fff0ef;

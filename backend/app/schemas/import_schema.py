@@ -60,6 +60,13 @@ class ImportPreviewResponse(BaseModel):
     blocking_reasons: list[ProfileIssue] = Field(default_factory=list)
     warnings: list[ProfileIssue] = Field(default_factory=list)
     sample_rows: list[dict[str, object]] = Field(default_factory=list)
+    recommended_target: Literal[
+        "daily_operations",
+        "workforce",
+        "fleet_registry",
+        "manual_review",
+    ] = "manual_review"
+    recommended_action_label: str = "Verifica manuale"
 
 
 class ImportResultResponse(BaseModel):

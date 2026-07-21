@@ -13,6 +13,9 @@ class AssetEventType(str, Enum):
     ASSET_AVAILABILITY_CHANGED = "AssetAvailabilityChanged"
     ASSET_AVAILABILITY_OBSERVED = "AssetAvailabilityObserved"
     ASSET_DOCUMENT_ADDED = "AssetDocumentAdded"
+    ASSET_RESERVE_ASSIGNED = "AssetReserveAssigned"
+    ASSET_DOCUMENT_OBSERVED = "AssetDocumentObserved"
+    ASSET_ASSOCIATION_CHANGED = "AssetAssociationChanged"
 
 
 class AssetDocument(BaseModel):

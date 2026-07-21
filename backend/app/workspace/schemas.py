@@ -19,6 +19,7 @@ class WorkspaceStatusResponse(BaseModel):
     latest_fleet_import: WorkspaceImportReference | None = None
     task_count: int = Field(default=0, ge=0)
     asset_count: int = Field(default=0, ge=0)
+    workforce_member_count: int = Field(default=0, ge=0)
     planning_count: int = Field(default=0, ge=0)
     briefing_count: int = Field(default=0, ge=0)
     last_operational_update: str | None = None
@@ -34,8 +35,16 @@ class WorkspaceRemovedCounts(BaseModel):
     plannings: int = 0
     operation_snapshots: int = 0
     analyses: int = 0
+    workforce_changes: int = 0
+    workforce_day_statuses: int = 0
+    workforce_requirements: int = 0
+    workforce_members: int = 0
+    workforce_imports: int = 0
     fleet_asset_documents: int = 0
+    fleet_sync_event_fingerprints: int = 0
     fleet_asset_events: int = 0
+    fleet_sync_runs: int = 0
+    fleet_asset_metadata: int = 0
     fleet_assets: int = 0
     imports: int = 0
     demo_workspaces: int = 0

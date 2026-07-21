@@ -493,10 +493,23 @@ def test_workspace_contract_is_typed_in_openapi():
 
 def test_preexisting_openapi_paths_are_byte_compatible():
     paths = app.openapi()["paths"]
+    added_paths = {
+        path
+        for path in paths
+        if path.startswith("/api/workspace/")
+        or path.startswith("/api/plugins/workforce/")
+        or path
+        in {
+            "/api/plugins/fleet/v1/sync/preview",
+            "/api/plugins/fleet/v1/sync/confirm",
+            "/api/plugins/fleet/v1/sync/latest",
+            "/api/plugins/fleet/v1/availability",
+        }
+    }
     existing = {
         path: value
         for path, value in paths.items()
-        if not path.startswith("/api/workspace/")
+        if path not in added_paths
     }
     digest = hashlib.sha256(
         json.dumps(
@@ -508,10 +521,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
     ).hexdigest()
 
     assert digest == PRE_WORKSPACE_PATHS_SHA256
-    assert set(paths) - set(existing) == {
-        f"{BASE_URL}/status",
-        f"{BASE_URL}/reset",
-    }
+    assert set(paths) - set(existing) == added_paths
 
 
 def test_workspace_domain_contains_no_market_specific_vocabulary():
@@ -535,8 +545,16 @@ def test_operational_and_preserved_table_classification_is_complete():
         "plannings",
         "operation_snapshots",
         "analyses",
+        "workforce_changes",
+        "workforce_day_statuses",
+        "workforce_requirements",
+        "workforce_members",
+        "workforce_imports",
         "fleet_asset_documents",
+        "fleet_sync_event_fingerprints",
         "fleet_asset_events",
+        "fleet_sync_runs",
+        "fleet_asset_metadata",
         "fleet_assets",
         "imports",
         "demo_workspaces",

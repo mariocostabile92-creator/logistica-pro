@@ -21,12 +21,18 @@ from app.briefing.models import (
     SourceType,
 )
 from app.briefing.prioritization import AttentionInputs, attention_level
+from app.briefing.plugin_sections import merge_plugin_sections
 from app.core.configuration.models import Configuration, ConfigurationScope
 from app.core.configuration.service import get_current_configuration
 from app.domain.operations_engine import OperationsDashboard
 from app.domain.planning_models import PlanningBundle
 from app.plugins.fleet.application.asset_service import list_assets
+from app.plugins.fleet.application.sync_service import briefing_snapshot as fleet_briefing_snapshot
 from app.plugins.fleet.domain.models import Asset
+from app.plugins.fleet.domain.sync_models import FleetBriefingSnapshot
+from app.plugins.workforce.application.workforce_service import briefing_snapshot as workforce_briefing_snapshot
+from app.plugins.workforce.bootstrap import workforce_plugin_enabled
+from app.plugins.workforce.domain.models import WorkforceBriefingSnapshot
 from app.repositories.import_repository import get_import
 from app.repositories.operations_repository import (
     get_latest_operation_snapshot,
@@ -50,6 +56,8 @@ class BriefingSourceContext:
     assets: list[Asset]
     configuration: Configuration
     is_demo: bool
+    workforce: WorkforceBriefingSnapshot | None
+    fleet: FleetBriefingSnapshot
 
 
 def _unavailable(
@@ -134,6 +142,7 @@ def _load_context(
     if not bundle:
         return None
     dashboard, snapshot_id = _matching_dashboard(bundle)
+    operation_date = bundle.planning.operation_date
     return BriefingSourceContext(
         bundle=bundle,
         dashboard=dashboard,
@@ -143,6 +152,12 @@ def _load_context(
             ConfigurationScope(organization_id="default")
         ),
         is_demo=_is_demo_bundle(bundle),
+        workforce=(
+            workforce_briefing_snapshot(operation_date)
+            if workforce_plugin_enabled()
+            else None
+        ),
+        fleet=fleet_briefing_snapshot(operation_date),
     )
 
 
@@ -167,6 +182,11 @@ def source_fingerprint(context: BriefingSourceContext) -> str:
         ],
         "configuration": context.configuration.model_dump(mode="json"),
         "is_demo": context.is_demo,
+        "workforce": (
+            context.workforce.model_dump(mode="json")
+            if context.workforce else None
+        ),
+        "fleet_registry": context.fleet.model_dump(mode="json"),
     }
     serialized = json.dumps(
         canonical_sources,
@@ -298,6 +318,10 @@ def _limitations(context: BriefingSourceContext) -> list[str]:
     if not context.assets:
         limitations.append(
             "Il Fleet Plugin non espone Asset per il Planning analizzato."
+        )
+    if workforce_plugin_enabled() and not context.workforce:
+        limitations.append(
+            "Nessuna disponibilita Workforce e disponibile per la data operativa."
         )
     return limitations
 
@@ -467,6 +491,11 @@ def generate_daily_briefing(
                 dashboard_snapshot_id=context.dashboard_snapshot_id,
                 assets=context.assets,
             )
+        )
+        sections = merge_plugin_sections(
+            sections,
+            context.workforce,
+            context.fleet,
         )
         readiness = _readiness_snapshot(context)
         capacity = _capacity_snapshot(context)

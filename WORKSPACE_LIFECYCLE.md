@@ -47,6 +47,7 @@ I contatori esposti sono:
 
 - Task: righe normalizzate dell'ultimo import Planning;
 - Asset: massimo tra Asset persistiti e righe dell'ultimo import Fleet;
+- Workforce: membri persistiti nel Workforce Plugin;
 - Planning: righe nella tabella `plannings`;
 - Briefing: righe nella tabella `daily_briefings`.
 
@@ -99,11 +100,19 @@ Un workspace gia vuoto restituisce HTTP `200`,
 | 5 | `plannings` | Planning e riepiloghi persistiti. |
 | 6 | `operation_snapshots` | Snapshot dashboard, Capacity e Readiness derivate. |
 | 7 | `analyses` | Analisi legacy ancora usate dalle API compatibili. |
-| 8 | `fleet_asset_documents` | Metadati documentali Asset. |
-| 9 | `fleet_asset_events` | Cronologia eventi Asset. |
-| 10 | `fleet_assets` | Registry Asset operativo. |
-| 11 | `imports` | Mapping e righe normalizzate Planning/Fleet. |
-| 12 | `demo_workspaces` | Registro, riferimenti e metadata demo. |
+| 8 | `workforce_changes` | Audit Workforce. |
+| 9 | `workforce_day_statuses` | Calendario e disponibilita. |
+| 10 | `workforce_requirements` | Fabbisogno Workforce. |
+| 11 | `workforce_members` | Anagrafica Workforce. |
+| 12 | `workforce_imports` | Fingerprint e riepiloghi import Workforce. |
+| 13 | `fleet_asset_documents` | Metadati documentali Asset. |
+| 14 | `fleet_sync_event_fingerprints` | Idempotenza eventi Fleet. |
+| 15 | `fleet_asset_events` | Cronologia eventi Asset. |
+| 16 | `fleet_sync_runs` | Conferme e riepiloghi sincronizzazione. |
+| 17 | `fleet_asset_metadata` | Associazioni e provenienza osservata. |
+| 18 | `fleet_assets` | Registry Asset operativo. |
+| 19 | `imports` | Mapping e righe normalizzate Planning/Fleet. |
+| 20 | `demo_workspaces` | Registro, riferimenti e metadata demo. |
 
 L'ordine elimina prima i record dipendenti e poi le radici. Le foreign key
 con cascade restano una protezione aggiuntiva, non l'unico meccanismo.
@@ -115,6 +124,8 @@ con cascade restano una protezione aggiuntiva, non l'unico meccanismo.
 - default e fallback del Configuration Engine;
 - nomenclature, capability, policy, priorita e mapping;
 - configurazione di processo e Railway;
+- mapping e policy `workforce_statuses`, `workforce_shift_codes` e
+  `fleet_registry`;
 - codice e struttura di Core, Adapter e Plugin.
 
 Le tabelle `users`, `routes_history` e `delivery_reports` appartengono al

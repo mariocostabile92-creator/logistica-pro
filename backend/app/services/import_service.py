@@ -50,6 +50,24 @@ async def preview_file(
         if profile.selected_header
         else profile.selected_sheet_profile.header_candidates
     )
+    destinations = {
+        "DAILY_OPERATIONAL_PLANNING": (
+            "daily_operations",
+            "Importa nel Planning operativo",
+        ),
+        "WORKFORCE_SCHEDULE": (
+            "workforce",
+            "Importa in Workforce Planning",
+        ),
+        "FLEET_REGISTRY": (
+            "fleet_registry",
+            "Sincronizza con Asset Registry",
+        ),
+        "UNKNOWN_WORKBOOK": ("manual_review", "Verifica manuale"),
+    }
+    target, action_label = destinations[
+        profile.classification.workbook_type.value
+    ]
     return ImportPreviewResponse(
         dataset_type=dataset_type,
         original_filename=file.filename or "upload",
@@ -97,6 +115,8 @@ async def preview_file(
         blocking_reasons=profile.blocking_reasons,
         warnings=profile.warnings,
         sample_rows=profile.sample_rows,
+        recommended_target=target,
+        recommended_action_label=action_label,
     )
 
 

@@ -3,7 +3,7 @@ import { escapeHtml } from "../utils/dom.js";
 
 const WORKBOOK_LABELS = {
   DAILY_OPERATIONAL_PLANNING: "Planning operativo giornaliero",
-  WORKFORCE_SCHEDULE: "Programmazione turni driver",
+  WORKFORCE_SCHEDULE: "Planning turni Workforce",
   FLEET_REGISTRY: "Registro Fleet",
   UNKNOWN_WORKBOOK: "Workbook non riconosciuto",
 };
@@ -35,8 +35,15 @@ export function renderSheets(selectEl, profiles, selectedSheet) {
 
 
 export function renderProfile(container, profile) {
-  const status = profile.import_allowed ? "Compatibile" : "Non importabile";
-  const tone = profile.import_allowed ? "ok" : "blocked";
+  const routed = ["workforce", "fleet_registry"].includes(
+    profile.recommended_target,
+  );
+  const status = profile.import_allowed
+    ? "Compatibile"
+    : routed
+      ? "Riconosciuto e instradato"
+      : "Non importabile";
+  const tone = profile.import_allowed || routed ? "ok" : "blocked";
   container.innerHTML = `
     <div class="import-profile-heading">
       <div>

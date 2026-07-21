@@ -21,6 +21,10 @@ from app.plugins.fleet.bootstrap import (
     initialize_fleet_plugin,
     register_fleet_plugin,
 )
+from app.plugins.workforce.bootstrap import (
+    initialize_workforce_plugin,
+    register_workforce_plugin,
+)
 from app.workspace.repository import init_schema as init_workspace_schema
 from app.workspace.router import router as workspace_router
 
@@ -43,6 +47,7 @@ async def lifespan(app: FastAPI):
         init_db()
         init_configuration_schema()
         initialize_fleet_plugin()
+        initialize_workforce_plugin()
         init_briefing_schema()
         init_demo_schema()
         init_workspace_schema()
@@ -128,6 +133,7 @@ app.include_router(demo_router)
 app.include_router(briefing_router)
 app.include_router(workspace_router)
 register_fleet_plugin(app)
+register_workforce_plugin(app)
 
 if FRONTEND_DIR.is_dir():
     app.mount(

@@ -50,8 +50,8 @@ Il profiler espone quattro tipi:
 | Tipo | Significato | Flusso ammesso |
 | --- | --- | --- |
 | `DAILY_OPERATIONAL_PLANNING` | Task/route, Operational Unit/station e Human Resource/driver nella stessa tabella | Planning |
-| `WORKFORCE_SCHEDULE` | Turni, calendario, ferie, riposi, assenze o condizioni contrattuali | Nessun import Planning automatico |
-| `FLEET_REGISTRY` | Identificativi Asset e attributi di stato del parco | Fleet |
+| `WORKFORCE_SCHEDULE` | Turni, calendario, ferie, riposi, assenze o condizioni contrattuali | Workforce Planning |
+| `FLEET_REGISTRY` | Identificativi Asset e attributi di stato del parco | Intelligent Fleet Registry |
 | `UNKNOWN_WORKBOOK` | Evidenze insufficienti o struttura ambigua | Nessun import automatico |
 
 La classificazione vive nel livello importer/Adapter. Nessun termine verticale
@@ -143,6 +143,12 @@ La preview mantiene i campi precedenti e aggiunge:
 - blocchi e warning tipizzati;
 - campione massimo di 10 righe e 12 colonne dati.
 
+La risposta espone inoltre `recommended_target` e
+`recommended_action_label`. Il backend instrada `WORKFORCE_SCHEDULE` a
+Workforce, `FLEET_REGISTRY` alla sincronizzazione Fleet e
+`DAILY_OPERATIONAL_PLANNING` al Planning esistente. Il frontend non replica la
+classificazione.
+
 ## Import atomico ed error handling
 
 L'import procede soltanto quando tipo, foglio, header, mapping e campi
@@ -184,18 +190,21 @@ import Planning valido. Il frontend non ricostruisce la classificazione.
 I due workbook sono stati letti esclusivamente dai percorsi locali originari,
 senza copiarli nel repository.
 
-### Workbook driver
+### Workbook Workforce
 
-- 6 fogli rilevati;
-- foglio tabellare selezionato: `Turni da inviare`;
-- intestazione selezionata: riga 1;
-- classificazione: `WORKFORCE_SCHEDULE`, confidenza 0,65;
-- 11 colonne e 135 righe tabellari rilevate;
-- 2 target canonici riconosciuti e 9 colonne da confermare/ignorare;
-- preview HTTP 200;
-- import Planning bloccato con HTTP 422
-  `WORKBOOK_IMPORT_BLOCKED`;
-- nessun record Planning persistito e nessun HTTP 500.
+- 6 fogli profilati e 5 fogli utili interpretati;
+- classificazione `WORKFORCE_SCHEDULE` e target `workforce`;
+- preview e import Workforce HTTP 200;
+- calendario annuale rilevato su 370 giorni;
+- 40 codici turno distinti e 519 assenze rilevate;
+- 59 record contrattuali con date e tipologia part-time riconosciuti;
+- 21 colonne strutturali restano da confermare o ignorare;
+- stesso workbook reimportato con risultato idempotente;
+- nessun record Planning o Assignment creato dal plugin.
+
+Il parser usa tutti i fogli utili e non forza la turnistica nel Planning
+operativo giornaliero. Conteggi e date sono stati verificati senza stampare
+nomi o altri valori personali.
 
 ### Workbook Fleet
 
@@ -205,17 +214,18 @@ senza copiarli nel repository.
 - classificazione: `FLEET_REGISTRY`, confidenza 1,00;
 - 21 colonne e 86 righe tabellari rilevate;
 - target riconosciuti: `vehicle_plate`, `driver_name`,
-  `second_driver_name`, `workshop`, `notes`, `fuel_card`;
-- 15 colonne non necessarie al contratto v1 restano da
-  confermare/ignorare;
-- preview HTTP 200 e import HTTP 200;
-- workspace operativo popolato con 86 righe Fleet.
+  `second_driver_name`, `workshop`, `damage`, `vehicle_model`,
+  `replacement_vehicle` e `parking`;
+- 172 occorrenze di campi sensibili escluse prima della proposta;
+- 59 Asset proposti disponibili, 26 indisponibili e 1 in manutenzione;
+- preview e conferma HTTP 200;
+- 86 Asset creati e 86 disponibilita neutrali pubblicate al Core;
+- snapshot operativo aggiornato nella stessa transazione;
+- secondo passaggio idempotente, senza Asset o eventi duplicati.
 
-L'import Fleet rappresenta lo snapshot operativo usato dal Core. Non crea
-automaticamente record di lifecycle nell'Asset Registry del Fleet Plugin:
-confondere i due modelli violerebbe le responsabilita definite nella
-Costituzione e richiederebbe un contratto di sincronizzazione atomico
-separato.
+Fleet Snapshot e Asset Registry restano contratti distinti. Intelligent Fleet
+Registry li aggiorna atomicamente e conserva eventi append-only, senza
+spostare logica Fleet nel Planning Engine.
 
 ### Planning sintetico end-to-end
 
@@ -250,9 +260,9 @@ I tempi dipendono da CPU, disco e complessita del workbook.
 
 ## Limiti e file ancora necessario
 
-Il workbook driver analizzato e una turnistica e non contiene un contratto
-sufficiente per generare il Planning operativo giornaliero. Serve ancora un
-file giornaliero con almeno:
+Il workbook Workforce analizzato alimenta turni e disponibilita, ma non e un
+Planning operativo giornaliero. Per generare Assignment serve ancora un file
+giornaliero con almeno:
 
 - Task/route;
 - Operational Unit/station;
@@ -263,10 +273,5 @@ Asset/vehicle e Time Window/wave sono facoltativi ma raccomandati.
 Il mapping v1 espone soltanto i campi gia accettati dai modelli normalizzati
 esistenti. Nuovi concetti non devono essere aggiunti per replicare colonne
 verticali dei workbook.
-
-La verifica responsive automatica e coperta da test frontend per desktop,
-tablet e mobile. In questa sessione il browser integrato ha bloccato per policy
-l'accesso al server localhost; non sono quindi disponibili screenshot runtime
-alle tre risoluzioni. Questo limite riguarda l'ambiente di QA, non un errore
 applicativo, e deve essere chiuso con una verifica browser sul deploy o da un
 browser locale raggiungibile prima della promozione finale.

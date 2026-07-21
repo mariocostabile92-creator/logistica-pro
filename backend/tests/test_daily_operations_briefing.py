@@ -374,10 +374,17 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
     existing_paths = {
         path: value
         for path, value in paths.items()
-        if (
-            not path.startswith("/api/briefing/")
-            and not path.startswith("/api/workspace/")
-        )
+            if (
+                not path.startswith("/api/briefing/")
+                and not path.startswith("/api/workspace/")
+                and not path.startswith("/api/plugins/workforce/")
+                and path not in {
+                    "/api/plugins/fleet/v1/sync/preview",
+                    "/api/plugins/fleet/v1/sync/confirm",
+                    "/api/plugins/fleet/v1/sync/latest",
+                    "/api/plugins/fleet/v1/availability",
+                }
+            )
     }
     digest = hashlib.sha256(
         json.dumps(

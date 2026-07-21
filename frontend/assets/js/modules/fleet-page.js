@@ -3,6 +3,7 @@ import {
   createFleetAsset,
   getFleetAsset,
   getFleetAssetEvents,
+  getLatestFleetSync,
   listFleetAssets,
   observeFleetAssetAvailability,
   updateFleetAsset,
@@ -10,6 +11,7 @@ import {
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import {
+  isExpectedApiError,
   reportUnexpectedError,
   userErrorPresentation,
 } from "../utils/errors.js";
@@ -24,6 +26,21 @@ import {
 
 let loaded = false;
 let demoEnabled = false;
+
+
+async function refreshSyncSummary() {
+  try {
+    const latest = await getLatestFleetSync();
+    const summary = latest.summary || {};
+    byId("fleetRecentUpdates").textContent = Number(summary.created_assets || 0)
+      + Number(summary.updated_assets || 0);
+    byId("fleetUnresolvedConflicts").textContent = summary.unresolved_conflicts || 0;
+  } catch (error) {
+    if (!isExpectedApiError(error, { statuses: [404] })) throw error;
+    byId("fleetRecentUpdates").textContent = "0";
+    byId("fleetUnresolvedConflicts").textContent = "0";
+  }
+}
 
 
 function showFleetActionError(context, error) {
@@ -59,6 +76,7 @@ async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId)
   renderFleetLoading();
   const response = await listFleetAssets();
   state.fleetPlugin.assets = response.items;
+  await refreshSyncSummary();
   renderAssetList(response.items, { demoEnabled });
   byId("fleetPluginTimestamp").textContent = response.items.length
     ? `${response.items.length} asset registrati.`
@@ -237,6 +255,12 @@ export function initFleetPage() {
     if (loaded && state.fleetPlugin.assets.length === 0) {
       renderAssetList([], { demoEnabled });
     }
+  });
+  document.addEventListener("fleet:sync-completed", () => {
+    refreshFleet().catch((error) => {
+      reportUnexpectedError("fleet.refresh-after-sync", error);
+      renderFleetFailure();
+    });
   });
   byId("fleetViewState").addEventListener("click", (event) => {
     const action = event.target.closest("[data-view-action]")?.dataset.viewAction;

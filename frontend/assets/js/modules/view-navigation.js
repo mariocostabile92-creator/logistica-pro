@@ -17,6 +17,7 @@ const OPERATIONS_SECTIONS = [
 const WORKSPACE_SECTIONS = {
   home: HOME_SECTIONS,
   operations: OPERATIONS_SECTIONS,
+  workforce: ["workforceSection"],
   fleet: ["fleetPluginSection"],
   settings: ["settingsSection"],
   learn: ["gettingStartedSection"],

@@ -56,6 +56,7 @@ export function renderWorkspaceCard(view) {
     appendFact(facts, "Import Fleet", localizedTimestamp(fleet?.imported_at));
     appendFact(facts, "Task", status.task_count);
     appendFact(facts, "Asset", status.asset_count);
+    appendFact(facts, "Workforce", status.workforce_member_count || 0);
     appendFact(facts, "Planning", status.planning_count);
     appendFact(facts, "Briefing", status.briefing_count);
     appendFact(

@@ -9,13 +9,15 @@
   <link rel="stylesheet" href="./assets/css/layout.css" />
   <link rel="stylesheet" href="./assets/css/components.css" />
   <link rel="stylesheet" href="./assets/css/fleet.css" />
+  <link rel="stylesheet" href="./assets/css/fleet-sync.css" />
+  <link rel="stylesheet" href="./assets/css/workforce.css?v=2" />
   <link rel="stylesheet" href="./assets/css/settings.css" />
   <link rel="stylesheet" href="./assets/css/onboarding.css" />
   <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
   <link rel="stylesheet" href="./assets/css/briefing.css" />
   <link rel="stylesheet" href="./assets/css/workspace-lifecycle.css?v=5" />
   <link rel="stylesheet" href="./assets/css/excel-import.css?v=1" />
-  <link rel="stylesheet" href="./assets/css/responsive.css" />
+  <link rel="stylesheet" href="./assets/css/responsive.css?v=2" />
 </head>
 <body data-home-state="loading" data-planning-state="loading">
   <header class="app-header">
@@ -42,6 +44,14 @@
           aria-selected="false"
         >
           Operations
+        </button>
+        <button
+          type="button"
+          class="workspace-tab"
+          data-workspace-view="workforce"
+          aria-selected="false"
+        >
+          Workforce
         </button>
         <button
           type="button"
@@ -897,6 +907,191 @@
     </section>
 
     <section
+      id="workforceSection"
+      class="workforce-section"
+      aria-labelledby="workforceTitle"
+      hidden
+    >
+      <div class="section-heading workforce-toolbar">
+        <div>
+          <p class="eyebrow">Disponibilita Human Resource</p>
+          <h2 id="workforceTitle">Workforce</h2>
+          <p id="workforceTimestamp" class="section-note">
+            Calendario non caricato.
+          </p>
+        </div>
+        <div class="workforce-actions">
+          <button id="workforceImportToggle" type="button">
+            Importa turni
+          </button>
+          <button id="workforceExportBtn" type="button" class="secondary">
+            Esporta CSV
+          </button>
+        </div>
+      </div>
+
+      <section
+        id="workforceImportPanel"
+        class="workforce-import-panel"
+        aria-labelledby="workforceImportTitle"
+        hidden
+      >
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Excel come ponte</p>
+            <h3 id="workforceImportTitle">Import Workforce Planning</h3>
+          </div>
+          <button id="workforceImportClose" type="button" class="quiet">
+            Chiudi
+          </button>
+        </div>
+        <form id="workforceImportForm" class="workforce-import-form">
+          <label>
+            File turni
+            <input
+              id="workforceFile"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              required
+            />
+          </label>
+          <div class="button-row">
+            <button id="workforceAnalyzeBtn" type="button">Analizza file</button>
+            <button id="workforceConfirmBtn" type="submit" disabled>
+              Conferma import
+            </button>
+          </div>
+        </form>
+        <div
+          id="workforceImportState"
+          class="workforce-import-state"
+          aria-live="polite"
+        ></div>
+        <div id="workforceSheetRoles" class="workforce-sheet-roles"></div>
+        <div id="workforceMatrixPreview" class="workforce-matrix-wrap"></div>
+      </section>
+
+      <div
+        id="workforceViewState"
+        class="view-state loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span class="visually-hidden">Caricamento Workforce</span>
+        <div class="skeleton-grid" aria-hidden="true">
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+          <span class="skeleton-block"></span>
+        </div>
+      </div>
+
+      <div id="workforceDataView" hidden>
+        <div id="workforceSummary" class="workforce-summary">
+          <div><span>Risorse</span><strong id="workforceMemberCount">0</strong></div>
+          <div><span>Disponibili</span><strong id="workforceAvailableCount">0</strong></div>
+          <div><span>Programmate</span><strong id="workforceScheduledCount">0</strong></div>
+          <div><span>Assenti</span><strong id="workforceAbsentCount">0</strong></div>
+          <div><span>Margine</span><strong id="workforceMarginValue">--</strong></div>
+        </div>
+
+        <div class="workforce-command-bar">
+          <div class="workforce-period">
+            <label>
+              Dal
+              <input id="workforceDateFrom" type="date" />
+            </label>
+            <label>
+              Al
+              <input id="workforceDateTo" type="date" />
+            </label>
+            <button id="workforceRefreshBtn" type="button">Aggiorna</button>
+          </div>
+          <div class="segmented-control" aria-label="Vista calendario">
+            <button type="button" data-workforce-view-mode="day">Giorno</button>
+            <button type="button" data-workforce-view-mode="week" class="active">Settimana</button>
+            <button type="button" data-workforce-view-mode="person">Persona</button>
+          </div>
+        </div>
+
+        <div id="workforceCalendar" class="workforce-calendar-wrap"></div>
+
+        <form id="workforceStatusEditor" class="workforce-status-editor" hidden>
+          <input id="workforceStatusId" type="hidden" />
+          <input id="workforceStatusMemberId" type="hidden" />
+          <div>
+            <span class="eyebrow">Modifica validata</span>
+            <strong id="workforceStatusEditorTitle">Stato giornaliero</strong>
+          </div>
+          <label>
+            Data
+            <input id="workforceStatusDate" type="date" required />
+          </label>
+          <label>
+            Stato
+            <select id="workforceStatusCode" required>
+              <option value="available">Disponibile</option>
+              <option value="scheduled">Programmato</option>
+              <option value="rest">Riposo</option>
+              <option value="holiday">Ferie</option>
+              <option value="sickness">Malattia</option>
+              <option value="leave">Permesso</option>
+              <option value="unavailable">Indisponibile</option>
+              <option value="unknown">Da verificare</option>
+            </select>
+          </label>
+          <label>
+            Turno
+            <input id="workforceShiftCode" type="text" maxlength="80" />
+          </label>
+          <label>
+            Note
+            <input id="workforceStatusNotes" type="text" maxlength="1000" />
+          </label>
+          <div class="workforce-editor-actions">
+            <button id="workforceStatusCancel" type="button" class="quiet">Annulla</button>
+            <button type="submit">Salva modifica</button>
+          </div>
+        </form>
+
+        <form id="workforceMemberEditor" class="workforce-member-editor" hidden>
+          <input id="workforceMemberId" type="hidden" />
+          <div>
+            <span class="eyebrow">Profilo risorsa</span>
+            <strong id="workforceMemberEditorTitle">Modifica contratto</strong>
+          </div>
+          <label>Ruolo<input id="workforceMemberRole" type="text" maxlength="120" /></label>
+          <label>Contratto<input id="workforceEmploymentType" type="text" maxlength="120" /></label>
+          <label>Fine contratto<input id="workforceContractEnd" type="date" /></label>
+          <label>Ore settimanali<input id="workforceWeeklyHours" type="number" min="0" max="168" step="0.5" /></label>
+          <label>Capability<input id="workforceCapabilities" type="text" placeholder="separate da virgola" /></label>
+          <div class="workforce-editor-actions">
+            <button id="workforceMemberCancel" type="button" class="quiet">Annulla</button>
+            <button type="submit">Salva profilo</button>
+          </div>
+        </form>
+
+        <div class="workforce-secondary-grid">
+          <section aria-labelledby="workforceCoverageTitle">
+            <h3 id="workforceCoverageTitle">Copertura</h3>
+            <div id="workforceCoverage" class="workforce-list"></div>
+          </section>
+          <section aria-labelledby="workforceAbsenceTitle">
+            <h3 id="workforceAbsenceTitle">Assenze e riposi</h3>
+            <div id="workforceAbsences" class="workforce-list"></div>
+          </section>
+          <section aria-labelledby="workforceContractsTitle">
+            <h3 id="workforceContractsTitle">Contratti</h3>
+            <div id="workforceContracts" class="workforce-list"></div>
+          </section>
+          <section aria-labelledby="workforceChangesTitle">
+            <h3 id="workforceChangesTitle">Modifiche recenti</h3>
+            <div id="workforceChanges" class="workforce-list"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section
       id="fleetPluginSection"
       class="fleet-section"
       aria-labelledby="fleetPluginTitle"
@@ -908,8 +1103,56 @@
           <h2 id="fleetPluginTitle">Parco Asset</h2>
           <p id="fleetPluginTimestamp" class="section-note">Asset non caricati.</p>
         </div>
-        <button id="createAssetBtn" type="button">Nuovo Asset</button>
+        <div class="fleet-toolbar-actions">
+          <button id="fleetSyncToggle" type="button">Sincronizza stato parco</button>
+          <button id="createAssetBtn" type="button" class="secondary">Nuovo Asset</button>
+        </div>
       </div>
+
+      <section
+        id="fleetSyncPanel"
+        class="fleet-sync-panel"
+        aria-labelledby="fleetSyncTitle"
+        hidden
+      >
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Import intelligente</p>
+            <h3 id="fleetSyncTitle">Sincronizza Asset Registry</h3>
+          </div>
+          <button id="fleetSyncClose" type="button" class="quiet">Chiudi</button>
+        </div>
+        <form id="fleetSyncForm" class="fleet-sync-form">
+          <label>
+            File stato parco
+            <input id="fleetSyncFile" type="file" accept=".xlsx,.xls,.csv" required />
+          </label>
+          <div class="fleet-sync-detection">
+            <label>
+              Foglio
+              <input id="fleetSyncSheet" type="text" placeholder="Automatico" />
+            </label>
+            <label>
+              Riga intestazione
+              <input id="fleetSyncHeader" type="number" min="1" max="100" placeholder="Automatico" />
+            </label>
+          </div>
+          <div class="button-row">
+            <button id="fleetSyncAnalyze" type="button">Analizza</button>
+            <button id="fleetSyncConfirm" type="submit" disabled>Applica selezionati</button>
+          </div>
+        </form>
+        <div id="fleetSyncState" class="fleet-sync-state" aria-live="polite"></div>
+        <div id="fleetSyncSummary" class="fleet-sync-summary"></div>
+        <div id="fleetSyncFilters" class="segmented-control" aria-label="Filtra proposte" hidden>
+          <button type="button" data-fleet-sync-filter="ALL" class="active">Tutto</button>
+          <button type="button" data-fleet-sync-filter="NEW_ASSET">Nuovi</button>
+          <button type="button" data-fleet-sync-filter="UPDATE_EXISTING">Aggiornati</button>
+          <button type="button" data-fleet-sync-filter="CONFLICT">Conflitti</button>
+          <button type="button" data-fleet-sync-filter="SENSITIVE">Sensibili esclusi</button>
+        </div>
+        <div id="fleetSyncDiff" class="fleet-sync-diff"></div>
+      </section>
 
       <div
         id="fleetViewState"
@@ -945,9 +1188,21 @@
           <strong id="fleetReserveAssets">0</strong>
         </div>
         <div>
+          <span>In officina</span>
+          <strong id="fleetMaintenanceAssets">0</strong>
+        </div>
+        <div>
           <span>Documenti in attenzione</span>
           <strong id="fleetDocumentsAttention">0</strong>
           <small>Scaduti o entro 30 giorni</small>
+        </div>
+        <div>
+          <span>Modifiche ultimo import</span>
+          <strong id="fleetRecentUpdates">0</strong>
+        </div>
+        <div>
+          <span>Conflitti da risolvere</span>
+          <strong id="fleetUnresolvedConflicts">0</strong>
         </div>
       </div>
       <div class="fleet-table-wrap">

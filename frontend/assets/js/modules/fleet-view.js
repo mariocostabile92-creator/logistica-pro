@@ -38,6 +38,9 @@ function eventLabel(eventType) {
     AssetAvailabilityChanged: "Disponibilità modificata",
     AssetAvailabilityObserved: "Disponibilità osservata",
     AssetDocumentAdded: "Documento aggiunto",
+    AssetReserveAssigned: "Asset assegnato alla riserva",
+    AssetDocumentObserved: "Documento osservato",
+    AssetAssociationChanged: "Associazione osservata aggiornata",
   };
   return labels[eventType] || eventType;
 }
@@ -80,10 +83,14 @@ export function fleetSummary(assets, today = new Date()) {
   const reserve = assets.filter(
     (asset) => asset.availability === "reserve",
   ).length;
+  const maintenance = assets.filter(
+    (asset) => asset.availability === "maintenance",
+  ).length;
   return {
     total: assets.length,
     available,
     reserve,
+    maintenance,
     unavailable: assets.length - available - reserve,
     documentsAttention,
   };
@@ -96,6 +103,7 @@ function renderFleetSummary(assets) {
   byId("fleetAvailableAssets").textContent = summary.available;
   byId("fleetUnavailableAssets").textContent = summary.unavailable;
   byId("fleetReserveAssets").textContent = summary.reserve;
+  byId("fleetMaintenanceAssets").textContent = summary.maintenance;
   byId("fleetDocumentsAttention").textContent = summary.documentsAttention;
 }
 

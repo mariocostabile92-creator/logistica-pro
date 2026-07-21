@@ -390,6 +390,13 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
         path: value
         for path, value in app.openapi()["paths"].items()
         if not path.startswith("/api/imports/")
+        and not path.startswith("/api/plugins/workforce/")
+        and path not in {
+            "/api/plugins/fleet/v1/sync/preview",
+            "/api/plugins/fleet/v1/sync/confirm",
+            "/api/plugins/fleet/v1/sync/latest",
+            "/api/plugins/fleet/v1/availability",
+        }
     }
     digest = hashlib.sha256(
         json.dumps(

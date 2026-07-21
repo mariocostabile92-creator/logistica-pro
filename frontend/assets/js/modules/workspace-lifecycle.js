@@ -94,6 +94,7 @@ async function afterReset(response, { continueToImport }) {
       latest_fleet_import: null,
       task_count: 0,
       asset_count: 0,
+      workforce_member_count: 0,
       planning_count: 0,
       briefing_count: 0,
       last_operational_update: null,

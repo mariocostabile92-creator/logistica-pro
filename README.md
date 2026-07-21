@@ -2,9 +2,10 @@
 
 **Release Candidate v1.0 - Private Beta**
 
-Piattaforma modulare per operations last-mile. Importa planning e stato del
-parco auto, costruisce una proposta spiegabile driver-rotta-mezzo, consente
-correzioni manuali, simulazioni di eccezioni, ricalcolo ed export CSV.
+Piattaforma modulare per operations last-mile. Importa planning, turni e stato
+del parco, gestisce disponibilita Workforce e lifecycle Asset, costruisce una
+proposta operativa spiegabile e consente correzioni, simulazioni, ricalcolo ed
+export CSV.
 
 Il vecchio ottimizzatore e il router gratuito non sono usati dal nuovo core e
 restano isolati in `backend/app/legacy`.
@@ -27,8 +28,12 @@ restano isolati in `backend/app/legacy`.
 - Suggerimenti cross-station espliciti, mai applicati automaticamente.
 - Versioni, eventi applicati e storico modifiche.
 - Export CSV del planning operativo.
+- Workforce Planning v1 con import multi-sheet, calendario, disponibilita,
+  assenze, contratti, copertura, audit ed export CSV.
 - Fleet Plugin v1 con registro Asset, capability configurabili, disponibilita
   osservata, metadati documentali e cronologia eventi append-only.
+- Intelligent Fleet Registry v1 con preview semantica, diff selezionabile,
+  esclusione dei campi sensibili e sync atomica Registry/snapshot/Core.
 - Configuration Engine v1 con configurazioni organizzative tipizzate,
   versionate, validate e risolte tramite fallback sicuri.
 - Amazon Adapter v1 con catalogo alias dichiarativo e mapping tipizzati verso
@@ -125,6 +130,7 @@ I file `.env` reali sono ignorati da Git.
 | `LOG_LEVEL` | `INFO` | `INFO` |
 | `MAX_UPLOAD_SIZE_MB` | `8` | da `1` a `100`, consigliato `8` |
 | `FLEET_PLUGIN_ENABLED` | `true` | `true` |
+| `WORKFORCE_PLUGIN_ENABLED` | `false` se non impostata | `true` per abilitare il plugin |
 | `DEMO_WORKSPACE_ENABLED` | `true` o non impostata | `false` se non impostata |
 
 In produzione l'avvio viene interrotto se `DEBUG=true`, se manca
@@ -171,9 +177,9 @@ Railway fornisce `PORT`; non deve essere impostata manualmente. Il launcher
 dall'espansione della shell e senza usare una porta predefinita. La
 configurazione usa `/api/health`, timeout 120 secondi, cinque retry e arresto
 graduale. Il primo startup crea in modo idempotente le tabelle Core,
-Configuration, Fleet, Demo, Daily Operations Briefing e audit Workspace
-Lifecycle. Gli startup successivi applicano gli stessi controlli senza
-cancellare dati.
+Configuration, Fleet, Fleet Sync, Workforce, Demo, Daily Operations Briefing
+e audit Workspace Lifecycle. Gli startup successivi applicano gli stessi
+controlli senza cancellare dati.
 
 ### Database
 
@@ -193,7 +199,8 @@ locali richiede un'attivita separata con backup e verifica.
 1. Eseguire localmente `python -m pytest -q`.
 2. Creare un commit e pubblicarlo sul branch collegato a Railway.
 3. Verificare build, startup e `/api/health` nei log Railway.
-4. Eseguire uno smoke test su `/app/`, import, Planning, Fleet e Settings.
+4. Eseguire uno smoke test su `/app/`, import, Workforce, Planning, Fleet e
+   Settings.
 
 ### Rollback
 
@@ -296,6 +303,34 @@ Modelli, ranking, source references, persistenza, comportamento demo e limiti
 sono descritti in
 [`DAILY_OPERATIONS_BRIEFING.md`](DAILY_OPERATIONS_BRIEFING.md).
 
+## Workforce Planning v1
+
+Il plugin Workforce importa workbook `WORKFORCE_SCHEDULE`, analizza tutti i
+fogli utili e rende turni, disponibilita, assenze, contratti e copertura
+gestibili nell'app. Pubblica contratti Core neutrali e non crea Assignment.
+
+Endpoint principali:
+
+- `GET /api/plugins/workforce/v1/status`
+- `GET /api/plugins/workforce/v1/members`
+- `GET /api/plugins/workforce/v1/calendar`
+- `GET /api/plugins/workforce/v1/coverage`
+- `POST /api/plugins/workforce/v1/import/preview`
+- `POST /api/plugins/workforce/v1/import`
+- `POST /api/plugins/workforce/v1/day-status`
+- `PATCH /api/plugins/workforce/v1/day-status/{status_id}`
+- `GET /api/plugins/workforce/v1/contracts/core`
+- `GET /api/plugins/workforce/v1/export`
+
+In produzione il router e disponibile soltanto con:
+
+```text
+WORKFORCE_PLUGIN_ENABLED=true
+```
+
+Architettura, mapping, audit, export, privacy e limiti sono descritti in
+[`WORKFORCE_PLANNING.md`](WORKFORCE_PLANNING.md).
+
 ## API planning
 
 - `POST /api/planning/generate`
@@ -321,6 +356,10 @@ readiness o capacity.
 - `POST /api/plugins/fleet/v1/assets/{asset_id}/availability`
 - `POST /api/plugins/fleet/v1/assets/{asset_id}/documents`
 - `GET /api/plugins/fleet/v1/assets/{asset_id}/events`
+- `POST /api/plugins/fleet/v1/sync/preview`
+- `POST /api/plugins/fleet/v1/sync/confirm`
+- `GET /api/plugins/fleet/v1/sync/latest`
+- `GET /api/plugins/fleet/v1/availability`
 
 Per disabilitare il Plugin prima dell'avvio:
 
@@ -330,6 +369,10 @@ $env:FLEET_PLUGIN_ENABLED = "false"
 
 Gli interventi, le notifiche, i fornitori e le regole sulle scadenze sono
 esclusi: appartengono al futuro Maintenance Plugin.
+
+Il contratto di sincronizzazione, il diff, l'idempotenza e le regole privacy
+sono descritti in
+[`INTELLIGENT_FLEET_REGISTRY.md`](INTELLIGENT_FLEET_REGISTRY.md).
 
 ## API Configuration Engine v1
 

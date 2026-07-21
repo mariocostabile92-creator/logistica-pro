@@ -25,7 +25,12 @@ def test_current_returns_safe_platform_defaults():
     assert payload["version"]["number"] == 0
     assert payload["metadata"]["contract_version"] == "1.0"
     assert payload["metadata"]["fallback_used"] is True
-    assert len(payload["sections"]) == 8
+    assert len(payload["sections"]) == 11
+    assert {section["key"] for section in payload["sections"]} >= {
+        "workforce_statuses",
+        "workforce_shift_codes",
+        "fleet_registry",
+    }
 
 
 def test_validate_does_not_persist_invalid_configuration():

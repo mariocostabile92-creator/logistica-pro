@@ -104,6 +104,76 @@ PLATFORM_DEFAULT_SECTIONS = [
             "mappings": {},
         },
     ),
+    _section(
+        "workforce_statuses",
+        {
+            "default": "unknown",
+            "allowed": [
+                "available",
+                "scheduled",
+                "rest",
+                "holiday",
+                "sickness",
+                "leave",
+                "unavailable",
+                "unknown",
+            ],
+            "external_mappings": {
+                "available": ["available", "disponibile", "disp"],
+                "scheduled": ["scheduled", "turno", "presente"],
+                "rest": ["rest", "riposo", "r"],
+                "holiday": ["holiday", "ferie", "f"],
+                "sickness": ["sickness", "malattia", "m"],
+                "leave": ["leave", "permesso", "p"],
+                "unavailable": ["unavailable", "indisponibile"],
+            },
+            "available_statuses": ["available", "scheduled"],
+        },
+    ),
+    _section(
+        "workforce_shift_codes",
+        {
+            "mappings": {},
+        },
+    ),
+    _section(
+        "fleet_registry",
+        {
+            "availability_mappings": {
+                "available": ["available", "disponibile", "operativo"],
+                "unavailable": ["unavailable", "indisponibile", "bloccato"],
+                "maintenance": ["maintenance", "officina", "guasto"],
+                "reserve": ["reserve", "riserva", "muletto"],
+            },
+            "sensitive_aliases": [
+                "pin",
+                "password",
+                "codice carta",
+                "numero carta",
+                "card number",
+                "tessera carburante",
+                "tessera q8",
+            ],
+            "column_mappings": {
+                "rental_company": ["compagnia"],
+                "replacement_vehicle": ["targa sostitutivo"],
+                "workshop": ["offcina"],
+            },
+            "negative_issue_values": [
+                "0",
+                "no",
+                "none",
+                "nessuno",
+                "nessun danno",
+                "ok",
+                "-",
+                "false",
+            ],
+            "workshop_presence_means_maintenance": True,
+            "damage_presence_means_unavailable": True,
+            "infer_available_when_no_issue": True,
+        },
+    ),
 ]
 
 

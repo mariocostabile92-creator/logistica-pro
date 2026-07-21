@@ -8,5 +8,6 @@ export function initPlanningImport() {
     fileMissingMessage: "Seleziona un file planning.",
     importedEventType: "planning",
     stateKey: "planning",
+    expectedTarget: "daily_operations",
   });
 }

@@ -12,6 +12,7 @@ TEST_DATABASE_PATH = (
 )
 os.environ["OPERATIONS_DB_PATH"] = str(TEST_DATABASE_PATH)
 os.environ.setdefault("DEMO_WORKSPACE_ENABLED", "true")
+os.environ.setdefault("WORKFORCE_PLUGIN_ENABLED", "true")
 
 from app.core.database import db_session, init_db
 from app.briefing.repository import init_schema as init_briefing_schema
@@ -20,6 +21,8 @@ from app.core.configuration.repository import (
 )
 from app.demo.repository import init_schema as init_demo_schema
 from app.plugins.fleet.infrastructure.repository import init_schema as init_fleet_schema
+from app.plugins.fleet.infrastructure.sync_schema import init_sync_schema as init_fleet_sync_schema
+from app.plugins.workforce.infrastructure.schema import init_schema as init_workforce_schema
 from app.workspace.repository import init_schema as init_workspace_schema
 
 
@@ -28,6 +31,8 @@ def reset_database():
     init_db()
     init_configuration_schema()
     init_fleet_schema()
+    init_fleet_sync_schema()
+    init_workforce_schema()
     init_briefing_schema()
     init_demo_schema()
     init_workspace_schema()
@@ -35,7 +40,15 @@ def reset_database():
         conn.execute("DELETE FROM workspace_reset_audits")
         conn.execute("DELETE FROM demo_workspaces")
         conn.execute("DELETE FROM configuration_versions")
+        conn.execute("DELETE FROM workforce_changes")
+        conn.execute("DELETE FROM workforce_day_statuses")
+        conn.execute("DELETE FROM workforce_requirements")
+        conn.execute("DELETE FROM workforce_members")
+        conn.execute("DELETE FROM workforce_imports")
+        conn.execute("DELETE FROM fleet_sync_event_fingerprints")
         conn.execute("DELETE FROM fleet_asset_events")
+        conn.execute("DELETE FROM fleet_sync_runs")
+        conn.execute("DELETE FROM fleet_asset_metadata")
         conn.execute("DELETE FROM fleet_asset_documents")
         conn.execute("DELETE FROM fleet_assets")
         conn.execute("DELETE FROM daily_briefings")
