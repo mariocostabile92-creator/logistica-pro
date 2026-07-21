@@ -111,6 +111,22 @@ def test_workforce_preview_is_multisheet_and_role_aware():
     assert payload["matrix"]
 
 
+def test_workforce_preview_returns_typed_error_for_unreadable_workbook():
+    response = client.post(
+        f"{BASE}/import/preview",
+        files={
+            "file": (
+                "synthetic_broken.xlsx",
+                b"PK-not-a-valid-workbook",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "WORKBOOK_NOT_READABLE"
+
+
 def test_workforce_import_maps_shift_holiday_rest_sickness_leave_and_availability():
     response = apply()
     assert response.status_code == 200
@@ -121,6 +137,22 @@ def test_workforce_import_maps_shift_holiday_rest_sickness_leave_and_availabilit
     }
     assert any(item["shift_code"] == "S1" for item in statuses)
     assert sum(item["availability"] for item in statuses) == 2
+
+
+def test_workforce_status_exposes_lightweight_ready_landing_summary():
+    assert apply().status_code == 200
+    payload = client.get(f"{BASE}/status").json()
+    summary = payload["latest_import"]["summary"]
+
+    assert payload["member_count"] == 2
+    assert payload["latest_import"]["source"] == "Excel"
+    assert summary["date_from"] == "2026-07-21"
+    assert summary["date_to"] == "2026-07-23"
+    assert summary["status_count"] == 6
+    assert summary["contracts_detected"] == 2
+    assert summary["absences_detected"] == 3
+    assert summary["excluded_rows"] == 0
+    assert summary["confirmation_columns"] == []
 
 
 def test_contract_types_dates_hours_and_capabilities_are_typed():
@@ -186,8 +218,9 @@ def test_manual_day_status_and_member_updates_append_audit():
 
 
 def test_workforce_import_is_idempotent_and_updated_file_changes_only_diffs():
-    first = apply()
-    second = apply()
+    payload = workforce_book()
+    first = apply(payload)
+    second = apply(payload)
     assert first.status_code == second.status_code == 200
     assert second.json()["idempotent"] is True
     with db_session() as conn:

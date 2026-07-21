@@ -87,11 +87,39 @@ def latest_import_summary():
         row = conn.execute(
             "SELECT imported_at, original_filename, summary FROM workforce_imports ORDER BY id DESC LIMIT 1"
         ).fetchone()
+        status_totals = conn.execute(
+            """
+            SELECT
+                COUNT(*) AS status_count,
+                MIN(date) AS date_from,
+                MAX(date) AS date_to,
+                SUM(CASE WHEN status_code IN ('holiday', 'sickness', 'leave', 'unavailable') THEN 1 ELSE 0 END) AS absence_count
+            FROM workforce_day_statuses
+            """
+        ).fetchone()
+        contract_totals = conn.execute(
+            """
+            SELECT COUNT(*) AS contract_count
+            FROM workforce_members
+            WHERE employment_type IS NOT NULL
+               OR contract_start IS NOT NULL
+               OR contract_end IS NOT NULL
+            """
+        ).fetchone()
     if not row:
         return None
     import json
+    summary = json.loads(row["summary"])
+    summary.update({
+        "status_count": int(status_totals["status_count"] or 0),
+        "date_from": status_totals["date_from"],
+        "date_to": status_totals["date_to"],
+        "contracts_detected": int(contract_totals["contract_count"] or 0),
+        "absences_detected": int(status_totals["absence_count"] or 0),
+    })
     return {
         "imported_at": row["imported_at"],
         "original_filename": row["original_filename"],
-        "summary": json.loads(row["summary"]),
+        "source": "Excel",
+        "summary": summary,
     }

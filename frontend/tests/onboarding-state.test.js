@@ -58,6 +58,24 @@ test("planning and fleet imports complete the first two wizard steps", () => {
 });
 
 
+test("Workforce import and persisted members complete Planning turni on Home", () => {
+  let imported = emptySystemState();
+  imported = applyOnboardingEvent(imported, {
+    type: "dataset-imported",
+    datasetType: "workforce",
+  });
+  assert.equal(deriveOnboardingView(imported).steps.planningImported, true);
+
+  let restored = emptySystemState();
+  restored = applyOnboardingEvent(restored, {
+    type: "workspace-status",
+    workforceMemberCount: 173,
+  });
+  assert.equal(restored.workforceMemberCount, 173);
+  assert.equal(deriveOnboardingView(restored).steps.planningImported, true);
+});
+
+
 test("an existing planning restores all wizard prerequisites", () => {
   let current = createOnboardingState({ fleetKnown: true });
   current = applyOnboardingEvent(current, {
@@ -131,7 +149,7 @@ test("the page contains the simplified sequential onboarding", async () => {
     html,
     /Completa i tre passaggi iniziali per preparare la prima giornata/,
   );
-  assert.match(html, /Importa Planning/);
+  assert.match(html, /Importa Planning turni/);
   assert.match(html, /Importa Fleet/);
   assert.match(html, /Genera il primo Planning/);
   assert.match(html, /data-onboarding-action="planning"/);

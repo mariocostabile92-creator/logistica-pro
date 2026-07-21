@@ -278,6 +278,17 @@ def apply_import(
             requirements_created=requirements_created,
             sheets_imported=[item.name for item in parsed.preview.sheets if item.responsibility != "ignored"],
         )
+        stored_summary = {
+            **summary.model_dump(mode="json", exclude={"idempotent"}),
+            "people_detected": parsed.preview.people_detected,
+            "date_from": parsed.preview.date_from,
+            "date_to": parsed.preview.date_to,
+            "status_count": len(parsed.statuses),
+            "contracts_detected": parsed.preview.contracts_detected,
+            "absences_detected": parsed.preview.absences_detected,
+            "excluded_rows": parsed.preview.excluded_rows,
+            "confirmation_columns": parsed.preview.confirmation_columns,
+        }
         conn.execute(
             """
             INSERT INTO workforce_imports (
@@ -287,7 +298,7 @@ def apply_import(
             (
                 parsed.fingerprint, original_filename, now,
                 _json([item.model_dump(mode="json") for item in parsed.preview.sheets]),
-                _json(summary.model_dump(mode="json", exclude={"idempotent"})),
+                _json(stored_summary),
             ),
         )
     return summary

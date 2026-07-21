@@ -91,8 +91,11 @@ export function initOnboarding() {
     const action = event.target.closest("[data-onboarding-action]")
       ?.dataset.onboardingAction;
     if (!action) return;
+    if (action === "planning") {
+      document.dispatchEvent(new CustomEvent("workforce:import-requested"));
+      return;
+    }
     const targets = {
-      planning: ["importsSection", "planningFile"],
       fleet: ["importsSection", "fleetFile"],
       generate: ["planningSection", "generatePlanningBtn"],
     };
@@ -128,6 +131,12 @@ export function initOnboarding() {
     updateOnboarding({
       type: "fleet-registry-loaded",
       assetCount: event.detail.assetCount,
+    });
+  });
+  document.addEventListener("workspace:status-changed", (event) => {
+    updateOnboarding({
+      type: "workspace-status",
+      workforceMemberCount: event.detail.workforce_member_count,
     });
   });
   document.addEventListener("demo:workspace-changed", (event) => {

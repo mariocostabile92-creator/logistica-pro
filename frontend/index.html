@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="./assets/css/components.css" />
   <link rel="stylesheet" href="./assets/css/fleet.css" />
   <link rel="stylesheet" href="./assets/css/fleet-sync.css" />
-  <link rel="stylesheet" href="./assets/css/workforce.css?v=2" />
+  <link rel="stylesheet" href="./assets/css/workforce.css?v=3" />
   <link rel="stylesheet" href="./assets/css/settings.css" />
   <link rel="stylesheet" href="./assets/css/onboarding.css" />
   <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
@@ -233,8 +233,8 @@
               >
                 <span class="onboarding-step-marker" aria-hidden="true">1</span>
                 <div class="onboarding-step-copy">
-                  <strong>Importa Planning</strong>
-                  <span>Carica il file con attività e risorse della giornata.</span>
+                  <strong>Importa Planning turni</strong>
+                  <span>Carica il file Excel con turni e disponibilità.</span>
                   <span class="onboarding-step-status">Da completare</span>
                 </div>
                 <button
@@ -243,7 +243,7 @@
                   data-onboarding-action="planning"
                   hidden
                 >
-                  Importa Planning
+                  Importa Planning turni
                 </button>
               </li>
               <li
@@ -914,19 +914,11 @@
     >
       <div class="section-heading workforce-toolbar">
         <div>
-          <p class="eyebrow">Disponibilita Human Resource</p>
-          <h2 id="workforceTitle">Workforce</h2>
+          <p class="eyebrow">Disponibilità risorse</p>
+          <h2 id="workforceTitle">Planning turni</h2>
           <p id="workforceTimestamp" class="section-note">
-            Calendario non caricato.
+            Verifica dello stato in corso.
           </p>
-        </div>
-        <div class="workforce-actions">
-          <button id="workforceImportToggle" type="button">
-            Importa turni
-          </button>
-          <button id="workforceExportBtn" type="button" class="secondary">
-            Esporta CSV
-          </button>
         </div>
       </div>
 
@@ -938,8 +930,8 @@
       >
         <div class="section-heading compact">
           <div>
-            <p class="eyebrow">Excel come ponte</p>
-            <h3 id="workforceImportTitle">Import Workforce Planning</h3>
+            <p class="eyebrow">Importazione Excel</p>
+            <h3 id="workforceImportTitle">Importa planning turni</h3>
           </div>
           <button id="workforceImportClose" type="button" class="quiet">
             Chiudi
@@ -968,6 +960,10 @@
           aria-live="polite"
         ></div>
         <div id="workforceSheetRoles" class="workforce-sheet-roles"></div>
+        <details id="workforceImportIssues" class="workforce-import-issues" hidden>
+          <summary id="workforceImportIssuesSummary">Elementi da verificare</summary>
+          <div id="workforceImportIssuesList"></div>
+        </details>
         <div id="workforceMatrixPreview" class="workforce-matrix-wrap"></div>
       </section>
 
@@ -985,7 +981,41 @@
         </div>
       </div>
 
-      <div id="workforceDataView" hidden>
+      <article id="workforceReadyView" class="workforce-ready-card" hidden>
+        <div class="workforce-ready-heading">
+          <div>
+            <span class="workforce-ready-badge">Importato</span>
+            <h3>Planning turni</h3>
+            <p>Il planning e disponibile in Operations Engine.</p>
+          </div>
+          <div class="workforce-ready-actions">
+            <button id="workforceOpenCalendarBtn" type="button">Apri calendario</button>
+            <button id="workforceImportToggle" type="button" class="secondary">Aggiorna da Excel</button>
+            <button id="workforceExportBtn" type="button" class="quiet">Esporta CSV</button>
+          </div>
+        </div>
+        <dl class="workforce-ready-facts">
+          <div><dt>Risorse</dt><dd id="workforceReadyMemberCount">--</dd></div>
+          <div><dt>Periodo coperto</dt><dd id="workforceReadyPeriod">--</dd></div>
+          <div><dt>Stati giornalieri</dt><dd id="workforceReadyStatusCount">--</dd></div>
+          <div><dt>Contratti</dt><dd id="workforceReadyContractCount">--</dd></div>
+          <div><dt>Assenze</dt><dd id="workforceReadyAbsenceCount">--</dd></div>
+          <div><dt>Ultimo aggiornamento</dt><dd id="workforceReadyUpdatedAt">--</dd></div>
+          <div><dt>Provenienza</dt><dd id="workforceReadySource">Excel</dd></div>
+        </dl>
+        <p id="workforceReadyAttention" class="workforce-ready-attention" hidden></p>
+      </article>
+
+      <section id="workforceCalendarView" class="workforce-calendar-view" hidden>
+        <div class="section-heading compact workforce-calendar-heading">
+          <div>
+            <p class="eyebrow">Periodo caricato su richiesta</p>
+            <h3>Calendario</h3>
+            <p id="workforceCalendarWindow" class="section-note"></p>
+          </div>
+          <button id="workforceCalendarClose" type="button" class="quiet">Torna al riepilogo</button>
+        </div>
+        <div id="workforceDataView">
         <div id="workforceSummary" class="workforce-summary">
           <div><span>Risorse</span><strong id="workforceMemberCount">0</strong></div>
           <div><span>Disponibili</span><strong id="workforceAvailableCount">0</strong></div>
@@ -1007,8 +1037,8 @@
             <button id="workforceRefreshBtn" type="button">Aggiorna</button>
           </div>
           <div class="segmented-control" aria-label="Vista calendario">
-            <button type="button" data-workforce-view-mode="day">Giorno</button>
-            <button type="button" data-workforce-view-mode="week" class="active">Settimana</button>
+            <button type="button" data-workforce-view-mode="day" class="active">Giorno</button>
+            <button type="button" data-workforce-view-mode="week">Settimana</button>
             <button type="button" data-workforce-view-mode="person">Persona</button>
           </div>
         </div>
@@ -1088,7 +1118,8 @@
             <div id="workforceChanges" class="workforce-list"></div>
           </section>
         </div>
-      </div>
+        </div>
+      </section>
     </section>
 
     <section

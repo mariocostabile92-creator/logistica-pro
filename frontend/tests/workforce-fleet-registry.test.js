@@ -4,6 +4,7 @@ import test from "node:test";
 
 import { fleetSyncCounts } from "../assets/js/modules/fleet-sync-view.js";
 import {
+  workforceCalendarWindow,
   workforceStatusLabel,
   workforceSummary,
 } from "../assets/js/modules/workforce-view.js";
@@ -27,9 +28,14 @@ test("Workforce is a primary routed workspace without replacing Operations", asy
 });
 
 
-test("Workforce page exposes summary period calendar coverage contracts changes import and export", async () => {
-  const html = await frontendFile("index.html");
+test("Workforce page exposes EMPTY import READY landing and on-demand calendar", async () => {
+  const [html, page] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/js/modules/workforce-page.js"),
+  ]);
   for (const id of [
+    "workforceViewState", "workforceReadyView", "workforceOpenCalendarBtn",
+    "workforceImportToggle", "workforceCalendarView",
     "workforceSummary", "workforceDateFrom", "workforceDateTo",
     "workforceCalendar", "workforceCoverage", "workforceAbsences",
     "workforceContracts", "workforceChanges", "workforceImportForm",
@@ -37,6 +43,9 @@ test("Workforce page exposes summary period calendar coverage contracts changes 
   ]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
+  assert.match(page, /Non hai ancora importato un planning turni/);
+  assert.match(html, /Apri calendario/);
+  assert.match(html, /Aggiorna da Excel/);
 });
 
 
@@ -74,16 +83,71 @@ test("Workforce calendar supports day week person and manual audited edits", asy
 });
 
 
-test("Workforce import shows recognized sheets and compact matrix", async () => {
+test("Workforce calendar uses only the current or first available week", () => {
+  const current = workforceCalendarWindow({
+    summary: { date_from: "2025-12-28", date_to: "2027-01-03" },
+  }, "2026-07-21");
+  assert.deepEqual(current, {
+    dateFrom: "2026-07-20",
+    dateTo: "2026-07-26",
+  });
+
+  const first = workforceCalendarWindow({
+    summary: { date_from: "2027-02-03", date_to: "2027-03-01" },
+  }, "2026-07-21");
+  assert.deepEqual(first, {
+    dateFrom: "2027-02-03",
+    dateTo: "2027-02-09",
+  });
+});
+
+
+test("Workforce import shows recognized sheets and a strictly bounded preview", async () => {
   const [view, css] = await Promise.all([
     frontendFile("assets/js/modules/workforce-view.js"),
     frontendFile("assets/css/workforce.css"),
   ]);
-  assert.match(view, /Planning turni riconosciuto/);
-  assert.match(view, /preview\.sheets\.map/);
-  assert.match(view, /preview\.matrix/);
-  assert.match(css, /max-height: 540px/);
+  assert.match(view, /Planning turni/);
+  assert.match(view, /preview\.sheets\.filter/);
+  assert.match(view, /\.slice\(0, 5\)/);
+  assert.match(view, /Object\.keys\(rows\[0\]\)\.slice\(0, 8\)/);
+  assert.match(view, /massimo 5 risorse e 7 giorni/);
+  assert.match(css, /max-height: 280px/);
   assert.match(css, /overflow: auto/);
+});
+
+
+test("Workforce initial load is summary-only and calendar data is deferred", async () => {
+  const source = await frontendFile("assets/js/modules/workforce-page.js");
+  const refreshStart = source.indexOf("async function refresh()");
+  const submitStart = source.indexOf("async function submitStatus", refreshStart);
+  const calendarStart = source.indexOf("async function loadCalendar");
+  const refreshBody = source.slice(refreshStart, submitStart);
+  const calendarBody = source.slice(calendarStart, refreshStart);
+  assert.match(refreshBody, /getWorkforceStatus\(\)/);
+  assert.doesNotMatch(refreshBody, /listWorkforceMembers|getWorkforceCalendar|getWorkforceCoverage/);
+  assert.match(calendarBody, /getWorkforceCalendar\(dateFrom, dateTo\)/);
+  assert.match(calendarBody, /listWorkforceMembers\(\)/);
+});
+
+
+test("Workforce import has loading guards and closes after success", async () => {
+  const source = await frontendFile("assets/js/modules/workforce-import-flow.js");
+  assert.match(source, /if \(analyzing \|\| importing\) return/);
+  assert.match(source, /setBusy\("analysis"\)/);
+  assert.match(source, /setBusy\("import"\)/);
+  assert.match(source, /close\(\{ reset: true \}\)/);
+  const page = await frontendFile("assets/js/modules/workforce-page.js");
+  assert.match(page, /setPageState\(status\.member_count \? PAGE_STATES\.READY : PAGE_STATES\.EMPTY/);
+});
+
+
+test("Workforce visible language translates internal states", async () => {
+  const source = await frontendFile("assets/js/modules/workforce-view.js");
+  assert.match(source, /requirement_unavailable: "Fabbisogno non disponibile"/);
+  assert.match(source, /scheduled: "Programmato"/);
+  assert.match(source, /rest: "Riposo"/);
+  assert.equal(workforceStatusLabel("not-an-enum"), "Da verificare");
 });
 
 
@@ -156,6 +220,7 @@ test("recognized workbooks route to their owning module", async () => {
 test("Workforce and Fleet use only API client calls and sanitized error handling", async () => {
   const sources = await Promise.all([
     frontendFile("assets/js/modules/workforce-page.js"),
+    frontendFile("assets/js/modules/workforce-import-flow.js"),
     frontendFile("assets/js/modules/fleet-sync.js"),
     frontendFile("assets/js/modules/fleet-sync-view.js"),
   ]);

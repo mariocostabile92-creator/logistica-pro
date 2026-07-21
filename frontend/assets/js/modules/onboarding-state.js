@@ -7,6 +7,7 @@ export function createOnboardingState(overrides = {}) {
     planningGenerated: false,
     dashboardAvailable: false,
     assetCount: 0,
+    workforceMemberCount: 0,
     ...overrides,
   };
 }
@@ -40,7 +41,13 @@ export function applyOnboardingEvent(current, event) {
 
   if (event.type === "dataset-imported") {
     if (event.datasetType === "planning") next.planningImported = true;
+    if (event.datasetType === "workforce") next.planningImported = true;
     if (event.datasetType === "fleet") next.fleetImported = true;
+  }
+
+  if (event.type === "workspace-status") {
+    next.workforceMemberCount = Number(event.workforceMemberCount || 0);
+    if (next.workforceMemberCount > 0) next.planningImported = true;
   }
 
   if (event.type === "dashboard-availability") {

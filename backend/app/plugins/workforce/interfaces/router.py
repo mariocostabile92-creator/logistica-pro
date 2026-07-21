@@ -1,6 +1,7 @@
 from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile
 
 from app.importers.excel_reader import validate_upload
+from app.importers.workbook_profiler.errors import WorkbookProfileError
 from app.plugins.workforce.application import workforce_service
 from app.plugins.workforce.domain.errors import (
     WorkforceImportError,
@@ -113,8 +114,11 @@ def changes(limit: int = Query(default=100, ge=1, le=1000)) -> WorkforceChangesR
 
 @router.post("/import/preview", response_model=WorkforceImportPreview)
 async def import_preview(file: UploadFile = File(...)) -> WorkforceImportPreview:
-    content, filename = await _read_upload(file)
-    return workforce_service.preview_import(content, filename)
+    try:
+        content, filename = await _read_upload(file)
+        return workforce_service.preview_import(content, filename)
+    except (WorkbookProfileError, WorkforceValidationError) as exc:
+        raise _write_error(exc) from exc
 
 
 @router.post("/import", response_model=WorkforceImportResult)
