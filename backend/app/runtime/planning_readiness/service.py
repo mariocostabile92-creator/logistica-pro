@@ -10,6 +10,9 @@ from app.domain.planning_readiness import (
 from app.runtime.planning_readiness.contracts import (
     PlanningInputCompositionProvider,
 )
+from app.runtime.planning_readiness.models import (
+    PlanningReadinessEvaluationContext,
+)
 
 
 class PlanningReadinessService:
@@ -30,6 +33,21 @@ class PlanningReadinessService:
         operation_date: date,
         evaluated_at: datetime,
     ) -> PlanningReadinessResult:
+        return self.evaluate_with_context(
+            organization_id=organization_id,
+            operational_unit=operational_unit,
+            operation_date=operation_date,
+            evaluated_at=evaluated_at,
+        ).result
+
+    def evaluate_with_context(
+        self,
+        *,
+        organization_id: str,
+        operational_unit: OperationalUnit,
+        operation_date: date,
+        evaluated_at: datetime,
+    ) -> PlanningReadinessEvaluationContext:
         composition = self._composition_provider.compose(
             organization_id=organization_id,
             operational_unit=operational_unit,
@@ -57,4 +75,7 @@ class PlanningReadinessService:
             evaluated_at=evaluated_at,
             legacy_flow_active=composition.legacy_flow_active,
         )
-        return self._evaluator.evaluate(report)
+        return PlanningReadinessEvaluationContext(
+            result=self._evaluator.evaluate(report),
+            envelope=composition.envelope,
+        )

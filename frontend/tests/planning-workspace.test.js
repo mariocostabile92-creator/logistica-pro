@@ -15,6 +15,10 @@ import {
   normalizePlanningReadiness,
   readinessEventType,
 } from "../assets/js/modules/planning-workspace/readiness.js";
+import {
+  createPlanningConflictLoader,
+  normalizePlanningConflictResult,
+} from "../assets/js/modules/planning-workspace/conflicts.js";
 
 
 const frontendFile = (path) => readFile(
@@ -65,7 +69,7 @@ test("legacy state names the disconnected Runtime and preserves placeholders", (
   assert.equal(view.badge, "Legacy");
   assert.equal(view.statusDescription, "Planning Runtime non ancora collegato.");
   assert.equal(view.readiness.value, "Non disponibile");
-  assert.equal(view.conflicts.value, "Non disponibili");
+  assert.equal(view.conflicts, null);
   assert.equal(view.draft.detail, "Draft disponibile nelle prossime fasi.");
   assert.equal(view.publication.detail, "Publication non disponibile.");
   assert.equal(view.canConfirm, false);
@@ -133,6 +137,57 @@ function readinessPayload(status = "READY") {
 }
 
 
+function conflictPayload({ status = "READY", conflicts = [], groups = [] } = {}) {
+  const blocking = conflicts.filter((item) => item.blocking).length;
+  return {
+    readiness: readinessPayload(status),
+    report: {
+      total_conflicts: conflicts.length,
+      total_blocking: blocking,
+      total_warnings: conflicts.length - blocking,
+      groups,
+      conflicts,
+      timestamp: "2026-07-22T07:00:00Z",
+      planning_version: "version-1",
+      planning_date: "2026-07-22",
+      operational_unit: {
+        external_identifier: "unit-a",
+        name: "Unit A",
+      },
+    },
+  };
+}
+
+
+function conflict({
+  id = "conflict-1",
+  code = "FLEET_MISSING",
+  category = "FLEET",
+  severity = "CRITICAL",
+  blocking = true,
+} = {}) {
+  return {
+    id,
+    code,
+    category,
+    severity,
+    title: "Fleet non disponibile",
+    description: "Lo snapshot Fleet non e disponibile.",
+    source: "fleet",
+    blocking,
+    affected_entities: [],
+    diagnostics: [{ code, message: "Missing", source: "fleet", details: [] }],
+    suggestion: {
+      action: "Apri Fleet e aggiorna il parco mezzi operativo.",
+      workspace: "Fleet",
+      rationale: "Il piano richiede Asset osservati.",
+    },
+    documentation_reference: "inventory#readiness",
+    timestamp: "2026-07-22T07:00:00Z",
+  };
+}
+
+
 test("readiness payload normalization supports every backend state", () => {
   for (const status of [
     "READY",
@@ -191,6 +246,93 @@ test("readiness loader coalesces duplicate calls and allows a controlled retry",
 });
 
 
+test("Conflict Review normalizes empty warning and critical states", () => {
+  const empty = normalizePlanningConflictResult(conflictPayload());
+  const warningItem = conflict({
+    id: "warning-1",
+    code: "FLEET_CAPABILITIES_MISSING",
+    category: "CAPABILITY",
+    severity: "MEDIUM",
+    blocking: false,
+  });
+  const warning = normalizePlanningConflictResult(conflictPayload({
+    status: "WARNING",
+    conflicts: [warningItem],
+    groups: [{
+      category: "CAPABILITY",
+      label: "Capability",
+      total_conflicts: 1,
+      total_blocking: 0,
+      highest_severity: "MEDIUM",
+      conflict_ids: ["warning-1"],
+    }],
+  }));
+  const critical = normalizePlanningConflictResult(conflictPayload({
+    status: "BLOCKED",
+    conflicts: [conflict()],
+    groups: [{
+      category: "FLEET",
+      label: "Fleet",
+      total_conflicts: 1,
+      total_blocking: 1,
+      highest_severity: "CRITICAL",
+      conflict_ids: ["conflict-1"],
+    }],
+  }));
+
+  assert.equal(empty.conflicts.totalConflicts, 0);
+  assert.equal(warning.conflicts.totalWarnings, 1);
+  assert.equal(warning.conflicts.topConflicts[0].severity, "MEDIUM");
+  assert.equal(critical.conflicts.totalBlocking, 1);
+  assert.equal(critical.conflicts.groups[0].category, "FLEET");
+});
+
+
+test("Conflict Review loader prevents duplicate requests and supports retry", async () => {
+  let calls = 0;
+  let release;
+  const loader = createPlanningConflictLoader(() => {
+    calls += 1;
+    if (calls > 1) return Promise.resolve(conflictPayload());
+    return new Promise((resolve) => { release = resolve; });
+  });
+  const first = loader.load();
+  const duplicate = loader.load();
+
+  assert.equal(first, duplicate);
+  assert.equal(calls, 1);
+  release(conflictPayload());
+  await first;
+  await loader.load();
+  assert.equal(calls, 2);
+});
+
+
+test("state exposes backend conflict groups without deriving decisions", () => {
+  const normalized = normalizePlanningConflictResult(conflictPayload({
+    status: "BLOCKED",
+    conflicts: [conflict()],
+    groups: [{
+      category: "FLEET",
+      label: "Fleet",
+      total_conflicts: 1,
+      total_blocking: 1,
+      highest_severity: "CRITICAL",
+      conflict_ids: ["conflict-1"],
+    }],
+  }));
+  const state = applyPlanningWorkspaceEvent(
+    createPlanningWorkspaceState(),
+    {
+      type: "blocked-received",
+      snapshot: normalized,
+    },
+  );
+
+  assert.equal(derivePlanningWorkspaceView(state).conflicts.totalBlocking, 1);
+});
+
+
 test("layout preserves the definitive desktop component hierarchy", async () => {
   const source = await frontendFile(
     "assets/js/modules/planning-workspace/layout.js",
@@ -234,9 +376,12 @@ test("renderer covers all components and exposes loading semantics", async () =>
   }
   assert.match(components, /role: "status"/);
   assert.match(components, /aria-labelledby/);
-  assert.match(components, /retry-readiness/);
+  assert.match(components, /retry-conflicts/);
   assert.match(components, /readiness-blocker-list/);
   assert.match(components, /readiness-warning-list/);
+  assert.match(components, /conflict-groups/);
+  assert.match(components, /conflict-list/);
+  assert.match(components, /aria-live/);
 });
 
 
@@ -253,6 +398,8 @@ test("responsive styles cover tablet mobile order and horizontal containment", a
     /planning-workspace-draft[\s\S]*?order: 4[\s\S]*?planning-workspace-timeline[\s\S]*?order: 5/,
   );
   assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /planning-conflict-group summary:focus-visible/);
+  assert.match(css, /planning-conflict-counts[\s\S]*grid-template-columns: 1fr/);
 });
 
 
@@ -269,7 +416,7 @@ test("keyboard navigation supports arrows boundaries and Escape", async () => {
 });
 
 
-test("Planning Workspace consumes only the readiness API and no business algorithms", async () => {
+test("Planning Workspace consumes one Conflict Review API and no business algorithms", async () => {
   const paths = [
     "assets/js/modules/planning-workspace/index.js",
     "assets/js/modules/planning-workspace/models.js",
@@ -279,18 +426,20 @@ test("Planning Workspace consumes only the readiness API and no business algorit
     "assets/js/modules/planning-workspace/components.js",
     "assets/js/modules/planning-workspace/utils.js",
     "assets/js/modules/planning-workspace/readiness.js",
+    "assets/js/modules/planning-workspace/conflicts.js",
   ];
   const sources = await Promise.all(paths.map(frontendFile));
   const combined = sources.join("\n");
 
-  assert.match(combined, /getPlanningReadiness/);
+  assert.match(combined, /getPlanningConflicts/);
+  assert.doesNotMatch(combined, /getPlanningReadiness/);
   assert.doesNotMatch(combined, /fetch\(|getLatestPlanning/);
   assert.doesNotMatch(combined, /PlanningInputRuntime|generatePlanning/);
   assert.doesNotMatch(combined, /console\.(error|warn|log)/);
 });
 
 
-test("frontend exposes loading error retry and one initial readiness request", async () => {
+test("frontend exposes loading error retry and one initial conflict request", async () => {
   const [index, api, renderer] = await Promise.all([
     frontendFile("assets/js/modules/planning-workspace/index.js"),
     frontendFile("assets/js/api.js"),
@@ -299,11 +448,12 @@ test("frontend exposes loading error retry and one initial readiness request", a
 
   assert.match(index, /type: "load-started"/);
   assert.match(index, /type: "load-failed"/);
-  assert.match(index, /retry-readiness/);
-  assert.match(index, /createPlanningReadinessLoader/);
-  assert.match(api, /\/api\/planning\/readiness/);
+  assert.match(index, /retry-conflicts/);
+  assert.match(index, /createPlanningConflictLoader/);
+  assert.match(api, /\/api\/planning\/conflicts/);
   assert.match(api, /signal/);
   assert.match(renderer, /retryButton\.hidden/);
+  assert.match(renderer, /createElement|element\("details"/);
 });
 
 

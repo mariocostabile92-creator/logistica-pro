@@ -1,8 +1,10 @@
-import { getPlanningReadiness } from "../../api.js";
+import { getPlanningConflicts } from "../../api.js";
+import {
+  createPlanningConflictLoader,
+  normalizePlanningConflictResult,
+} from "./conflicts.js";
 import { createPlanningWorkspaceLayout } from "./layout.js";
 import {
-  createPlanningReadinessLoader,
-  normalizePlanningReadiness,
   readinessEventType,
 } from "./readiness.js";
 import { renderPlanningWorkspace } from "./renderer.js";
@@ -17,7 +19,7 @@ import { focusRelativeAction } from "./utils.js";
 let initialized = false;
 let state;
 let refs;
-const readinessLoader = createPlanningReadinessLoader(getPlanningReadiness);
+const conflictLoader = createPlanningConflictLoader(getPlanningConflicts);
 
 
 function today() {
@@ -33,19 +35,19 @@ function commit(event) {
 }
 
 
-async function loadReadiness() {
+async function loadConflictReview() {
   commit({ type: "load-started" });
   try {
-    const payload = await readinessLoader.load({
+    const payload = await conflictLoader.load({
       organizationId: "default",
       operationalUnitId: "default",
       planningDate: state.planningDate,
     });
-    const readiness = normalizePlanningReadiness(payload);
+    const { readiness, conflicts } = normalizePlanningConflictResult(payload);
     commit({
       type: readinessEventType(readiness.status),
       message: readiness.rationale,
-      snapshot: { readiness },
+      snapshot: { readiness, conflicts },
       operationalUnit: readiness.operationalUnit,
       planningDate: readiness.planningDate,
     });
@@ -53,7 +55,7 @@ async function loadReadiness() {
     if (error?.name === "AbortError") return;
     commit({
       type: "load-failed",
-      message: error?.message || "Readiness non disponibile. Riprova.",
+      message: error?.message || "Conflict Review non disponibile. Riprova.",
     });
   }
 }
@@ -73,7 +75,7 @@ function handleActionClick(event) {
   const action = event.target.closest("[data-planning-action]")?.dataset
     .planningAction;
   if (action === "open-legacy") openLegacyFlow();
-  if (action === "retry-readiness") loadReadiness();
+  if (action === "retry-conflicts") loadConflictReview();
 }
 
 
@@ -118,5 +120,5 @@ export function initPlanningWorkspace() {
     "keydown",
     handleLegacyKeydown,
   );
-  loadReadiness();
+  loadConflictReview();
 }

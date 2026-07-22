@@ -501,6 +501,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         or path
         in {
             "/api/planning/readiness",
+            "/api/planning/conflicts",
             "/api/plugins/fleet/v1/sync/preview",
             "/api/plugins/fleet/v1/sync/confirm",
             "/api/plugins/fleet/v1/sync/latest",

@@ -70,9 +70,9 @@ export function createStatusCard() {
     text: "Riprova",
     attributes: {
       type: "button",
-      "data-planning-action": "retry-readiness",
+      "data-planning-action": "retry-conflicts",
       hidden: "",
-      "aria-label": "Riprova il caricamento della Planning Readiness",
+      "aria-label": "Riprova il caricamento del Conflict Review",
     },
   });
   card.append(copy, retry);
@@ -189,12 +189,78 @@ export function createReadinessCard() {
 
 
 export function createConflictSummary() {
-  return createWorkspaceBlock({
-    component: "conflicts",
-    eyebrow: "Controlli",
-    title: "Conflict Summary",
-    titleId: "planningWorkspaceConflictsTitle",
+  const section = element("section", {
+    className: "planning-workspace-block planning-workspace-conflicts",
+    attributes: {
+      "data-planning-component": "conflicts",
+      "aria-labelledby": "planningWorkspaceConflictsTitle",
+    },
   });
+  const heading = element("header", {
+    className: "planning-workspace-block-heading",
+  });
+  heading.append(
+    element("p", { className: "eyebrow", text: "Controlli" }),
+    element("h3", {
+      text: "Conflict Summary",
+      attributes: { id: "planningWorkspaceConflictsTitle" },
+    }),
+    element("p", {
+      className: "planning-workspace-description",
+      text: "Problemi che richiedono verifica prima della conferma.",
+    }),
+  );
+  const body = element("div", {
+    className: "planning-workspace-block-body planning-conflict-body",
+    attributes: {
+      "data-planning-role": "conflict-body",
+      "aria-live": "polite",
+    },
+  });
+  const summary = element("dl", { className: "planning-conflict-counts" });
+  for (const [label, role] of [
+    ["Conflitti", "conflict-total"],
+    ["Bloccanti", "conflict-blocking"],
+    ["Avvisi", "conflict-warnings"],
+  ]) {
+    const item = element("div");
+    item.append(
+      element("dt", { text: label }),
+      element("dd", { attributes: { "data-planning-role": role } }),
+    );
+    summary.append(item);
+  }
+  const empty = element("p", {
+    className: "planning-conflict-empty",
+    text: "Nessun conflitto rilevato.",
+    attributes: { "data-planning-role": "conflict-empty" },
+  });
+  const groups = element("div", {
+    className: "planning-conflict-groups",
+    attributes: {
+      "data-planning-role": "conflict-groups",
+      "aria-label": "Gruppi di conflitti",
+    },
+  });
+  const top = element("section", {
+    className: "planning-conflict-top",
+    attributes: {
+      "data-planning-role": "conflict-top",
+      "aria-labelledby": "planningConflictTopTitle",
+    },
+  });
+  top.append(
+    element("h4", {
+      text: "Priorita operative",
+      attributes: { id: "planningConflictTopTitle" },
+    }),
+    element("ol", {
+      attributes: { "data-planning-role": "conflict-list" },
+    }),
+  );
+  body.append(summary, empty, groups, top);
+  section.append(heading, body);
+  return section;
 }
 
 

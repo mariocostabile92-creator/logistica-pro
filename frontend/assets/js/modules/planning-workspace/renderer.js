@@ -44,6 +44,111 @@ function renderReadiness(refs, readiness) {
 }
 
 
+function conflictBadge(value, className = "") {
+  return element("span", {
+    className: `planning-conflict-badge ${className}`.trim(),
+    text: value,
+  });
+}
+
+
+function renderConflictGroups(refs, report) {
+  const conflictsById = new Map(
+    report.conflicts.map((conflict) => [conflict.id, conflict]),
+  );
+  const nodes = report.groups.map((group, index) => {
+    const details = element("details", {
+      className: "planning-conflict-group",
+      attributes: {
+        "data-conflict-category": group.category,
+        ...(index === 0 && group.totalBlocking ? { open: "" } : {}),
+      },
+    });
+    const summary = element("summary", {
+      attributes: {
+        "aria-label": `${group.label}: ${group.totalConflicts} conflitti`,
+      },
+    });
+    const labels = element("span");
+    labels.append(
+      element("strong", { text: group.label }),
+      element("span", {
+        text: `${group.totalConflicts} totali`,
+      }),
+    );
+    summary.append(labels);
+    if (group.totalBlocking) {
+      summary.append(conflictBadge(
+        `${group.totalBlocking} bloccanti`,
+        "critical",
+      ));
+    } else {
+      summary.append(conflictBadge(group.highestSeverity));
+    }
+    const list = element("ul");
+    const items = group.conflictIds
+      .map((id) => conflictsById.get(id))
+      .filter(Boolean)
+      .map((conflict) => element("li", { text: conflict.title }));
+    list.append(...items);
+    details.append(summary, list);
+    return details;
+  });
+  refs.conflictGroups.replaceChildren(...nodes);
+  refs.conflictGroups.hidden = nodes.length === 0;
+}
+
+
+function renderConflictList(refs, report) {
+  const nodes = report.topConflicts.map((conflict) => {
+    const item = element("li", {
+      className: `planning-conflict-item ${conflict.blocking ? "blocking" : "warning"}`,
+    });
+    const meta = element("div", { className: "planning-conflict-item-meta" });
+    meta.append(
+      conflictBadge(conflict.severity, conflict.blocking ? "critical" : ""),
+      element("span", { text: conflict.category.replaceAll("_", " ") }),
+    );
+    item.append(
+      meta,
+      element("h5", { text: conflict.title }),
+      element("p", { text: conflict.description }),
+      element("p", {
+        className: "planning-conflict-action",
+        text: `Azione: ${conflict.suggestion.action}`,
+      }),
+    );
+    return item;
+  });
+  refs.conflictList.replaceChildren(...nodes);
+  refs.conflictTop.hidden = nodes.length === 0;
+}
+
+
+function renderConflicts(refs, report) {
+  const available = report && Number.isInteger(report.totalConflicts);
+  setNodeText(refs.conflictTotal, available ? report.totalConflicts : "-");
+  setNodeText(refs.conflictBlocking, available ? report.totalBlocking : "-");
+  setNodeText(refs.conflictWarnings, available ? report.totalWarnings : "-");
+  refs.conflictEmpty.hidden = available && report.totalConflicts > 0;
+  setNodeText(
+    refs.conflictEmpty,
+    available
+      ? "Nessun conflitto rilevato."
+      : "Conflict Review non disponibile.",
+  );
+  if (!available) {
+    refs.conflictGroups.replaceChildren();
+    refs.conflictGroups.hidden = true;
+    refs.conflictList.replaceChildren();
+    refs.conflictTop.hidden = true;
+    return;
+  }
+  renderConflictGroups(refs, report);
+  renderConflictList(refs, report);
+}
+
+
 export function renderPlanningWorkspace(refs, view) {
   refs.root.dataset.planningWorkspaceState = view.state;
   refs.root.dataset.planningWorkspaceTone = view.tone;
@@ -58,7 +163,7 @@ export function renderPlanningWorkspace(refs, view) {
   setNodeText(refs.statusTitle, view.statusTitle);
   setNodeText(refs.statusDescription, view.statusDescription);
   renderReadiness(refs, view.readiness);
-  renderPlaceholder(refs, "conflicts", view.conflicts);
+  renderConflicts(refs, view.conflicts);
   renderPlaceholder(refs, "timeline", view.timeline);
   renderPlaceholder(refs, "draft", view.draft);
   renderPlaceholder(refs, "publication", view.publication);

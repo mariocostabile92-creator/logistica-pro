@@ -68,10 +68,7 @@ export function derivePlanningWorkspaceView(state) {
         ...readiness,
       })
       : placeholder("Non disponibile", state.message || noRuntime),
-    conflicts: snapshot.conflicts || placeholder(
-      "Non disponibili",
-      "Conflict Summary disponibile nelle prossime fasi.",
-    ),
+    conflicts: snapshot.conflicts || null,
     timeline: placeholder(
       "Timeline non disponibile",
       "La timeline sarà collegata nelle prossime fasi.",
