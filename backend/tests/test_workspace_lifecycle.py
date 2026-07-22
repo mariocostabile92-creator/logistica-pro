@@ -497,6 +497,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         path
         for path in paths
         if path.startswith("/api/workspace/")
+        or path == "/api/runtime/authority"
         or path.startswith("/api/plugins/workforce/")
         or path.startswith("/api/planning/drafts")
         or path.startswith("/api/planning/confirmation")

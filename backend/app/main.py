@@ -19,6 +19,7 @@ from app.api.routers import (
     planning_publication,
     planning_readiness,
     planning_timeline,
+    runtime_authority,
 )
 from app.briefing.repository import init_schema as init_briefing_schema
 from app.briefing.router import router as briefing_router
@@ -36,6 +37,9 @@ from app.plugins.fleet.bootstrap import (
 from app.plugins.workforce.bootstrap import (
     initialize_workforce_plugin,
     register_workforce_plugin,
+)
+from app.repositories.authority_repository import (
+    init_schema as init_authority_schema,
 )
 from app.repositories.planning_draft_repository import (
     init_schema as init_planning_draft_schema,
@@ -75,6 +79,7 @@ async def lifespan(app: FastAPI):
         init_planning_draft_schema()
         init_planning_confirmation_schema()
         init_planning_publication_schema()
+        init_authority_schema()
         yield
     finally:
         logger.info("Operations Engine stopped")
@@ -158,6 +163,7 @@ app.include_router(planning_timeline.router)
 app.include_router(planning_drafts.router)
 app.include_router(planning_confirmation.router)
 app.include_router(planning_publication.router)
+app.include_router(runtime_authority.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)

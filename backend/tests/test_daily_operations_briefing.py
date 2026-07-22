@@ -374,23 +374,24 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
     existing_paths = {
         path: value
         for path, value in paths.items()
-            if (
-                not path.startswith("/api/briefing/")
-                and not path.startswith("/api/workspace/")
-                and not path.startswith("/api/plugins/workforce/")
-                and not path.startswith("/api/planning/drafts")
-                and not path.startswith("/api/planning/confirmation")
-                and not path.startswith("/api/planning/publication")
-                and path not in {
-                    "/api/planning/readiness",
-                    "/api/planning/conflicts",
-                    "/api/planning/timeline",
-                    "/api/plugins/fleet/v1/sync/preview",
-                    "/api/plugins/fleet/v1/sync/confirm",
-                    "/api/plugins/fleet/v1/sync/latest",
-                    "/api/plugins/fleet/v1/availability",
-                }
-            )
+        if (
+            not path.startswith("/api/briefing/")
+            and path != "/api/runtime/authority"
+            and not path.startswith("/api/workspace/")
+            and not path.startswith("/api/plugins/workforce/")
+            and not path.startswith("/api/planning/drafts")
+            and not path.startswith("/api/planning/confirmation")
+            and not path.startswith("/api/planning/publication")
+            and path not in {
+                "/api/planning/readiness",
+                "/api/planning/conflicts",
+                "/api/planning/timeline",
+                "/api/plugins/fleet/v1/sync/preview",
+                "/api/plugins/fleet/v1/sync/confirm",
+                "/api/plugins/fleet/v1/sync/latest",
+                "/api/plugins/fleet/v1/availability",
+            }
+        )
     }
     digest = hashlib.sha256(
         json.dumps(
