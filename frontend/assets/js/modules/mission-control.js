@@ -1,4 +1,5 @@
 import { byId } from "../utils/dom.js";
+import { scheduleIdle } from "../utils/idle-scheduler.js";
 import { userFacingCopy } from "./briefing.js";
 import {
   applyMissionControlEvent,
@@ -9,6 +10,13 @@ import {
 
 let missionState = createMissionControlState();
 let clockTimer = null;
+let refreshPromise = null;
+let cancelTimelineRender = null;
+let renderVersion = 0;
+let initialized = false;
+let refreshData = async () => [];
+let changeOperationalUnit = () => {};
+const renderSignatures = new Map();
 
 
 function element(tag, className = "", text = "") {
@@ -49,35 +57,63 @@ function relativeFreshness(value) {
 }
 
 
+function setText(id, value) {
+  const node = byId(id);
+  if (node.textContent !== String(value)) node.textContent = value;
+}
+
+
+function renderChanged(key, value, callback) {
+  const signature = JSON.stringify(value);
+  if (renderSignatures.get(key) === signature) return false;
+  renderSignatures.set(key, signature);
+  callback();
+  return true;
+}
+
+
 function updateClock() {
   const now = new Date();
-  byId("missionDate").textContent = now.toLocaleDateString("it-IT", {
+  setText("missionDate", now.toLocaleDateString("it-IT", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-  });
-  byId("missionTime").textContent = now.toLocaleTimeString("it-IT", {
+  }));
+  setText("missionTime", now.toLocaleTimeString("it-IT", {
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }));
+  setText(
+    "missionFreshness",
+    relativeFreshness(deriveMissionControlView(missionState).freshnessAt),
+  );
 }
 
 
 function renderStatus(view) {
-  const status = byId("missionDayStatus");
-  status.className = `mission-day-status is-${view.status.tone}`;
-  status.setAttribute("aria-busy", String(view.loading || view.refreshing));
-  byId("missionDayStatusLabel").textContent = view.status.label;
-  byId("missionDayStatusDescription").textContent = userFacingCopy(
-    view.status.description,
-  );
-  byId("missionStatusTemporary").hidden = !view.status.temporary;
-  byId("missionWorkforceKpi").textContent = view.workforce.availabilityLabel;
-  byId("missionFleetKpi").textContent = view.fleet.availableLabel;
-  byId("missionConflictKpi").textContent = view.planning.blocking === null
-    ? "Non disponibile"
-    : String(view.planning.blocking);
+  const signature = {
+    status: view.status,
+    loading: view.loading,
+    refreshing: view.refreshing,
+    workforce: view.workforce.availabilityLabel,
+    fleet: view.fleet.availableLabel,
+    blocking: view.planning.blocking,
+  };
+  renderChanged("status", signature, () => {
+    const status = byId("missionDayStatus");
+    status.className = `mission-day-status is-${view.status.tone}`;
+    status.setAttribute("aria-busy", String(view.loading || view.refreshing));
+    setText("missionDayStatusLabel", view.status.label);
+    setText("missionDayStatusDescription", userFacingCopy(view.status.description));
+    byId("missionStatusTemporary").hidden = !view.status.temporary;
+    setText("missionWorkforceKpi", view.workforce.availabilityLabel);
+    setText("missionFleetKpi", view.fleet.availableLabel);
+    setText(
+      "missionConflictKpi",
+      view.planning.blocking === null ? "Non disponibile" : view.planning.blocking,
+    );
+  });
 }
 
 
@@ -102,7 +138,9 @@ function actionRow(action) {
     element(
       "span",
       `mission-action-priority is-${action.tone}`,
-      action.priority ? `${action.priorityLabel} · priorità ${action.priority}` : action.priorityLabel,
+      action.priority
+        ? `${action.priorityLabel} \u00b7 priorit\u00e0 ${action.priority}`
+        : action.priorityLabel,
     ),
     element("span", "mission-action-source", action.sourceLabel),
   );
@@ -119,119 +157,151 @@ function actionRow(action) {
 
 
 function renderActions(view) {
-  const state = byId("missionActionsState");
-  const list = byId("missionActionsList");
-  byId("missionActionCount").textContent = view.actionState === "loading"
-    ? "--"
-    : String(view.actions.length);
-  if (view.actionState === "loading") {
-    state.hidden = false;
-    state.className = "mission-actions-state is-loading";
-    state.setAttribute("aria-busy", "true");
-    state.replaceChildren();
-    const skeleton = element("div", "mission-actions-skeleton");
-    skeleton.setAttribute("aria-hidden", "true");
-    skeleton.append(element("span"), element("span"), element("span"));
-    state.append(skeleton);
-    list.hidden = true;
-    list.replaceChildren();
-    return;
-  }
-  state.setAttribute("aria-busy", "false");
-  if (view.actionState === "empty") {
-    state.hidden = false;
-    state.className = `mission-actions-state ${view.error ? "is-error" : "is-empty"}`;
-    state.replaceChildren(
-      element("strong", "", view.actionEmptyTitle),
-      element("p", "", view.actionEmptyDescription),
+  const signature = {
+    state: view.actionState,
+    actions: view.actions,
+    error: view.error,
+    title: view.actionEmptyTitle,
+    description: view.actionEmptyDescription,
+  };
+  renderChanged("actions", signature, () => {
+    const state = byId("missionActionsState");
+    const list = byId("missionActionsList");
+    setText(
+      "missionActionCount",
+      view.actionState === "loading" ? "--" : view.actions.length,
     );
-    list.hidden = true;
-    list.replaceChildren();
-    return;
-  }
-  state.hidden = true;
-  list.hidden = false;
-  list.replaceChildren(...view.actions.map(actionRow));
+    if (view.actionState === "loading") {
+      state.hidden = false;
+      state.className = "mission-actions-state is-loading";
+      state.setAttribute("aria-busy", "true");
+      list.hidden = true;
+      return;
+    }
+    state.setAttribute("aria-busy", "false");
+    if (view.actionState === "empty") {
+      state.hidden = false;
+      state.className = `mission-actions-state ${view.error ? "is-error" : "is-empty"}`;
+      state.replaceChildren(
+        element("strong", "", view.actionEmptyTitle),
+        element("p", "", view.actionEmptyDescription),
+      );
+      list.hidden = true;
+      return;
+    }
+    state.hidden = true;
+    list.hidden = false;
+    list.replaceChildren(...view.actions.map(actionRow));
+  });
 }
 
 
 function renderModuleState(id, state) {
   const badge = byId(id);
-  badge.textContent = state.label;
+  setText(id, state.label);
   badge.className = `mission-module-state is-${state.tone}`;
 }
 
 
 function renderSnapshots(view) {
-  renderModuleState("missionWorkforceState", view.workforce.state);
-  byId("missionWorkforceAvailability").textContent = view.workforce.availabilityLabel;
-  byId("missionWorkforceAbsences").textContent = view.workforce.absencesLabel;
-
-  renderModuleState("missionFleetState", view.fleet.state);
-  byId("missionFleetAvailable").textContent = view.fleet.availableLabel;
-  byId("missionFleetMaintenance").textContent = view.fleet.maintenanceLabel;
-  byId("missionFleetDocuments").textContent = view.fleet.documentsLabel;
-
-  renderModuleState("missionPlanningState", view.planning.state);
-  byId("missionPlanningReadiness").textContent = view.planning.readiness;
-  byId("missionPlanningConflicts").textContent = view.planning.conflictsLabel;
-  byId("missionPlanningGenerated").textContent = view.planning.generatedAt
-    ? shortTimestamp(view.planning.generatedAt)
-    : "Non disponibile";
+  renderChanged("snapshots", {
+    workforce: view.workforce,
+    fleet: view.fleet,
+    planning: view.planning,
+  }, () => {
+    renderModuleState("missionWorkforceState", view.workforce.state);
+    setText("missionWorkforceAvailability", view.workforce.availabilityLabel);
+    setText("missionWorkforceAbsences", view.workforce.absencesLabel);
+    renderModuleState("missionFleetState", view.fleet.state);
+    setText("missionFleetAvailable", view.fleet.availableLabel);
+    setText("missionFleetMaintenance", view.fleet.maintenanceLabel);
+    setText("missionFleetDocuments", view.fleet.documentsLabel);
+    renderModuleState("missionPlanningState", view.planning.state);
+    setText("missionPlanningReadiness", view.planning.readiness);
+    setText("missionPlanningConflicts", view.planning.conflictsLabel);
+    setText(
+      "missionPlanningGenerated",
+      view.planning.generatedAt ? shortTimestamp(view.planning.generatedAt) : "Non disponibile",
+    );
+  });
 }
 
 
 function renderOperationalUnits(view) {
-  const select = byId("missionOperationalUnit");
-  select.replaceChildren(...view.operationalUnits.options.map((option) => {
-    const node = element("option", "", option.label);
-    node.value = option.value;
-    return node;
-  }));
-  select.value = view.operationalUnits.selected;
-  select.disabled = view.operationalUnits.disabled;
-  const unitCount = Math.max(0, view.operationalUnits.options.length - 1);
-  byId("missionOperationalUnitHint").textContent = unitCount
-    ? `${unitCount} unità nello snapshot · filtro temporaneo`
-    : "Selettore predisposto · snapshot aggregato";
+  renderChanged("operational-units", view.operationalUnits, () => {
+    const select = byId("missionOperationalUnit");
+    select.replaceChildren(...view.operationalUnits.options.map((option) => {
+      const node = element("option", "", option.label);
+      node.value = option.value;
+      return node;
+    }));
+    select.value = view.operationalUnits.selected;
+    select.disabled = view.operationalUnits.disabled;
+    const unitCount = Math.max(0, view.operationalUnits.options.length - 1);
+    setText(
+      "missionOperationalUnitHint",
+      unitCount
+        ? `${unitCount} unit\u00e0 nello snapshot \u00b7 filtro temporaneo`
+        : "Selettore predisposto \u00b7 snapshot aggregato",
+    );
+  });
 }
 
 
 function renderTimeline(view) {
-  const list = byId("missionTimelineList");
-  if (!view.timeline.length) {
-    list.replaceChildren(element(
-      "li",
-      "mission-timeline-placeholder",
-      "Nessuna attività disponibile nello snapshot corrente.",
-    ));
-    return;
-  }
-  list.replaceChildren(...view.timeline.map((item) => {
-    const row = element("li", "mission-timeline-item");
-    const time = element("time", "", shortTimestamp(item.timestamp));
-    time.dateTime = item.timestamp;
-    row.append(
-      time,
-      element("strong", "", item.label),
-      element("span", "", item.source),
-    );
-    return row;
-  }));
+  renderChanged("timeline", view.timeline, () => {
+    const list = byId("missionTimelineList");
+    if (!view.timeline.length) {
+      list.replaceChildren(element(
+        "li",
+        "mission-timeline-placeholder",
+        "Nessuna attivit\u00e0 disponibile nello snapshot corrente.",
+      ));
+      return;
+    }
+    list.replaceChildren(...view.timeline.map((item) => {
+      const row = element("li", "mission-timeline-item");
+      const time = element("time", "", shortTimestamp(item.timestamp));
+      time.dateTime = item.timestamp;
+      row.append(time, element("strong", "", item.label), element("span", "", item.source));
+      return row;
+    }));
+  });
 }
 
 
-function renderMissionControl() {
-  const view = deriveMissionControlView(missionState);
-  renderStatus(view);
-  renderActions(view);
-  renderSnapshots(view);
-  renderOperationalUnits(view);
-  renderTimeline(view);
-  byId("missionFreshness").textContent = relativeFreshness(view.freshnessAt);
+function renderControls(view) {
+  setText(
+    "missionFreshness",
+    view.refreshError
+      ? "Aggiornamento incompleto \u00b7 dati precedenti"
+      : relativeFreshness(view.freshnessAt),
+  );
   const refresh = byId("missionRefreshBtn");
   refresh.disabled = view.loading || view.refreshing;
-  refresh.textContent = view.refreshing ? "Aggiornamento..." : "Aggiorna";
+  setText("missionRefreshBtn", view.refreshing ? "Aggiornamento..." : "Aggiorna");
+}
+
+
+function renderMissionControl({ initial = false } = {}) {
+  const view = deriveMissionControlView(missionState);
+  renderStatus(view);
+  renderControls(view);
+  if (initial) return;
+  const version = ++renderVersion;
+  queueMicrotask(() => {
+    if (version === renderVersion) renderActions(view);
+  });
+  requestAnimationFrame(() => {
+    if (version !== renderVersion) return;
+    renderSnapshots(view);
+    renderOperationalUnits(view);
+  });
+  cancelTimelineRender?.();
+  cancelTimelineRender = scheduleIdle(() => {
+    cancelTimelineRender = null;
+    if (version === renderVersion) renderTimeline(view);
+  });
 }
 
 
@@ -255,19 +325,58 @@ function handleWorkspaceNavigation(event) {
 }
 
 
-export function initMissionControl() {
+async function handleRefresh() {
+  if (refreshPromise) return refreshPromise;
+  updateMissionControl({ type: "refresh-started" });
+  refreshPromise = Promise.resolve(refreshData())
+    .then((results) => {
+      const partialFailure = Array.isArray(results) && results.some((result) => (
+        result.status === "rejected" || result.value === null
+      ));
+      updateMissionControl({
+        type: "refresh-settled",
+        error: partialFailure ? "Uno snapshot non \u00e8 stato aggiornato." : "",
+      });
+    })
+    .catch(() => {
+      updateMissionControl({
+        type: "refresh-settled",
+        error: "Aggiornamento temporaneamente non disponibile.",
+      });
+    })
+    .finally(() => { refreshPromise = null; });
+  return refreshPromise;
+}
+
+
+function handleOperationalUnitChange(event) {
+  const operationalUnit = event.target.value;
+  if (operationalUnit === missionState.selectedOperationalUnit) return;
+  changeOperationalUnit(operationalUnit);
+  updateMissionControl({ type: "operational-unit-selected", operationalUnit });
+  document.dispatchEvent(new CustomEvent("mission:operational-unit-changed", {
+    detail: { operationalUnit },
+  }));
+}
+
+
+export function initMissionControl({
+  onRefresh = null,
+  onOperationalUnitChange = null,
+} = {}) {
+  if (initialized) return;
+  initialized = true;
+  if (onRefresh) refreshData = onRefresh;
+  if (onOperationalUnitChange) changeOperationalUnit = onOperationalUnitChange;
   updateClock();
   clockTimer = window.setInterval(updateClock, 60000);
   byId("missionControlSection").addEventListener("click", handleWorkspaceNavigation);
-  byId("missionRefreshBtn").addEventListener("click", () => {
-    byId("refreshBriefingBtn").click();
-  });
+  byId("missionRefreshBtn").addEventListener("click", handleRefresh);
+  byId("missionOperationalUnit").addEventListener("change", handleOperationalUnitChange);
   document.addEventListener("briefing:state-changed", (event) => {
     if (event.detail.phase === "loading") {
       updateMissionControl({ type: "briefing-loading" });
-      return;
-    }
-    if (event.detail.phase === "error") {
+    } else if (event.detail.phase === "error") {
       updateMissionControl({
         type: "briefing-failed",
         message: event.detail.errorMessage,
@@ -275,10 +384,7 @@ export function initMissionControl() {
     }
   });
   document.addEventListener("briefing:changed", (event) => {
-    updateMissionControl({
-      type: "briefing-loaded",
-      briefing: event.detail.briefing,
-    });
+    updateMissionControl({ type: "briefing-loaded", briefing: event.detail.briefing });
   });
   document.addEventListener("workspace:status-changed", (event) => {
     updateMissionControl({ type: "workspace-loaded", workspace: event.detail });
@@ -296,6 +402,7 @@ export function initMissionControl() {
   });
   window.addEventListener("beforeunload", () => {
     if (clockTimer) window.clearInterval(clockTimer);
+    cancelTimelineRender?.();
   });
-  renderMissionControl();
+  renderMissionControl({ initial: true });
 }

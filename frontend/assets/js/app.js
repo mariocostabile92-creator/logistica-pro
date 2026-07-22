@@ -1,18 +1,19 @@
 import { getHealth } from "./api.js";
-import { initBriefing } from "./modules/briefing.js";
-import { initFleetImport } from "./modules/import-fleet.js";
-import { initFleetPage } from "./modules/fleet-page.js";
-import { initFleetSync } from "./modules/fleet-sync.js";
-import { initDemoWorkspace } from "./modules/demo-workspace.js";
+import {
+  abortBriefingRequest,
+  initBriefing,
+  refreshBriefing,
+} from "./modules/briefing.js";
 import { initMissionControl } from "./modules/mission-control.js";
-import { initOnboarding } from "./modules/onboarding.js";
-import { initOperationsDashboard } from "./modules/operations-dashboard.js";
-import { initPlanningPage } from "./modules/planning-page.js";
-import { initPlanningImport } from "./modules/import-planning.js";
-import { initSettingsPage } from "./modules/settings-page.js";
 import { initViewNavigation } from "./modules/view-navigation.js";
-import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js";
-import { initWorkforcePage } from "./modules/workforce-page.js";
+import {
+  ensureWorkspaceInitialized,
+  initWorkspaceLoader,
+} from "./modules/workspace-loader.js";
+import {
+  initWorkspaceLifecycle,
+  refreshWorkspaceStatus,
+} from "./modules/workspace-lifecycle.js";
 import { byId } from "./utils/dom.js";
 
 
@@ -29,18 +30,20 @@ async function checkHealth() {
 }
 
 
-initPlanningImport();
-initFleetImport();
-initMissionControl();
+async function refreshMissionControlData() {
+  return Promise.allSettled([
+    refreshBriefing({ announce: false }),
+    refreshWorkspaceStatus({ force: true, preserveCurrent: true }),
+  ]);
+}
+
+
+initMissionControl({
+  onRefresh: refreshMissionControlData,
+  onOperationalUnitChange: abortBriefingRequest,
+});
 initBriefing();
-initOnboarding();
-initOperationsDashboard();
-initPlanningPage();
-initFleetPage();
-initFleetSync();
-initWorkforcePage();
-initSettingsPage();
-initViewNavigation();
-initDemoWorkspace();
 initWorkspaceLifecycle();
+initWorkspaceLoader();
+initViewNavigation({ loadWorkspace: ensureWorkspaceInitialized });
 checkHealth();

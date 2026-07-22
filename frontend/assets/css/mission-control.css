@@ -292,14 +292,13 @@
 .mission-actions-skeleton span {
   height: 62px;
   border-radius: 4px;
-  background: linear-gradient(90deg, #e7ebe9, #f6f8f7, #e7ebe9);
-  background-size: 200% 100%;
-  animation: mission-skeleton-shift 1.2s ease-in-out infinite;
+  background: #e7ebe9;
+  animation: mission-skeleton-pulse 1.2s ease-in-out infinite alternate;
 }
 
-@keyframes mission-skeleton-shift {
-  from { background-position: 100% 0; }
-  to { background-position: -100% 0; }
+@keyframes mission-skeleton-pulse {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
 }
 
 .mission-actions-list {

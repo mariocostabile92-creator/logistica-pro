@@ -5,6 +5,11 @@ import {
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 import { operationalCodeLabel } from "../utils/formatters.js";
+import { scheduleIdle } from "../utils/idle-scheduler.js";
+import {
+  createSnapshotCache,
+  isAbortError,
+} from "../utils/snapshot-cache.js";
 import {
   applyBriefingEvent,
   createBriefingState,
@@ -14,6 +19,13 @@ import {
 
 let briefingState = createBriefingState();
 let briefingRequestId = 0;
+let activeWorkspace = "home";
+let briefingDirty = false;
+let briefingRequiresGeneration = false;
+let briefingRefreshScheduled = false;
+let cancelDeferredRender = null;
+let initialized = false;
+const briefingSnapshotCache = createSnapshotCache({ ttlMs: 30000 });
 
 
 const ATTENTION_LABELS = {
@@ -357,38 +369,69 @@ function renderBriefing() {
 }
 
 
-function updateBriefing(event) {
-  briefingState = applyBriefingEvent(briefingState, event);
-  renderBriefing();
+function scheduleBriefingRender() {
+  cancelDeferredRender?.();
+  cancelDeferredRender = scheduleIdle(() => {
+    cancelDeferredRender = null;
+    renderBriefing();
+  });
 }
 
 
-async function fetchBriefing({ generate = false } = {}) {
+function updateBriefing(event, { deferred = false } = {}) {
+  briefingState = applyBriefingEvent(briefingState, event);
+  if (deferred) scheduleBriefingRender();
+  else renderBriefing();
+}
+
+
+function publishBriefing(response) {
+  updateBriefing(
+    { type: "load-completed", briefing: response },
+    { deferred: true },
+  );
+  document.dispatchEvent(new CustomEvent("briefing:changed", {
+    detail: {
+      available: response.status !== "unavailable",
+      phase: response.status === "unavailable" ? "unavailable" : "available",
+      briefing: response,
+    },
+  }));
+}
+
+
+export async function fetchBriefing({ generate = false, force = false } = {}) {
   const requestId = ++briefingRequestId;
-  updateBriefing({ type: "load-started" });
+  updateBriefing(
+    { type: "load-started" },
+    { deferred: Boolean(briefingState.briefing) },
+  );
   document.dispatchEvent(new CustomEvent("briefing:state-changed", {
     detail: { phase: "loading" },
   }));
   try {
-    let response = await getLatestDailyBriefing();
-    if (generate || (
-      response.status === "unavailable" && response.planning_id
-    )) {
-      response = await generateDailyBriefing(
-        response.planning_id || null,
-      );
-    }
+    const { value: response } = await briefingSnapshotCache.read(
+      async ({ signal }) => {
+        if (generate) {
+          const planningId = briefingSnapshotCache.peek().value?.planning_id || null;
+          return generateDailyBriefing(planningId, { signal });
+        }
+        const latest = await getLatestDailyBriefing({ signal });
+        if (latest.status === "unavailable" && latest.planning_id) {
+          return generateDailyBriefing(latest.planning_id, { signal });
+        }
+        return latest;
+      },
+      { force },
+    );
     if (requestId === briefingRequestId) {
-      updateBriefing({ type: "load-completed", briefing: response });
-      document.dispatchEvent(new CustomEvent("briefing:changed", {
-        detail: {
-          available: response.status !== "unavailable",
-          phase: response.status === "unavailable" ? "unavailable" : "available",
-          briefing: response,
-        },
-      }));
+      briefingDirty = false;
+      briefingRequiresGeneration = false;
+      publishBriefing(response);
     }
+    return response;
   } catch (error) {
+    if (isAbortError(error)) return null;
     const presentation = userErrorPresentation(
       "briefing.load",
       error,
@@ -398,10 +441,10 @@ async function fetchBriefing({ generate = false } = {}) {
       },
     );
     if (requestId === briefingRequestId) {
-      updateBriefing({
-        type: "load-failed",
-        message: presentation.message,
-      });
+      updateBriefing(
+        { type: "load-failed", message: presentation.message },
+        { deferred: true },
+      );
       document.dispatchEvent(new CustomEvent("briefing:state-changed", {
         detail: {
           phase: "error",
@@ -409,19 +452,47 @@ async function fetchBriefing({ generate = false } = {}) {
         },
       }));
     }
+    return null;
   }
 }
 
 
-async function refreshBriefing() {
+export async function refreshBriefing({ announce = true } = {}) {
   const button = byId("refreshBriefingBtn");
   setLoading(button, true, "Aggiornamento...");
   try {
-    await fetchBriefing({ generate: true });
-    setMessage("Briefing operativo aggiornato.", "success");
+    const response = await fetchBriefing({ generate: true, force: true });
+    if (announce && response) {
+      setMessage("Briefing operativo aggiornato.", "success");
+    }
+    return response;
   } finally {
     setLoading(button, false);
   }
+}
+
+
+function scheduleDirtyBriefingRefresh() {
+  if (briefingRefreshScheduled || activeWorkspace !== "home") return;
+  briefingRefreshScheduled = true;
+  queueMicrotask(() => {
+    briefingRefreshScheduled = false;
+    if (activeWorkspace !== "home" || !briefingDirty) return;
+    fetchBriefing({ generate: briefingRequiresGeneration, force: true });
+  });
+}
+
+
+function invalidateBriefing({ generate = false } = {}) {
+  briefingDirty = true;
+  briefingRequiresGeneration = briefingRequiresGeneration || generate;
+  briefingSnapshotCache.invalidate({ abortRequest: true });
+  scheduleDirtyBriefingRefresh();
+}
+
+
+export function abortBriefingRequest() {
+  briefingSnapshotCache.abort();
 }
 
 
@@ -453,8 +524,10 @@ function handleBriefingClick(event) {
 
 
 export function initBriefing() {
+  if (initialized) return;
+  initialized = true;
   byId("briefingSection").addEventListener("click", handleBriefingClick);
-  byId("refreshBriefingBtn").addEventListener("click", refreshBriefing);
+  byId("refreshBriefingBtn").addEventListener("click", () => refreshBriefing());
   byId("briefingImportBtn").addEventListener("click", () => {
     document.dispatchEvent(new CustomEvent("workspace:navigate", {
       detail: { view: "operations", targetId: "importsSection" },
@@ -480,14 +553,30 @@ export function initBriefing() {
   });
   document.addEventListener("demo:workspace-changed", (event) => {
     if (event.detail.status === "ready") {
-      fetchBriefing({ generate: true });
+      invalidateBriefing({ generate: true });
     }
     if (event.detail.status === "reset") {
-      fetchBriefing();
+      invalidateBriefing();
     }
   });
   document.addEventListener("planning:availability-changed", (event) => {
-    fetchBriefing({ generate: event.detail.hasPlanning });
+    invalidateBriefing({ generate: event.detail.hasPlanning });
+  });
+  document.addEventListener("workspace:view-started", (event) => {
+    activeWorkspace = event.detail.view;
+    if (activeWorkspace !== "home") briefingSnapshotCache.abort();
+  });
+  document.addEventListener("workspace:view-changed", (event) => {
+    activeWorkspace = event.detail.view;
+    if (
+      activeWorkspace === "home"
+      && (briefingDirty || !briefingSnapshotCache.isFresh())
+    ) {
+      fetchBriefing({
+        generate: briefingRequiresGeneration,
+        force: briefingDirty,
+      });
+    }
   });
   renderBriefing();
   fetchBriefing();

@@ -60,6 +60,9 @@ export function createMissionControlState(overrides = {}) {
     briefing: null,
     briefingError: "",
     workspace: null,
+    manualRefreshing: false,
+    manualRefreshError: "",
+    selectedOperationalUnit: null,
     ...overrides,
   };
 }
@@ -87,6 +90,17 @@ export function applyMissionControlEvent(current, event) {
   }
   if (event.type === "workspace-reset") {
     return createMissionControlState({ workspace: event.workspace || null });
+  }
+  if (event.type === "refresh-started") {
+    next.manualRefreshing = true;
+    next.manualRefreshError = "";
+  }
+  if (event.type === "refresh-settled") {
+    next.manualRefreshing = false;
+    next.manualRefreshError = event.error || "";
+  }
+  if (event.type === "operational-unit-selected") {
+    next.selectedOperationalUnit = event.operationalUnit || null;
   }
   return next;
 }
@@ -297,14 +311,18 @@ function statusView(state) {
 }
 
 
-function operationalUnits(briefing) {
+function operationalUnits(briefing, selectedOperationalUnit) {
   const ids = [...new Set((briefing?.operational_unit_ids || []).filter(Boolean))];
+  const defaultSelection = ids.length === 1 ? ids[0] : "all";
+  const allowed = new Set(["all", ...ids]);
   return {
     options: [
       { value: "all", label: ids.length > 1 ? `Tutte (${ids.length})` : "Tutte" },
       ...ids.map((id) => ({ value: id, label: id })),
     ],
-    selected: ids.length === 1 ? ids[0] : "all",
+    selected: allowed.has(selectedOperationalUnit)
+      ? selectedOperationalUnit
+      : defaultSelection,
     disabled: true,
     temporary: true,
   };
@@ -357,7 +375,10 @@ export function deriveMissionControlView(state) {
   const actions = available ? backendActions(briefing) : temporaryActions(state.workspace);
   return {
     loading: state.briefingPhase === "loading" && !briefing,
-    refreshing: state.briefingPhase === "refreshing",
+    refreshing: state.briefingPhase === "refreshing" || state.manualRefreshing,
+    refreshError: state.manualRefreshError || (
+      state.briefing && state.briefingError ? state.briefingError : ""
+    ),
     error: state.briefingPhase === "error",
     status: statusView(state),
     actions,
@@ -377,7 +398,7 @@ export function deriveMissionControlView(state) {
     workforce,
     fleet,
     planning,
-    operationalUnits: operationalUnits(briefing),
+    operationalUnits: operationalUnits(briefing, state.selectedOperationalUnit),
     timeline: timelineItems(state),
     freshnessAt: briefing?.generated_at || state.workspace?.last_operational_update || null,
   };

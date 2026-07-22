@@ -26,8 +26,8 @@ export async function getHealth() {
 }
 
 
-export async function getWorkspaceStatus() {
-  return parseResponse(await fetch(`${API_BASE}/api/workspace/v1/status`));
+export async function getWorkspaceStatus({ signal } = {}) {
+  return parseResponse(await fetch(`${API_BASE}/api/workspace/v1/status`, { signal }));
 }
 
 
@@ -38,17 +38,18 @@ export async function resetWorkspace() {
 }
 
 
-export async function getLatestDailyBriefing() {
-  return parseResponse(await fetch(`${API_BASE}/api/briefing/v1/daily/latest`));
+export async function getLatestDailyBriefing({ signal } = {}) {
+  return parseResponse(await fetch(`${API_BASE}/api/briefing/v1/daily/latest`, { signal }));
 }
 
 
-export async function generateDailyBriefing(planningId = null) {
+export async function generateDailyBriefing(planningId = null, { signal } = {}) {
   const payload = planningId ? { planning_id: planningId } : {};
   return parseResponse(await fetch(`${API_BASE}/api/briefing/v1/daily/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    signal,
   }));
 }
 

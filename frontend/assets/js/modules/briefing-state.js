@@ -22,7 +22,7 @@ export function createBriefingState(overrides = {}) {
 export function applyBriefingEvent(current, event) {
   const next = { ...current };
   if (event.type === "load-started") {
-    next.phase = "loading";
+    next.phase = current.briefing ? current.phase : "loading";
     next.error = null;
   }
   if (event.type === "load-completed") {
@@ -33,7 +33,9 @@ export function applyBriefingEvent(current, event) {
     next.error = null;
   }
   if (event.type === "load-failed") {
-    next.phase = "error";
+    next.phase = current.briefing?.status === "available"
+      ? "available"
+      : "error";
     next.error = event.message;
   }
   if (

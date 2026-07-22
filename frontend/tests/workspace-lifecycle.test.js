@@ -225,19 +225,19 @@ test("reset restores onboarding and clears import presentation", async () => {
 });
 
 
-test("workspace badge refreshes after every lifecycle mutation", async () => {
+test("workspace badge refreshes only after lifecycle mutations that change it", async () => {
   const source = await frontendFile(
     "assets/js/modules/workspace-lifecycle.js",
   );
   for (const eventName of [
     "operations:data-imported",
     "demo:workspace-changed",
-    "briefing:changed",
     "fleet:registry-loaded",
     "workspace:refresh-requested",
   ]) {
     assert.match(source, new RegExp(eventName.replace(":", "\\:")));
   }
+  assert.doesNotMatch(source, /briefing:changed/);
 });
 
 

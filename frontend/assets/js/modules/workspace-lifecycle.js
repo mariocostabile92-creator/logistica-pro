@@ -4,6 +4,10 @@ import {
   reportUnexpectedError,
   userErrorPresentation,
 } from "../utils/errors.js";
+import {
+  createSnapshotCache,
+  isAbortError,
+} from "../utils/snapshot-cache.js";
 import { renderWorkspaceCard } from "./workspace-card.js";
 import { renderWorkspaceHeader } from "./workspace-header.js";
 import { initWorkspaceDialogs } from "./workspace-reset-dialog.js";
@@ -18,6 +22,9 @@ import {
 let workspaceState = createWorkspaceState();
 let statusRequestId = 0;
 let dialogs = null;
+let initialized = false;
+let workspaceRefreshScheduled = false;
+const workspaceSnapshotCache = createSnapshotCache({ ttlMs: 30000 });
 
 
 function renderWorkspace() {
@@ -38,11 +45,19 @@ function updateWorkspace(event) {
 }
 
 
-async function refreshWorkspaceStatus() {
+export async function refreshWorkspaceStatus({
+  force = false,
+  preserveCurrent = true,
+} = {}) {
   const requestId = ++statusRequestId;
-  updateWorkspace({ type: "load-started" });
+  if (!preserveCurrent || !workspaceState.status) {
+    updateWorkspace({ type: "load-started" });
+  }
   try {
-    const status = await getWorkspaceStatus();
+    const { value: status } = await workspaceSnapshotCache.read(
+      ({ signal }) => getWorkspaceStatus({ signal }),
+      { force },
+    );
     if (requestId === statusRequestId) {
       updateWorkspace({ type: "load-completed", status });
       document.dispatchEvent(new CustomEvent("workspace:status-changed", {
@@ -51,6 +66,7 @@ async function refreshWorkspaceStatus() {
     }
     return status;
   } catch (error) {
+    if (isAbortError(error)) return null;
     reportUnexpectedError("workspace.status", error);
     const presentation = userErrorPresentation(
       "workspace.status",
@@ -64,6 +80,18 @@ async function refreshWorkspaceStatus() {
       });
     }
     return null;
+  }
+}
+
+
+function invalidateWorkspaceStatus({ refresh = true } = {}) {
+  workspaceSnapshotCache.invalidate({ abortRequest: true });
+  if (refresh && !workspaceRefreshScheduled) {
+    workspaceRefreshScheduled = true;
+    queueMicrotask(() => {
+      workspaceRefreshScheduled = false;
+      refreshWorkspaceStatus({ force: true, preserveCurrent: true });
+    });
   }
 }
 
@@ -84,9 +112,7 @@ function openImports() {
 
 
 async function afterReset(response, { continueToImport }) {
-  updateWorkspace({
-    type: "load-completed",
-    status: {
+  const emptyStatus = {
       workspace_state: WORKSPACE_STATES.EMPTY,
       is_demo: false,
       demo_enabled: workspaceState.status?.demo_enabled || false,
@@ -100,15 +126,16 @@ async function afterReset(response, { continueToImport }) {
       last_operational_update: null,
       can_reset: false,
       available_actions: ["import_data"],
-    },
-  });
+  };
+  workspaceSnapshotCache.write(emptyStatus);
+  updateWorkspace({ type: "load-completed", status: emptyStatus });
   document.dispatchEvent(new CustomEvent("workspace:reset-completed", {
     detail: response,
   }));
   document.dispatchEvent(new CustomEvent("demo:workspace-changed", {
     detail: { status: "reset" },
   }));
-  await refreshWorkspaceStatus();
+  await refreshWorkspaceStatus({ force: true, preserveCurrent: true });
   setMessage(
     "Workspace ripristinato. Ora puoi importare nuovi dati.",
     "success",
@@ -161,6 +188,8 @@ function handleWorkspaceAction(event) {
 
 
 export function initWorkspaceLifecycle() {
+  if (initialized) return;
+  initialized = true;
   dialogs = initWorkspaceDialogs({
     onImport: openImports,
     onResetCompleted: afterReset,
@@ -179,18 +208,20 @@ export function initWorkspaceLifecycle() {
       event.detail?.opener || document.activeElement,
     );
   });
-  for (const eventName of [
-    "operations:data-imported",
-    "demo:workspace-changed",
-    "briefing:changed",
-    "fleet:registry-loaded",
-  ]) {
-    document.addEventListener(eventName, refreshWorkspaceStatus);
+  for (const eventName of ["operations:data-imported", "demo:workspace-changed"]) {
+    document.addEventListener(eventName, () => invalidateWorkspaceStatus());
   }
+  document.addEventListener("fleet:registry-loaded", (event) => {
+    const observedCount = Number(event.detail?.assetCount);
+    const currentCount = Number(workspaceState.status?.asset_count);
+    if (Number.isFinite(observedCount) && observedCount !== currentCount) {
+      invalidateWorkspaceStatus();
+    }
+  });
   document.addEventListener(
     "workspace:refresh-requested",
-    refreshWorkspaceStatus,
+    () => refreshWorkspaceStatus({ force: true, preserveCurrent: true }),
   );
   renderWorkspace();
-  refreshWorkspaceStatus();
+  refreshWorkspaceStatus({ preserveCurrent: false });
 }
