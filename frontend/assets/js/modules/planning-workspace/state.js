@@ -14,6 +14,51 @@ export function createPlanningWorkspaceState({ planningDate = null } = {}) {
 
 
 export function applyPlanningWorkspaceEvent(current, event) {
+  if (event?.type?.startsWith("confirmation-")) {
+    const currentConfirmation = current.snapshot?.confirmation || {};
+    const confirmationStates = {
+      "confirmation-load-started": Object.freeze({
+        viewState: "loading",
+        busy: false,
+      }),
+      "confirmation-loaded": Object.freeze({
+        ...event.confirmation,
+        busy: false,
+      }),
+      "confirmation-load-failed": Object.freeze({
+        ...currentConfirmation,
+        viewState: "error",
+        busy: false,
+        message: event.message || "Planning Confirmation non disponibile.",
+      }),
+      "confirmation-mutation-started": Object.freeze({
+        ...currentConfirmation,
+        busy: true,
+        feedback: null,
+        message: null,
+      }),
+      "confirmation-mutation-completed": Object.freeze({
+        ...event.confirmation,
+        busy: false,
+        feedback: event.message || "Confirmation aggiornata.",
+      }),
+      "confirmation-mutation-failed": Object.freeze({
+        ...currentConfirmation,
+        viewState: "error",
+        busy: false,
+        message: event.message || "Operazione Confirmation non riuscita.",
+      }),
+    };
+    const nextConfirmation = confirmationStates[event.type];
+    if (!nextConfirmation) return current;
+    return planningWorkspaceModel({
+      ...current,
+      snapshot: {
+        ...(current.snapshot || {}),
+        confirmation: nextConfirmation,
+      },
+    });
+  }
   if (event?.type?.startsWith("draft-")) {
     const currentDraft = current.snapshot?.draft || {};
     const draftStates = {
@@ -134,11 +179,15 @@ export function derivePlanningWorkspaceView(state) {
       viewState: "loading",
       busy: false,
     }),
+    confirmation: snapshot.confirmation || Object.freeze({
+      viewState: "loading",
+      busy: false,
+    }),
     publication: placeholder(
       "Non disponibile",
       "Publication non disponibile.",
     ),
-    canConfirm: false,
+    canConfirm: snapshot.confirmation?.result?.canConfirm === true,
     canRetry: state.state === PLANNING_WORKSPACE_STATES.ERROR,
   });
 }

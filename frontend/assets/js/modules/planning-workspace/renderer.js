@@ -391,6 +391,140 @@ function renderDraft(refs, draft) {
 }
 
 
+const CONFIRMATION_STATE_LABELS = Object.freeze({
+  NOT_READY: "Non confermabile",
+  READY_TO_CONFIRM: "Pronto per la conferma",
+  CONFIRMED: "Confermato",
+  REJECTED: "Conferma rifiutata",
+  ERROR: "Errore",
+});
+
+
+function confirmationRuleNode(rule) {
+  const item = element("li", {
+    attributes: { tabindex: "0" },
+  });
+  item.append(element("strong", { text: rule.reason }));
+  if (!rule.passed) {
+    item.append(element("p", { text: rule.remediationHint }));
+  }
+  return item;
+}
+
+
+function renderConfirmationRules(refs, result) {
+  const passed = result.rules.filter((rule) => rule.passed);
+  const failed = result.rules.filter((rule) => !rule.passed);
+  refs.confirmationPassedList.replaceChildren(
+    ...passed.map(confirmationRuleNode),
+  );
+  refs.confirmationFailedList.replaceChildren(
+    ...failed.map(confirmationRuleNode),
+  );
+  refs.confirmationPassed.hidden = passed.length === 0;
+  refs.confirmationFailed.hidden = failed.length === 0;
+  setNodeText(refs.confirmationPassedCount, passed.length);
+  setNodeText(refs.confirmationFailedCount, failed.length);
+}
+
+
+function renderConfirmationHistory(refs, history) {
+  const nodes = (history?.confirmations || []).slice(0, 5).map((item) => {
+    const node = element("li", {
+      attributes: {
+        tabindex: "0",
+        "aria-label": `${item.draftName}, confermato ${formatPlanningTimestamp(item.confirmedAt)}`,
+      },
+    });
+    const meta = element("div", {
+      className: "planning-confirmation-history-meta",
+    });
+    meta.append(
+      element("strong", { text: item.draftName }),
+      element("time", {
+        text: formatPlanningTimestamp(item.confirmedAt),
+        attributes: { datetime: item.confirmedAt },
+      }),
+    );
+    node.append(
+      meta,
+      element("p", {
+        text: `Draft v${item.draftVersion} · Readiness ${item.readinessScore}/100`,
+      }),
+    );
+    return node;
+  });
+  refs.confirmationHistoryList.replaceChildren(...nodes);
+  refs.confirmationHistory.hidden = nodes.length === 0;
+}
+
+
+function renderConfirmation(refs, confirmation, draftWorkspace) {
+  const loading = confirmation?.viewState === "loading";
+  const failed = confirmation?.viewState === "error";
+  const result = confirmation?.result || null;
+  const current = confirmation?.current || null;
+  const draft = draftWorkspace?.draft || null;
+  const busy = confirmation?.busy === true;
+  refs.confirmationBody.dataset.confirmationState = result?.state || "LOADING";
+  refs.confirmationBody.setAttribute("aria-busy", String(loading || busy));
+  refs.confirmationLoading.hidden = !loading;
+  refs.confirmationError.hidden = !failed;
+  setNodeText(
+    refs.confirmationErrorText,
+    confirmation?.message || "Planning Confirmation non disponibile.",
+  );
+  refs.confirmationSummary.hidden = loading;
+  refs.confirmationValidation.hidden = !result || loading;
+  refs.confirmationRationale.hidden = !result || loading;
+  setNodeText(
+    refs.confirmationState,
+    result ? CONFIRMATION_STATE_LABELS[result.state] || result.state : "Non disponibile",
+  );
+  setNodeText(
+    refs.confirmationDraft,
+    current?.draftName || draft?.name || "Nessun Draft",
+  );
+  setNodeText(
+    refs.confirmationVersion,
+    current
+      ? `Conferma v${current.version} · Draft v${current.draftVersion}`
+      : draft ? `Draft v${draft.version.number}` : "-",
+  );
+  setNodeText(
+    refs.confirmationUpdated,
+    result ? formatPlanningTimestamp(result.evaluatedAt) : "-",
+  );
+  setNodeText(refs.confirmationRationale, result?.rationale || "");
+  if (result) renderConfirmationRules(refs, result);
+  else {
+    refs.confirmationPassedList.replaceChildren();
+    refs.confirmationFailedList.replaceChildren();
+  }
+
+  refs.confirmationFeedback.hidden = !confirmation?.feedback;
+  setNodeText(refs.confirmationFeedback, confirmation?.feedback || "");
+  refs.confirmationActions.hidden = loading || (failed && !result);
+  refs.confirmationValidateButton.disabled = busy || !draft || Boolean(current);
+  refs.confirmationBeginButton.disabled = busy || failed || !result?.canConfirm;
+  refs.confirmationBeginButton.textContent = current
+    ? "Piano confermato"
+    : "Conferma piano";
+  refs.confirmationHint.hidden = loading;
+  setNodeText(
+    refs.confirmationHint,
+    current
+      ? "Il Confirmed Plan e immutabile. Publication non e ancora disponibile."
+      : result?.canConfirm
+        ? "Tutte le regole sono superate. La conferma non pubblica il piano."
+        : result?.rationale || "Completa il Draft e ripeti la verifica.",
+  );
+  refs.confirmationExplicit.hidden = true;
+  refs.confirmationConfirmButton.disabled = busy || !result?.canConfirm;
+  renderConfirmationHistory(refs, confirmation?.history);
+}
+
+
 export function renderPlanningWorkspace(refs, view) {
   refs.root.dataset.planningWorkspaceState = view.state;
   refs.root.dataset.planningWorkspaceTone = view.tone;
@@ -408,7 +542,7 @@ export function renderPlanningWorkspace(refs, view) {
   renderConflicts(refs, view.conflicts);
   renderTimeline(refs, view.timeline);
   renderDraft(refs, view.draft);
+  renderConfirmation(refs, view.confirmation, view.draft);
   renderPlaceholder(refs, "publication", view.publication);
-  refs.confirmButton.disabled = !view.canConfirm;
   refs.retryButton.hidden = !view.canRetry;
 }

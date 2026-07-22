@@ -27,6 +27,10 @@ import {
   createPlanningDraftLoader,
   normalizePlanningDraftWorkspace,
 } from "../assets/js/modules/planning-workspace/draft.js";
+import {
+  createPlanningConfirmationLoader,
+  normalizePlanningConfirmationReport,
+} from "../assets/js/modules/planning-workspace/confirmation.js";
 
 
 const frontendFile = (path) => readFile(
@@ -308,6 +312,69 @@ function draftWorkspacePayload({ state = "SAVED", version = 3 } = {}) {
 }
 
 
+function confirmationReportPayload({ state = "READY_TO_CONFIRM" } = {}) {
+  const ruleCodes = [
+    "DRAFT_PRESENT",
+    "DRAFT_SAVED",
+    "READINESS_READY",
+    "NO_CRITICAL_BLOCKERS",
+    "RUNTIME_COMPATIBLE",
+    "ENVELOPE_VALID",
+    "DRAFT_VERSION_COHERENT",
+    "NO_ACTIVE_CONFIRMATION",
+  ];
+  const allPassed = ["READY_TO_CONFIRM", "CONFIRMED"].includes(state);
+  const rules = ruleCodes.map((code, index) => ({
+    code,
+    passed: allPassed || index > 0,
+    reason: allPassed || index > 0
+      ? "Verifica superata."
+      : "Draft non disponibile.",
+    remediation_hint: "Completa il requisito e riprova.",
+  }));
+  const current = state === "CONFIRMED"
+    ? {
+      confirmation_id: "confirmation-1",
+      state: "CONFIRMED",
+      version: 1,
+      draft_id: "draft-1",
+      draft_version: 3,
+      draft_name: "Draft operativo",
+      readiness_status: "READY",
+      readiness_score: 100,
+      fingerprint: "a".repeat(64),
+      actor: "private-beta",
+      confirmed_at: "2026-07-22T07:10:00Z",
+    }
+    : null;
+  return {
+    state,
+    result: {
+      state,
+      can_confirm: state === "READY_TO_CONFIRM",
+      rules,
+      rationale: state === "READY_TO_CONFIRM"
+        ? "Il Draft puo essere confermato."
+        : state === "CONFIRMED"
+          ? "Draft congelato come Confirmed Plan immutabile."
+          : "Conferma non disponibile.",
+      evaluated_at: "2026-07-22T07:10:00Z",
+    },
+    current,
+    history: {
+      scope: {
+        organization_id: "default",
+        operational_unit: { external_identifier: "default", name: null },
+        planning_date: "2026-07-22",
+      },
+      total: current ? 1 : 0,
+      confirmations: current ? [current] : [],
+    },
+    generated_at: "2026-07-22T07:10:00Z",
+  };
+}
+
+
 test("readiness payload normalization supports every backend state", () => {
   for (const status of [
     "READY",
@@ -507,6 +574,87 @@ test("Planning Draft loader performs one request and supports retry", async () =
 });
 
 
+test("Planning Confirmation normalizes ready not-ready confirmed and error states", () => {
+  const ready = normalizePlanningConfirmationReport(
+    confirmationReportPayload(),
+  );
+  const notReady = normalizePlanningConfirmationReport(
+    confirmationReportPayload({ state: "NOT_READY" }),
+  );
+  const confirmed = normalizePlanningConfirmationReport(
+    confirmationReportPayload({ state: "CONFIRMED" }),
+  );
+  const error = normalizePlanningConfirmationReport(
+    confirmationReportPayload({ state: "ERROR" }),
+  );
+
+  assert.equal(ready.result.canConfirm, true);
+  assert.equal(notReady.result.rules[0].passed, false);
+  assert.equal(confirmed.current.draftVersion, 3);
+  assert.equal(confirmed.history.total, 1);
+  assert.equal(error.viewState, "error");
+  assert.throws(
+    () => normalizePlanningConfirmationReport({ state: "UNKNOWN" }),
+    /Stato Confirmation non riconosciuto|Valore Confirmation non valido/,
+  );
+});
+
+
+test("Planning Confirmation loader performs one request and supports retry", async () => {
+  let calls = 0;
+  let release;
+  const loader = createPlanningConfirmationLoader(() => {
+    calls += 1;
+    if (calls > 1) {
+      return Promise.resolve(confirmationReportPayload({ state: "NOT_READY" }));
+    }
+    return new Promise((resolve) => { release = resolve; });
+  });
+  const first = loader.load();
+  const duplicate = loader.load();
+
+  assert.equal(first, duplicate);
+  assert.equal(calls, 1);
+  release(confirmationReportPayload());
+  await first;
+  await loader.load();
+  assert.equal(calls, 2);
+});
+
+
+test("Confirmation mutations preserve Readiness Conflicts Timeline and Draft", () => {
+  const normalized = normalizePlanningConflictResult(conflictPayload());
+  let current = applyPlanningWorkspaceEvent(
+    createPlanningWorkspaceState(),
+    { type: "ready-received", snapshot: normalized },
+  );
+  current = applyPlanningWorkspaceEvent(current, {
+    type: "timeline-loaded",
+    timeline: normalizePlanningTimelineResult(timelinePayload()),
+  });
+  current = applyPlanningWorkspaceEvent(current, {
+    type: "draft-loaded",
+    draft: normalizePlanningDraftWorkspace(draftWorkspacePayload()),
+  });
+  current = applyPlanningWorkspaceEvent(current, {
+    type: "confirmation-loaded",
+    confirmation: normalizePlanningConfirmationReport(
+      confirmationReportPayload(),
+    ),
+  });
+  const failed = applyPlanningWorkspaceEvent(current, {
+    type: "confirmation-mutation-failed",
+    message: "Conferma non riuscita.",
+  });
+
+  assert.equal(failed.state, PLANNING_WORKSPACE_STATES.READY);
+  assert.equal(failed.snapshot.conflicts, normalized.conflicts);
+  assert.equal(failed.snapshot.timeline.state, "ready");
+  assert.equal(failed.snapshot.draft.draft.id, "draft-1");
+  assert.equal(failed.snapshot.confirmation.viewState, "error");
+});
+
+
 test("Draft mutations preserve Readiness Conflicts and Timeline state", () => {
   const normalized = normalizePlanningConflictResult(conflictPayload());
   const ready = applyPlanningWorkspaceEvent(
@@ -595,6 +743,7 @@ test("layout preserves the definitive desktop component hierarchy", async () => 
     "createConflictSummary()",
     "createPlanningTimeline()",
     "createPlanningDraft()",
+    "createPlanningConfirmation()",
     "createPublicationPlaceholder()",
     "createFooterActions()",
   ];
@@ -620,6 +769,7 @@ test("renderer covers all components and exposes loading semantics", async () =>
     "conflicts",
     "timeline",
     "draft",
+    "confirmation",
     "publication",
     "actions",
   ]) {
@@ -639,6 +789,10 @@ test("renderer covers all components and exposes loading semantics", async () =>
   assert.match(components, /restore-draft/);
   assert.match(components, /confirm-delete-draft/);
   assert.match(components, /draft-history-list/);
+  assert.match(components, /confirmation-passed-list/);
+  assert.match(components, /confirmation-failed-list/);
+  assert.match(components, /confirm-now/);
+  assert.match(components, /confirmation-history-list/);
   assert.match(components, /aria-live/);
 });
 
@@ -662,6 +816,9 @@ test("responsive styles cover tablet mobile order and horizontal containment", a
   assert.match(css, /planning-timeline-summary[\s\S]*grid-template-columns: 1fr/);
   assert.match(css, /planning-draft-summary[\s\S]*grid-template-columns: 1fr/);
   assert.match(css, /planning-draft-history li:focus-visible/);
+  assert.match(css, /planning-workspace-confirmation[\s\S]*?order: 6/);
+  assert.match(css, /planning-confirmation-summary[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /planning-confirmation-rules li:focus-visible/);
 });
 
 
@@ -677,6 +834,8 @@ test("keyboard navigation supports arrows boundaries and Escape", async () => {
   assert.match(source, /legacyButton\.focus/);
   assert.match(source, /event\.key !== "Enter"/);
   assert.match(source, /draftConfirmDeleteButton\.focus/);
+  assert.match(source, /confirmationConfirmButton\.focus/);
+  assert.match(source, /confirmationExplicit\.hidden/);
 });
 
 
@@ -693,6 +852,7 @@ test("Planning Workspace consumes compact review APIs and no business algorithms
     "assets/js/modules/planning-workspace/conflicts.js",
     "assets/js/modules/planning-workspace/timeline.js",
     "assets/js/modules/planning-workspace/draft.js",
+    "assets/js/modules/planning-workspace/confirmation.js",
   ];
   const sources = await Promise.all(paths.map(frontendFile));
   const combined = sources.join("\n");
@@ -700,6 +860,7 @@ test("Planning Workspace consumes compact review APIs and no business algorithms
   assert.match(combined, /getPlanningConflicts/);
   assert.match(combined, /getPlanningTimeline/);
   assert.match(combined, /getCurrentPlanningDraft/);
+  assert.match(combined, /getCurrentPlanningConfirmation/);
   assert.doesNotMatch(combined, /getPlanningReadiness/);
   assert.doesNotMatch(combined, /fetch\(|getLatestPlanning/);
   assert.doesNotMatch(combined, /PlanningInputRuntime|generatePlanning/);
@@ -707,7 +868,7 @@ test("Planning Workspace consumes compact review APIs and no business algorithms
 });
 
 
-test("frontend exposes Timeline and Draft loading retry and bounded initial requests", async () => {
+test("frontend exposes Timeline Draft and Confirmation retry with bounded requests", async () => {
   const [index, api, renderer] = await Promise.all([
     frontendFile("assets/js/modules/planning-workspace/index.js"),
     frontendFile("assets/js/api.js"),
@@ -719,14 +880,21 @@ test("frontend exposes Timeline and Draft loading retry and bounded initial requ
   assert.match(index, /retry-conflicts/);
   assert.match(index, /retry-timeline/);
   assert.match(index, /retry-draft/);
+  assert.match(index, /retry-confirmation/);
   assert.match(index, /createPlanningConflictLoader/);
   assert.match(index, /createPlanningTimelineLoader/);
   assert.match(index, /createPlanningDraftLoader/);
+  assert.match(index, /createPlanningConfirmationLoader/);
   assert.match(index, /supportingLoads = \[loadTimeline\(\)\]/);
   assert.match(index, /supportingLoads\.push\(loadDraft\(\)\)/);
+  assert.match(index, /supportingLoads\.push\(loadConfirmation\(\)\)/);
   assert.match(api, /\/api\/planning\/conflicts/);
   assert.match(api, /\/api\/planning\/timeline/);
   assert.match(api, /\/api\/planning\/drafts\/current/);
+  assert.match(api, /\/api\/planning\/confirmation\/current/);
+  assert.match(api, /\/api\/planning\/confirmation\/validate/);
+  assert.match(api, /\/api\/planning\/confirmation\/confirm/);
+  assert.match(api, /\/api\/planning\/confirmation\/history/);
   assert.match(api, /method: "PATCH"/);
   assert.match(api, /method: "DELETE"/);
   assert.match(api, /signal/);
@@ -734,6 +902,8 @@ test("frontend exposes Timeline and Draft loading retry and bounded initial requ
   assert.match(renderer, /relatedConflicts/);
   assert.match(renderer, /!refs\.draftNameInput\.value\.trim\(\)/);
   assert.match(renderer, /view-conflicts/);
+  assert.match(renderer, /!result\?\.canConfirm/);
+  assert.match(renderer, /renderConfirmationHistory/);
   assert.match(renderer, /createElement|element\("details"/);
 });
 

@@ -1,13 +1,20 @@
 import {
+  confirmPlanningConfirmation,
   createPlanningDraft,
   deletePlanningDraft,
   getCurrentPlanningDraft,
+  getCurrentPlanningConfirmation,
   getPlanningConflicts,
   getPlanningTimeline,
   restorePlanningDraft,
   savePlanningDraft,
   updatePlanningDraftMetadata,
+  validatePlanningConfirmation,
 } from "../../api.js";
+import {
+  createPlanningConfirmationLoader,
+  normalizePlanningConfirmationReport,
+} from "./confirmation.js";
 import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
@@ -39,6 +46,9 @@ let refs;
 const conflictLoader = createPlanningConflictLoader(getPlanningConflicts);
 const timelineLoader = createPlanningTimelineLoader(getPlanningTimeline);
 const draftLoader = createPlanningDraftLoader(getCurrentPlanningDraft);
+const confirmationLoader = createPlanningConfirmationLoader(
+  getCurrentPlanningConfirmation,
+);
 
 
 function today() {
@@ -98,6 +108,31 @@ async function loadDraft() {
 }
 
 
+async function loadConfirmation({ force = false } = {}) {
+  commit({ type: "confirmation-load-started" });
+  try {
+    const payload = await confirmationLoader.load(
+      {
+        organizationId: "default",
+        operationalUnitId: "default",
+        planningDate: state.planningDate,
+      },
+      { force },
+    );
+    commit({
+      type: "confirmation-loaded",
+      confirmation: normalizePlanningConfirmationReport(payload),
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "confirmation-load-failed",
+      message: error?.message || "Planning Confirmation non disponibile. Riprova.",
+    });
+  }
+}
+
+
 async function loadConflictReview() {
   commit({ type: "load-started" });
   try {
@@ -116,6 +151,7 @@ async function loadConflictReview() {
     });
     const supportingLoads = [loadTimeline()];
     if (!state.snapshot?.draft) supportingLoads.push(loadDraft());
+    if (!state.snapshot?.confirmation) supportingLoads.push(loadConfirmation());
     await Promise.all(supportingLoads);
   } catch (error) {
     if (error?.name === "AbortError") return;
@@ -145,6 +181,7 @@ async function runDraftMutation(operation, successMessage, focusTarget = null) {
       draft,
       message: successMessage,
     });
+    await loadConfirmation({ force: true });
     focusTarget?.()?.focus({ preventScroll: true });
   } catch (error) {
     if (error?.name === "AbortError") return;
@@ -153,6 +190,72 @@ async function runDraftMutation(operation, successMessage, focusTarget = null) {
       message: error?.message || "Operazione Draft non riuscita. Riprova.",
     });
   }
+}
+
+
+function currentConfirmation() {
+  return state.snapshot?.confirmation || null;
+}
+
+
+function confirmationPayload() {
+  const draft = currentDraft()?.draft;
+  if (!draft) return null;
+  return {
+    organization_id: "default",
+    operational_unit_id: "default",
+    planning_date: state.planningDate,
+    draft_id: draft.id,
+    draft_version: draft.version.number,
+  };
+}
+
+
+async function runConfirmationMutation(operation, successMessage) {
+  if (currentConfirmation()?.busy) return;
+  commit({ type: "confirmation-mutation-started" });
+  try {
+    const payload = await operation();
+    const confirmation = normalizePlanningConfirmationReport(payload);
+    commit({
+      type: "confirmation-mutation-completed",
+      confirmation,
+      message: successMessage,
+    });
+    const focusTarget = refs.confirmationBeginButton.disabled
+      ? refs.confirmationBody
+      : refs.confirmationBeginButton;
+    focusTarget.focus({ preventScroll: true });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "confirmation-mutation-failed",
+      message: error?.message || "Operazione Confirmation non riuscita. Riprova.",
+    });
+  }
+}
+
+
+function validateConfirmation() {
+  const payload = confirmationPayload();
+  if (!payload) {
+    loadConfirmation();
+    return;
+  }
+  runConfirmationMutation(
+    () => validatePlanningConfirmation(payload),
+    "Validazione Confirmation aggiornata.",
+  );
+}
+
+
+function confirmNow() {
+  const payload = confirmationPayload();
+  if (!payload) return;
+  runConfirmationMutation(
+    () => confirmPlanningConfirmation(payload),
+    "Draft congelato come Confirmed Plan. Nessuna pubblicazione eseguita.",
+  );
 }
 
 
@@ -266,6 +369,7 @@ function handleActionClick(event) {
   if (action === "retry-conflicts") loadConflictReview();
   if (action === "retry-timeline") loadTimeline();
   if (action === "retry-draft") loadDraft();
+  if (action === "retry-confirmation") loadConfirmation();
   if (action === "create-draft") createDraft();
   if (action === "save-draft") saveDraft();
   if (action === "restore-draft") restoreDraft();
@@ -278,11 +382,29 @@ function handleActionClick(event) {
     refs.draftDeleteButton.focus();
   }
   if (action === "confirm-delete-draft") confirmDeleteDraft();
+  if (action === "validate-confirmation") validateConfirmation();
+  if (action === "begin-confirmation") {
+    refs.confirmationExplicit.hidden = false;
+    refs.confirmationConfirmButton.focus();
+  }
+  if (action === "cancel-confirmation") {
+    refs.confirmationExplicit.hidden = true;
+    refs.confirmationBeginButton.focus();
+  }
+  if (action === "confirm-now") confirmNow();
   if (action === "view-conflicts") {
     event.preventDefault();
     refs.conflictTitle.focus({ preventScroll: true });
     refs.conflictTitle.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+}
+
+
+function handleConfirmationKeydown(event) {
+  if (event.key !== "Escape" || refs.confirmationExplicit.hidden) return;
+  event.preventDefault();
+  refs.confirmationExplicit.hidden = true;
+  refs.confirmationBeginButton.focus();
 }
 
 
@@ -341,6 +463,7 @@ export function initPlanningWorkspace() {
   refs.draftEditor.addEventListener("submit", (event) => event.preventDefault());
   refs.draftEditor.addEventListener("input", updateDraftActionAvailability);
   refs.draftEditor.addEventListener("keydown", handleDraftKeydown);
+  refs.confirmationBody.addEventListener("keydown", handleConfirmationKeydown);
   refs.actions.addEventListener("keydown", handleActionKeydown);
   document.getElementById("legacyOperationsRegion").addEventListener(
     "keydown",

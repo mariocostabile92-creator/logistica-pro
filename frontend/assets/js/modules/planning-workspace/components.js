@@ -582,6 +582,245 @@ export function createPlanningDraft() {
 }
 
 
+export function createPlanningConfirmation() {
+  const section = element("section", {
+    className: "planning-workspace-block planning-workspace-confirmation",
+    attributes: {
+      "data-planning-component": "confirmation",
+      "aria-labelledby": "planningWorkspaceConfirmationTitle",
+    },
+  });
+  const heading = element("header", {
+    className: "planning-workspace-block-heading",
+  });
+  heading.append(
+    element("p", { className: "eyebrow", text: "Conferma" }),
+    element("h3", {
+      text: "Planning Confirmation",
+      attributes: { id: "planningWorkspaceConfirmationTitle" },
+    }),
+    element("p", {
+      className: "planning-workspace-description",
+      text: "Congela il Draft come Confirmed Plan senza pubblicarlo.",
+    }),
+  );
+  const body = element("div", {
+    className: "planning-workspace-block-body planning-confirmation-body",
+    attributes: {
+      "data-planning-role": "confirmation-body",
+      "aria-live": "polite",
+      tabindex: "-1",
+    },
+  });
+  const summary = element("dl", {
+    className: "planning-confirmation-summary",
+    attributes: { "data-planning-role": "confirmation-summary" },
+  });
+  for (const [label, role] of [
+    ["Stato", "confirmation-state"],
+    ["Draft", "confirmation-draft"],
+    ["Versione", "confirmation-version"],
+    ["Ultimo controllo", "confirmation-updated"],
+  ]) {
+    const item = element("div");
+    item.append(
+      element("dt", { text: label }),
+      element("dd", { attributes: { "data-planning-role": role } }),
+    );
+    summary.append(item);
+  }
+  const loading = element("div", {
+    className: "planning-confirmation-loading",
+    attributes: {
+      "data-planning-role": "confirmation-loading",
+      role: "status",
+    },
+  });
+  loading.append(
+    element("span", {
+      className: "visually-hidden",
+      text: "Caricamento Planning Confirmation",
+    }),
+    element("span", { className: "planning-confirmation-skeleton" }),
+    element("span", { className: "planning-confirmation-skeleton short" }),
+  );
+  const error = element("div", {
+    className: "planning-confirmation-error",
+    attributes: {
+      "data-planning-role": "confirmation-error",
+      role: "alert",
+      hidden: "",
+    },
+  });
+  error.append(
+    element("p", {
+      attributes: { "data-planning-role": "confirmation-error-text" },
+    }),
+    element("button", {
+      className: "secondary",
+      text: "Riprova Confirmation",
+      attributes: {
+        type: "button",
+        "data-planning-action": "retry-confirmation",
+      },
+    }),
+  );
+  const rationale = element("p", {
+    className: "planning-confirmation-rationale",
+    attributes: { "data-planning-role": "confirmation-rationale" },
+  });
+  const validation = element("div", {
+    className: "planning-confirmation-validation",
+    attributes: {
+      "data-planning-role": "confirmation-validation",
+      "aria-label": "Esito validazione conferma",
+    },
+  });
+  const counts = element("dl", { className: "planning-confirmation-counts" });
+  for (const [label, role] of [
+    ["Regole superate", "confirmation-passed-count"],
+    ["Regole fallite", "confirmation-failed-count"],
+  ]) {
+    const item = element("div");
+    item.append(
+      element("dt", { text: label }),
+      element("dd", { attributes: { "data-planning-role": role } }),
+    );
+    counts.append(item);
+  }
+  const passed = element("section", {
+    className: "planning-confirmation-rules passed",
+    attributes: {
+      "data-planning-role": "confirmation-passed",
+      "aria-labelledby": "planningConfirmationPassedTitle",
+    },
+  });
+  passed.append(
+    element("h4", {
+      text: "Verifiche superate",
+      attributes: { id: "planningConfirmationPassedTitle" },
+    }),
+    element("ul", {
+      attributes: { "data-planning-role": "confirmation-passed-list" },
+    }),
+  );
+  const failed = element("section", {
+    className: "planning-confirmation-rules failed",
+    attributes: {
+      "data-planning-role": "confirmation-failed",
+      "aria-labelledby": "planningConfirmationFailedTitle",
+    },
+  });
+  failed.append(
+    element("h4", {
+      text: "Da risolvere",
+      attributes: { id: "planningConfirmationFailedTitle" },
+    }),
+    element("ul", {
+      attributes: { "data-planning-role": "confirmation-failed-list" },
+    }),
+  );
+  validation.append(counts, failed, passed);
+  const feedback = element("p", {
+    className: "planning-confirmation-feedback",
+    attributes: {
+      "data-planning-role": "confirmation-feedback",
+      role: "status",
+      hidden: "",
+    },
+  });
+  const actions = element("div", {
+    className: "planning-confirmation-actions",
+    attributes: { "data-planning-role": "confirmation-actions" },
+  });
+  actions.append(
+    element("button", {
+      className: "secondary",
+      text: "Verifica di nuovo",
+      attributes: {
+        type: "button",
+        "data-planning-action": "validate-confirmation",
+      },
+    }),
+    element("button", {
+      text: "Conferma piano",
+      attributes: {
+        type: "button",
+        "data-planning-action": "begin-confirmation",
+        "aria-describedby": "planningConfirmationHint",
+      },
+    }),
+  );
+  const hint = element("p", {
+    className: "planning-confirmation-hint",
+    attributes: {
+      id: "planningConfirmationHint",
+      "data-planning-role": "confirmation-hint",
+    },
+  });
+  const explicit = element("div", {
+    className: "planning-confirmation-explicit",
+    attributes: {
+      "data-planning-role": "confirmation-explicit",
+      role: "group",
+      "aria-label": "Conferma definitiva del Draft",
+      hidden: "",
+    },
+  });
+  explicit.append(
+    element("p", {
+      text: "Il Draft diventera un Confirmed Plan immutabile. Non verra pubblicato.",
+    }),
+    element("button", {
+      className: "secondary",
+      text: "Annulla",
+      attributes: {
+        type: "button",
+        "data-planning-action": "cancel-confirmation",
+      },
+    }),
+    element("button", {
+      text: "Conferma ora",
+      attributes: {
+        type: "button",
+        "data-planning-action": "confirm-now",
+      },
+    }),
+  );
+  const history = element("section", {
+    className: "planning-confirmation-history",
+    attributes: {
+      "data-planning-role": "confirmation-history",
+      "aria-labelledby": "planningConfirmationHistoryTitle",
+      hidden: "",
+    },
+  });
+  history.append(
+    element("h4", {
+      text: "Cronologia conferme",
+      attributes: { id: "planningConfirmationHistoryTitle" },
+    }),
+    element("ol", {
+      attributes: { "data-planning-role": "confirmation-history-list" },
+    }),
+  );
+  body.append(
+    summary,
+    loading,
+    error,
+    rationale,
+    validation,
+    feedback,
+    actions,
+    hint,
+    explicit,
+    history,
+  );
+  section.append(heading, body);
+  return section;
+}
+
+
 export function createPublicationPlaceholder() {
   return createWorkspaceBlock({
     component: "publication",
@@ -604,7 +843,7 @@ export function createFooterActions() {
   copy.append(
     element("strong", { text: "Azioni" }),
     element("p", {
-      text: "La conferma non è disponibile in questa fase.",
+      text: "Il Planning legacy resta l'unica fonte operativa.",
     }),
   );
   const actions = element("div", {
@@ -622,22 +861,8 @@ export function createFooterActions() {
         "aria-expanded": "false",
       },
     }),
-    element("button", {
-      text: "Conferma piano",
-      attributes: {
-        type: "button",
-        "data-planning-action": "confirm",
-        disabled: "",
-        "aria-describedby": "planningWorkspaceActionHint",
-      },
-    }),
   );
-  const hint = element("span", {
-    className: "visually-hidden",
-    text: "Conferma non disponibile in questa fase",
-    attributes: { id: "planningWorkspaceActionHint" },
-  });
-  footer.append(copy, actions, hint);
+  footer.append(copy, actions);
   return footer;
 }
 

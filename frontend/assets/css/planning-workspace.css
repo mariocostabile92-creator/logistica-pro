@@ -824,6 +824,208 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   overflow-wrap: anywhere;
 }
 
+.planning-workspace-confirmation {
+  align-items: stretch;
+}
+
+.planning-confirmation-body {
+  display: grid;
+  gap: 15px;
+}
+
+.planning-confirmation-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+
+.planning-confirmation-summary div,
+.planning-confirmation-counts div {
+  padding: 9px 11px;
+  background: var(--surface);
+}
+
+.planning-confirmation-summary dt,
+.planning-confirmation-counts dt {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.planning-confirmation-summary dd,
+.planning-confirmation-counts dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.planning-confirmation-loading {
+  display: grid;
+  gap: 8px;
+}
+
+.planning-confirmation-skeleton {
+  display: block;
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--border);
+  background: linear-gradient(90deg, #e7ece9 20%, #f7f9f8 50%, #e7ece9 80%);
+  background-size: 220% 100%;
+  animation: planning-workspace-loading 1.4s ease-in-out infinite;
+}
+
+.planning-confirmation-skeleton.short {
+  width: min(360px, 70%);
+}
+
+.planning-confirmation-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.planning-confirmation-error p,
+.planning-confirmation-rationale,
+.planning-confirmation-feedback,
+.planning-confirmation-hint {
+  margin: 0;
+}
+
+.planning-confirmation-rationale {
+  padding: 10px 12px;
+  border-left: 3px solid var(--warning);
+  background: var(--attention-bg);
+  color: var(--attention-text);
+  font-weight: 700;
+}
+
+.planning-confirmation-body[data-confirmation-state="READY_TO_CONFIRM"]
+  .planning-confirmation-rationale,
+.planning-confirmation-body[data-confirmation-state="CONFIRMED"]
+  .planning-confirmation-rationale {
+  border-left-color: var(--accent);
+  background: var(--stable-bg);
+  color: var(--stable-text);
+}
+
+.planning-confirmation-counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+
+.planning-confirmation-rules {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.planning-confirmation-rules h4,
+.planning-confirmation-history h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.planning-confirmation-rules ul,
+.planning-confirmation-history ol {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  background: var(--border);
+  list-style: none;
+}
+
+.planning-confirmation-rules li,
+.planning-confirmation-history li {
+  padding: 9px 10px;
+  background: var(--surface);
+}
+
+.planning-confirmation-rules li:focus-visible,
+.planning-confirmation-history li:focus-visible,
+.planning-confirmation-body:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.planning-confirmation-rules li p,
+.planning-confirmation-history li p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.planning-confirmation-rules.failed li {
+  border-left: 3px solid var(--danger);
+}
+
+.planning-confirmation-rules.passed li {
+  border-left: 3px solid var(--accent);
+}
+
+.planning-confirmation-feedback {
+  padding: 9px 11px;
+  border-left: 3px solid var(--accent);
+  background: var(--stable-bg);
+  color: var(--stable-text);
+  font-weight: 700;
+}
+
+.planning-confirmation-actions,
+.planning-confirmation-explicit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
+.planning-confirmation-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.planning-confirmation-explicit {
+  padding: 11px;
+  border-left: 3px solid var(--warning);
+  background: var(--attention-bg);
+}
+
+.planning-confirmation-explicit p {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--attention-text);
+  font-weight: 700;
+}
+
+.planning-confirmation-history {
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.planning-confirmation-history li {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.45fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.planning-confirmation-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
 .planning-workspace-footer {
   display: flex;
   align-items: center;
@@ -975,7 +1177,10 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   .planning-draft-summary,
   .planning-draft-fields,
   .planning-draft-restore,
-  .planning-draft-history li {
+  .planning-draft-history li,
+  .planning-confirmation-summary,
+  .planning-confirmation-counts,
+  .planning-confirmation-history li {
     grid-template-columns: 1fr;
   }
 
@@ -993,6 +1198,17 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   .planning-draft-delete-row button,
   .planning-draft-restore button,
   .planning-draft-delete-confirm button {
+    width: 100%;
+  }
+
+  .planning-confirmation-error {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .planning-confirmation-error button,
+  .planning-confirmation-actions button,
+  .planning-confirmation-explicit button {
     width: 100%;
   }
 
@@ -1017,12 +1233,16 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
     order: 5;
   }
 
-  .planning-workspace-publication {
+  .planning-workspace-confirmation {
     order: 6;
   }
 
-  .planning-workspace-footer {
+  .planning-workspace-publication {
     order: 7;
+  }
+
+  .planning-workspace-footer {
+    order: 8;
     align-items: stretch;
     flex-direction: column;
     padding: 15px;
@@ -1050,7 +1270,8 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
 @media (prefers-reduced-motion: reduce) {
   .planning-workspace-skeleton,
   .planning-timeline-skeleton,
-  .planning-draft-skeleton {
+  .planning-draft-skeleton,
+  .planning-confirmation-skeleton {
     animation: none;
   }
 }

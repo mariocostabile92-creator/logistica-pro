@@ -453,6 +453,68 @@ export async function deletePlanningDraft(
 }
 
 
+export async function getCurrentPlanningConfirmation({
+  organizationId = "default",
+  operationalUnitId = "default",
+  planningDate = null,
+  signal,
+} = {}) {
+  const params = new URLSearchParams({
+    organization_id: organizationId,
+    operational_unit_id: operationalUnitId,
+  });
+  if (planningDate) params.set("planning_date", planningDate);
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/confirmation/current?${params}`,
+    { signal },
+  ));
+}
+
+
+export async function validatePlanningConfirmation(payload, { signal } = {}) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/confirmation/validate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function confirmPlanningConfirmation(payload, { signal } = {}) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/confirmation/confirm`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function getPlanningConfirmationHistory({
+  organizationId = "default",
+  operationalUnitId = "default",
+  planningDate = null,
+  signal,
+} = {}) {
+  const params = new URLSearchParams({
+    organization_id: organizationId,
+    operational_unit_id: operationalUnitId,
+  });
+  if (planningDate) params.set("planning_date", planningDate);
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/confirmation/history?${params}`,
+    { signal },
+  ));
+}
+
+
 export async function getPlanning(planningId) {
   return parseResponse(await fetch(`${API_BASE}/api/planning/${planningId}`));
 }
