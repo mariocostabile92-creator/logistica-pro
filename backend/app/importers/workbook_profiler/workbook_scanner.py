@@ -3,6 +3,7 @@ import io
 import warnings
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 from openpyxl import load_workbook
@@ -102,7 +103,11 @@ def _formula_coordinates(worksheet) -> set[tuple[int, int]]:
     return coordinates
 
 
-def _scan_xlsx(content: bytes) -> ScannedWorkbook:
+def _scan_xlsx(
+    content: bytes,
+    *,
+    preserve_formula_metadata: bool,
+) -> ScannedWorkbook:
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
@@ -110,11 +115,16 @@ def _scan_xlsx(content: bytes) -> ScannedWorkbook:
             category=UserWarning,
             module="openpyxl",
         )
-        formulas_book = load_workbook(
-            io.BytesIO(content),
-            read_only=False,
-            data_only=False,
-            keep_links=False,
+        open_started = perf_counter()
+        formulas_book = (
+            load_workbook(
+                io.BytesIO(content),
+                read_only=False,
+                data_only=False,
+                keep_links=False,
+            )
+            if preserve_formula_metadata
+            else None
         )
         values_book = load_workbook(
             io.BytesIO(content),
@@ -122,16 +132,29 @@ def _scan_xlsx(content: bytes) -> ScannedWorkbook:
             data_only=True,
             keep_links=False,
         )
+        open_seconds = perf_counter() - open_started
         try:
+            scan_started = perf_counter()
             sheets = []
-            for name in formulas_book.sheetnames:
-                formula_sheet = formulas_book[name]
+            for name in values_book.sheetnames:
                 value_sheet = values_book[name]
-                formula_cells = _formula_coordinates(formula_sheet)
-                max_row = max(formula_sheet.max_row, value_sheet.max_row)
+                formula_sheet = formulas_book[name] if formulas_book else None
+                formula_cells = (
+                    _formula_coordinates(formula_sheet)
+                    if formula_sheet is not None
+                    else set()
+                )
+                max_row = max(
+                    formula_sheet.max_row or 0
+                    if formula_sheet is not None
+                    else 0,
+                    value_sheet.max_row or 0,
+                )
                 max_column = max(
-                    formula_sheet.max_column,
-                    value_sheet.max_column,
+                    formula_sheet.max_column or 0
+                    if formula_sheet is not None
+                    else 0,
+                    value_sheet.max_column or 0,
                 )
                 rows = [
                     list(row)
@@ -143,14 +166,18 @@ def _scan_xlsx(content: bytes) -> ScannedWorkbook:
                         values_only=True,
                     )
                 ]
-                merged = tuple(
-                    (
-                        item.min_row,
-                        item.max_row,
-                        item.min_col,
-                        item.max_col,
+                merged = (
+                    tuple(
+                        (
+                            item.min_row,
+                            item.max_row,
+                            item.min_col,
+                            item.max_col,
+                        )
+                        for item in formula_sheet.merged_cells.ranges
                     )
-                    for item in formula_sheet.merged_cells.ranges
+                    if formula_sheet is not None
+                    else ()
                 )
                 sheets.append(
                     ScannedSheet(
@@ -160,13 +187,25 @@ def _scan_xlsx(content: bytes) -> ScannedWorkbook:
                         merged_ranges=merged,
                     )
                 )
-            return ScannedWorkbook(sheets=tuple(sheets))
+            return ScannedWorkbook(
+                sheets=tuple(sheets),
+                metrics={
+                    "open_workbook": open_seconds,
+                    "scan_sheets": perf_counter() - scan_started,
+                },
+            )
         finally:
-            formulas_book.close()
+            if formulas_book is not None:
+                formulas_book.close()
             values_book.close()
 
 
-def scan_workbook(content: bytes, filename: str) -> ScannedWorkbook:
+def scan_workbook(
+    content: bytes,
+    filename: str,
+    *,
+    preserve_formula_metadata: bool = True,
+) -> ScannedWorkbook:
     suffix = Path(filename).suffix.casefold()
     try:
         if suffix == ".csv":
@@ -174,7 +213,10 @@ def scan_workbook(content: bytes, filename: str) -> ScannedWorkbook:
         elif suffix == ".xls":
             workbook = _scan_xls(content)
         else:
-            workbook = _scan_xlsx(content)
+            workbook = _scan_xlsx(
+                content,
+                preserve_formula_metadata=preserve_formula_metadata,
+            )
     except Exception as exc:
         raise WorkbookReadError(
             "Il file non e leggibile oppure la struttura Excel e danneggiata."

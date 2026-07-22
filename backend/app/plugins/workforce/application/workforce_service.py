@@ -1,6 +1,9 @@
 import csv
 import io
 from datetime import date, timedelta
+from hashlib import sha256
+import logging
+from time import perf_counter
 
 from app.domain.core_language.models import (
     HumanResource,
@@ -19,11 +22,28 @@ from app.plugins.workforce.domain.models import (
 from app.plugins.workforce.importer.workbook_interpreter import (
     interpret_workforce_workbook,
 )
-from app.plugins.workforce.infrastructure import read_repository, write_repository
+from app.plugins.workforce.infrastructure import (
+    import_repository,
+    read_repository,
+    write_repository,
+)
+from app.plugins.workforce.application.preview_cache import WorkforcePreviewCache
+
+
+logger = logging.getLogger(__name__)
+preview_cache = WorkforcePreviewCache()
 
 
 def preview_import(content: bytes, filename: str):
-    return interpret_workforce_workbook(content, filename).preview
+    parsed = interpret_workforce_workbook(content, filename)
+    preview_cache.store(parsed)
+    logger.info(
+        "Workforce preview completed stages=%s members=%s statuses=%s",
+        {key: round(value, 4) for key, value in parsed.metrics.items()},
+        len(parsed.members),
+        len(parsed.statuses),
+    )
+    return parsed.preview
 
 
 def apply_import(
@@ -32,21 +52,43 @@ def apply_import(
     confirmed_fingerprint: str,
     actor: str = "local_operator",
 ):
-    parsed = interpret_workforce_workbook(content, filename)
-    if parsed.fingerprint != confirmed_fingerprint:
+    fingerprint_started = perf_counter()
+    actual_fingerprint = sha256(content).hexdigest()
+    fingerprint_seconds = perf_counter() - fingerprint_started
+    if actual_fingerprint != confirmed_fingerprint:
         from app.plugins.workforce.domain.errors import WorkforceImportConfirmationError
         raise WorkforceImportConfirmationError(
             "Il file e cambiato dopo la preview. Analizzalo nuovamente."
         )
+    prior = read_repository.imported_result(actual_fingerprint)
+    if prior:
+        preview_cache.discard(actual_fingerprint)
+        return prior
+    parsed = preview_cache.get(actual_fingerprint)
+    cache_hit = parsed is not None
+    if parsed is None:
+        parsed = interpret_workforce_workbook(content, filename)
     if not parsed.members:
         raise WorkforceValidationError(
             "Nessuna risorsa Workforce importabile e stata rilevata."
         )
-    return write_repository.apply_import(
+    metrics = dict(parsed.metrics)
+    metrics["fingerprint"] = fingerprint_seconds
+    metrics["preview_cache_hit"] = float(cache_hit)
+    result = import_repository.apply_import(
         parsed,
         original_filename=filename,
         actor=actor,
+        metrics=metrics,
     )
+    preview_cache.discard(actual_fingerprint)
+    logger.info(
+        "Workforce import completed stages=%s members=%s statuses=%s",
+        {key: round(value, 4) for key, value in metrics.items()},
+        len(parsed.members),
+        len(parsed.statuses),
+    )
+    return result
 
 
 def list_members():

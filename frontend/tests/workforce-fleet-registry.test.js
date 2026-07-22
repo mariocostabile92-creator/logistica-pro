@@ -426,3 +426,32 @@ test("API client exposes versioned Workforce and Fleet sync contracts", async ()
   assert.match(source, /api\/plugins\/fleet\/v1\/sync\/preview/);
   assert.match(source, /api\/plugins\/fleet\/v1\/sync\/confirm/);
 });
+
+
+test("Workforce import exposes deterministic stages without fake percentages", async () => {
+  const [flow, page, lifecycle, css, responsive] = await Promise.all([
+    frontendFile("assets/js/modules/workforce-import-flow.js"),
+    frontendFile("assets/js/modules/workforce-page.js"),
+    frontendFile("assets/js/modules/workspace-lifecycle.js"),
+    frontendFile("assets/css/workforce.css"),
+    frontendFile("assets/css/responsive.css"),
+  ]);
+  for (const label of [
+    "Lettura file",
+    "Analisi fogli",
+    "Preparazione risorse",
+    "Preparazione calendario",
+    "Salvataggio",
+    "Verifica finale",
+  ]) {
+    assert.match(flow, new RegExp(label));
+  }
+  assert.match(flow, /Fasi di elaborazione del file/);
+  assert.match(flow, /window\.setInterval/);
+  assert.doesNotMatch(flow, /role="progressbar"|aria-valuenow|\d+%/);
+  assert.match(page, /workforce:data-imported/);
+  assert.doesNotMatch(page, /operations:data-imported/);
+  assert.match(lifecycle, /workforce:data-imported/);
+  assert.match(css, /\.workforce-import-progress/);
+  assert.match(responsive, /\.workforce-import-progress ol[\s\S]*?grid-template-columns: 1fr/);
+});

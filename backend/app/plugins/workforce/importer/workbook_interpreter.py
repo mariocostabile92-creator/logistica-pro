@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from functools import lru_cache
 from hashlib import sha256
 import re
+from time import perf_counter
 from typing import Any
 
 from app.importers.workbook_profiler.workbook_scanner import scan_workbook
@@ -79,6 +81,7 @@ class ParsedWorkforceWorkbook:
     members: list[ParsedMember] = field(default_factory=list)
     statuses: list[ParsedStatus] = field(default_factory=list)
     requirements: list[ParsedRequirement] = field(default_factory=list)
+    metrics: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -95,14 +98,19 @@ def _present(value: Any) -> bool:
     return value is not None and str(value).strip() != ""
 
 
-def _strict_date(value: Any) -> str | None:
-    if isinstance(value, datetime):
-        return value.date().isoformat()
-    if isinstance(value, date):
-        return value.isoformat()
-    text = str(value or "").strip()
+@lru_cache(maxsize=4096)
+def _strict_date_text(text: str) -> str | None:
+    if not re.fullmatch(
+        r"(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
+        text,
+    ):
+        return None
     for pattern in (
-        "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y",
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%d/%m/%y",
+        "%d-%m-%y",
     ):
         try:
             return datetime.strptime(text, pattern).date().isoformat()
@@ -111,25 +119,45 @@ def _strict_date(value: Any) -> str | None:
     return None
 
 
-def _target_for(label: Any) -> tuple[str | None, float, str]:
-    normalized = normalize_text(label)
-    if not normalized:
-        return None, 0.0, "ignored"
-    for target, aliases in FIELD_ALIASES.items():
-        if normalized in {normalize_text(item) for item in aliases}:
-            return target, 0.96, "recognized"
+def _strict_date(value: Any) -> str | None:
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    text = str(value or "").strip()
+    return _strict_date_text(text)
+
+
+_NORMALIZED_ALIASES = {
+    target: tuple(normalize_text(item) for item in aliases)
+    for target, aliases in FIELD_ALIASES.items()
+}
+_EXACT_ALIAS_TARGETS: dict[str, str] = {}
+for _target, _aliases in _NORMALIZED_ALIASES.items():
+    for _alias in _aliases:
+        _EXACT_ALIAS_TARGETS.setdefault(_alias, _target)
+
+
+@lru_cache(maxsize=4096)
+def _target_for_normalized(normalized: str) -> tuple[str | None, float, str]:
+    exact = _EXACT_ALIAS_TARGETS.get(normalized)
+    if exact:
+        return exact, 0.96, "recognized"
     candidates = [
         target
-        for target, aliases in FIELD_ALIASES.items()
-        if any(
-            len(normalize_text(alias)) >= 4
-            and normalize_text(alias) in normalized
-            for alias in aliases
-        )
+        for target, aliases in _NORMALIZED_ALIASES.items()
+        if any(len(alias) >= 4 and alias in normalized for alias in aliases)
     ]
     if len(candidates) == 1:
         return candidates[0], 0.72, "inferred"
     return None, 0.25, "needs_confirmation"
+
+
+def _target_for(label: Any) -> tuple[str | None, float, str]:
+    normalized = normalize_text(label)
+    if not normalized:
+        return None, 0.0, "ignored"
+    return _target_for_normalized(normalized)
 
 
 def _header_candidate(rows: list[list[Any]]) -> tuple[int | None, list[Column]]:
@@ -253,7 +281,14 @@ def _employment_type(value: Any, current: object = None) -> str | None:
 
 
 def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkforceWorkbook:
-    workbook = scan_workbook(content, filename)
+    total_started = perf_counter()
+    workbook = scan_workbook(
+        content,
+        filename,
+        preserve_formula_metadata=False,
+    )
+    metrics = dict(workbook.metrics)
+    metrics.update({"profile": 0.0, "normalize": 0.0, "validate": 0.0})
     fingerprint = sha256(content).hexdigest()
     status_mapping = _status_mapping()
     members: dict[str, dict[str, object]] = {}
@@ -265,8 +300,10 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
     anomalies: list[str] = []
 
     for sheet in workbook.sheets:
+        profile_started = perf_counter()
         header_row, columns = _header_candidate(sheet.rows)
         responsibility = _responsibility(sheet.name, columns)
+        metrics["profile"] += perf_counter() - profile_started
         importable_rows = 0
         sheets.append(
             WorkforceImportSheet(
@@ -292,6 +329,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         if responsibility == "ignored" or header_row is None:
             continue
 
+        normalize_started = perf_counter()
         for excel_row, row in enumerate(sheet.rows[header_row:], start=header_row + 1):
             if sum(_present(value) for value in row) < 2:
                 excluded_rows += 1
@@ -382,7 +420,9 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     )
             importable_rows += 1
         sheets[-1] = sheets[-1].model_copy(update={"importable_rows": importable_rows})
+        metrics["normalize"] += perf_counter() - normalize_started
 
+    validate_started = perf_counter()
     dates = sorted({item[1] for item in statuses})
     shift_codes = sorted({str(value.get("shift_code")) for value in statuses.values() if value.get("shift_code")})
     absence_codes = {"holiday", "sickness", "leave", "unavailable"}
@@ -416,10 +456,13 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         anomalies=anomalies[:50],
         matrix=matrix,
     )
+    metrics["validate"] = perf_counter() - validate_started
+    metrics["total"] = perf_counter() - total_started
     return ParsedWorkforceWorkbook(
         fingerprint=fingerprint,
         preview=preview,
         members=[ParsedMember(identifier, values) for identifier, values in members.items()],
         statuses=[ParsedStatus(identifier, day, values) for (identifier, day), values in statuses.items()],
         requirements=list(requirements.values()),
+        metrics=metrics,
     )

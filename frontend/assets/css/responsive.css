@@ -60,6 +60,10 @@
 }
 
 @media (max-width: 620px) {
+  .workforce-import-progress ol {
+    grid-template-columns: 1fr;
+  }
+
   .app-header {
     padding: 0 16px;
   }

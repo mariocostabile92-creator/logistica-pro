@@ -31,6 +31,7 @@ class ScannedSheet:
 @dataclass(frozen=True)
 class ScannedWorkbook:
     sheets: tuple[ScannedSheet, ...]
+    metrics: dict[str, float] = field(default_factory=dict)
 
 
 class HeaderCandidate(BaseModel):

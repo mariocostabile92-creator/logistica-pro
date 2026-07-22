@@ -12,7 +12,7 @@ const STYLES = {
     "excel-import.css",
   ],
   workforce: [
-    "workforce.css?v=4",
+    "workforce.css?v=5",
     "workforce-layout.css?v=3",
     "workforce-calendar.css?v=3",
     "workforce-panel.css?v=3",

@@ -208,7 +208,11 @@ export function initWorkspaceLifecycle() {
       event.detail?.opener || document.activeElement,
     );
   });
-  for (const eventName of ["operations:data-imported", "demo:workspace-changed"]) {
+  for (const eventName of [
+    "operations:data-imported",
+    "workforce:data-imported",
+    "demo:workspace-changed",
+  ]) {
     document.addEventListener(eventName, () => invalidateWorkspaceStatus());
   }
   document.addEventListener("fleet:registry-loaded", (event) => {

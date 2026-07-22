@@ -119,6 +119,20 @@ class PostgresConnection:
             _raise_compatible_database_error(exc)
             raise
 
+    def executemany(
+        self,
+        statement: str,
+        parameters: Sequence[Sequence[Any]],
+    ) -> PostgresCursor:
+        translated = statement.replace("?", "%s")
+        try:
+            cursor = self._connection.cursor()
+            cursor.executemany(translated, parameters)
+            return PostgresCursor(cursor)
+        except Exception as exc:
+            _raise_compatible_database_error(exc)
+            raise
+
     def executescript(self, script: str) -> None:
         for statement in script.split(";"):
             if statement.strip():

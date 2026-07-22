@@ -18,6 +18,23 @@ let importing = false;
 let afterImport = async () => {};
 let notifySuccess = (message) => setMessage(message, "success");
 let importSurface = null;
+let progressTimer = null;
+
+
+const PROGRESS_STAGES = Object.freeze({
+  analysis: [
+    "Lettura file",
+    "Analisi fogli",
+    "Preparazione anteprima",
+  ],
+  import: [
+    "Verifica analisi",
+    "Preparazione risorse",
+    "Preparazione calendario",
+    "Salvataggio",
+    "Verifica finale",
+  ],
+});
 
 
 function selectedFile() {
@@ -32,7 +49,52 @@ function presentError(context, error) {
 }
 
 
+function renderProgress(title, stages, activeIndex) {
+  byId("workforceImportState").innerHTML = `
+    <div class="workforce-import-progress" aria-live="polite">
+      <strong>${title}</strong>
+      <span>Fasi di elaborazione del file</span>
+      <ol>
+        ${stages.map((stage, index) => `
+          <li class="${index < activeIndex ? "complete" : index === activeIndex ? "active" : "pending"}">
+            ${stage}
+          </li>
+        `).join("")}
+      </ol>
+    </div>
+  `;
+}
+
+
+function startProgress(kind) {
+  const stages = PROGRESS_STAGES[kind];
+  let activeIndex = 0;
+  window.clearInterval(progressTimer);
+  renderProgress(
+    kind === "analysis" ? "Analisi del planning turni" : "Importazione del planning turni",
+    stages,
+    activeIndex,
+  );
+  progressTimer = window.setInterval(() => {
+    if (activeIndex >= stages.length - 1) return;
+    activeIndex += 1;
+    renderProgress(
+      kind === "analysis" ? "Analisi del planning turni" : "Importazione del planning turni",
+      stages,
+      activeIndex,
+    );
+  }, kind === "analysis" ? 650 : 450);
+}
+
+
+function stopProgress() {
+  window.clearInterval(progressTimer);
+  progressTimer = null;
+}
+
+
 function resetPanel() {
+  stopProgress();
   importPreview = null;
   routedFile = null;
   byId("workforceFile").value = "";
@@ -73,12 +135,7 @@ async function analyze() {
   importPreview = null;
   clearWorkforceImportPreview();
   setBusy("analysis");
-  byId("workforceImportState").innerHTML = `
-    <div class="workforce-import-loading" aria-live="polite">
-      <strong>Analisi del planning turni in corso...</strong>
-      <span class="skeleton-line" aria-hidden="true"></span>
-    </div>
-  `;
+  startProgress("analysis");
   try {
     importPreview = await previewWorkforceImport(file);
     renderWorkforceImportPreview(importPreview);
@@ -90,6 +147,7 @@ async function analyze() {
       <p class="import-notice blocking"><strong>Analisi non riuscita.</strong> ${message}</p>
     `;
   } finally {
+    stopProgress();
     analyzing = false;
     setBusy();
   }
@@ -112,25 +170,24 @@ async function confirm(event) {
   }
   importing = true;
   setBusy("import");
-  byId("workforceImportState").innerHTML = `
-    <div class="workforce-import-loading" aria-live="polite">
-      <strong>Importazione del planning turni in corso...</strong>
-      <span class="skeleton-line" aria-hidden="true"></span>
-    </div>
-  `;
+  startProgress("import");
   try {
-    await confirmWorkforceImport(file, importPreview.fingerprint);
+    const result = await confirmWorkforceImport(file, importPreview.fingerprint);
     importing = false;
     setBusy();
     close({ reset: true });
-    await afterImport();
-    notifySuccess("Aggiornamento completato.");
+    await afterImport(result);
+    notifySuccess(
+      `Aggiornamento completato: ${result.members_created + result.members_updated} risorse, `
+      + `${result.statuses_created + result.statuses_updated} stati.`,
+    );
   } catch (error) {
     const message = presentError("workforce.import", error);
     byId("workforceImportState").innerHTML = `
       <p class="import-notice blocking"><strong>Importazione non riuscita.</strong> ${message}</p>
     `;
   } finally {
+    stopProgress();
     importing = false;
     setBusy();
   }

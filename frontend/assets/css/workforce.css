@@ -88,6 +88,49 @@
   padding: 18px;
 }
 
+.workforce-import-progress {
+  display: grid;
+  gap: 5px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-import-progress > span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.workforce-import-progress ol {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workforce-import-progress li {
+  min-width: 0;
+  padding: 7px 8px;
+  border-left: 3px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.workforce-import-progress li.active {
+  border-left-color: var(--accent);
+  background: var(--surface-subtle);
+  color: var(--text);
+}
+
+.workforce-import-progress li.complete {
+  border-left-color: var(--stable-text);
+  color: var(--text);
+}
+
 .workforce-import-issues {
   margin-top: 14px;
   border-top: 1px solid var(--border);

@@ -1,4 +1,7 @@
+import json
+
 from app.core.database import db_session
+from app.plugins.workforce.domain.models import WorkforceImportResult
 from app.plugins.workforce.infrastructure.records import (
     change_from_row,
     member_from_row,
@@ -13,6 +16,20 @@ def list_members():
             "SELECT * FROM workforce_members ORDER BY display_name, id"
         ).fetchall()
     return [member_from_row(row) for row in rows]
+
+
+def imported_result(fingerprint: str) -> WorkforceImportResult | None:
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT summary FROM workforce_imports WHERE fingerprint = ?",
+            (fingerprint,),
+        ).fetchone()
+    if not row:
+        return None
+    return WorkforceImportResult(
+        **json.loads(row["summary"]),
+        idempotent=True,
+    )
 
 
 def get_member(member_id: int):
@@ -108,7 +125,6 @@ def latest_import_summary():
         ).fetchone()
     if not row:
         return None
-    import json
     summary = json.loads(row["summary"])
     summary.update({
         "status_count": int(status_totals["status_count"] or 0),

@@ -477,7 +477,7 @@ export function initWorkforcePage() {
   workforceImportFlow = initWorkforceImportFlow({
     onImported: async () => {
       calendarLoaded = false;
-      document.dispatchEvent(new CustomEvent("operations:data-imported", {
+      document.dispatchEvent(new CustomEvent("workforce:data-imported", {
         detail: { datasetType: "workforce" },
       }));
       await refresh();
