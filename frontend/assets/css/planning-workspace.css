@@ -85,8 +85,16 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
 }
 
 .planning-workspace-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
   padding: 20px;
   border-left: 5px solid var(--info);
+}
+
+.planning-workspace-retry {
+  flex: 0 0 auto;
 }
 
 [data-planning-workspace-tone="stable"] .planning-workspace-status {
@@ -150,6 +158,93 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   color: #263630;
   font-size: 18px;
   font-weight: 750;
+}
+
+.planning-workspace-readiness {
+  align-items: stretch;
+}
+
+.planning-readiness-body {
+  display: grid;
+  gap: 15px;
+}
+
+.planning-readiness-summary {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 18px;
+}
+
+.planning-readiness-score {
+  margin: 0;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.planning-readiness-issues {
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.planning-readiness-issues h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.planning-readiness-issues ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planning-readiness-issues li {
+  padding-left: 12px;
+  border-left: 3px solid var(--border-strong);
+}
+
+.planning-readiness-issues.critical li {
+  border-left-color: var(--danger);
+}
+
+.planning-readiness-issues.attention li {
+  border-left-color: var(--warning);
+}
+
+.planning-readiness-issues p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.planning-readiness-metadata {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+
+.planning-readiness-metadata div {
+  padding: 9px 10px;
+  background: var(--surface);
+}
+
+.planning-readiness-metadata dt {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.planning-readiness-metadata dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .planning-workspace-timeline .planning-workspace-block-body {
@@ -253,6 +348,10 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   .planning-workspace-block {
     grid-template-columns: minmax(190px, 0.42fr) minmax(0, 0.58fr);
   }
+
+  .planning-readiness-metadata {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 620px) {
@@ -275,6 +374,20 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   .planning-workspace-block-heading,
   .planning-workspace-block-body {
     padding: 15px;
+  }
+
+  .planning-workspace-status {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .planning-workspace-retry {
+    width: 100%;
+  }
+
+  .planning-readiness-summary,
+  .planning-readiness-metadata {
+    grid-template-columns: 1fr;
   }
 
   .planning-workspace-draft {

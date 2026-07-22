@@ -31,6 +31,20 @@ export function formatPlanningDate(value) {
 }
 
 
+export function formatPlanningTimestamp(value) {
+  if (!value) return "Non disponibile";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Non disponibile";
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+}
+
+
 export function focusRelativeAction(container, current, direction) {
   const actions = [...container.querySelectorAll("button:not(:disabled)")];
   const index = actions.indexOf(current);

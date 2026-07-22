@@ -10,6 +10,11 @@ import {
   createPlanningWorkspaceState,
   derivePlanningWorkspaceView,
 } from "../assets/js/modules/planning-workspace/state.js";
+import {
+  createPlanningReadinessLoader,
+  normalizePlanningReadiness,
+  readinessEventType,
+} from "../assets/js/modules/planning-workspace/readiness.js";
 
 
 const frontendFile = (path) => readFile(
@@ -33,6 +38,12 @@ test("state accepts every declared presentation without deriving decisions", () 
     ["empty-detected", PLANNING_WORKSPACE_STATES.EMPTY],
     ["ready-received", PLANNING_WORKSPACE_STATES.READY],
     ["warning-received", PLANNING_WORKSPACE_STATES.WARNING],
+    ["blocked-received", PLANNING_WORKSPACE_STATES.BLOCKED],
+    ["stale-received", PLANNING_WORKSPACE_STATES.STALE],
+    ["partial-received", PLANNING_WORKSPACE_STATES.PARTIAL],
+    ["missing-received", PLANNING_WORKSPACE_STATES.MISSING],
+    ["invalid-received", PLANNING_WORKSPACE_STATES.INVALID],
+    ["incompatible-received", PLANNING_WORKSPACE_STATES.INCOMPATIBLE],
     ["load-failed", PLANNING_WORKSPACE_STATES.ERROR],
     ["legacy-active", PLANNING_WORKSPACE_STATES.LEGACY],
   ]);
@@ -62,11 +73,16 @@ test("legacy state names the disconnected Runtime and preserves placeholders", (
 
 
 test("ready and warning views present only values explicitly supplied", () => {
-  const snapshot = {
-    readiness: { value: "Verificata", detail: "Contratto esplicito" },
+  const readiness = {
+    status: "READY",
+    score: 100,
+    isReady: true,
+    rationale: "Contratto esplicito",
+    blockers: [],
+    warnings: [],
     conflicts: { value: "2", detail: "Contratto esplicito" },
-    canConfirm: true,
   };
+  const snapshot = { readiness };
   const ready = applyPlanningWorkspaceEvent(
     createPlanningWorkspaceState(),
     { type: "ready-received", snapshot },
@@ -76,9 +92,102 @@ test("ready and warning views present only values explicitly supplied", () => {
     { type: "warning-received", snapshot },
   );
 
-  assert.equal(derivePlanningWorkspaceView(ready).readiness.value, "Verificata");
-  assert.equal(derivePlanningWorkspaceView(ready).canConfirm, true);
+  assert.equal(derivePlanningWorkspaceView(ready).readiness.value, "100/100 · Pronto");
+  assert.equal(derivePlanningWorkspaceView(ready).canConfirm, false);
   assert.equal(derivePlanningWorkspaceView(warning).tone, "attention");
+});
+
+
+function readinessPayload(status = "READY") {
+  return {
+    status,
+    score: { value: status === "READY" ? 100 : 72 },
+    is_ready: ["READY", "WARNING"].includes(status),
+    blockers: status === "BLOCKED"
+      ? [{
+        code: "FLEET_AVAILABLE",
+        message: "Nessun Asset risulta disponibile.",
+        remediation_hint: "Verifica Fleet.",
+        source: "fleet",
+      }]
+      : [],
+    warnings: status === "WARNING"
+      ? [{
+        code: "FLEET_CAPABILITIES",
+        message: "Capability Fleet incomplete.",
+        remediation_hint: "Completa le capability.",
+        source: "fleet",
+      }]
+      : [],
+    missing_inputs: [],
+    rationale: "Valutazione prodotta dal backend.",
+    evaluated_at: "2026-07-22T07:00:00Z",
+    operational_unit: {
+      external_identifier: "unit-a",
+      name: "Unit A",
+    },
+    planning_date: "2026-07-22",
+    envelope_version: status === "READY" ? "version-1" : null,
+    legacy_flow_active: true,
+  };
+}
+
+
+test("readiness payload normalization supports every backend state", () => {
+  for (const status of [
+    "READY",
+    "WARNING",
+    "BLOCKED",
+    "STALE",
+    "PARTIAL",
+    "MISSING",
+    "INVALID",
+    "INCOMPATIBLE",
+    "LEGACY",
+  ]) {
+    const normalized = normalizePlanningReadiness(readinessPayload(status));
+    assert.equal(normalized.status, status);
+    assert.equal(
+      readinessEventType(status),
+      `${status.toLowerCase()}-received`,
+    );
+    assert.equal(normalized.operationalUnit, "Unit A");
+  }
+});
+
+
+test("readiness normalization renders score blocker and warning without invented data", () => {
+  const blocked = normalizePlanningReadiness(readinessPayload("BLOCKED"));
+  const warning = normalizePlanningReadiness(readinessPayload("WARNING"));
+
+  assert.equal(blocked.score, 72);
+  assert.equal(blocked.blockers[0].code, "FLEET_AVAILABLE");
+  assert.equal(warning.warnings[0].remediationHint, "Completa le capability.");
+  assert.equal(blocked.envelopeVersion, null);
+  assert.throws(
+    () => normalizePlanningReadiness({ status: "READY" }),
+    /Score readiness non valido/,
+  );
+});
+
+
+test("readiness loader coalesces duplicate calls and allows a controlled retry", async () => {
+  let calls = 0;
+  let release;
+  const loader = createPlanningReadinessLoader(() => {
+    calls += 1;
+    if (calls > 1) return Promise.resolve(readinessPayload());
+    return new Promise((resolve) => { release = resolve; });
+  });
+  const first = loader.load();
+  const duplicate = loader.load();
+
+  assert.equal(calls, 1);
+  assert.equal(first, duplicate);
+  release(readinessPayload());
+  await first;
+  await loader.load();
+  assert.equal(calls, 2);
 });
 
 
@@ -125,6 +234,9 @@ test("renderer covers all components and exposes loading semantics", async () =>
   }
   assert.match(components, /role: "status"/);
   assert.match(components, /aria-labelledby/);
+  assert.match(components, /retry-readiness/);
+  assert.match(components, /readiness-blocker-list/);
+  assert.match(components, /readiness-warning-list/);
 });
 
 
@@ -157,7 +269,7 @@ test("keyboard navigation supports arrows boundaries and Escape", async () => {
 });
 
 
-test("Planning Workspace is isolated from APIs Runtime and business algorithms", async () => {
+test("Planning Workspace consumes only the readiness API and no business algorithms", async () => {
   const paths = [
     "assets/js/modules/planning-workspace/index.js",
     "assets/js/modules/planning-workspace/models.js",
@@ -166,13 +278,32 @@ test("Planning Workspace is isolated from APIs Runtime and business algorithms",
     "assets/js/modules/planning-workspace/layout.js",
     "assets/js/modules/planning-workspace/components.js",
     "assets/js/modules/planning-workspace/utils.js",
+    "assets/js/modules/planning-workspace/readiness.js",
   ];
   const sources = await Promise.all(paths.map(frontendFile));
   const combined = sources.join("\n");
 
-  assert.doesNotMatch(combined, /api\.js|fetch\(|getLatestPlanning/);
+  assert.match(combined, /getPlanningReadiness/);
+  assert.doesNotMatch(combined, /fetch\(|getLatestPlanning/);
   assert.doesNotMatch(combined, /PlanningInputRuntime|generatePlanning/);
   assert.doesNotMatch(combined, /console\.(error|warn|log)/);
+});
+
+
+test("frontend exposes loading error retry and one initial readiness request", async () => {
+  const [index, api, renderer] = await Promise.all([
+    frontendFile("assets/js/modules/planning-workspace/index.js"),
+    frontendFile("assets/js/api.js"),
+    frontendFile("assets/js/modules/planning-workspace/renderer.js"),
+  ]);
+
+  assert.match(index, /type: "load-started"/);
+  assert.match(index, /type: "load-failed"/);
+  assert.match(index, /retry-readiness/);
+  assert.match(index, /createPlanningReadinessLoader/);
+  assert.match(api, /\/api\/planning\/readiness/);
+  assert.match(api, /signal/);
+  assert.match(renderer, /retryButton\.hidden/);
 });
 
 

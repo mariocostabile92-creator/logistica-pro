@@ -313,6 +313,24 @@ export async function getLatestPlanning() {
 }
 
 
+export async function getPlanningReadiness({
+  organizationId = "default",
+  operationalUnitId = "default",
+  planningDate = null,
+  signal,
+} = {}) {
+  const params = new URLSearchParams({
+    organization_id: organizationId,
+    operational_unit_id: operationalUnitId,
+  });
+  if (planningDate) params.set("operation_date", planningDate);
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/readiness?${params}`,
+    { signal },
+  ));
+}
+
+
 export async function getPlanning(planningId) {
   return parseResponse(await fetch(`${API_BASE}/api/planning/${planningId}`));
 }

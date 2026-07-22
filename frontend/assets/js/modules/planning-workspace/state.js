@@ -19,6 +19,13 @@ export function applyPlanningWorkspaceEvent(current, event) {
     "empty-detected": PLANNING_WORKSPACE_STATES.EMPTY,
     "ready-received": PLANNING_WORKSPACE_STATES.READY,
     "warning-received": PLANNING_WORKSPACE_STATES.WARNING,
+    "blocked-received": PLANNING_WORKSPACE_STATES.BLOCKED,
+    "stale-received": PLANNING_WORKSPACE_STATES.STALE,
+    "partial-received": PLANNING_WORKSPACE_STATES.PARTIAL,
+    "missing-received": PLANNING_WORKSPACE_STATES.MISSING,
+    "invalid-received": PLANNING_WORKSPACE_STATES.INVALID,
+    "incompatible-received": PLANNING_WORKSPACE_STATES.INCOMPATIBLE,
+    "legacy-received": PLANNING_WORKSPACE_STATES.LEGACY,
     "load-failed": PLANNING_WORKSPACE_STATES.ERROR,
     "legacy-active": PLANNING_WORKSPACE_STATES.LEGACY,
   };
@@ -30,6 +37,7 @@ export function applyPlanningWorkspaceEvent(current, event) {
     message: event.message || null,
     snapshot: event.snapshot || null,
     operationalUnit: event.operationalUnit || current.operationalUnit,
+    planningDate: event.planningDate || current.planningDate,
   });
 }
 
@@ -43,6 +51,7 @@ export function derivePlanningWorkspaceView(state) {
   const presentation = PLANNING_WORKSPACE_PRESENTATION[state.state];
   const snapshot = state.snapshot || {};
   const noRuntime = "Planning Runtime non ancora collegato.";
+  const readiness = snapshot.readiness || null;
   return Object.freeze({
     state: state.state,
     loading: state.state === PLANNING_WORKSPACE_STATES.LOADING,
@@ -52,8 +61,17 @@ export function derivePlanningWorkspaceView(state) {
     statusDescription: state.message || presentation.description,
     planningDate: state.planningDate,
     operationalUnit: state.operationalUnit,
-    readiness: snapshot.readiness || placeholder("Non disponibile", noRuntime),
-    conflicts: snapshot.conflicts || placeholder("Non disponibili", noRuntime),
+    readiness: readiness
+      ? Object.freeze({
+        value: `${readiness.score}/100 · ${readiness.isReady ? "Pronto" : "Non pronto"}`,
+        detail: readiness.rationale,
+        ...readiness,
+      })
+      : placeholder("Non disponibile", state.message || noRuntime),
+    conflicts: snapshot.conflicts || placeholder(
+      "Non disponibili",
+      "Conflict Summary disponibile nelle prossime fasi.",
+    ),
     timeline: placeholder(
       "Timeline non disponibile",
       "La timeline sarà collegata nelle prossime fasi.",
@@ -66,6 +84,7 @@ export function derivePlanningWorkspaceView(state) {
       "Non disponibile",
       "Publication non disponibile.",
     ),
-    canConfirm: Boolean(snapshot.canConfirm),
+    canConfirm: false,
+    canRetry: state.state === PLANNING_WORKSPACE_STATES.ERROR,
   });
 }

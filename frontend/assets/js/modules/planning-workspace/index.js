@@ -1,4 +1,10 @@
+import { getPlanningReadiness } from "../../api.js";
 import { createPlanningWorkspaceLayout } from "./layout.js";
+import {
+  createPlanningReadinessLoader,
+  normalizePlanningReadiness,
+  readinessEventType,
+} from "./readiness.js";
 import { renderPlanningWorkspace } from "./renderer.js";
 import {
   applyPlanningWorkspaceEvent,
@@ -11,6 +17,7 @@ import { focusRelativeAction } from "./utils.js";
 let initialized = false;
 let state;
 let refs;
+const readinessLoader = createPlanningReadinessLoader(getPlanningReadiness);
 
 
 function today() {
@@ -23,6 +30,32 @@ function today() {
 function commit(event) {
   state = applyPlanningWorkspaceEvent(state, event);
   renderPlanningWorkspace(refs, derivePlanningWorkspaceView(state));
+}
+
+
+async function loadReadiness() {
+  commit({ type: "load-started" });
+  try {
+    const payload = await readinessLoader.load({
+      organizationId: "default",
+      operationalUnitId: "default",
+      planningDate: state.planningDate,
+    });
+    const readiness = normalizePlanningReadiness(payload);
+    commit({
+      type: readinessEventType(readiness.status),
+      message: readiness.rationale,
+      snapshot: { readiness },
+      operationalUnit: readiness.operationalUnit,
+      planningDate: readiness.planningDate,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "load-failed",
+      message: error?.message || "Readiness non disponibile. Riprova.",
+    });
+  }
 }
 
 
@@ -40,6 +73,7 @@ function handleActionClick(event) {
   const action = event.target.closest("[data-planning-action]")?.dataset
     .planningAction;
   if (action === "open-legacy") openLegacyFlow();
+  if (action === "retry-readiness") loadReadiness();
 }
 
 
@@ -78,11 +112,11 @@ export function initPlanningWorkspace() {
   state = createPlanningWorkspaceState({ planningDate: today() });
   refs = createPlanningWorkspaceLayout(root);
   renderPlanningWorkspace(refs, derivePlanningWorkspaceView(state));
-  refs.actions.addEventListener("click", handleActionClick);
+  refs.root.addEventListener("click", handleActionClick);
   refs.actions.addEventListener("keydown", handleActionKeydown);
   document.getElementById("legacyOperationsRegion").addEventListener(
     "keydown",
     handleLegacyKeydown,
   );
-  queueMicrotask(() => commit({ type: "legacy-active" }));
+  loadReadiness();
 }

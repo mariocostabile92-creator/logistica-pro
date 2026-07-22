@@ -65,7 +65,17 @@ export function createStatusCard() {
     }),
     textBlock("status-description", "planning-workspace-description"),
   );
-  card.append(copy);
+  const retry = element("button", {
+    className: "secondary planning-workspace-retry",
+    text: "Riprova",
+    attributes: {
+      type: "button",
+      "data-planning-action": "retry-readiness",
+      hidden: "",
+      "aria-label": "Riprova il caricamento della Planning Readiness",
+    },
+  });
+  card.append(copy, retry);
   return card;
 }
 
@@ -96,12 +106,85 @@ function createWorkspaceBlock({ component, eyebrow, title, titleId }) {
 
 
 export function createReadinessCard() {
-  return createWorkspaceBlock({
-    component: "readiness",
-    eyebrow: "Verifica",
-    title: "Planning Readiness",
-    titleId: "planningWorkspaceReadinessTitle",
+  const section = element("section", {
+    className: "planning-workspace-block planning-workspace-readiness",
+    attributes: {
+      "data-planning-component": "readiness",
+      "aria-labelledby": "planningWorkspaceReadinessTitle",
+    },
   });
+  const heading = element("header", {
+    className: "planning-workspace-block-heading",
+  });
+  heading.append(
+    element("p", { className: "eyebrow", text: "Verifica" }),
+    element("h3", {
+      text: "Planning Readiness",
+      attributes: { id: "planningWorkspaceReadinessTitle" },
+    }),
+  );
+  const body = element("div", {
+    className: "planning-workspace-block-body planning-readiness-body",
+  });
+  const summary = element("div", { className: "planning-readiness-summary" });
+  summary.append(
+    textBlock("readiness-value", "planning-readiness-score"),
+    textBlock("readiness-detail", "planning-workspace-description"),
+  );
+  const blockers = element("section", {
+    className: "planning-readiness-issues critical",
+    attributes: {
+      "data-planning-role": "readiness-blockers",
+      "aria-labelledby": "planningReadinessBlockersTitle",
+      hidden: "",
+    },
+  });
+  blockers.append(
+    element("h4", {
+      text: "Da risolvere",
+      attributes: { id: "planningReadinessBlockersTitle" },
+    }),
+    element("ul", {
+      attributes: { "data-planning-role": "readiness-blocker-list" },
+    }),
+  );
+  const warnings = element("section", {
+    className: "planning-readiness-issues attention",
+    attributes: {
+      "data-planning-role": "readiness-warnings",
+      "aria-labelledby": "planningReadinessWarningsTitle",
+      hidden: "",
+    },
+  });
+  warnings.append(
+    element("h4", {
+      text: "Da verificare",
+      attributes: { id: "planningReadinessWarningsTitle" },
+    }),
+    element("ul", {
+      attributes: { "data-planning-role": "readiness-warning-list" },
+    }),
+  );
+  const metadata = element("dl", {
+    className: "planning-readiness-metadata",
+    attributes: { "data-planning-role": "readiness-metadata" },
+  });
+  for (const [label, role] of [
+    ["Operational Unit", "readiness-unit"],
+    ["Data operativa", "readiness-date"],
+    ["Ultimo aggiornamento", "readiness-updated"],
+    ["Flusso legacy", "readiness-legacy"],
+  ]) {
+    const item = element("div");
+    item.append(
+      element("dt", { text: label }),
+      element("dd", { attributes: { "data-planning-role": role } }),
+    );
+    metadata.append(item);
+  }
+  body.append(summary, blockers, warnings, metadata);
+  section.append(heading, body);
+  return section;
 }
 
 
@@ -157,7 +240,7 @@ export function createFooterActions() {
   copy.append(
     element("strong", { text: "Azioni" }),
     element("p", {
-      text: "La conferma sarà disponibile quando i contratti saranno collegati.",
+      text: "La conferma non è disponibile in questa fase.",
     }),
   );
   const actions = element("div", {
@@ -187,7 +270,7 @@ export function createFooterActions() {
   );
   const hint = element("span", {
     className: "visually-hidden",
-    text: "Planning Runtime non ancora collegato",
+    text: "Conferma non disponibile in questa fase",
     attributes: { id: "planningWorkspaceActionHint" },
   });
   footer.append(copy, actions, hint);
