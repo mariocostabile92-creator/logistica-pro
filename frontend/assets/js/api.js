@@ -367,6 +367,92 @@ export async function getPlanningTimeline({
 }
 
 
+export async function getCurrentPlanningDraft({
+  organizationId = "default",
+  operationalUnitId = "default",
+  planningDate = null,
+  signal,
+} = {}) {
+  const params = new URLSearchParams({
+    organization_id: organizationId,
+    operational_unit_id: operationalUnitId,
+  });
+  if (planningDate) params.set("planning_date", planningDate);
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/drafts/current?${params}`,
+    { signal },
+  ));
+}
+
+
+export async function createPlanningDraft(payload, { signal } = {}) {
+  return parseResponse(await fetch(`${API_BASE}/api/planning/drafts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  }));
+}
+
+
+export async function updatePlanningDraftMetadata(
+  draftId,
+  payload,
+  { signal } = {},
+) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/drafts/${encodeURIComponent(draftId)}/metadata`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function savePlanningDraft(draftId, payload, { signal } = {}) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/drafts/${encodeURIComponent(draftId)}/save`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function restorePlanningDraft(draftId, payload, { signal } = {}) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/drafts/${encodeURIComponent(draftId)}/restore`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function deletePlanningDraft(
+  draftId,
+  expectedVersion,
+  { signal } = {},
+) {
+  const params = new URLSearchParams({
+    expected_version: String(expectedVersion),
+  });
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/drafts/${encodeURIComponent(draftId)}?${params}`,
+    { method: "DELETE", signal },
+  ));
+}
+
+
 export async function getPlanning(planningId) {
   return parseResponse(await fetch(`${API_BASE}/api/planning/${planningId}`));
 }

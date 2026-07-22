@@ -23,6 +23,10 @@ import {
   createPlanningTimelineLoader,
   normalizePlanningTimelineResult,
 } from "../assets/js/modules/planning-workspace/timeline.js";
+import {
+  createPlanningDraftLoader,
+  normalizePlanningDraftWorkspace,
+} from "../assets/js/modules/planning-workspace/draft.js";
 
 
 const frontendFile = (path) => readFile(
@@ -74,7 +78,7 @@ test("legacy state names the disconnected Runtime and preserves placeholders", (
   assert.equal(view.statusDescription, "Planning Runtime non ancora collegato.");
   assert.equal(view.readiness.value, "Non disponibile");
   assert.equal(view.conflicts, null);
-  assert.equal(view.draft.detail, "Draft disponibile nelle prossime fasi.");
+  assert.equal(view.draft.viewState, "loading");
   assert.equal(view.publication.detail, "Publication non disponibile.");
   assert.equal(view.canConfirm, false);
 });
@@ -241,6 +245,69 @@ function timelinePayload(events = [timelineEvent()]) {
 }
 
 
+function draftWorkspacePayload({ state = "SAVED", version = 3 } = {}) {
+  if (state === "EMPTY") return { state, draft: null, history: null };
+  const deletedAt = state === "READ_ONLY" ? "2026-07-22T07:05:00Z" : null;
+  const changes = [
+    {
+      change_id: "change-3",
+      draft_id: "draft-1",
+      change_type: state === "READ_ONLY" ? "DELETED" : "SAVED",
+      from_version: Math.max(1, version - 1),
+      to_version: version,
+      actor: "private-beta",
+      occurred_at: "2026-07-22T07:05:00Z",
+      summary: state === "READ_ONLY" ? "Draft eliminato." : "Draft salvato.",
+      metadata: [],
+    },
+  ];
+  const snapshots = Array.from({ length: version }, (_, index) => {
+    const number = version - index;
+    return {
+      snapshot_id: `snapshot-${number}`,
+      draft_id: "draft-1",
+      state: number === version ? state : "CREATED",
+      version: {
+        number,
+        created_at: `2026-07-22T07:0${number}:00Z`,
+        created_by: "private-beta",
+        restored_from_version: null,
+      },
+      metadata: { name: `Draft v${number}`, note: null },
+    };
+  });
+  return {
+    state,
+    draft: {
+      draft_id: "draft-1",
+      scope: {
+        organization_id: "default",
+        operational_unit: { external_identifier: "default", name: null },
+        planning_date: "2026-07-22",
+      },
+      metadata: { name: "Draft operativo", note: "Solo metadati." },
+      state,
+      version: {
+        number: version,
+        created_at: "2026-07-22T07:05:00Z",
+        created_by: "private-beta",
+        restored_from_version: null,
+      },
+      created_at: "2026-07-22T07:00:00Z",
+      updated_at: "2026-07-22T07:05:00Z",
+      deleted_at: deletedAt,
+    },
+    history: {
+      draft_id: "draft-1",
+      total_changes: changes.length,
+      total_versions: snapshots.length,
+      changes,
+      snapshots,
+    },
+  };
+}
+
+
 test("readiness payload normalization supports every backend state", () => {
   for (const status of [
     "READY",
@@ -400,6 +467,73 @@ test("Planning Timeline loader coalesces duplicate calls and supports retry", as
 });
 
 
+test("Planning Draft normalizes empty active and read-only states", () => {
+  const empty = normalizePlanningDraftWorkspace(draftWorkspacePayload({ state: "EMPTY" }));
+  const saved = normalizePlanningDraftWorkspace(draftWorkspacePayload());
+  const deleted = normalizePlanningDraftWorkspace(
+    draftWorkspacePayload({ state: "READ_ONLY", version: 4 }),
+  );
+
+  assert.equal(empty.viewState, "empty");
+  assert.equal(saved.viewState, "ready");
+  assert.equal(saved.draft.version.number, 3);
+  assert.equal(saved.history.snapshots[0].version.number, 3);
+  assert.equal(deleted.viewState, "read-only");
+  assert.equal(deleted.draft.deletedAt, "2026-07-22T07:05:00Z");
+  assert.throws(
+    () => normalizePlanningDraftWorkspace({ state: "UNKNOWN" }),
+    /Stato Planning Draft non riconosciuto/,
+  );
+});
+
+
+test("Planning Draft loader performs one request and supports retry", async () => {
+  let calls = 0;
+  let release;
+  const loader = createPlanningDraftLoader(() => {
+    calls += 1;
+    if (calls > 1) return Promise.resolve(draftWorkspacePayload({ state: "EMPTY" }));
+    return new Promise((resolve) => { release = resolve; });
+  });
+  const first = loader.load();
+  const duplicate = loader.load();
+
+  assert.equal(first, duplicate);
+  assert.equal(calls, 1);
+  release(draftWorkspacePayload());
+  await first;
+  await loader.load();
+  assert.equal(calls, 2);
+});
+
+
+test("Draft mutations preserve Readiness Conflicts and Timeline state", () => {
+  const normalized = normalizePlanningConflictResult(conflictPayload());
+  const ready = applyPlanningWorkspaceEvent(
+    createPlanningWorkspaceState(),
+    { type: "ready-received", snapshot: normalized },
+  );
+  const withTimeline = applyPlanningWorkspaceEvent(ready, {
+    type: "timeline-loaded",
+    timeline: normalizePlanningTimelineResult(timelinePayload()),
+  });
+  const withDraft = applyPlanningWorkspaceEvent(withTimeline, {
+    type: "draft-loaded",
+    draft: normalizePlanningDraftWorkspace(draftWorkspacePayload()),
+  });
+  const failed = applyPlanningWorkspaceEvent(withDraft, {
+    type: "draft-mutation-failed",
+    message: "Versione obsoleta.",
+  });
+
+  assert.equal(failed.state, PLANNING_WORKSPACE_STATES.READY);
+  assert.equal(failed.snapshot.conflicts, normalized.conflicts);
+  assert.equal(failed.snapshot.timeline.state, "ready");
+  assert.equal(failed.snapshot.draft.viewState, "error");
+  assert.equal(failed.snapshot.draft.draft.id, "draft-1");
+});
+
+
 test("Timeline loading and failure preserve the current Planning state", () => {
   const normalized = normalizePlanningConflictResult(conflictPayload());
   const ready = applyPlanningWorkspaceEvent(
@@ -460,7 +594,7 @@ test("layout preserves the definitive desktop component hierarchy", async () => 
     "createReadinessCard()",
     "createConflictSummary()",
     "createPlanningTimeline()",
-    "createDraftPlaceholder()",
+    "createPlanningDraft()",
     "createPublicationPlaceholder()",
     "createFooterActions()",
   ];
@@ -500,6 +634,11 @@ test("renderer covers all components and exposes loading semantics", async () =>
   assert.match(components, /conflict-list/);
   assert.match(components, /timeline-groups/);
   assert.match(components, /retry-timeline/);
+  assert.match(components, /create-draft/);
+  assert.match(components, /save-draft/);
+  assert.match(components, /restore-draft/);
+  assert.match(components, /confirm-delete-draft/);
+  assert.match(components, /draft-history-list/);
   assert.match(components, /aria-live/);
 });
 
@@ -521,6 +660,8 @@ test("responsive styles cover tablet mobile order and horizontal containment", a
   assert.match(css, /planning-timeline-event:focus-visible/);
   assert.match(css, /planning-conflict-counts[\s\S]*grid-template-columns: 1fr/);
   assert.match(css, /planning-timeline-summary[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /planning-draft-summary[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /planning-draft-history li:focus-visible/);
 });
 
 
@@ -534,6 +675,8 @@ test("keyboard navigation supports arrows boundaries and Escape", async () => {
   }
   assert.match(source, /focusRelativeAction/);
   assert.match(source, /legacyButton\.focus/);
+  assert.match(source, /event\.key !== "Enter"/);
+  assert.match(source, /draftConfirmDeleteButton\.focus/);
 });
 
 
@@ -549,12 +692,14 @@ test("Planning Workspace consumes compact review APIs and no business algorithms
     "assets/js/modules/planning-workspace/readiness.js",
     "assets/js/modules/planning-workspace/conflicts.js",
     "assets/js/modules/planning-workspace/timeline.js",
+    "assets/js/modules/planning-workspace/draft.js",
   ];
   const sources = await Promise.all(paths.map(frontendFile));
   const combined = sources.join("\n");
 
   assert.match(combined, /getPlanningConflicts/);
   assert.match(combined, /getPlanningTimeline/);
+  assert.match(combined, /getCurrentPlanningDraft/);
   assert.doesNotMatch(combined, /getPlanningReadiness/);
   assert.doesNotMatch(combined, /fetch\(|getLatestPlanning/);
   assert.doesNotMatch(combined, /PlanningInputRuntime|generatePlanning/);
@@ -562,7 +707,7 @@ test("Planning Workspace consumes compact review APIs and no business algorithms
 });
 
 
-test("frontend exposes Timeline loading error retry and sequential initial requests", async () => {
+test("frontend exposes Timeline and Draft loading retry and bounded initial requests", async () => {
   const [index, api, renderer] = await Promise.all([
     frontendFile("assets/js/modules/planning-workspace/index.js"),
     frontendFile("assets/js/api.js"),
@@ -573,14 +718,21 @@ test("frontend exposes Timeline loading error retry and sequential initial reque
   assert.match(index, /type: "load-failed"/);
   assert.match(index, /retry-conflicts/);
   assert.match(index, /retry-timeline/);
+  assert.match(index, /retry-draft/);
   assert.match(index, /createPlanningConflictLoader/);
   assert.match(index, /createPlanningTimelineLoader/);
-  assert.match(index, /await loadTimeline\(\)/);
+  assert.match(index, /createPlanningDraftLoader/);
+  assert.match(index, /supportingLoads = \[loadTimeline\(\)\]/);
+  assert.match(index, /supportingLoads\.push\(loadDraft\(\)\)/);
   assert.match(api, /\/api\/planning\/conflicts/);
   assert.match(api, /\/api\/planning\/timeline/);
+  assert.match(api, /\/api\/planning\/drafts\/current/);
+  assert.match(api, /method: "PATCH"/);
+  assert.match(api, /method: "DELETE"/);
   assert.match(api, /signal/);
   assert.match(renderer, /retryButton\.hidden/);
   assert.match(renderer, /relatedConflicts/);
+  assert.match(renderer, /!refs\.draftNameInput\.value\.trim\(\)/);
   assert.match(renderer, /view-conflicts/);
   assert.match(renderer, /createElement|element\("details"/);
 });

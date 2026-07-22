@@ -606,8 +606,222 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   font-weight: 800;
 }
 
-.planning-workspace-draft .planning-workspace-block-body {
-  min-height: 120px;
+.planning-workspace-draft {
+  align-items: stretch;
+}
+
+.planning-draft-body {
+  display: grid;
+  gap: 16px;
+}
+
+.planning-draft-summary {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--border);
+  background: var(--border);
+}
+
+.planning-draft-summary div {
+  padding: 9px 11px;
+  background: var(--surface);
+}
+
+.planning-draft-summary dt {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.planning-draft-summary dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.planning-draft-loading {
+  display: grid;
+  gap: 8px;
+}
+
+.planning-draft-skeleton {
+  display: block;
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--border);
+  background: linear-gradient(90deg, #e7ece9 20%, #f7f9f8 50%, #e7ece9 80%);
+  background-size: 220% 100%;
+  animation: planning-workspace-loading 1.4s ease-in-out infinite;
+}
+
+.planning-draft-skeleton.short {
+  width: min(360px, 70%);
+}
+
+.planning-draft-empty,
+.planning-draft-error,
+.planning-draft-feedback {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.planning-draft-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.planning-draft-error p {
+  margin: 0;
+}
+
+.planning-draft-feedback {
+  padding: 9px 11px;
+  border-left: 3px solid var(--accent);
+  background: var(--stable-bg);
+  color: var(--stable-text);
+  font-weight: 700;
+}
+
+.planning-draft-editor {
+  display: grid;
+  gap: 13px;
+}
+
+.planning-draft-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.planning-draft-fields label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.planning-draft-fields label:last-child {
+  grid-column: 1 / -1;
+}
+
+.planning-draft-fields input,
+.planning-draft-fields textarea,
+.planning-draft-restore select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.planning-draft-fields textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.planning-draft-actions,
+.planning-draft-delete-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.planning-draft-restore {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.planning-draft-restore label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.planning-draft-delete {
+  color: var(--danger) !important;
+}
+
+.planning-draft-delete-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  padding: 11px;
+  border-left: 3px solid var(--danger);
+  background: var(--critical-bg);
+}
+
+.planning-draft-delete-confirm p {
+  flex: 1 1 240px;
+  margin: 0;
+  color: var(--critical-text);
+  font-weight: 700;
+}
+
+.planning-draft-confirm-delete {
+  background: var(--danger);
+}
+
+.planning-draft-history {
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.planning-draft-history h4 {
+  margin: 0 0 9px;
+  font-size: 14px;
+}
+
+.planning-draft-history ol {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  background: var(--border);
+  list-style: none;
+}
+
+.planning-draft-history li {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.35fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 10px;
+  background: var(--surface);
+}
+
+.planning-draft-history li:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.planning-draft-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.planning-draft-history li p {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .planning-workspace-footer {
@@ -758,6 +972,30 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
     gap: 2px;
   }
 
+  .planning-draft-summary,
+  .planning-draft-fields,
+  .planning-draft-restore,
+  .planning-draft-history li {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-draft-fields label:last-child {
+    grid-column: auto;
+  }
+
+  .planning-draft-error {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .planning-draft-error button,
+  .planning-draft-actions button,
+  .planning-draft-delete-row button,
+  .planning-draft-restore button,
+  .planning-draft-delete-confirm button {
+    width: 100%;
+  }
+
   .planning-timeline-summary {
     grid-template-columns: 1fr;
   }
@@ -811,7 +1049,8 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
 
 @media (prefers-reduced-motion: reduce) {
   .planning-workspace-skeleton,
-  .planning-timeline-skeleton {
+  .planning-timeline-skeleton,
+  .planning-draft-skeleton {
     animation: none;
   }
 }

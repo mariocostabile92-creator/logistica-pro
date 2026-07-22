@@ -363,13 +363,222 @@ export function createPlanningTimeline() {
 }
 
 
-export function createDraftPlaceholder() {
-  return createWorkspaceBlock({
-    component: "draft",
-    eyebrow: "Proposta",
-    title: "Planning Draft",
-    titleId: "planningWorkspaceDraftTitle",
+export function createPlanningDraft() {
+  const section = element("section", {
+    className: "planning-workspace-block planning-workspace-draft",
+    attributes: {
+      "data-planning-component": "draft",
+      "aria-labelledby": "planningWorkspaceDraftTitle",
+    },
   });
+  const heading = element("header", {
+    className: "planning-workspace-block-heading",
+  });
+  heading.append(
+    element("p", { className: "eyebrow", text: "Proposta" }),
+    element("h3", {
+      text: "Planning Draft",
+      attributes: { id: "planningWorkspaceDraftTitle" },
+    }),
+    element("p", {
+      className: "planning-workspace-description",
+      text: "Proposta modificabile senza effetti sul Planning operativo.",
+    }),
+  );
+  const body = element("div", {
+    className: "planning-workspace-block-body planning-draft-body",
+    attributes: {
+      "data-planning-role": "draft-body",
+      "aria-live": "polite",
+    },
+  });
+  const summary = element("dl", {
+    className: "planning-draft-summary",
+    attributes: { "data-planning-role": "draft-summary", hidden: "" },
+  });
+  for (const [label, role] of [
+    ["Nome Draft", "draft-summary-name"],
+    ["Stato", "draft-summary-state"],
+    ["Versione", "draft-summary-version"],
+    ["Ultima modifica", "draft-summary-updated"],
+  ]) {
+    const item = element("div");
+    item.append(
+      element("dt", { text: label }),
+      element("dd", { attributes: { "data-planning-role": role } }),
+    );
+    summary.append(item);
+  }
+  const loading = element("div", {
+    className: "planning-draft-loading",
+    attributes: {
+      "data-planning-role": "draft-loading",
+      role: "status",
+    },
+  });
+  loading.append(
+    element("span", {
+      className: "visually-hidden",
+      text: "Caricamento Planning Draft",
+    }),
+    element("span", { className: "planning-draft-skeleton" }),
+    element("span", { className: "planning-draft-skeleton short" }),
+  );
+  const error = element("div", {
+    className: "planning-draft-error",
+    attributes: {
+      "data-planning-role": "draft-error",
+      role: "alert",
+      hidden: "",
+    },
+  });
+  error.append(
+    element("p", { attributes: { "data-planning-role": "draft-error-text" } }),
+    element("button", {
+      className: "secondary",
+      text: "Riprova Draft",
+      attributes: {
+        type: "button",
+        "data-planning-action": "retry-draft",
+      },
+    }),
+  );
+  const empty = element("p", {
+    className: "planning-draft-empty",
+    text: "Nessun Draft disponibile. Crea una proposta separata dal Planning operativo.",
+    attributes: { "data-planning-role": "draft-empty", hidden: "" },
+  });
+  const editor = element("form", {
+    className: "planning-draft-editor",
+    attributes: {
+      "data-planning-role": "draft-editor",
+      "aria-label": "Metadati Planning Draft",
+    },
+  });
+  const fields = element("div", { className: "planning-draft-fields" });
+  const nameLabel = element("label");
+  nameLabel.append(
+    element("span", { text: "Nome Draft" }),
+    element("input", {
+      attributes: {
+        type: "text",
+        maxlength: "120",
+        required: "",
+        autocomplete: "off",
+        "data-planning-role": "draft-name-input",
+      },
+    }),
+  );
+  const noteLabel = element("label");
+  noteLabel.append(
+    element("span", { text: "Nota" }),
+    element("textarea", {
+      attributes: {
+        rows: "3",
+        maxlength: "1000",
+        "data-planning-role": "draft-note-input",
+      },
+    }),
+  );
+  fields.append(nameLabel, noteLabel);
+  const feedback = element("p", {
+    className: "planning-draft-feedback",
+    attributes: {
+      "data-planning-role": "draft-feedback",
+      role: "status",
+      hidden: "",
+    },
+  });
+  const actions = element("div", {
+    className: "planning-draft-actions",
+    attributes: { "data-planning-role": "draft-actions" },
+  });
+  actions.append(
+    element("button", {
+      text: "Nuovo Draft",
+      attributes: { type: "button", "data-planning-action": "create-draft" },
+    }),
+    element("button", {
+      text: "Salva",
+      attributes: {
+        type: "button",
+        "data-planning-action": "save-draft",
+        hidden: "",
+      },
+    }),
+  );
+  const restore = element("div", {
+    className: "planning-draft-restore",
+    attributes: { "data-planning-role": "draft-restore", hidden: "" },
+  });
+  const restoreLabel = element("label");
+  restoreLabel.append(
+    element("span", { text: "Versione da ripristinare" }),
+    element("select", {
+      attributes: { "data-planning-role": "draft-restore-select" },
+    }),
+  );
+  restore.append(
+    restoreLabel,
+    element("button", {
+      className: "secondary",
+      text: "Ripristina",
+      attributes: {
+        type: "button",
+        "data-planning-action": "restore-draft",
+      },
+    }),
+  );
+  const deletion = element("div", {
+    className: "planning-draft-delete-row",
+    attributes: { "data-planning-role": "draft-delete-row", hidden: "" },
+  });
+  deletion.append(element("button", {
+    className: "secondary planning-draft-delete",
+    text: "Elimina",
+    attributes: { type: "button", "data-planning-action": "delete-draft" },
+  }));
+  const confirmation = element("div", {
+    className: "planning-draft-delete-confirm",
+    attributes: {
+      "data-planning-role": "draft-delete-confirm",
+      role: "group",
+      "aria-label": "Conferma eliminazione Draft",
+      hidden: "",
+    },
+  });
+  confirmation.append(
+    element("p", { text: "Eliminare il Draft dal workspace attivo?" }),
+    element("button", {
+      className: "secondary",
+      text: "Annulla",
+      attributes: { type: "button", "data-planning-action": "cancel-delete-draft" },
+    }),
+    element("button", {
+      className: "planning-draft-confirm-delete",
+      text: "Conferma eliminazione",
+      attributes: { type: "button", "data-planning-action": "confirm-delete-draft" },
+    }),
+  );
+  editor.append(fields, feedback, actions, restore, deletion, confirmation);
+  const history = element("section", {
+    className: "planning-draft-history",
+    attributes: {
+      "data-planning-role": "draft-history",
+      "aria-labelledby": "planningDraftHistoryTitle",
+      hidden: "",
+    },
+  });
+  history.append(
+    element("h4", {
+      text: "Cronologia modifiche",
+      attributes: { id: "planningDraftHistoryTitle" },
+    }),
+    element("ol", { attributes: { "data-planning-role": "draft-history-list" } }),
+  );
+  body.append(summary, loading, error, empty, editor, history);
+  section.append(heading, body);
+  return section;
 }
 
 

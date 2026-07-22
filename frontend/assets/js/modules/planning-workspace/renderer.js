@@ -274,6 +274,123 @@ function renderTimeline(refs, timeline) {
 }
 
 
+const DRAFT_STATE_LABELS = Object.freeze({
+  CREATED: "Creato",
+  DIRTY: "Modificato",
+  SAVED: "Salvato",
+  READ_ONLY: "Sola lettura",
+});
+
+
+function renderDraftHistory(refs, history) {
+  const changes = history?.changes || [];
+  const nodes = changes.slice(0, 5).map((change) => {
+    const item = element("li", {
+      attributes: {
+        tabindex: "0",
+        "aria-label": `Versione ${change.toVersion}: ${change.summary}`,
+      },
+    });
+    const meta = element("div", { className: "planning-draft-history-meta" });
+    meta.append(
+      element("strong", { text: `v${change.toVersion}` }),
+      element("time", {
+        text: formatPlanningTimestamp(change.occurredAt),
+        attributes: { datetime: change.occurredAt },
+      }),
+    );
+    item.append(meta, element("p", { text: change.summary }));
+    return item;
+  });
+  refs.draftHistoryList.replaceChildren(...nodes);
+  refs.draftHistory.hidden = nodes.length === 0;
+}
+
+
+function renderDraftRestoreOptions(refs, draft) {
+  const snapshots = (draft.history?.snapshots || []).filter(
+    (snapshot) => snapshot.version.number < draft.draft.version.number,
+  );
+  refs.draftRestoreSelect.replaceChildren(
+    ...snapshots.map((snapshot) => element("option", {
+      text: `v${snapshot.version.number} - ${snapshot.name}`,
+      attributes: { value: String(snapshot.version.number) },
+    })),
+  );
+  refs.draftRestore.hidden = !snapshots.length || draft.busy;
+  refs.draftRestoreButton.disabled = !snapshots.length || draft.busy;
+}
+
+
+function renderDraft(refs, draft) {
+  const loading = draft?.viewState === "loading";
+  const failed = draft?.viewState === "error";
+  const hasDraft = Boolean(draft?.draft);
+  const readOnly = draft?.state === "READ_ONLY";
+  const empty = draft?.viewState === "empty" || readOnly;
+  refs.draftBody.setAttribute("aria-busy", String(loading || draft?.busy === true));
+  refs.draftLoading.hidden = !loading;
+  refs.draftError.hidden = !failed;
+  setNodeText(
+    refs.draftErrorText,
+    draft?.message || "Planning Draft non disponibile.",
+  );
+  refs.draftSummary.hidden = !hasDraft;
+  refs.draftEmpty.hidden = !empty;
+  setNodeText(
+    refs.draftEmpty,
+    readOnly
+      ? "Draft eliminato. La cronologia resta disponibile in sola lettura."
+      : "Nessun Draft disponibile. Crea una proposta separata dal Planning operativo.",
+  );
+  refs.draftEditor.hidden = loading || (failed && !hasDraft);
+
+  if (hasDraft) {
+    setNodeText(refs.draftSummaryName, draft.draft.name);
+    setNodeText(
+      refs.draftSummaryState,
+      DRAFT_STATE_LABELS[draft.state] || draft.state,
+    );
+    setNodeText(refs.draftSummaryVersion, `v${draft.draft.version.number}`);
+    setNodeText(
+      refs.draftSummaryUpdated,
+      formatPlanningTimestamp(draft.draft.updatedAt),
+    );
+  }
+
+  const renderKey = hasDraft
+    ? `${draft.draft.id}:${draft.draft.version.number}`
+    : "empty";
+  if (refs.draftEditor.dataset.renderKey !== renderKey) {
+    refs.draftNameInput.value = hasDraft ? draft.draft.name : "";
+    refs.draftNoteInput.value = hasDraft ? draft.draft.note : "";
+    refs.draftEditor.dataset.renderKey = renderKey;
+  }
+  refs.draftNameInput.disabled = draft?.busy === true;
+  refs.draftNoteInput.disabled = draft?.busy === true;
+  refs.draftCreateButton.hidden = hasDraft && !readOnly;
+  refs.draftCreateButton.disabled =
+    draft?.busy === true || !refs.draftNameInput.value.trim();
+  refs.draftSaveButton.hidden = !hasDraft || readOnly;
+  refs.draftSaveButton.disabled = draft?.busy === true
+    || draft?.state === "SAVED";
+  refs.draftDeleteRow.hidden = !hasDraft || readOnly;
+  refs.draftDeleteButton.disabled = draft?.busy === true;
+  refs.draftDeleteConfirm.hidden = true;
+  refs.draftFeedback.hidden = !draft?.feedback;
+  setNodeText(refs.draftFeedback, draft?.feedback || "");
+
+  if (hasDraft) {
+    renderDraftRestoreOptions(refs, draft);
+    renderDraftHistory(refs, draft.history);
+  } else {
+    refs.draftRestore.hidden = true;
+    refs.draftHistory.hidden = true;
+    refs.draftHistoryList.replaceChildren();
+  }
+}
+
+
 export function renderPlanningWorkspace(refs, view) {
   refs.root.dataset.planningWorkspaceState = view.state;
   refs.root.dataset.planningWorkspaceTone = view.tone;
@@ -290,7 +407,7 @@ export function renderPlanningWorkspace(refs, view) {
   renderReadiness(refs, view.readiness);
   renderConflicts(refs, view.conflicts);
   renderTimeline(refs, view.timeline);
-  renderPlaceholder(refs, "draft", view.draft);
+  renderDraft(refs, view.draft);
   renderPlaceholder(refs, "publication", view.publication);
   refs.confirmButton.disabled = !view.canConfirm;
   refs.retryButton.hidden = !view.canRetry;

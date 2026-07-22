@@ -23,6 +23,7 @@ from app.demo.repository import init_schema as init_demo_schema
 from app.plugins.fleet.infrastructure.repository import init_schema as init_fleet_schema
 from app.plugins.fleet.infrastructure.sync_schema import init_sync_schema as init_fleet_sync_schema
 from app.plugins.workforce.infrastructure.schema import init_schema as init_workforce_schema
+from app.repositories.planning_draft_repository import init_schema as init_planning_draft_schema
 from app.workspace.repository import init_schema as init_workspace_schema
 
 
@@ -36,6 +37,7 @@ def reset_database():
     init_briefing_schema()
     init_demo_schema()
     init_workspace_schema()
+    init_planning_draft_schema()
     with db_session() as conn:
         conn.execute("DELETE FROM workspace_reset_audits")
         conn.execute("DELETE FROM demo_workspaces")
@@ -52,6 +54,9 @@ def reset_database():
         conn.execute("DELETE FROM fleet_asset_documents")
         conn.execute("DELETE FROM fleet_assets")
         conn.execute("DELETE FROM daily_briefings")
+        conn.execute("DELETE FROM planning_draft_changes")
+        conn.execute("DELETE FROM planning_draft_versions")
+        conn.execute("DELETE FROM planning_drafts")
         conn.execute("DELETE FROM planning_events")
         conn.execute("DELETE FROM planning_versions")
         conn.execute("DELETE FROM assignments")

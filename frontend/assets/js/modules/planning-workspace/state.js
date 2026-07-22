@@ -14,6 +14,45 @@ export function createPlanningWorkspaceState({ planningDate = null } = {}) {
 
 
 export function applyPlanningWorkspaceEvent(current, event) {
+  if (event?.type?.startsWith("draft-")) {
+    const currentDraft = current.snapshot?.draft || {};
+    const draftStates = {
+      "draft-load-started": Object.freeze({ viewState: "loading", busy: false }),
+      "draft-loaded": Object.freeze({ ...event.draft, busy: false }),
+      "draft-load-failed": Object.freeze({
+        ...currentDraft,
+        viewState: "error",
+        busy: false,
+        message: event.message || "Planning Draft non disponibile.",
+      }),
+      "draft-mutation-started": Object.freeze({
+        ...currentDraft,
+        busy: true,
+        feedback: null,
+        message: null,
+      }),
+      "draft-mutation-completed": Object.freeze({
+        ...event.draft,
+        busy: false,
+        feedback: event.message || "Draft aggiornato.",
+      }),
+      "draft-mutation-failed": Object.freeze({
+        ...currentDraft,
+        viewState: "error",
+        busy: false,
+        message: event.message || "Operazione Draft non riuscita.",
+      }),
+    };
+    const nextDraft = draftStates[event.type];
+    if (!nextDraft) return current;
+    return planningWorkspaceModel({
+      ...current,
+      snapshot: {
+        ...(current.snapshot || {}),
+        draft: nextDraft,
+      },
+    });
+  }
   if (event?.type?.startsWith("timeline-")) {
     const timelineStates = {
       "timeline-load-started": Object.freeze({ state: "loading" }),
@@ -54,7 +93,9 @@ export function applyPlanningWorkspaceEvent(current, event) {
     ...current,
     state: nextState,
     message: event.message || null,
-    snapshot: event.snapshot || null,
+    snapshot: event.snapshot
+      ? { ...(current.snapshot || {}), ...event.snapshot }
+      : current.snapshot,
     operationalUnit: event.operationalUnit || current.operationalUnit,
     planningDate: event.planningDate || current.planningDate,
   });
@@ -89,10 +130,10 @@ export function derivePlanningWorkspaceView(state) {
       : placeholder("Non disponibile", state.message || noRuntime),
     conflicts: snapshot.conflicts || null,
     timeline: snapshot.timeline || Object.freeze({ state: "loading" }),
-    draft: placeholder(
-      "Draft non disponibile",
-      "Draft disponibile nelle prossime fasi.",
-    ),
+    draft: snapshot.draft || Object.freeze({
+      viewState: "loading",
+      busy: false,
+    }),
     publication: placeholder(
       "Non disponibile",
       "Publication non disponibile.",
