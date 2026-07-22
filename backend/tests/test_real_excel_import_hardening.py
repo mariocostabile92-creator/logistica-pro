@@ -394,6 +394,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
         and path not in {
             "/api/planning/readiness",
             "/api/planning/conflicts",
+            "/api/planning/timeline",
             "/api/plugins/fleet/v1/sync/preview",
             "/api/plugins/fleet/v1/sync/confirm",
             "/api/plugins/fleet/v1/sync/latest",

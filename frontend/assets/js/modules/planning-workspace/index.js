@@ -1,4 +1,4 @@
-import { getPlanningConflicts } from "../../api.js";
+import { getPlanningConflicts, getPlanningTimeline } from "../../api.js";
 import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
@@ -13,6 +13,10 @@ import {
   createPlanningWorkspaceState,
   derivePlanningWorkspaceView,
 } from "./state.js";
+import {
+  createPlanningTimelineLoader,
+  normalizePlanningTimelineResult,
+} from "./timeline.js";
 import { focusRelativeAction } from "./utils.js";
 
 
@@ -20,6 +24,7 @@ let initialized = false;
 let state;
 let refs;
 const conflictLoader = createPlanningConflictLoader(getPlanningConflicts);
+const timelineLoader = createPlanningTimelineLoader(getPlanningTimeline);
 
 
 function today() {
@@ -32,6 +37,28 @@ function today() {
 function commit(event) {
   state = applyPlanningWorkspaceEvent(state, event);
   renderPlanningWorkspace(refs, derivePlanningWorkspaceView(state));
+}
+
+
+async function loadTimeline() {
+  commit({ type: "timeline-load-started" });
+  try {
+    const payload = await timelineLoader.load({
+      organizationId: "default",
+      operationalUnitId: "default",
+      planningDate: state.planningDate,
+    });
+    commit({
+      type: "timeline-loaded",
+      timeline: normalizePlanningTimelineResult(payload),
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "timeline-load-failed",
+      message: error?.message || "Planning Timeline non disponibile. Riprova.",
+    });
+  }
 }
 
 
@@ -51,6 +78,7 @@ async function loadConflictReview() {
       operationalUnit: readiness.operationalUnit,
       planningDate: readiness.planningDate,
     });
+    await loadTimeline();
   } catch (error) {
     if (error?.name === "AbortError") return;
     commit({
@@ -76,6 +104,12 @@ function handleActionClick(event) {
     .planningAction;
   if (action === "open-legacy") openLegacyFlow();
   if (action === "retry-conflicts") loadConflictReview();
+  if (action === "retry-timeline") loadTimeline();
+  if (action === "view-conflicts") {
+    event.preventDefault();
+    refs.conflictTitle.focus({ preventScroll: true });
+    refs.conflictTitle.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 

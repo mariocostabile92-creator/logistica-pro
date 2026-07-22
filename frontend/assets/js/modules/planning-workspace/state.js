@@ -14,6 +14,25 @@ export function createPlanningWorkspaceState({ planningDate = null } = {}) {
 
 
 export function applyPlanningWorkspaceEvent(current, event) {
+  if (event?.type?.startsWith("timeline-")) {
+    const timelineStates = {
+      "timeline-load-started": Object.freeze({ state: "loading" }),
+      "timeline-loaded": event.timeline,
+      "timeline-load-failed": Object.freeze({
+        state: "error",
+        message: event.message || "Planning Timeline non disponibile.",
+      }),
+    };
+    const nextTimeline = timelineStates[event.type];
+    if (!nextTimeline) return current;
+    return planningWorkspaceModel({
+      ...current,
+      snapshot: {
+        ...(current.snapshot || {}),
+        timeline: nextTimeline,
+      },
+    });
+  }
   const transitions = {
     "load-started": PLANNING_WORKSPACE_STATES.LOADING,
     "empty-detected": PLANNING_WORKSPACE_STATES.EMPTY,
@@ -69,10 +88,7 @@ export function derivePlanningWorkspaceView(state) {
       })
       : placeholder("Non disponibile", state.message || noRuntime),
     conflicts: snapshot.conflicts || null,
-    timeline: placeholder(
-      "Timeline non disponibile",
-      "La timeline sarà collegata nelle prossime fasi.",
-    ),
+    timeline: snapshot.timeline || Object.freeze({ state: "loading" }),
     draft: placeholder(
       "Draft non disponibile",
       "Draft disponibile nelle prossime fasi.",

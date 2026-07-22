@@ -15,6 +15,7 @@ from app.api.routers import (
     planning,
     planning_conflicts,
     planning_readiness,
+    planning_timeline,
 )
 from app.briefing.repository import init_schema as init_briefing_schema
 from app.briefing.router import router as briefing_router
@@ -138,6 +139,7 @@ app.include_router(imports.router)
 app.include_router(operations.router)
 app.include_router(planning_readiness.router)
 app.include_router(planning_conflicts.router)
+app.include_router(planning_timeline.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)

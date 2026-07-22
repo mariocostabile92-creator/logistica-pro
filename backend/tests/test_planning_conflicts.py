@@ -1,5 +1,5 @@
 import ast
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -25,6 +25,13 @@ from app.domain.planning_readiness import (
 )
 from app.main import app
 from app.runtime.planning_conflicts import PlanningConflictService
+from app.runtime.planning_inputs import (
+    PlanningInputCompatibility,
+    PlanningInputCompatibilityCheck,
+    PlanningInputCompositionReport,
+    PlanningInputDiagnostics,
+    PlanningInputRuntimeStatus,
+)
 from app.runtime.planning_readiness import PlanningReadinessEvaluationContext
 
 
@@ -32,6 +39,27 @@ NOW = datetime(2026, 7, 22, 7, 0, tzinfo=UTC)
 OPERATION_DATE = date(2026, 7, 22)
 UNIT = OperationalUnit(external_identifier="unit-a", name="Unit A")
 APP_DIR = Path(__file__).parents[1] / "app"
+
+
+def _composition_report():
+    return PlanningInputCompositionReport(
+        workforce=None,
+        fleet=None,
+        status=PlanningInputRuntimeStatus.INCOMPATIBLE,
+        compatibility=PlanningInputCompatibility(
+            compatible=False,
+            checks=(
+                PlanningInputCompatibilityCheck(
+                    code="WORKFORCE_PRESENT",
+                    compatible=False,
+                    message="Workforce input is missing.",
+                ),
+            ),
+        ),
+        diagnostics=PlanningInputDiagnostics(),
+        timestamp=NOW,
+        legacy_flow_active=True,
+    )
 
 
 def _issue(model, code, *, source="planning-input", category="validation"):
@@ -261,6 +289,7 @@ def test_conflict_service_reuses_one_readiness_composition_context():
             return PlanningReadinessEvaluationContext(
                 result=_readiness(),
                 envelope=None,
+                composition_report=_composition_report(),
             )
 
     provider = CountingProvider()
@@ -277,6 +306,43 @@ def test_conflict_service_reuses_one_readiness_composition_context():
 
     assert provider.calls == 1
     assert result.report.total_conflicts == 0
+
+
+def test_conflict_review_context_is_reused_by_the_timeline_window():
+    class CountingProvider:
+        def __init__(self):
+            self.calls = 0
+
+        def evaluate_with_context(self, **_):
+            self.calls += 1
+            return PlanningReadinessEvaluationContext(
+                result=_readiness(),
+                envelope=None,
+                composition_report=_composition_report(),
+            )
+
+    provider = CountingProvider()
+    service = PlanningConflictService(
+        readiness_provider=provider,
+        engine=_engine(),
+    )
+    parameters = {
+        "organization_id": "organization-one",
+        "operational_unit": UNIT,
+        "operation_date": OPERATION_DATE,
+    }
+
+    conflict_context = service.review_with_context(
+        **parameters,
+        evaluated_at=NOW,
+    )
+    timeline_context = service.review_with_context(
+        **parameters,
+        evaluated_at=NOW + timedelta(seconds=1),
+    )
+
+    assert provider.calls == 1
+    assert timeline_context is conflict_context
 
 
 def test_conflict_endpoint_is_compact_and_excludes_source_datasets():

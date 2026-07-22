@@ -381,6 +381,7 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
                 and path not in {
                     "/api/planning/readiness",
                     "/api/planning/conflicts",
+                    "/api/planning/timeline",
                     "/api/plugins/fleet/v1/sync/preview",
                     "/api/plugins/fleet/v1/sync/confirm",
                     "/api/plugins/fleet/v1/sync/latest",

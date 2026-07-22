@@ -203,7 +203,10 @@ export function createConflictSummary() {
     element("p", { className: "eyebrow", text: "Controlli" }),
     element("h3", {
       text: "Conflict Summary",
-      attributes: { id: "planningWorkspaceConflictsTitle" },
+      attributes: {
+        id: "planningWorkspaceConflictsTitle",
+        tabindex: "-1",
+      },
     }),
     element("p", {
       className: "planning-workspace-description",
@@ -264,13 +267,99 @@ export function createConflictSummary() {
 }
 
 
-export function createTimelinePlaceholder() {
-  return createWorkspaceBlock({
-    component: "timeline",
-    eyebrow: "Sequenza",
-    title: "Planning Timeline",
-    titleId: "planningWorkspaceTimelineTitle",
+export function createPlanningTimeline() {
+  const section = element("section", {
+    className: "planning-workspace-block planning-workspace-timeline",
+    attributes: {
+      "data-planning-component": "timeline",
+      "aria-labelledby": "planningWorkspaceTimelineTitle",
+    },
   });
+  const heading = element("header", {
+    className: "planning-workspace-block-heading",
+  });
+  heading.append(
+    element("p", { className: "eyebrow", text: "Sequenza" }),
+    element("h3", {
+      text: "Planning Timeline",
+      attributes: { id: "planningWorkspaceTimelineTitle" },
+    }),
+    element("p", {
+      className: "planning-workspace-description",
+      text: "Cosa e successo oggi prima che il piano fosse pronto.",
+    }),
+  );
+  const body = element("div", {
+    className: "planning-workspace-block-body planning-timeline-body",
+    attributes: {
+      "data-planning-role": "timeline-body",
+      "aria-live": "polite",
+    },
+  });
+  const summary = element("dl", { className: "planning-timeline-summary" });
+  for (const [label, role] of [
+    ["Eventi", "timeline-count"],
+    ["Stato corrente", "timeline-status"],
+    ["Ultimo aggiornamento", "timeline-updated"],
+  ]) {
+    const item = element("div");
+    item.append(
+      element("dt", { text: label }),
+      element("dd", { attributes: { "data-planning-role": role } }),
+    );
+    summary.append(item);
+  }
+  const loading = element("div", {
+    className: "planning-timeline-loading",
+    attributes: {
+      "data-planning-role": "timeline-loading",
+      role: "status",
+    },
+  });
+  loading.append(
+    element("span", {
+      className: "visually-hidden",
+      text: "Caricamento Timeline",
+    }),
+    element("span", { className: "planning-timeline-skeleton" }),
+    element("span", { className: "planning-timeline-skeleton" }),
+  );
+  const empty = element("p", {
+    className: "planning-timeline-message",
+    text: "Nessun evento disponibile per la giornata.",
+    attributes: { "data-planning-role": "timeline-empty", hidden: "" },
+  });
+  const error = element("div", {
+    className: "planning-timeline-error",
+    attributes: {
+      "data-planning-role": "timeline-error",
+      role: "alert",
+      hidden: "",
+    },
+  });
+  error.append(
+    element("p", {
+      attributes: { "data-planning-role": "timeline-error-text" },
+    }),
+    element("button", {
+      className: "secondary",
+      text: "Riprova Timeline",
+      attributes: {
+        type: "button",
+        "data-planning-action": "retry-timeline",
+      },
+    }),
+  );
+  const groups = element("div", {
+    className: "planning-timeline-groups",
+    attributes: {
+      "data-planning-role": "timeline-groups",
+      "aria-label": "Cronologia Planning",
+    },
+  });
+  body.append(summary, loading, empty, error, groups);
+  section.append(heading, body);
+  return section;
 }
 
 

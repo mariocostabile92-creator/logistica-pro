@@ -19,6 +19,10 @@ import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
 } from "../assets/js/modules/planning-workspace/conflicts.js";
+import {
+  createPlanningTimelineLoader,
+  normalizePlanningTimelineResult,
+} from "../assets/js/modules/planning-workspace/timeline.js";
 
 
 const frontendFile = (path) => readFile(
@@ -188,6 +192,55 @@ function conflict({
 }
 
 
+function timelineEvent({
+  id = "timeline-1",
+  category = "READINESS",
+  severity = "SUCCESS",
+  timestamp = "2026-07-22T07:00:00Z",
+  relatedConflicts = [],
+} = {}) {
+  return {
+    id,
+    timestamp,
+    category,
+    severity,
+    title: "Planning Readiness completata",
+    description: "Valutazione prodotta dal backend.",
+    status: "READY",
+    source: "planning-readiness",
+    operational_unit: {
+      external_identifier: "unit-a",
+      name: "Unit A",
+    },
+    planning_date: "2026-07-22",
+    reference: "version-1",
+    related_conflicts: relatedConflicts,
+    related_readiness: "READY",
+    metadata: [{ key: "score", value: "100" }],
+  };
+}
+
+
+function timelinePayload(events = [timelineEvent()]) {
+  return {
+    report: {
+      event_count: events.length,
+      last_updated: events[0]?.timestamp || null,
+      current_status: "READY",
+      groups: events.length
+        ? [{
+          key: "LAST_HOUR",
+          label: "Ultima ora",
+          event_count: events.length,
+          event_ids: events.map((item) => item.id),
+        }]
+        : [],
+      events,
+    },
+  };
+}
+
+
 test("readiness payload normalization supports every backend state", () => {
   for (const status of [
     "READY",
@@ -308,6 +361,70 @@ test("Conflict Review loader prevents duplicate requests and supports retry", as
 });
 
 
+test("Planning Timeline normalizes complete and empty backend reports", () => {
+  const ready = normalizePlanningTimelineResult(timelinePayload());
+  const empty = normalizePlanningTimelineResult(timelinePayload([]));
+
+  assert.equal(ready.state, "ready");
+  assert.equal(ready.eventCount, 1);
+  assert.equal(ready.groups[0].label, "Ultima ora");
+  assert.equal(ready.events[0].operationalUnit.externalIdentifier, "unit-a");
+  assert.equal(ready.events[0].metadata[0].value, "100");
+  assert.equal(empty.state, "empty");
+  assert.throws(
+    () => normalizePlanningTimelineResult(timelinePayload([
+      timelineEvent({ category: "UNKNOWN" }),
+    ])),
+    /Classificazione evento timeline non riconosciuta/,
+  );
+});
+
+
+test("Planning Timeline loader coalesces duplicate calls and supports retry", async () => {
+  let calls = 0;
+  let release;
+  const loader = createPlanningTimelineLoader(() => {
+    calls += 1;
+    if (calls > 1) return Promise.resolve(timelinePayload());
+    return new Promise((resolve) => { release = resolve; });
+  });
+  const first = loader.load();
+  const duplicate = loader.load();
+
+  assert.equal(first, duplicate);
+  assert.equal(calls, 1);
+  release(timelinePayload());
+  await first;
+  await loader.load();
+  assert.equal(calls, 2);
+});
+
+
+test("Timeline loading and failure preserve the current Planning state", () => {
+  const normalized = normalizePlanningConflictResult(conflictPayload());
+  const ready = applyPlanningWorkspaceEvent(
+    createPlanningWorkspaceState(),
+    { type: "ready-received", snapshot: normalized },
+  );
+  const loading = applyPlanningWorkspaceEvent(
+    ready,
+    { type: "timeline-load-started" },
+  );
+  const failed = applyPlanningWorkspaceEvent(
+    loading,
+    { type: "timeline-load-failed", message: "Timeline non disponibile." },
+  );
+
+  assert.equal(failed.state, PLANNING_WORKSPACE_STATES.READY);
+  assert.equal(failed.snapshot.conflicts, normalized.conflicts);
+  assert.equal(failed.snapshot.timeline.state, "error");
+  assert.equal(
+    applyPlanningWorkspaceEvent(failed, { type: "timeline-unknown" }),
+    failed,
+  );
+});
+
+
 test("state exposes backend conflict groups without deriving decisions", () => {
   const normalized = normalizePlanningConflictResult(conflictPayload({
     status: "BLOCKED",
@@ -342,7 +459,7 @@ test("layout preserves the definitive desktop component hierarchy", async () => 
     "createStatusCard()",
     "createReadinessCard()",
     "createConflictSummary()",
-    "createTimelinePlaceholder()",
+    "createPlanningTimeline()",
     "createDraftPlaceholder()",
     "createPublicationPlaceholder()",
     "createFooterActions()",
@@ -381,6 +498,8 @@ test("renderer covers all components and exposes loading semantics", async () =>
   assert.match(components, /readiness-warning-list/);
   assert.match(components, /conflict-groups/);
   assert.match(components, /conflict-list/);
+  assert.match(components, /timeline-groups/);
+  assert.match(components, /retry-timeline/);
   assert.match(components, /aria-live/);
 });
 
@@ -399,7 +518,9 @@ test("responsive styles cover tablet mobile order and horizontal containment", a
   );
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /planning-conflict-group summary:focus-visible/);
+  assert.match(css, /planning-timeline-event:focus-visible/);
   assert.match(css, /planning-conflict-counts[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /planning-timeline-summary[\s\S]*grid-template-columns: 1fr/);
 });
 
 
@@ -416,7 +537,7 @@ test("keyboard navigation supports arrows boundaries and Escape", async () => {
 });
 
 
-test("Planning Workspace consumes one Conflict Review API and no business algorithms", async () => {
+test("Planning Workspace consumes compact review APIs and no business algorithms", async () => {
   const paths = [
     "assets/js/modules/planning-workspace/index.js",
     "assets/js/modules/planning-workspace/models.js",
@@ -427,11 +548,13 @@ test("Planning Workspace consumes one Conflict Review API and no business algori
     "assets/js/modules/planning-workspace/utils.js",
     "assets/js/modules/planning-workspace/readiness.js",
     "assets/js/modules/planning-workspace/conflicts.js",
+    "assets/js/modules/planning-workspace/timeline.js",
   ];
   const sources = await Promise.all(paths.map(frontendFile));
   const combined = sources.join("\n");
 
   assert.match(combined, /getPlanningConflicts/);
+  assert.match(combined, /getPlanningTimeline/);
   assert.doesNotMatch(combined, /getPlanningReadiness/);
   assert.doesNotMatch(combined, /fetch\(|getLatestPlanning/);
   assert.doesNotMatch(combined, /PlanningInputRuntime|generatePlanning/);
@@ -439,7 +562,7 @@ test("Planning Workspace consumes one Conflict Review API and no business algori
 });
 
 
-test("frontend exposes loading error retry and one initial conflict request", async () => {
+test("frontend exposes Timeline loading error retry and sequential initial requests", async () => {
   const [index, api, renderer] = await Promise.all([
     frontendFile("assets/js/modules/planning-workspace/index.js"),
     frontendFile("assets/js/api.js"),
@@ -449,10 +572,16 @@ test("frontend exposes loading error retry and one initial conflict request", as
   assert.match(index, /type: "load-started"/);
   assert.match(index, /type: "load-failed"/);
   assert.match(index, /retry-conflicts/);
+  assert.match(index, /retry-timeline/);
   assert.match(index, /createPlanningConflictLoader/);
+  assert.match(index, /createPlanningTimelineLoader/);
+  assert.match(index, /await loadTimeline\(\)/);
   assert.match(api, /\/api\/planning\/conflicts/);
+  assert.match(api, /\/api\/planning\/timeline/);
   assert.match(api, /signal/);
   assert.match(renderer, /retryButton\.hidden/);
+  assert.match(renderer, /relatedConflicts/);
+  assert.match(renderer, /view-conflicts/);
   assert.match(renderer, /createElement|element\("details"/);
 });
 

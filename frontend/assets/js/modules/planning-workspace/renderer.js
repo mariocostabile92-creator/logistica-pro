@@ -149,6 +149,131 @@ function renderConflicts(refs, report) {
 }
 
 
+const TIMELINE_MARKERS = Object.freeze({
+  IMPORT: "I",
+  VALIDATION: "V",
+  WORKFORCE: "W",
+  FLEET: "F",
+  READINESS: "R",
+  CONFLICT: "!",
+  RUNTIME: "RT",
+  SYSTEM: "S",
+  LEGACY: "L",
+});
+
+
+function timelineEventNode(event) {
+  const item = element("li", {
+    className: `planning-timeline-event severity-${event.severity.toLowerCase()}`,
+    attributes: {
+      tabindex: "0",
+      "data-timeline-category": event.category,
+      "aria-label": `${event.category}: ${event.title}`,
+    },
+  });
+  const marker = element("span", {
+    className: "planning-timeline-marker",
+    text: TIMELINE_MARKERS[event.category] || "i",
+    attributes: { "aria-hidden": "true" },
+  });
+  const content = element("div", { className: "planning-timeline-event-content" });
+  const meta = element("div", { className: "planning-timeline-event-meta" });
+  meta.append(
+    element("time", {
+      text: formatPlanningTimestamp(event.timestamp),
+      attributes: { datetime: event.timestamp },
+    }),
+    element("span", {
+      className: "planning-timeline-category",
+      text: event.category,
+    }),
+    element("span", {
+      className: `planning-timeline-status severity-${event.severity.toLowerCase()}`,
+      text: event.status,
+    }),
+  );
+  content.append(
+    meta,
+    element("h5", { text: event.title }),
+    element("p", { text: event.description }),
+  );
+  if (event.relatedConflicts.length) {
+    content.append(element("a", {
+      className: "planning-timeline-conflict-link",
+      text: `Apri conflitti (${event.relatedConflicts.length})`,
+      attributes: {
+        href: "#planningWorkspaceConflictsTitle",
+        "data-planning-action": "view-conflicts",
+      },
+    }));
+  }
+  item.append(marker, content);
+  return item;
+}
+
+
+function renderTimelineGroups(refs, timeline) {
+  const eventsById = new Map(
+    timeline.events.map((event) => [event.id, event]),
+  );
+  const groups = timeline.groups.map((group) => {
+    const titleId = `planningTimelineGroup-${group.key}`;
+    const section = element("section", {
+      className: "planning-timeline-group",
+      attributes: { "aria-labelledby": titleId },
+    });
+    section.append(element("h4", {
+      text: `${group.label} (${group.eventCount})`,
+      attributes: { id: titleId },
+    }));
+    const list = element("ol");
+    list.append(
+      ...group.eventIds
+        .map((eventId) => eventsById.get(eventId))
+        .filter(Boolean)
+        .map(timelineEventNode),
+    );
+    section.append(list);
+    return section;
+  });
+  refs.timelineGroups.replaceChildren(...groups);
+  refs.timelineGroups.hidden = groups.length === 0;
+}
+
+
+function renderTimeline(refs, timeline) {
+  const loading = timeline?.state === "loading";
+  const empty = timeline?.state === "empty";
+  const failed = timeline?.state === "error";
+  const ready = timeline?.state === "ready";
+  refs.timelineBody.setAttribute("aria-busy", String(loading));
+  refs.timelineLoading.hidden = !loading;
+  refs.timelineEmpty.hidden = !empty;
+  refs.timelineError.hidden = !failed;
+  setNodeText(
+    refs.timelineErrorText,
+    timeline?.message || "Planning Timeline non disponibile.",
+  );
+  setNodeText(refs.timelineCount, ready || empty ? timeline.eventCount : "-");
+  setNodeText(
+    refs.timelineStatus,
+    ready || empty ? timeline.currentStatus : "Non disponibile",
+  );
+  setNodeText(
+    refs.timelineUpdated,
+    ready || empty
+      ? formatPlanningTimestamp(timeline.lastUpdated)
+      : "Non disponibile",
+  );
+  if (ready) {
+    renderTimelineGroups(refs, timeline);
+    return;
+  }
+  refs.timelineGroups.replaceChildren();
+  refs.timelineGroups.hidden = true;
+}
+
+
 export function renderPlanningWorkspace(refs, view) {
   refs.root.dataset.planningWorkspaceState = view.state;
   refs.root.dataset.planningWorkspaceTone = view.tone;
@@ -164,7 +289,7 @@ export function renderPlanningWorkspace(refs, view) {
   setNodeText(refs.statusDescription, view.statusDescription);
   renderReadiness(refs, view.readiness);
   renderConflicts(refs, view.conflicts);
-  renderPlaceholder(refs, "timeline", view.timeline);
+  renderTimeline(refs, view.timeline);
   renderPlaceholder(refs, "draft", view.draft);
   renderPlaceholder(refs, "publication", view.publication);
   refs.confirmButton.disabled = !view.canConfirm;

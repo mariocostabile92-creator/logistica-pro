@@ -78,4 +78,5 @@ class PlanningReadinessService:
         return PlanningReadinessEvaluationContext(
             result=self._evaluator.evaluate(report),
             envelope=composition.envelope,
+            composition_report=composition.report,
         )
