@@ -165,13 +165,16 @@ test("unexpected failures produce a dedicated user state", () => {
 });
 
 
-test("page includes hero metrics filters empty CTA and live regions", async () => {
+test("page embeds the existing Briefing inside Mission Control", async () => {
   const html = await readFile(
     new URL("../index.html", import.meta.url),
     "utf8",
   );
 
-  assert.match(html, /Cosa richiede la tua attenzione oggi/);
+  assert.match(html, /Mission Control/);
+  assert.match(html, /Azioni richieste/);
+  assert.match(html, /Operational Unit/);
+  assert.match(html, /id="briefingTitle">Briefing/);
   assert.match(
     html,
     /Il briefing sarà disponibile dopo la creazione del primo planning\./,

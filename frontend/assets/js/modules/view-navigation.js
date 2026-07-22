@@ -2,6 +2,7 @@ import { byId } from "../utils/dom.js";
 
 
 const HOME_SECTIONS = [
+  "missionControlSection",
   "workspaceCurrentSection",
   "onboardingSection",
   "briefingSection",

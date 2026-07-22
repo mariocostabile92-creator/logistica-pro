@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="legacy-app-title" content="DSP Operations OS" />
   <title>Operations Engine</title>
+  <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./assets/css/base.css" />
   <link rel="stylesheet" href="./assets/css/layout.css" />
   <link rel="stylesheet" href="./assets/css/components.css" />
@@ -19,6 +20,7 @@
   <link rel="stylesheet" href="./assets/css/onboarding.css" />
   <link rel="stylesheet" href="./assets/css/demo-workspace.css" />
   <link rel="stylesheet" href="./assets/css/briefing.css" />
+  <link rel="stylesheet" href="./assets/css/mission-control.css?v=1" />
   <link rel="stylesheet" href="./assets/css/workspace-lifecycle.css?v=5" />
   <link rel="stylesheet" href="./assets/css/excel-import.css?v=1" />
   <link rel="stylesheet" href="./assets/css/responsive.css?v=2" />
@@ -139,8 +141,206 @@
 
   <main class="app-shell">
     <section
+      id="missionControlSection"
+      class="mission-control"
+      aria-labelledby="missionControlTitle"
+    >
+      <header class="mission-control-header">
+        <div class="mission-control-heading">
+          <p class="eyebrow">Scrivania operativa</p>
+          <h2 id="missionControlTitle">Mission Control</h2>
+          <div class="mission-control-clock" aria-label="Contesto temporale">
+            <time id="missionDate">Data in aggiornamento</time>
+            <span aria-hidden="true">·</span>
+            <time id="missionTime">--:--</time>
+          </div>
+        </div>
+
+        <div class="mission-context-controls">
+          <label class="mission-unit-control" for="missionOperationalUnit">
+            <span>Operational Unit</span>
+            <select
+              id="missionOperationalUnit"
+              aria-describedby="missionOperationalUnitHint"
+              disabled
+            >
+              <option value="all">Tutte</option>
+            </select>
+          </label>
+          <span id="missionOperationalUnitHint" class="mission-temporary-note">
+            Selettore predisposto · snapshot aggregato
+          </span>
+          <button id="missionRefreshBtn" type="button" class="secondary">
+            Aggiorna
+          </button>
+          <span id="missionFreshness" class="mission-freshness">
+            Aggiornamento in corso
+          </span>
+        </div>
+      </header>
+
+      <section
+        id="missionDayStatus"
+        class="mission-day-status is-loading"
+        aria-labelledby="missionDayStatusLabel"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div class="mission-status-copy">
+          <span class="mission-status-symbol" aria-hidden="true"></span>
+          <div>
+            <div class="mission-status-heading">
+              <h3 id="missionDayStatusLabel">Stato in aggiornamento</h3>
+              <span id="missionStatusTemporary" class="mission-temporary-badge">
+                Temporaneo
+              </span>
+            </div>
+            <p id="missionDayStatusDescription">
+              Verifica degli snapshot operativi disponibili.
+            </p>
+          </div>
+        </div>
+        <dl class="mission-status-facts" aria-label="Sintesi operativa">
+          <div>
+            <dt>Copertura persone</dt>
+            <dd id="missionWorkforceKpi">Non disponibile</dd>
+          </div>
+          <div>
+            <dt>Mezzi disponibili</dt>
+            <dd id="missionFleetKpi">Non disponibile</dd>
+          </div>
+          <div>
+            <dt>Conflitti bloccanti</dt>
+            <dd id="missionConflictKpi">Non disponibile</dd>
+          </div>
+        </dl>
+      </section>
+
+      <div class="mission-primary-grid">
+        <section class="mission-actions" aria-labelledby="missionActionsTitle">
+          <header class="mission-section-heading">
+            <div>
+              <p class="eyebrow">Prima di iniziare</p>
+              <h3 id="missionActionsTitle">Azioni richieste</h3>
+            </div>
+            <span id="missionActionCount" class="mission-count-badge">--</span>
+          </header>
+          <div
+            id="missionActionsState"
+            class="mission-actions-state is-loading"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <div class="mission-actions-skeleton" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div id="missionActionsList" class="mission-actions-list" hidden></div>
+        </section>
+
+        <aside class="mission-snapshots" aria-labelledby="missionSnapshotsTitle">
+          <header class="mission-section-heading">
+            <div>
+              <p class="eyebrow">Fonti dello stato</p>
+              <h3 id="missionSnapshotsTitle">Stato dei moduli</h3>
+            </div>
+          </header>
+
+          <article class="mission-snapshot" data-mission-snapshot="workforce">
+            <header>
+              <h4>Workforce</h4>
+              <span id="missionWorkforceState" class="mission-module-state is-temporary">
+                In aggiornamento
+              </span>
+            </header>
+            <dl>
+              <div>
+                <dt>Disponibilità</dt>
+                <dd id="missionWorkforceAvailability">Non disponibile</dd>
+              </div>
+              <div>
+                <dt>Assenze</dt>
+                <dd id="missionWorkforceAbsences">Non esposte</dd>
+              </div>
+            </dl>
+            <button type="button" class="mission-workspace-link" data-mission-workspace="workforce">
+              Apri Workforce
+            </button>
+          </article>
+
+          <article class="mission-snapshot" data-mission-snapshot="fleet">
+            <header>
+              <h4>Fleet</h4>
+              <span id="missionFleetState" class="mission-module-state is-temporary">
+                In aggiornamento
+              </span>
+            </header>
+            <dl>
+              <div>
+                <dt>Mezzi disponibili</dt>
+                <dd id="missionFleetAvailable">Non esposti</dd>
+              </div>
+              <div>
+                <dt>Officina</dt>
+                <dd id="missionFleetMaintenance">Non disponibile</dd>
+              </div>
+              <div>
+                <dt>Documenti</dt>
+                <dd id="missionFleetDocuments">Non disponibili</dd>
+              </div>
+            </dl>
+            <button type="button" class="mission-workspace-link" data-mission-workspace="fleet">
+              Apri Fleet
+            </button>
+          </article>
+
+          <article class="mission-snapshot" data-mission-snapshot="planning">
+            <header>
+              <h4>Planning</h4>
+              <span id="missionPlanningState" class="mission-module-state is-temporary">
+                In aggiornamento
+              </span>
+            </header>
+            <dl>
+              <div>
+                <dt>Readiness</dt>
+                <dd id="missionPlanningReadiness">Non disponibile</dd>
+              </div>
+              <div>
+                <dt>Conflitti</dt>
+                <dd id="missionPlanningConflicts">Non disponibili</dd>
+              </div>
+              <div>
+                <dt>Ultima generazione</dt>
+                <dd id="missionPlanningGenerated">Non disponibile</dd>
+              </div>
+            </dl>
+            <button type="button" class="mission-workspace-link" data-mission-workspace="operations">
+              Apri Operations
+            </button>
+          </article>
+        </aside>
+      </div>
+
+      <section class="mission-timeline" aria-labelledby="missionTimelineTitle">
+        <header class="mission-section-heading">
+          <div>
+            <p class="eyebrow">Oggi</p>
+            <h3 id="missionTimelineTitle">Timeline operativa</h3>
+          </div>
+          <span class="mission-temporary-note">Eventi disponibili nello snapshot</span>
+        </header>
+        <ol id="missionTimelineList" class="mission-timeline-list" aria-live="polite">
+          <li class="mission-timeline-placeholder">Cronologia in aggiornamento.</li>
+        </ol>
+      </section>
+    </section>
+
+    <section
       id="workspaceCurrentSection"
-      class="workspace-current-section"
+      class="workspace-current-section mission-control-source"
       aria-labelledby="workspaceCurrentTitle"
     >
       <article
@@ -195,7 +395,7 @@
 
     <section
       id="onboardingSection"
-      class="onboarding-section"
+      class="onboarding-section mission-control-source"
       aria-labelledby="onboardingTitle"
     >
       <div
@@ -298,13 +498,13 @@
 
     <section
       id="briefingSection"
-      class="briefing-section"
+      class="briefing-section mission-briefing"
       aria-labelledby="briefingTitle"
     >
       <header class="briefing-heading">
         <div>
-          <p class="eyebrow">Daily Operations Briefing</p>
-          <h2 id="briefingTitle">Cosa richiede la tua attenzione oggi</h2>
+          <p class="eyebrow">Sintesi operativa</p>
+          <h2 id="briefingTitle">Briefing</h2>
         </div>
         <button id="refreshBriefingBtn" type="button" class="secondary">
           Aggiorna briefing
@@ -452,7 +652,7 @@
 
     <section
       id="demoWorkspaceHomeSection"
-      class="demo-workspace-section"
+      class="demo-workspace-section mission-control-source"
       aria-label="Demo Workspace"
     >
       <div

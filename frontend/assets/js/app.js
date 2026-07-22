@@ -4,6 +4,7 @@ import { initFleetImport } from "./modules/import-fleet.js";
 import { initFleetPage } from "./modules/fleet-page.js";
 import { initFleetSync } from "./modules/fleet-sync.js";
 import { initDemoWorkspace } from "./modules/demo-workspace.js";
+import { initMissionControl } from "./modules/mission-control.js";
 import { initOnboarding } from "./modules/onboarding.js";
 import { initOperationsDashboard } from "./modules/operations-dashboard.js";
 import { initPlanningPage } from "./modules/planning-page.js";
@@ -30,6 +31,7 @@ async function checkHealth() {
 
 initPlanningImport();
 initFleetImport();
+initMissionControl();
 initBriefing();
 initOnboarding();
 initOperationsDashboard();

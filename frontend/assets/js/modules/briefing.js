@@ -64,7 +64,7 @@ function localizedTimestamp(value) {
 }
 
 
-function userFacingCopy(value) {
+export function userFacingCopy(value) {
   return String(value ?? "")
     .replaceAll("Human Resources", "Risorse")
     .replaceAll("Human Resource", "Risorsa")
@@ -341,7 +341,7 @@ function renderAvailable(view) {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
-  renderSections(view);
+  byId("briefingIssueList").replaceChildren();
 }
 
 
@@ -366,6 +366,9 @@ function updateBriefing(event) {
 async function fetchBriefing({ generate = false } = {}) {
   const requestId = ++briefingRequestId;
   updateBriefing({ type: "load-started" });
+  document.dispatchEvent(new CustomEvent("briefing:state-changed", {
+    detail: { phase: "loading" },
+  }));
   try {
     let response = await getLatestDailyBriefing();
     if (generate || (
@@ -378,7 +381,11 @@ async function fetchBriefing({ generate = false } = {}) {
     if (requestId === briefingRequestId) {
       updateBriefing({ type: "load-completed", briefing: response });
       document.dispatchEvent(new CustomEvent("briefing:changed", {
-        detail: { available: response.status !== "unavailable" },
+        detail: {
+          available: response.status !== "unavailable",
+          phase: response.status === "unavailable" ? "unavailable" : "available",
+          briefing: response,
+        },
       }));
     }
   } catch (error) {
@@ -395,6 +402,12 @@ async function fetchBriefing({ generate = false } = {}) {
         type: "load-failed",
         message: presentation.message,
       });
+      document.dispatchEvent(new CustomEvent("briefing:state-changed", {
+        detail: {
+          phase: "error",
+          errorMessage: presentation.message,
+        },
+      }));
     }
   }
 }
