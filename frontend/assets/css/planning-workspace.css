@@ -1,0 +1,322 @@
+.planning-workspace,
+.planning-workspace * {
+  min-width: 0;
+}
+
+.planning-workspace {
+  width: 100%;
+}
+
+body[data-active-workspace="operations"] .workspace-tab.active,
+body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabled) {
+  background: #f7faf8;
+  color: #173d35;
+}
+
+.planning-workspace-shell {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  overflow: clip;
+}
+
+.planning-workspace-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.planning-workspace-heading h2 {
+  margin: 4px 0 0;
+  font-size: 28px;
+}
+
+.planning-workspace-question {
+  max-width: 680px;
+  margin: 7px 0 0;
+  color: var(--text-muted);
+}
+
+.planning-workspace-context {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  min-width: min(420px, 100%);
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.planning-workspace-context div {
+  padding: 11px 14px;
+}
+
+.planning-workspace-context div + div {
+  border-left: 1px solid var(--border);
+}
+
+.planning-workspace-context dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.planning-workspace-context dd {
+  margin: 3px 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.planning-workspace-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.planning-workspace-status,
+.planning-workspace-block,
+.planning-workspace-footer {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.planning-workspace-status {
+  padding: 20px;
+  border-left: 5px solid var(--info);
+}
+
+[data-planning-workspace-tone="stable"] .planning-workspace-status {
+  border-left-color: var(--accent);
+  background: var(--stable-bg);
+}
+
+[data-planning-workspace-tone="attention"] .planning-workspace-status {
+  border-left-color: var(--warning);
+  background: var(--attention-bg);
+}
+
+[data-planning-workspace-tone="critical"] .planning-workspace-status {
+  border-left-color: var(--danger);
+  background: var(--critical-bg);
+}
+
+.planning-workspace-badge {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #dfeaf2;
+  color: #17324d;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.planning-workspace-status h3,
+.planning-workspace-block h3 {
+  margin: 7px 0 0;
+  font-size: 19px;
+}
+
+.planning-workspace-description {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.planning-workspace-block {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.34fr) minmax(0, 0.66fr);
+  align-items: center;
+}
+
+.planning-workspace-block-heading,
+.planning-workspace-block-body {
+  padding: 17px 20px;
+}
+
+.planning-workspace-block-body {
+  border-left: 1px solid var(--border);
+  background: var(--surface-subtle);
+}
+
+.planning-workspace-block-value {
+  margin: 0;
+  color: #263630;
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.planning-workspace-timeline .planning-workspace-block-body {
+  min-height: 82px;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 12%,
+    var(--border) 12%,
+    var(--border) 88%,
+    transparent 88%
+  );
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+}
+
+.planning-workspace-draft .planning-workspace-block-body {
+  min-height: 120px;
+}
+
+.planning-workspace-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 20px;
+  background: #eef2f0;
+}
+
+.planning-workspace-footer p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.planning-workspace-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.planning-workspace-loading {
+  display: grid;
+  gap: 12px;
+}
+
+.planning-workspace-skeleton {
+  height: 82px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, #e7ece9 20%, #f7f9f8 50%, #e7ece9 80%);
+  background-size: 220% 100%;
+  animation: planning-workspace-loading 1.4s ease-in-out infinite;
+}
+
+.planning-workspace-legacy {
+  margin-top: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.planning-workspace-legacy > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px;
+}
+
+.planning-workspace-legacy > summary strong,
+.planning-workspace-legacy > summary span {
+  display: block;
+}
+
+.planning-workspace-legacy-note {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.planning-workspace-legacy-content {
+  padding: 0 18px 22px;
+  border-top: 1px solid var(--border);
+}
+
+@keyframes planning-workspace-loading {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (max-width: 900px) {
+  .planning-workspace-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .planning-workspace-context {
+    width: 100%;
+  }
+
+  .planning-workspace-block {
+    grid-template-columns: minmax(190px, 0.42fr) minmax(0, 0.58fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .planning-workspace-heading h2 {
+    font-size: 24px;
+  }
+
+  .planning-workspace-context,
+  .planning-workspace-block {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-workspace-context div + div,
+  .planning-workspace-block-body {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .planning-workspace-status,
+  .planning-workspace-block-heading,
+  .planning-workspace-block-body {
+    padding: 15px;
+  }
+
+  .planning-workspace-draft {
+    order: 4;
+  }
+
+  .planning-workspace-timeline {
+    order: 5;
+  }
+
+  .planning-workspace-publication {
+    order: 6;
+  }
+
+  .planning-workspace-footer {
+    order: 7;
+    align-items: stretch;
+    flex-direction: column;
+    padding: 15px;
+  }
+
+  .planning-workspace-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .planning-workspace-actions button {
+    width: 100%;
+  }
+
+  .planning-workspace-legacy > summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .planning-workspace-legacy-content {
+    padding: 0 12px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-workspace-skeleton {
+    animation: none;
+  }
+}

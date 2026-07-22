@@ -652,10 +652,41 @@
     </section>
 
     <section
+      id="planningWorkspaceSection"
+      class="planning-workspace"
+      aria-labelledby="planningWorkspaceTitle"
+      hidden
+    >
+      <div
+        id="planningWorkspaceRoot"
+        data-planning-workspace-state="loading"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <h2 id="planningWorkspaceTitle">Planning Workspace</h2>
+        <p>Preparazione del workspace di pianificazione.</p>
+      </div>
+    </section>
+
+    <details
+      id="legacyOperationsRegion"
+      class="planning-workspace-legacy"
+      hidden
+    >
+      <summary id="legacyOperationsSummary">
+        <span>
+          <span class="eyebrow">Compatibilit&agrave; transitoria</span>
+          <strong>Flusso Planning legacy</strong>
+        </span>
+        <span class="planning-workspace-legacy-note">
+          Strumenti operativi attuali
+        </span>
+      </summary>
+      <div class="planning-workspace-legacy-content">
+    <section
       id="planningSection"
       class="planning-section"
       aria-labelledby="planningTitle"
-      hidden
     >
       <div class="section-heading planning-toolbar">
         <div>
@@ -885,7 +916,6 @@
       id="dashboardSection"
       class="dashboard-section"
       aria-labelledby="dashboardTitle"
-      hidden
     >
       <div class="section-heading dashboard-toolbar">
         <div>
@@ -989,7 +1019,6 @@
       id="importsSection"
       class="imports-section"
       aria-labelledby="importsTitle"
-      hidden
     >
       <details id="importsDisclosure" class="data-source-disclosure" open>
         <summary>
@@ -1098,6 +1127,8 @@
         </div>
       </details>
     </section>
+      </div>
+    </details>
 
     <section
       id="workforceSection"

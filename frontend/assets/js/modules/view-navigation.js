@@ -10,9 +10,8 @@ const HOME_SECTIONS = [
 ];
 
 const OPERATIONS_SECTIONS = [
-  "planningSection",
-  "dashboardSection",
-  "importsSection",
+  "planningWorkspaceSection",
+  "legacyOperationsRegion",
 ];
 
 const WORKSPACE_SECTIONS = {

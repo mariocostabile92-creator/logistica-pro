@@ -7,6 +7,7 @@ let loaderInitialized = false;
 
 const STYLES = {
   operations: [
+    "planning-workspace.css?v=1",
     "onboarding.css",
     "fleet-sync.css",
     "excel-import.css",
@@ -61,23 +62,23 @@ const WORKSPACE_PREPARERS = {
       fleetImport,
       operationsDashboard,
       planningPage,
-      fleetSync,
       onboarding,
+      planningWorkspace,
     ] = await Promise.all([
       import("./import-planning.js"),
       import("./import-fleet.js"),
       import("./operations-dashboard.js"),
       import("./planning-page.js"),
-      import("./fleet-sync.js"),
       import("./onboarding.js"),
+      import("./planning-workspace/index.js"),
       loadWorkspaceStyles("operations"),
     ]);
     return () => {
+      planningWorkspace.initPlanningWorkspace();
       planningImport.initPlanningImport();
       fleetImport.initFleetImport();
       operationsDashboard.initOperationsDashboard();
       planningPage.initPlanningPage();
-      initializeOnce("fleet-sync", fleetSync.initFleetSync);
       onboarding.initOnboarding();
     };
   },
