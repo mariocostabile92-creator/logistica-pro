@@ -220,3 +220,32 @@ class PlanningInputEnvelope(_PlanningInputModel):
         if len(input_types) != len(set(input_types)):
             raise ValueError("An envelope cannot repeat an input type.")
         return self
+
+    @property
+    def operational_unit(self) -> OperationalUnit:
+        return self.scope.operational_unit
+
+    @property
+    def planning_date(self) -> date:
+        return self.scope.operation_date
+
+    @property
+    def fingerprint(self) -> str:
+        return self.version.value
+
+    @property
+    def freshness(self) -> tuple[PlanningInputFreshness, ...]:
+        return tuple(
+            snapshot.contract.metadata.freshness
+            for snapshot in self.snapshots
+        )
+
+    @property
+    def validation(self) -> tuple[PlanningInputValidation, ...]:
+        return tuple(snapshot.validation for snapshot in self.snapshots)
+
+    @property
+    def metadata(self) -> tuple[PlanningInputMetadata, ...]:
+        return tuple(
+            snapshot.contract.metadata for snapshot in self.snapshots
+        )
