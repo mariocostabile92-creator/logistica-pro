@@ -500,6 +500,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         or path.startswith("/api/plugins/workforce/")
         or path.startswith("/api/planning/drafts")
         or path.startswith("/api/planning/confirmation")
+        or path.startswith("/api/planning/publication")
         or path
         in {
             "/api/planning/readiness",
@@ -543,6 +544,7 @@ def test_workspace_domain_contains_no_market_specific_vocabulary():
 
 def test_operational_and_preserved_table_classification_is_complete():
     assert workspace_repository.OPERATIONAL_DELETE_ORDER == (
+        "planning_publications",
         "planning_confirmations",
         "planning_draft_changes",
         "planning_draft_versions",

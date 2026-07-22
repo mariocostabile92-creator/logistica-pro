@@ -821,13 +821,244 @@ export function createPlanningConfirmation() {
 }
 
 
-export function createPublicationPlaceholder() {
-  return createWorkspaceBlock({
-    component: "publication",
-    eyebrow: "Ciclo di vita",
-    title: "Publication Status",
-    titleId: "planningWorkspacePublicationTitle",
+export function createPlanningPublication() {
+  const section = element("section", {
+    className: "planning-workspace-block planning-workspace-publication",
+    attributes: {
+      "data-planning-component": "publication",
+      "aria-labelledby": "planningWorkspacePublicationTitle",
+    },
   });
+  const heading = element("header", {
+    className: "planning-workspace-block-heading",
+  });
+  heading.append(
+    element("p", { className: "eyebrow", text: "Pubblicazione" }),
+    element("h3", {
+      text: "Planning Publication",
+      attributes: { id: "planningWorkspacePublicationTitle" },
+    }),
+    element("p", {
+      className: "planning-workspace-description",
+      text: "Rende disponibile il Confirmed Plan senza avviare l'esecuzione.",
+    }),
+  );
+  const body = element("div", {
+    className: "planning-workspace-block-body planning-publication-body",
+    attributes: {
+      "data-planning-role": "publication-body",
+      "aria-live": "polite",
+      tabindex: "-1",
+    },
+  });
+  const summary = element("dl", {
+    className: "planning-publication-summary",
+    attributes: { "data-planning-role": "publication-summary" },
+  });
+  for (const [label, role] of [
+    ["Stato", "publication-state"],
+    ["Versione", "publication-version"],
+    ["Timestamp", "publication-updated"],
+    ["Actor", "publication-actor"],
+    ["Confirmed Plan", "publication-confirmation"],
+    ["Fingerprint", "publication-fingerprint"],
+  ]) {
+    const item = element("div");
+    item.append(
+      element("dt", { text: label }),
+      element("dd", { attributes: { "data-planning-role": role } }),
+    );
+    summary.append(item);
+  }
+  const loading = element("div", {
+    className: "planning-publication-loading",
+    attributes: {
+      "data-planning-role": "publication-loading",
+      role: "status",
+    },
+  });
+  loading.append(
+    element("span", {
+      className: "visually-hidden",
+      text: "Caricamento Planning Publication",
+    }),
+    element("span", { className: "planning-publication-skeleton" }),
+    element("span", { className: "planning-publication-skeleton short" }),
+  );
+  const error = element("div", {
+    className: "planning-publication-error",
+    attributes: {
+      "data-planning-role": "publication-error",
+      role: "alert",
+      hidden: "",
+    },
+  });
+  error.append(
+    element("p", {
+      attributes: { "data-planning-role": "publication-error-text" },
+    }),
+    element("button", {
+      className: "secondary",
+      text: "Riprova Publication",
+      attributes: {
+        type: "button",
+        "data-planning-action": "retry-publication",
+      },
+    }),
+  );
+  const rationale = element("p", {
+    className: "planning-publication-rationale",
+    attributes: { "data-planning-role": "publication-rationale" },
+  });
+  const validation = element("div", {
+    className: "planning-publication-validation",
+    attributes: {
+      "data-planning-role": "publication-validation",
+      "aria-label": "Esito validazione pubblicazione",
+    },
+  });
+  const counts = element("dl", { className: "planning-publication-counts" });
+  for (const [label, role] of [
+    ["Regole superate", "publication-passed-count"],
+    ["Regole fallite", "publication-failed-count"],
+  ]) {
+    const item = element("div");
+    item.append(
+      element("dt", { text: label }),
+      element("dd", { attributes: { "data-planning-role": role } }),
+    );
+    counts.append(item);
+  }
+  const passed = element("section", {
+    className: "planning-publication-rules passed",
+    attributes: {
+      "data-planning-role": "publication-passed",
+      "aria-labelledby": "planningPublicationPassedTitle",
+    },
+  });
+  passed.append(
+    element("h4", {
+      text: "Verifiche superate",
+      attributes: { id: "planningPublicationPassedTitle" },
+    }),
+    element("ul", {
+      attributes: { "data-planning-role": "publication-passed-list" },
+    }),
+  );
+  const failed = element("section", {
+    className: "planning-publication-rules failed",
+    attributes: {
+      "data-planning-role": "publication-failed",
+      "aria-labelledby": "planningPublicationFailedTitle",
+    },
+  });
+  failed.append(
+    element("h4", {
+      text: "Da risolvere",
+      attributes: { id: "planningPublicationFailedTitle" },
+    }),
+    element("ul", {
+      attributes: { "data-planning-role": "publication-failed-list" },
+    }),
+  );
+  validation.append(counts, failed, passed);
+  const feedback = element("p", {
+    className: "planning-publication-feedback",
+    attributes: {
+      "data-planning-role": "publication-feedback",
+      role: "status",
+      hidden: "",
+    },
+  });
+  const actions = element("div", {
+    className: "planning-publication-actions",
+    attributes: { "data-planning-role": "publication-actions" },
+  });
+  actions.append(
+    element("button", {
+      className: "secondary",
+      text: "Verifica di nuovo",
+      attributes: {
+        type: "button",
+        "data-planning-action": "validate-publication",
+      },
+    }),
+    element("button", {
+      text: "Pubblica piano",
+      attributes: {
+        type: "button",
+        "data-planning-action": "begin-publication",
+        "aria-describedby": "planningPublicationHint",
+      },
+    }),
+  );
+  const hint = element("p", {
+    className: "planning-publication-hint",
+    attributes: {
+      id: "planningPublicationHint",
+      "data-planning-role": "publication-hint",
+    },
+  });
+  const explicit = element("div", {
+    className: "planning-publication-explicit",
+    attributes: {
+      "data-planning-role": "publication-explicit",
+      role: "group",
+      "aria-label": "Pubblicazione esplicita del Confirmed Plan",
+      hidden: "",
+    },
+  });
+  explicit.append(
+    element("p", {
+      text: "Il Confirmed Plan diventera disponibile agli altri workspace. Nessuna esecuzione verra avviata.",
+    }),
+    element("button", {
+      className: "secondary",
+      text: "Annulla",
+      attributes: {
+        type: "button",
+        "data-planning-action": "cancel-publication",
+      },
+    }),
+    element("button", {
+      text: "Pubblica ora",
+      attributes: {
+        type: "button",
+        "data-planning-action": "publish-now",
+      },
+    }),
+  );
+  const history = element("section", {
+    className: "planning-publication-history",
+    attributes: {
+      "data-planning-role": "publication-history",
+      "aria-labelledby": "planningPublicationHistoryTitle",
+      hidden: "",
+    },
+  });
+  history.append(
+    element("h4", {
+      text: "Cronologia pubblicazioni",
+      attributes: { id: "planningPublicationHistoryTitle" },
+    }),
+    element("ol", {
+      attributes: { "data-planning-role": "publication-history-list" },
+    }),
+  );
+  body.append(
+    summary,
+    loading,
+    error,
+    rationale,
+    validation,
+    feedback,
+    actions,
+    hint,
+    explicit,
+    history,
+  );
+  section.append(heading, body);
+  return section;
 }
 
 

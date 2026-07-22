@@ -525,6 +525,148 @@ function renderConfirmation(refs, confirmation, draftWorkspace) {
 }
 
 
+const PUBLICATION_STATE_LABELS = Object.freeze({
+  NOT_PUBLISHED: "Non pubblicato",
+  READY_TO_PUBLISH: "Pronto per la pubblicazione",
+  PUBLISHED: "Pubblicato",
+  FAILED: "Pubblicazione rifiutata",
+  ERROR: "Errore",
+});
+
+
+function publicationRuleNode(rule) {
+  const item = element("li", { attributes: { tabindex: "0" } });
+  item.append(element("strong", { text: rule.reason }));
+  if (!rule.passed) {
+    item.append(element("p", { text: rule.remediationHint }));
+  }
+  return item;
+}
+
+
+function renderPublicationRules(refs, result) {
+  const passed = result.rules.filter((rule) => rule.passed);
+  const failed = result.rules.filter((rule) => !rule.passed);
+  refs.publicationPassedList.replaceChildren(
+    ...passed.map(publicationRuleNode),
+  );
+  refs.publicationFailedList.replaceChildren(
+    ...failed.map(publicationRuleNode),
+  );
+  refs.publicationPassed.hidden = passed.length === 0;
+  refs.publicationFailed.hidden = failed.length === 0;
+  setNodeText(refs.publicationPassedCount, passed.length);
+  setNodeText(refs.publicationFailedCount, failed.length);
+}
+
+
+function renderPublicationHistory(refs, history) {
+  const nodes = (history?.publications || []).slice(0, 5).map((item) => {
+    const node = element("li", {
+      attributes: {
+        tabindex: "0",
+        "aria-label": `Publication versione ${item.version}, ${formatPlanningTimestamp(item.publishedAt)}`,
+      },
+    });
+    const meta = element("div", {
+      className: "planning-publication-history-meta",
+    });
+    meta.append(
+      element("strong", { text: `Publication v${item.version}` }),
+      element("time", {
+        text: formatPlanningTimestamp(item.publishedAt),
+        attributes: { datetime: item.publishedAt },
+      }),
+    );
+    node.append(
+      meta,
+      element("p", {
+        text: `Confirmed Plan v${item.confirmationVersion} · ${item.actor}`,
+      }),
+    );
+    return node;
+  });
+  refs.publicationHistoryList.replaceChildren(...nodes);
+  refs.publicationHistory.hidden = nodes.length === 0;
+}
+
+
+function renderPublication(refs, publication, confirmationWorkspace) {
+  const loading = publication?.viewState === "loading";
+  const failed = publication?.viewState === "error";
+  const result = publication?.result || null;
+  const current = publication?.current || null;
+  const confirmation = confirmationWorkspace?.current || null;
+  const busy = publication?.busy === true;
+  refs.publicationBody.dataset.publicationState = result?.state || "LOADING";
+  refs.publicationBody.setAttribute("aria-busy", String(loading || busy));
+  refs.publicationLoading.hidden = !loading;
+  refs.publicationError.hidden = !failed;
+  setNodeText(
+    refs.publicationErrorText,
+    publication?.message || "Planning Publication non disponibile.",
+  );
+  refs.publicationSummary.hidden = loading;
+  refs.publicationValidation.hidden = !result || loading;
+  refs.publicationRationale.hidden = !result || loading;
+  setNodeText(
+    refs.publicationState,
+    result ? PUBLICATION_STATE_LABELS[result.state] || result.state : "Non disponibile",
+  );
+  setNodeText(
+    refs.publicationVersion,
+    current ? `Publication v${current.version}` : "-",
+  );
+  setNodeText(
+    refs.publicationUpdated,
+    current ? formatPlanningTimestamp(current.publishedAt) : "-",
+  );
+  setNodeText(refs.publicationActor, current?.actor || "-");
+  setNodeText(
+    refs.publicationConfirmation,
+    current
+      ? `v${current.confirmationVersion} · ${current.confirmationId}`
+      : confirmation ? `v${confirmation.version} · ${confirmation.id}` : "Nessuno",
+  );
+  setNodeText(
+    refs.publicationFingerprint,
+    current?.fingerprint || confirmation?.fingerprint || "-",
+  );
+  setNodeText(refs.publicationRationale, result?.rationale || "");
+  if (result) renderPublicationRules(refs, result);
+  else {
+    refs.publicationPassedList.replaceChildren();
+    refs.publicationFailedList.replaceChildren();
+  }
+  refs.publicationFeedback.hidden = !publication?.feedback;
+  setNodeText(refs.publicationFeedback, publication?.feedback || "");
+  refs.publicationActions.hidden = loading || (failed && !result);
+  refs.publicationValidateButton.disabled = (
+    busy || !confirmation || Boolean(current)
+  );
+  refs.publicationBeginButton.disabled = (
+    busy || failed || !confirmation || !result?.canPublish
+  );
+  refs.publicationBeginButton.textContent = current
+    ? "Piano pubblicato"
+    : "Pubblica piano";
+  refs.publicationHint.hidden = loading;
+  setNodeText(
+    refs.publicationHint,
+    current
+      ? "Il Published Plan e immutabile. Nessuna esecuzione e stata avviata."
+      : result?.canPublish
+        ? "Tutte le regole sono superate. La Publication non esegue il piano."
+        : result?.rationale || "Conferma il Draft e ripeti la verifica.",
+  );
+  refs.publicationExplicit.hidden = true;
+  refs.publicationPublishButton.disabled = (
+    busy || !confirmation || !result?.canPublish
+  );
+  renderPublicationHistory(refs, publication?.history);
+}
+
+
 export function renderPlanningWorkspace(refs, view) {
   refs.root.dataset.planningWorkspaceState = view.state;
   refs.root.dataset.planningWorkspaceTone = view.tone;
@@ -543,6 +685,6 @@ export function renderPlanningWorkspace(refs, view) {
   renderTimeline(refs, view.timeline);
   renderDraft(refs, view.draft);
   renderConfirmation(refs, view.confirmation, view.draft);
-  renderPlaceholder(refs, "publication", view.publication);
+  renderPublication(refs, view.publication, view.confirmation);
   refs.retryButton.hidden = !view.canRetry;
 }

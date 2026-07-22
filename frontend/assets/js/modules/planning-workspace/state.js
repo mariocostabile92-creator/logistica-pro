@@ -14,6 +14,51 @@ export function createPlanningWorkspaceState({ planningDate = null } = {}) {
 
 
 export function applyPlanningWorkspaceEvent(current, event) {
+  if (event?.type?.startsWith("publication-")) {
+    const currentPublication = current.snapshot?.publication || {};
+    const publicationStates = {
+      "publication-load-started": Object.freeze({
+        viewState: "loading",
+        busy: false,
+      }),
+      "publication-loaded": Object.freeze({
+        ...event.publication,
+        busy: false,
+      }),
+      "publication-load-failed": Object.freeze({
+        ...currentPublication,
+        viewState: "error",
+        busy: false,
+        message: event.message || "Planning Publication non disponibile.",
+      }),
+      "publication-mutation-started": Object.freeze({
+        ...currentPublication,
+        busy: true,
+        feedback: null,
+        message: null,
+      }),
+      "publication-mutation-completed": Object.freeze({
+        ...event.publication,
+        busy: false,
+        feedback: event.message || "Publication aggiornata.",
+      }),
+      "publication-mutation-failed": Object.freeze({
+        ...currentPublication,
+        viewState: "error",
+        busy: false,
+        message: event.message || "Operazione Publication non riuscita.",
+      }),
+    };
+    const nextPublication = publicationStates[event.type];
+    if (!nextPublication) return current;
+    return planningWorkspaceModel({
+      ...current,
+      snapshot: {
+        ...(current.snapshot || {}),
+        publication: nextPublication,
+      },
+    });
+  }
   if (event?.type?.startsWith("confirmation-")) {
     const currentConfirmation = current.snapshot?.confirmation || {};
     const confirmationStates = {
@@ -183,11 +228,12 @@ export function derivePlanningWorkspaceView(state) {
       viewState: "loading",
       busy: false,
     }),
-    publication: placeholder(
-      "Non disponibile",
-      "Publication non disponibile.",
-    ),
+    publication: snapshot.publication || Object.freeze({
+      viewState: "loading",
+      busy: false,
+    }),
     canConfirm: snapshot.confirmation?.result?.canConfirm === true,
+    canPublish: snapshot.publication?.result?.canPublish === true,
     canRetry: state.state === PLANNING_WORKSPACE_STATES.ERROR,
   });
 }

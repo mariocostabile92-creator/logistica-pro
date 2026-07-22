@@ -4,17 +4,24 @@ import {
   deletePlanningDraft,
   getCurrentPlanningDraft,
   getCurrentPlanningConfirmation,
+  getCurrentPlanningPublication,
   getPlanningConflicts,
   getPlanningTimeline,
   restorePlanningDraft,
   savePlanningDraft,
+  publishPlanningPublication,
   updatePlanningDraftMetadata,
   validatePlanningConfirmation,
+  validatePlanningPublication,
 } from "../../api.js";
 import {
   createPlanningConfirmationLoader,
   normalizePlanningConfirmationReport,
 } from "./confirmation.js";
+import {
+  createPlanningPublicationLoader,
+  normalizePlanningPublicationReport,
+} from "./publication.js";
 import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
@@ -48,6 +55,9 @@ const timelineLoader = createPlanningTimelineLoader(getPlanningTimeline);
 const draftLoader = createPlanningDraftLoader(getCurrentPlanningDraft);
 const confirmationLoader = createPlanningConfirmationLoader(
   getCurrentPlanningConfirmation,
+);
+const publicationLoader = createPlanningPublicationLoader(
+  getCurrentPlanningPublication,
 );
 
 
@@ -133,6 +143,31 @@ async function loadConfirmation({ force = false } = {}) {
 }
 
 
+async function loadPublication({ force = false } = {}) {
+  commit({ type: "publication-load-started" });
+  try {
+    const payload = await publicationLoader.load(
+      {
+        organizationId: "default",
+        operationalUnitId: "default",
+        planningDate: state.planningDate,
+      },
+      { force },
+    );
+    commit({
+      type: "publication-loaded",
+      publication: normalizePlanningPublicationReport(payload),
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "publication-load-failed",
+      message: error?.message || "Planning Publication non disponibile. Riprova.",
+    });
+  }
+}
+
+
 async function loadConflictReview() {
   commit({ type: "load-started" });
   try {
@@ -152,6 +187,7 @@ async function loadConflictReview() {
     const supportingLoads = [loadTimeline()];
     if (!state.snapshot?.draft) supportingLoads.push(loadDraft());
     if (!state.snapshot?.confirmation) supportingLoads.push(loadConfirmation());
+    if (!state.snapshot?.publication) supportingLoads.push(loadPublication());
     await Promise.all(supportingLoads);
   } catch (error) {
     if (error?.name === "AbortError") return;
@@ -222,6 +258,7 @@ async function runConfirmationMutation(operation, successMessage) {
       confirmation,
       message: successMessage,
     });
+    await loadPublication({ force: true });
     const focusTarget = refs.confirmationBeginButton.disabled
       ? refs.confirmationBody
       : refs.confirmationBeginButton;
@@ -233,6 +270,73 @@ async function runConfirmationMutation(operation, successMessage) {
       message: error?.message || "Operazione Confirmation non riuscita. Riprova.",
     });
   }
+}
+
+
+function currentPublication() {
+  return state.snapshot?.publication || null;
+}
+
+
+function publicationPayload() {
+  const confirmation = currentConfirmation()?.current;
+  if (!confirmation) return null;
+  return {
+    organization_id: "default",
+    operational_unit_id: "default",
+    planning_date: state.planningDate,
+    confirmation_id: confirmation.id,
+    confirmation_version: confirmation.version,
+    confirmation_fingerprint: confirmation.fingerprint,
+  };
+}
+
+
+async function runPublicationMutation(operation, successMessage) {
+  if (currentPublication()?.busy) return;
+  commit({ type: "publication-mutation-started" });
+  try {
+    const payload = await operation();
+    const publication = normalizePlanningPublicationReport(payload);
+    commit({
+      type: "publication-mutation-completed",
+      publication,
+      message: successMessage,
+    });
+    const focusTarget = refs.publicationBeginButton.disabled
+      ? refs.publicationBody
+      : refs.publicationBeginButton;
+    focusTarget.focus({ preventScroll: true });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "publication-mutation-failed",
+      message: error?.message || "Operazione Publication non riuscita. Riprova.",
+    });
+  }
+}
+
+
+function validatePublication() {
+  const payload = publicationPayload();
+  if (!payload) {
+    loadPublication();
+    return;
+  }
+  runPublicationMutation(
+    () => validatePlanningPublication(payload),
+    "Validazione Publication aggiornata.",
+  );
+}
+
+
+function publishNow() {
+  const payload = publicationPayload();
+  if (!payload) return;
+  runPublicationMutation(
+    () => publishPlanningPublication(payload),
+    "Confirmed Plan pubblicato. Nessuna esecuzione avviata.",
+  );
 }
 
 
@@ -370,6 +474,7 @@ function handleActionClick(event) {
   if (action === "retry-timeline") loadTimeline();
   if (action === "retry-draft") loadDraft();
   if (action === "retry-confirmation") loadConfirmation();
+  if (action === "retry-publication") loadPublication();
   if (action === "create-draft") createDraft();
   if (action === "save-draft") saveDraft();
   if (action === "restore-draft") restoreDraft();
@@ -392,6 +497,16 @@ function handleActionClick(event) {
     refs.confirmationBeginButton.focus();
   }
   if (action === "confirm-now") confirmNow();
+  if (action === "validate-publication") validatePublication();
+  if (action === "begin-publication") {
+    refs.publicationExplicit.hidden = false;
+    refs.publicationPublishButton.focus();
+  }
+  if (action === "cancel-publication") {
+    refs.publicationExplicit.hidden = true;
+    refs.publicationBeginButton.focus();
+  }
+  if (action === "publish-now") publishNow();
   if (action === "view-conflicts") {
     event.preventDefault();
     refs.conflictTitle.focus({ preventScroll: true });
@@ -405,6 +520,14 @@ function handleConfirmationKeydown(event) {
   event.preventDefault();
   refs.confirmationExplicit.hidden = true;
   refs.confirmationBeginButton.focus();
+}
+
+
+function handlePublicationKeydown(event) {
+  if (event.key !== "Escape" || refs.publicationExplicit.hidden) return;
+  event.preventDefault();
+  refs.publicationExplicit.hidden = true;
+  refs.publicationBeginButton.focus();
 }
 
 
@@ -464,6 +587,7 @@ export function initPlanningWorkspace() {
   refs.draftEditor.addEventListener("input", updateDraftActionAvailability);
   refs.draftEditor.addEventListener("keydown", handleDraftKeydown);
   refs.confirmationBody.addEventListener("keydown", handleConfirmationKeydown);
+  refs.publicationBody.addEventListener("keydown", handlePublicationKeydown);
   refs.actions.addEventListener("keydown", handleActionKeydown);
   document.getElementById("legacyOperationsRegion").addEventListener(
     "keydown",

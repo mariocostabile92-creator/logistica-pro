@@ -515,6 +515,68 @@ export async function getPlanningConfirmationHistory({
 }
 
 
+export async function getCurrentPlanningPublication({
+  organizationId = "default",
+  operationalUnitId = "default",
+  planningDate = null,
+  signal,
+} = {}) {
+  const params = new URLSearchParams({
+    organization_id: organizationId,
+    operational_unit_id: operationalUnitId,
+  });
+  if (planningDate) params.set("planning_date", planningDate);
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/publication/current?${params}`,
+    { signal },
+  ));
+}
+
+
+export async function validatePlanningPublication(payload, { signal } = {}) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/publication/validate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function publishPlanningPublication(payload, { signal } = {}) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/publication/publish`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function getPlanningPublicationHistory({
+  organizationId = "default",
+  operationalUnitId = "default",
+  planningDate = null,
+  signal,
+} = {}) {
+  const params = new URLSearchParams({
+    organization_id: organizationId,
+    operational_unit_id: operationalUnitId,
+  });
+  if (planningDate) params.set("planning_date", planningDate);
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/publication/history?${params}`,
+    { signal },
+  ));
+}
+
+
 export async function getPlanning(planningId) {
   return parseResponse(await fetch(`${API_BASE}/api/planning/${planningId}`));
 }

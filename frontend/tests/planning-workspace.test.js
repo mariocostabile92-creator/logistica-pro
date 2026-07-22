@@ -31,6 +31,10 @@ import {
   createPlanningConfirmationLoader,
   normalizePlanningConfirmationReport,
 } from "../assets/js/modules/planning-workspace/confirmation.js";
+import {
+  createPlanningPublicationLoader,
+  normalizePlanningPublicationReport,
+} from "../assets/js/modules/planning-workspace/publication.js";
 
 
 const frontendFile = (path) => readFile(
@@ -83,8 +87,9 @@ test("legacy state names the disconnected Runtime and preserves placeholders", (
   assert.equal(view.readiness.value, "Non disponibile");
   assert.equal(view.conflicts, null);
   assert.equal(view.draft.viewState, "loading");
-  assert.equal(view.publication.detail, "Publication non disponibile.");
+  assert.equal(view.publication.viewState, "loading");
   assert.equal(view.canConfirm, false);
+  assert.equal(view.canPublish, false);
 });
 
 
@@ -375,6 +380,66 @@ function confirmationReportPayload({ state = "READY_TO_CONFIRM" } = {}) {
 }
 
 
+function publicationReportPayload({ state = "READY_TO_PUBLISH" } = {}) {
+  const ruleCodes = [
+    "CONFIRMED_PLAN_PRESENT",
+    "CONFIRMATION_VALID",
+    "NO_ACTIVE_PUBLICATION",
+    "RUNTIME_COMPATIBLE",
+    "FINGERPRINT_COHERENT",
+    "VERSION_COHERENT",
+    "OPERATIONAL_UNIT_VALID",
+  ];
+  const allPassed = ["READY_TO_PUBLISH", "PUBLISHED"].includes(state);
+  const rules = ruleCodes.map((code, index) => ({
+    code,
+    passed: allPassed || index > 0,
+    reason: allPassed || index > 0
+      ? "Verifica superata."
+      : "Confirmed Plan non disponibile.",
+    remediation_hint: "Completa il requisito e riprova.",
+  }));
+  const current = state === "PUBLISHED"
+    ? {
+      publication_id: "publication-1",
+      state: "PUBLISHED",
+      version: 1,
+      confirmation_id: "confirmation-1",
+      confirmation_version: 1,
+      confirmation_fingerprint: "a".repeat(64),
+      fingerprint: "b".repeat(64),
+      actor: "private-beta",
+      published_at: "2026-07-22T07:15:00Z",
+    }
+    : null;
+  return {
+    state,
+    result: {
+      state,
+      can_publish: state === "READY_TO_PUBLISH",
+      rules,
+      rationale: state === "READY_TO_PUBLISH"
+        ? "Il Confirmed Plan puo essere pubblicato."
+        : state === "PUBLISHED"
+          ? "Confirmed Plan pubblicato senza esecuzione."
+          : "Publication non disponibile.",
+      evaluated_at: "2026-07-22T07:15:00Z",
+    },
+    current,
+    history: {
+      scope: {
+        organization_id: "default",
+        operational_unit: { external_identifier: "default", name: null },
+        planning_date: "2026-07-22",
+      },
+      total: current ? 1 : 0,
+      publications: current ? [current] : [],
+    },
+    generated_at: "2026-07-22T07:15:00Z",
+  };
+}
+
+
 test("readiness payload normalization supports every backend state", () => {
   for (const status of [
     "READY",
@@ -622,6 +687,95 @@ test("Planning Confirmation loader performs one request and supports retry", asy
 });
 
 
+test("Planning Publication normalizes ready published failed and error states", () => {
+  const ready = normalizePlanningPublicationReport(
+    publicationReportPayload(),
+  );
+  const published = normalizePlanningPublicationReport(
+    publicationReportPayload({ state: "PUBLISHED" }),
+  );
+  const failed = normalizePlanningPublicationReport(
+    publicationReportPayload({ state: "FAILED" }),
+  );
+  const error = normalizePlanningPublicationReport(
+    publicationReportPayload({ state: "ERROR" }),
+  );
+
+  assert.equal(ready.result.canPublish, true);
+  assert.equal(published.current.confirmationVersion, 1);
+  assert.equal(published.current.fingerprint, "b".repeat(64));
+  assert.equal(published.history.total, 1);
+  assert.equal(failed.result.rules[0].passed, false);
+  assert.equal(error.viewState, "error");
+  assert.throws(
+    () => normalizePlanningPublicationReport({ state: "UNKNOWN" }),
+    /Stato Publication non riconosciuto|Valore Publication non valido/,
+  );
+});
+
+
+test("Planning Publication loader performs one request and supports retry", async () => {
+  let calls = 0;
+  let release;
+  const loader = createPlanningPublicationLoader(() => {
+    calls += 1;
+    if (calls > 1) {
+      return Promise.resolve(publicationReportPayload({ state: "FAILED" }));
+    }
+    return new Promise((resolve) => { release = resolve; });
+  });
+  const first = loader.load();
+  const duplicate = loader.load();
+
+  assert.equal(first, duplicate);
+  assert.equal(calls, 1);
+  release(publicationReportPayload());
+  await first;
+  await loader.load();
+  assert.equal(calls, 2);
+});
+
+
+test("Publication mutations preserve all preceding Planning blocks", () => {
+  const normalized = normalizePlanningConflictResult(conflictPayload());
+  let current = applyPlanningWorkspaceEvent(
+    createPlanningWorkspaceState(),
+    { type: "ready-received", snapshot: normalized },
+  );
+  current = applyPlanningWorkspaceEvent(current, {
+    type: "timeline-loaded",
+    timeline: normalizePlanningTimelineResult(timelinePayload()),
+  });
+  current = applyPlanningWorkspaceEvent(current, {
+    type: "draft-loaded",
+    draft: normalizePlanningDraftWorkspace(draftWorkspacePayload()),
+  });
+  current = applyPlanningWorkspaceEvent(current, {
+    type: "confirmation-loaded",
+    confirmation: normalizePlanningConfirmationReport(
+      confirmationReportPayload({ state: "CONFIRMED" }),
+    ),
+  });
+  current = applyPlanningWorkspaceEvent(current, {
+    type: "publication-loaded",
+    publication: normalizePlanningPublicationReport(
+      publicationReportPayload(),
+    ),
+  });
+  const failed = applyPlanningWorkspaceEvent(current, {
+    type: "publication-mutation-failed",
+    message: "Publication non riuscita.",
+  });
+
+  assert.equal(failed.state, PLANNING_WORKSPACE_STATES.READY);
+  assert.equal(failed.snapshot.conflicts, normalized.conflicts);
+  assert.equal(failed.snapshot.timeline.state, "ready");
+  assert.equal(failed.snapshot.draft.draft.id, "draft-1");
+  assert.equal(failed.snapshot.confirmation.current.id, "confirmation-1");
+  assert.equal(failed.snapshot.publication.viewState, "error");
+});
+
+
 test("Confirmation mutations preserve Readiness Conflicts Timeline and Draft", () => {
   const normalized = normalizePlanningConflictResult(conflictPayload());
   let current = applyPlanningWorkspaceEvent(
@@ -744,7 +898,7 @@ test("layout preserves the definitive desktop component hierarchy", async () => 
     "createPlanningTimeline()",
     "createPlanningDraft()",
     "createPlanningConfirmation()",
-    "createPublicationPlaceholder()",
+    "createPlanningPublication()",
     "createFooterActions()",
   ];
   let previous = -1;
@@ -793,6 +947,10 @@ test("renderer covers all components and exposes loading semantics", async () =>
   assert.match(components, /confirmation-failed-list/);
   assert.match(components, /confirm-now/);
   assert.match(components, /confirmation-history-list/);
+  assert.match(components, /publication-passed-list/);
+  assert.match(components, /publication-failed-list/);
+  assert.match(components, /publish-now/);
+  assert.match(components, /publication-history-list/);
   assert.match(components, /aria-live/);
 });
 
@@ -819,6 +977,9 @@ test("responsive styles cover tablet mobile order and horizontal containment", a
   assert.match(css, /planning-workspace-confirmation[\s\S]*?order: 6/);
   assert.match(css, /planning-confirmation-summary[\s\S]*grid-template-columns: 1fr/);
   assert.match(css, /planning-confirmation-rules li:focus-visible/);
+  assert.match(css, /planning-workspace-publication[\s\S]*?order: 7/);
+  assert.match(css, /planning-publication-summary[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /planning-publication-rules li:focus-visible/);
 });
 
 
@@ -836,6 +997,8 @@ test("keyboard navigation supports arrows boundaries and Escape", async () => {
   assert.match(source, /draftConfirmDeleteButton\.focus/);
   assert.match(source, /confirmationConfirmButton\.focus/);
   assert.match(source, /confirmationExplicit\.hidden/);
+  assert.match(source, /publicationPublishButton\.focus/);
+  assert.match(source, /publicationExplicit\.hidden/);
 });
 
 
@@ -853,6 +1016,7 @@ test("Planning Workspace consumes compact review APIs and no business algorithms
     "assets/js/modules/planning-workspace/timeline.js",
     "assets/js/modules/planning-workspace/draft.js",
     "assets/js/modules/planning-workspace/confirmation.js",
+    "assets/js/modules/planning-workspace/publication.js",
   ];
   const sources = await Promise.all(paths.map(frontendFile));
   const combined = sources.join("\n");
@@ -861,6 +1025,7 @@ test("Planning Workspace consumes compact review APIs and no business algorithms
   assert.match(combined, /getPlanningTimeline/);
   assert.match(combined, /getCurrentPlanningDraft/);
   assert.match(combined, /getCurrentPlanningConfirmation/);
+  assert.match(combined, /getCurrentPlanningPublication/);
   assert.doesNotMatch(combined, /getPlanningReadiness/);
   assert.doesNotMatch(combined, /fetch\(|getLatestPlanning/);
   assert.doesNotMatch(combined, /PlanningInputRuntime|generatePlanning/);
@@ -868,7 +1033,7 @@ test("Planning Workspace consumes compact review APIs and no business algorithms
 });
 
 
-test("frontend exposes Timeline Draft and Confirmation retry with bounded requests", async () => {
+test("frontend exposes Planning lifecycle retry with bounded requests", async () => {
   const [index, api, renderer] = await Promise.all([
     frontendFile("assets/js/modules/planning-workspace/index.js"),
     frontendFile("assets/js/api.js"),
@@ -881,13 +1046,16 @@ test("frontend exposes Timeline Draft and Confirmation retry with bounded reques
   assert.match(index, /retry-timeline/);
   assert.match(index, /retry-draft/);
   assert.match(index, /retry-confirmation/);
+  assert.match(index, /retry-publication/);
   assert.match(index, /createPlanningConflictLoader/);
   assert.match(index, /createPlanningTimelineLoader/);
   assert.match(index, /createPlanningDraftLoader/);
   assert.match(index, /createPlanningConfirmationLoader/);
+  assert.match(index, /createPlanningPublicationLoader/);
   assert.match(index, /supportingLoads = \[loadTimeline\(\)\]/);
   assert.match(index, /supportingLoads\.push\(loadDraft\(\)\)/);
   assert.match(index, /supportingLoads\.push\(loadConfirmation\(\)\)/);
+  assert.match(index, /supportingLoads\.push\(loadPublication\(\)\)/);
   assert.match(api, /\/api\/planning\/conflicts/);
   assert.match(api, /\/api\/planning\/timeline/);
   assert.match(api, /\/api\/planning\/drafts\/current/);
@@ -895,6 +1063,10 @@ test("frontend exposes Timeline Draft and Confirmation retry with bounded reques
   assert.match(api, /\/api\/planning\/confirmation\/validate/);
   assert.match(api, /\/api\/planning\/confirmation\/confirm/);
   assert.match(api, /\/api\/planning\/confirmation\/history/);
+  assert.match(api, /\/api\/planning\/publication\/current/);
+  assert.match(api, /\/api\/planning\/publication\/validate/);
+  assert.match(api, /\/api\/planning\/publication\/publish/);
+  assert.match(api, /\/api\/planning\/publication\/history/);
   assert.match(api, /method: "PATCH"/);
   assert.match(api, /method: "DELETE"/);
   assert.match(api, /signal/);
@@ -904,6 +1076,8 @@ test("frontend exposes Timeline Draft and Confirmation retry with bounded reques
   assert.match(renderer, /view-conflicts/);
   assert.match(renderer, /!result\?\.canConfirm/);
   assert.match(renderer, /renderConfirmationHistory/);
+  assert.match(renderer, /!result\?\.canPublish/);
+  assert.match(renderer, /renderPublicationHistory/);
   assert.match(renderer, /createElement|element\("details"/);
 });
 

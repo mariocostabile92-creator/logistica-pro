@@ -6,6 +6,7 @@ from app.core.database import db_session
 
 
 OPERATIONAL_DELETE_ORDER = (
+    "planning_publications",
     "planning_confirmations",
     "planning_draft_changes",
     "planning_draft_versions",
