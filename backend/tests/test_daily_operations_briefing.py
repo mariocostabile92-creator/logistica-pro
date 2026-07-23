@@ -380,9 +380,11 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
             and path != "/api/runtime/execution-intent"
             and path != "/api/runtime/execution-attempt"
             and path != "/api/runtime/shadow"
-            and path != "/api/runtime/output"
-            and path != "/api/runtime/canary"
-            and not path.startswith("/api/workspace/")
+                and path != "/api/runtime/output"
+                and path != "/api/runtime/canary"
+                and path != "/api/runtime/primary"
+                and path != "/api/runtime/legacy-retirement"
+                and not path.startswith("/api/workspace/")
             and not path.startswith("/api/plugins/workforce/")
             and not path.startswith("/api/planning/drafts")
             and not path.startswith("/api/planning/confirmation")

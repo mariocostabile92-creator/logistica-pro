@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from app.domain.core_language import OperationalUnit
 from app.domain.planning_confirmation import (
@@ -44,9 +44,9 @@ from app.runtime.planning_inputs import PlanningInputRuntimeService
 from app.runtime.planning_readiness import PlanningReadinessService
 
 
-NOW = datetime(2026, 7, 22, 7, 0, tzinfo=UTC)
-RECENT = datetime(2026, 7, 22, 6, 45, tzinfo=UTC)
-OPERATION_DATE = date(2026, 7, 22)
+NOW = datetime.now(UTC).replace(microsecond=0)
+RECENT = NOW - timedelta(minutes=15)
+OPERATION_DATE = NOW.date()
 UNIT = OperationalUnit(external_identifier="unit-a", name="Unit A")
 ORGANIZATION_ID = "organization-one"
 SCOPE = PlanningConfirmationScope(

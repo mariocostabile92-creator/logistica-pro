@@ -503,6 +503,8 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         or path == "/api/runtime/shadow"
         or path == "/api/runtime/output"
         or path == "/api/runtime/canary"
+        or path == "/api/runtime/primary"
+        or path == "/api/runtime/legacy-retirement"
         or path.startswith("/api/plugins/workforce/")
         or path.startswith("/api/planning/drafts")
         or path.startswith("/api/planning/confirmation")
