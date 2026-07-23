@@ -25,6 +25,7 @@ from app.plugins.fleet.infrastructure.sync_schema import init_sync_schema as ini
 from app.plugins.workforce.infrastructure.schema import init_schema as init_workforce_schema
 from app.repositories.authority_repository import init_schema as init_authority_schema
 from app.repositories.execution_intent_repository import init_schema as init_execution_intent_schema
+from app.repositories.execution_attempt_repository import init_schema as init_execution_attempt_schema
 from app.repositories.planning_draft_repository import init_schema as init_planning_draft_schema
 from app.repositories.planning_confirmation_repository import init_schema as init_planning_confirmation_schema
 from app.repositories.planning_publication_repository import init_schema as init_planning_publication_schema
@@ -46,6 +47,7 @@ def reset_database():
     init_planning_publication_schema()
     init_authority_schema()
     init_execution_intent_schema()
+    init_execution_attempt_schema()
     with db_session() as conn:
         conn.execute("DELETE FROM workspace_reset_audits")
         conn.execute("DELETE FROM demo_workspaces")
@@ -63,8 +65,9 @@ def reset_database():
         conn.execute("DELETE FROM fleet_assets")
         conn.execute("DELETE FROM daily_briefings")
         conn.execute("DELETE FROM planning_publications")
-        conn.execute("DELETE FROM runtime_authority_decisions")
+        conn.execute("DELETE FROM runtime_execution_attempts")
         conn.execute("DELETE FROM runtime_execution_intents")
+        conn.execute("DELETE FROM runtime_authority_decisions")
         conn.execute("DELETE FROM planning_confirmations")
         conn.execute("DELETE FROM planning_draft_changes")
         conn.execute("DELETE FROM planning_draft_versions")

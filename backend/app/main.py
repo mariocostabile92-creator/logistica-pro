@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routers import (
     configuration,
+    execution_attempt,
     execution_intent,
     health,
     imports,
@@ -21,6 +22,7 @@ from app.api.routers import (
     planning_readiness,
     planning_timeline,
     runtime_authority,
+    runtime_shadow,
 )
 from app.briefing.repository import init_schema as init_briefing_schema
 from app.briefing.router import router as briefing_router
@@ -44,6 +46,9 @@ from app.repositories.authority_repository import (
 )
 from app.repositories.execution_intent_repository import (
     init_schema as init_execution_intent_schema,
+)
+from app.repositories.execution_attempt_repository import (
+    init_schema as init_execution_attempt_schema,
 )
 from app.repositories.planning_draft_repository import (
     init_schema as init_planning_draft_schema,
@@ -85,6 +90,7 @@ async def lifespan(app: FastAPI):
         init_planning_publication_schema()
         init_authority_schema()
         init_execution_intent_schema()
+        init_execution_attempt_schema()
         yield
     finally:
         logger.info("Operations Engine stopped")
@@ -170,6 +176,8 @@ app.include_router(planning_confirmation.router)
 app.include_router(planning_publication.router)
 app.include_router(runtime_authority.router)
 app.include_router(execution_intent.router)
+app.include_router(execution_attempt.router)
+app.include_router(runtime_shadow.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)
