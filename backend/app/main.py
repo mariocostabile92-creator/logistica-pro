@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routers import (
     configuration,
+    execution_intent,
     health,
     imports,
     operations,
@@ -40,6 +41,9 @@ from app.plugins.workforce.bootstrap import (
 )
 from app.repositories.authority_repository import (
     init_schema as init_authority_schema,
+)
+from app.repositories.execution_intent_repository import (
+    init_schema as init_execution_intent_schema,
 )
 from app.repositories.planning_draft_repository import (
     init_schema as init_planning_draft_schema,
@@ -80,6 +84,7 @@ async def lifespan(app: FastAPI):
         init_planning_confirmation_schema()
         init_planning_publication_schema()
         init_authority_schema()
+        init_execution_intent_schema()
         yield
     finally:
         logger.info("Operations Engine stopped")
@@ -164,6 +169,7 @@ app.include_router(planning_drafts.router)
 app.include_router(planning_confirmation.router)
 app.include_router(planning_publication.router)
 app.include_router(runtime_authority.router)
+app.include_router(execution_intent.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)
