@@ -22,16 +22,16 @@ const READINESS_LABELS = {
 const CATEGORY_LABELS = {
   human_resources: "Workforce",
   assets: "Fleet",
-  planning_decisions: "Operations",
-  readiness: "Operations",
-  capacity: "Operations",
-  critical_attention: "Operations",
+  planning_decisions: "Planning",
+  readiness: "Planning",
+  capacity: "Planning",
+  critical_attention: "Planning",
 };
 
 const WORKSPACE_ACTION_LABELS = {
   workforce: "Apri Workforce",
   fleet: "Apri Fleet",
-  operations: "Apri Operations",
+  operations: "Apri Planning",
   settings: "Apri Configurazione",
 };
 
@@ -124,7 +124,7 @@ function numeric(value) {
 
 function snapshotState(section) {
   if (!section) {
-    return { label: "Snapshot temporaneo", tone: "temporary" };
+    return { label: "Dati in attesa", tone: "temporary" };
   }
   return SNAPSHOT_PRESENTATION[section.severity]
     || { label: "Da verificare", tone: "attention" };
@@ -143,11 +143,11 @@ function workforceSnapshot(briefing) {
     required,
     absences,
     availabilityLabel: available === null
-      ? "Non esposta dallo snapshot"
+      ? "Dato non esposto"
       : required === null
         ? String(available)
         : `${available} su ${required}`,
-    absencesLabel: absences === null ? "Non esposte" : String(absences),
+    absencesLabel: absences === null ? "Dato non esposto" : String(absences),
   };
 }
 
@@ -163,9 +163,9 @@ function fleetSnapshot(briefing) {
     available,
     maintenance,
     documents,
-    availableLabel: available === null ? "Non esposti dallo snapshot" : String(available),
-    maintenanceLabel: maintenance === null ? "Non disponibile" : String(maintenance),
-    documentsLabel: documents === null ? "Non disponibili" : `${documents} in attenzione`,
+    availableLabel: available === null ? "Dato non esposto" : String(available),
+    maintenanceLabel: maintenance === null ? "Dato non esposto" : String(maintenance),
+    documentsLabel: documents === null ? "Dato non esposto" : `${documents} in attenzione`,
   };
 }
 
@@ -178,14 +178,14 @@ function planningSnapshot(briefing) {
   return {
     state: planningAvailable
       ? { label: "Planning disponibile", tone: "ready" }
-      : { label: "Snapshot temporaneo", tone: "temporary" },
+      : { label: "Dati in attesa", tone: "temporary" },
     readiness: readiness.available
       ? READINESS_LABELS[readiness.level] || readiness.level || "Disponibile"
-      : "Non disponibile",
+      : "Dato non esposto",
     blocking,
     warnings,
     conflictsLabel: blocking === null
-      ? "Non disponibili"
+      ? "Dato non esposto"
       : `${blocking} bloccanti · ${warnings || 0} avvisi`,
     generatedAt: briefing?.generated_at || null,
     version: briefing?.planning_version || null,
@@ -231,10 +231,10 @@ function temporaryActions(workspace) {
       priorityLabel: "Dati necessari",
       tone: "neutral",
       title: "Prepara Workforce",
-      summary: "Lo snapshot Workforce non è ancora disponibile per la giornata.",
+      summary: "I dati Workforce non sono ancora disponibili per la giornata.",
       sourceLabel: "Stato temporaneo",
       workspace: "workforce",
-      actionLabel: "Apri Workforce",
+      actionLabel: WORKSPACE_ACTION_LABELS.workforce,
       temporary: true,
     });
   }
@@ -244,10 +244,10 @@ function temporaryActions(workspace) {
       priorityLabel: "Dati necessari",
       tone: "neutral",
       title: "Aggiorna Fleet",
-      summary: "Lo snapshot Fleet non è ancora disponibile per la giornata.",
+      summary: "I dati Fleet non sono ancora disponibili per la giornata.",
       sourceLabel: "Stato temporaneo",
       workspace: "fleet",
-      actionLabel: "Apri Fleet",
+      actionLabel: WORKSPACE_ACTION_LABELS.fleet,
       temporary: true,
     });
   }
@@ -257,10 +257,10 @@ function temporaryActions(workspace) {
       priorityLabel: "Dati necessari",
       tone: "neutral",
       title: "Genera o verifica il Planning",
-      summary: "Non esiste ancora un Planning utilizzabile nello snapshot corrente.",
+      summary: "Non esiste ancora un Planning utilizzabile nei dati correnti.",
       sourceLabel: "Stato temporaneo",
       workspace: "operations",
-      actionLabel: "Apri Operations",
+      actionLabel: WORKSPACE_ACTION_LABELS.operations,
       temporary: true,
     });
   }
@@ -274,7 +274,7 @@ function statusView(state) {
     return {
       tone: "loading",
       label: "Stato in aggiornamento",
-      description: "Verifica degli snapshot operativi disponibili.",
+      description: "Verifica dei dati operativi disponibili.",
       temporary: true,
     };
   }
@@ -290,7 +290,7 @@ function statusView(state) {
     return {
       tone: "unknown",
       label: "Stato non determinabile",
-      description: briefing?.executive_summary || "Gli snapshot necessari non sono ancora disponibili.",
+      description: briefing?.executive_summary || "I dati necessari non sono ancora disponibili.",
       temporary: true,
     };
   }
@@ -336,13 +336,13 @@ function timelineItems(state) {
     workspace.latest_planning_import?.imported_at && {
       id: `planning-import-${workspace.latest_planning_import.import_id}`,
       timestamp: workspace.latest_planning_import.imported_at,
-      label: "Import Planning completato",
-      source: "Operations",
+      label: "Import del Planning completato",
+      source: "Planning",
     },
     workspace.latest_fleet_import?.imported_at && {
       id: `fleet-import-${workspace.latest_fleet_import.import_id}`,
       timestamp: workspace.latest_fleet_import.imported_at,
-      label: "Sincronizzazione Fleet disponibile",
+      label: "Sincronizzazione parco mezzi disponibile",
       source: "Fleet",
     },
     briefing.generated_at && {
@@ -393,7 +393,7 @@ export function deriveMissionControlView(state) {
         ? "Azioni temporaneamente non disponibili"
         : "Preparazione non ancora disponibile",
     actionEmptyDescription: available
-      ? "Il Briefing non segnala interventi nello snapshot corrente."
+      ? "Il briefing non segnala interventi nei dati correnti."
       : state.briefingError || "Completa i dati operativi per ottenere azioni verificate.",
     workforce,
     fleet,

@@ -9,7 +9,7 @@ const CONFIRMATION_STATES = Object.freeze([
 
 function text(value, field) {
   if (typeof value !== "string" || !value.trim()) {
-    throw new TypeError(`Valore Confirmation non valido: ${field}.`);
+    throw new TypeError(`Valore della conferma non valido: ${field}.`);
   }
   return value.trim();
 }
@@ -17,7 +17,7 @@ function text(value, field) {
 
 function count(value, field, minimum = 0) {
   if (!Number.isInteger(value) || value < minimum) {
-    throw new TypeError(`Conteggio Confirmation non valido: ${field}.`);
+    throw new TypeError(`Conteggio della conferma non valido: ${field}.`);
   }
   return value;
 }
@@ -39,13 +39,13 @@ function normalizeRule(value) {
 function normalizeResult(value) {
   const state = text(value?.state, "result.state").toUpperCase();
   if (!CONFIRMATION_STATES.includes(state)) {
-    throw new TypeError("Stato Confirmation non riconosciuto.");
+    throw new TypeError("Stato della conferma non riconosciuto.");
   }
   const rules = Object.freeze((value?.rules || []).map(normalizeRule));
-  if (!rules.length) throw new TypeError("Regole Confirmation mancanti.");
+  if (!rules.length) throw new TypeError("Regole di conferma mancanti.");
   const canConfirm = value?.can_confirm === true;
   if (canConfirm !== (state === "READY_TO_CONFIRM")) {
-    throw new TypeError("Disponibilita Confirmation incoerente.");
+    throw new TypeError("Disponibilità della conferma incoerente.");
   }
   return Object.freeze({
     state,
@@ -61,21 +61,21 @@ function normalizeConfirmation(value) {
   if (!value) return null;
   const state = text(value?.state, "confirmation.state").toUpperCase();
   if (state !== "CONFIRMED") {
-    throw new TypeError("Confirmed Plan non valido.");
+    throw new TypeError("Piano confermato non valido.");
   }
   const readinessScore = count(
     value?.readiness_score,
     "confirmation.readiness_score",
   );
   if (readinessScore > 100) {
-    throw new TypeError("Score Confirmation non valido.");
+    throw new TypeError("Punteggio della conferma non valido.");
   }
   const fingerprint = text(
     value?.fingerprint,
     "confirmation.fingerprint",
   );
   if (!/^[a-f0-9]{64}$/i.test(fingerprint)) {
-    throw new TypeError("Fingerprint Confirmation non valido.");
+    throw new TypeError("Fingerprint della conferma non valido.");
   }
   return Object.freeze({
     id: text(value?.confirmation_id, "confirmation.confirmation_id"),
@@ -106,7 +106,7 @@ function normalizeHistory(value) {
   );
   const total = count(value?.total, "history.total");
   if (total < confirmations.length) {
-    throw new TypeError("Cronologia Confirmation incoerente.");
+    throw new TypeError("Cronologia delle conferme incoerente.");
   }
   return Object.freeze({ total, confirmations });
 }
@@ -114,16 +114,16 @@ function normalizeHistory(value) {
 
 export function normalizePlanningConfirmationReport(payload) {
   if (!payload || typeof payload !== "object") {
-    throw new TypeError("Risposta Planning Confirmation non valida.");
+    throw new TypeError("Risposta di conferma del piano non valida.");
   }
   const state = text(payload.state, "state").toUpperCase();
   const result = normalizeResult(payload.result);
   if (state !== result.state) {
-    throw new TypeError("Stato report Confirmation incoerente.");
+    throw new TypeError("Stato del report di conferma incoerente.");
   }
   const current = normalizeConfirmation(payload.current);
   if (state === "CONFIRMED" && !current) {
-    throw new TypeError("Confirmed Plan corrente mancante.");
+    throw new TypeError("Piano confermato corrente mancante.");
   }
   return Object.freeze({
     viewState: state === "ERROR" ? "error" : "ready",

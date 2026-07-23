@@ -23,6 +23,7 @@ import {
   renderAssetList,
   renderFleetFailure,
   renderFleetLoading,
+  setFleetMetricPriority,
 } from "./fleet-view.js";
 
 
@@ -35,19 +36,23 @@ let latestFleetImportAt = null;
 async function refreshSyncSummary(hasAssets) {
   if (!hasAssets) {
     byId("fleetRecentUpdates").textContent = "0";
+    setFleetMetricPriority("fleetRecentUpdates", 0);
     byId("fleetUnresolvedConflicts").textContent = "0";
     return null;
   }
   try {
     const latest = await getLatestFleetSync();
     const summary = latest.summary || {};
-    byId("fleetRecentUpdates").textContent = Number(summary.created_assets || 0)
+    const recentUpdates = Number(summary.created_assets || 0)
       + Number(summary.updated_assets || 0);
+    byId("fleetRecentUpdates").textContent = recentUpdates;
+    setFleetMetricPriority("fleetRecentUpdates", recentUpdates);
     byId("fleetUnresolvedConflicts").textContent = summary.unresolved_conflicts || 0;
     return latest;
   } catch (error) {
     if (!isExpectedApiError(error, { statuses: [404] })) throw error;
     byId("fleetRecentUpdates").textContent = "0";
+    setFleetMetricPriority("fleetRecentUpdates", 0);
     byId("fleetUnresolvedConflicts").textContent = "0";
     return null;
   }

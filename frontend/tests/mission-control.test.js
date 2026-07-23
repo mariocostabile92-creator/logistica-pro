@@ -81,7 +81,7 @@ test("initial Mission Control state is explicitly temporary", () => {
   assert.equal(view.loading, true);
   assert.equal(view.status.label, "Stato in aggiornamento");
   assert.equal(view.status.temporary, true);
-  assert.equal(view.workforce.availabilityLabel, "Non esposta dallo snapshot");
+  assert.equal(view.workforce.availabilityLabel, "Dato non esposto");
 });
 
 
@@ -141,10 +141,10 @@ test("snapshots consume structured facts and never invent missing Fleet availabi
   const view = deriveMissionControlView(availableState());
 
   assert.equal(view.workforce.availabilityLabel, "24 su 25");
-  assert.equal(view.workforce.absencesLabel, "Non esposte");
+  assert.equal(view.workforce.absencesLabel, "Dato non esposto");
   assert.equal(view.fleet.maintenanceLabel, "1");
   assert.equal(view.fleet.documentsLabel, "2 in attenzione");
-  assert.equal(view.fleet.availableLabel, "Non esposti dallo snapshot");
+  assert.equal(view.fleet.availableLabel, "Dato non esposto");
   assert.equal(view.planning.readiness, "Critica");
   assert.equal(view.planning.conflictsLabel, "2 bloccanti · 1 avvisi");
 });
@@ -182,8 +182,8 @@ test("timeline uses only existing Workspace and Briefing timestamps", () => {
   assert.deepEqual(labels, [
     "Briefing aggiornato",
     "Workspace operativo aggiornato",
-    "Sincronizzazione Fleet disponibile",
-    "Import Planning completato",
+    "Sincronizzazione parco mezzi disponibile",
+    "Import del Planning completato",
   ]);
 });
 
@@ -244,4 +244,27 @@ test("Mission Control mobile keeps actions primary and compacts secondary blocks
     /@media \(max-width: 620px\)[\s\S]*?\.mission-timeline-list[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,
   );
   assert.match(css, /\.mission-briefing \.briefing-summary[\s\S]*?-webkit-line-clamp: 2/);
+});
+
+
+test("Mission Control P1 keeps ownership explicit and secondary context compact", async () => {
+  const [html, css, state] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../assets/css/mission-control.css", import.meta.url), "utf8"),
+    readFile(
+      new URL("../assets/js/modules/mission-control-state.js", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(
+    html,
+    /data-mission-workspace="operations"[\s\S]*?Apri Planning/,
+  );
+  assert.match(state, /operations: "Apri Planning"/);
+  assert.match(state, /fleet: "Apri Fleet"/);
+  assert.match(state, /workforce: "Apri Workforce"/);
+  assert.match(css, /\.mission-snapshot[\s\S]*?padding: 12px 14px 10px/);
+  assert.match(css, /\.mission-timeline[\s\S]*?margin-top: 22px/);
+  assert.match(css, /\.mission-briefing[\s\S]*?margin: 22px 0 0/);
 });

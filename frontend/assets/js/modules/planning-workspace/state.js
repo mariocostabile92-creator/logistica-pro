@@ -29,7 +29,7 @@ export function applyPlanningWorkspaceEvent(current, event) {
         ...currentPublication,
         viewState: "error",
         busy: false,
-        message: event.message || "Planning Publication non disponibile.",
+        message: event.message || "Pubblicazione del piano non disponibile.",
       }),
       "publication-mutation-started": Object.freeze({
         ...currentPublication,
@@ -40,13 +40,13 @@ export function applyPlanningWorkspaceEvent(current, event) {
       "publication-mutation-completed": Object.freeze({
         ...event.publication,
         busy: false,
-        feedback: event.message || "Publication aggiornata.",
+        feedback: event.message || "Pubblicazione aggiornata.",
       }),
       "publication-mutation-failed": Object.freeze({
         ...currentPublication,
         viewState: "error",
         busy: false,
-        message: event.message || "Operazione Publication non riuscita.",
+        message: event.message || "Operazione di pubblicazione non riuscita.",
       }),
     };
     const nextPublication = publicationStates[event.type];
@@ -74,7 +74,7 @@ export function applyPlanningWorkspaceEvent(current, event) {
         ...currentConfirmation,
         viewState: "error",
         busy: false,
-        message: event.message || "Planning Confirmation non disponibile.",
+        message: event.message || "Conferma del piano non disponibile.",
       }),
       "confirmation-mutation-started": Object.freeze({
         ...currentConfirmation,
@@ -85,13 +85,13 @@ export function applyPlanningWorkspaceEvent(current, event) {
       "confirmation-mutation-completed": Object.freeze({
         ...event.confirmation,
         busy: false,
-        feedback: event.message || "Confirmation aggiornata.",
+        feedback: event.message || "Conferma aggiornata.",
       }),
       "confirmation-mutation-failed": Object.freeze({
         ...currentConfirmation,
         viewState: "error",
         busy: false,
-        message: event.message || "Operazione Confirmation non riuscita.",
+        message: event.message || "Operazione di conferma non riuscita.",
       }),
     };
     const nextConfirmation = confirmationStates[event.type];
@@ -113,7 +113,7 @@ export function applyPlanningWorkspaceEvent(current, event) {
         ...currentDraft,
         viewState: "error",
         busy: false,
-        message: event.message || "Planning Draft non disponibile.",
+        message: event.message || "Bozza di pianificazione non disponibile.",
       }),
       "draft-mutation-started": Object.freeze({
         ...currentDraft,
@@ -124,13 +124,13 @@ export function applyPlanningWorkspaceEvent(current, event) {
       "draft-mutation-completed": Object.freeze({
         ...event.draft,
         busy: false,
-        feedback: event.message || "Draft aggiornato.",
+        feedback: event.message || "Bozza aggiornata.",
       }),
       "draft-mutation-failed": Object.freeze({
         ...currentDraft,
         viewState: "error",
         busy: false,
-        message: event.message || "Operazione Draft non riuscita.",
+        message: event.message || "Operazione sulla bozza non riuscita.",
       }),
     };
     const nextDraft = draftStates[event.type];
@@ -149,7 +149,7 @@ export function applyPlanningWorkspaceEvent(current, event) {
       "timeline-loaded": event.timeline,
       "timeline-load-failed": Object.freeze({
         state: "error",
-        message: event.message || "Planning Timeline non disponibile.",
+        message: event.message || "Cronologia del piano non disponibile.",
       }),
     };
     const nextTimeline = timelineStates[event.type];
@@ -216,7 +216,7 @@ export function derivePlanningWorkspaceView(state) {
         detail: readiness.rationale,
         ...readiness,
       })
-      : placeholder("Non disponibile", "Nessuna valutazione Readiness disponibile."),
+      : placeholder("Non disponibile", "Nessuna valutazione di preparazione disponibile."),
     conflicts: snapshot.conflicts || null,
     timeline: snapshot.timeline || Object.freeze({ state: "loading" }),
     draft: snapshot.draft || Object.freeze({

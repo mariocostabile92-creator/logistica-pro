@@ -49,7 +49,7 @@ test("Planning Workspace starts in an explicit loading state", () => {
 
   assert.equal(state.state, PLANNING_WORKSPACE_STATES.LOADING);
   assert.equal(view.loading, true);
-  assert.equal(view.statusTitle, "Preparazione Planning Workspace");
+  assert.equal(view.statusTitle, "Preparazione area Planning");
 });
 
 
@@ -75,20 +75,26 @@ test("state accepts every declared presentation without deriving decisions", () 
 });
 
 
-test("legacy state presents the disconnected Runtime once in the primary status", () => {
+test("legacy state presents the disconnected planning engine once in the primary status", () => {
   const state = applyPlanningWorkspaceEvent(
     createPlanningWorkspaceState(),
     { type: "legacy-active" },
   );
   const view = derivePlanningWorkspaceView(state);
 
-  assert.equal(view.badge, "Legacy");
-  assert.equal(view.statusDescription, "Planning Runtime non ancora collegato.");
+  assert.equal(view.badge, "Flusso precedente");
+  assert.equal(
+    view.statusDescription,
+    "Il nuovo motore di pianificazione non è ancora collegato.",
+  );
   assert.equal(view.readiness.value, "Non disponibile");
-  assert.equal(view.readiness.detail, "Nessuna valutazione Readiness disponibile.");
+  assert.equal(
+    view.readiness.detail,
+    "Nessuna valutazione di preparazione disponibile.",
+  );
   assert.equal(
     [view.statusDescription, view.readiness.detail]
-      .filter((value) => value.includes("Planning Runtime non ancora collegato."))
+      .filter((value) => value.includes("motore di pianificazione"))
       .length,
     1,
   );
@@ -480,7 +486,7 @@ test("readiness normalization renders score blocker and warning without invented
   assert.equal(blocked.envelopeVersion, null);
   assert.throws(
     () => normalizePlanningReadiness({ status: "READY" }),
-    /Score readiness non valido/,
+    /Punteggio di preparazione non valido/,
   );
 });
 
@@ -621,7 +627,7 @@ test("Planning Draft normalizes empty active and read-only states", () => {
   assert.equal(deleted.draft.deletedAt, "2026-07-22T07:05:00Z");
   assert.throws(
     () => normalizePlanningDraftWorkspace({ state: "UNKNOWN" }),
-    /Stato Planning Draft non riconosciuto/,
+    /Stato della bozza di pianificazione non riconosciuto/,
   );
 });
 
@@ -667,7 +673,7 @@ test("Planning Confirmation normalizes ready not-ready confirmed and error state
   assert.equal(error.viewState, "error");
   assert.throws(
     () => normalizePlanningConfirmationReport({ state: "UNKNOWN" }),
-    /Stato Confirmation non riconosciuto|Valore Confirmation non valido/,
+    /Stato della conferma non riconosciuto|Valore della conferma non valido/,
   );
 });
 
@@ -716,7 +722,7 @@ test("Planning Publication normalizes ready published failed and error states", 
   assert.equal(error.viewState, "error");
   assert.throws(
     () => normalizePlanningPublicationReport({ state: "UNKNOWN" }),
-    /Stato Publication non riconosciuto|Valore Publication non valido/,
+    /Stato della pubblicazione non riconosciuto|Valore della pubblicazione non valido/,
   );
 });
 
@@ -999,6 +1005,34 @@ test("Planning P0 hierarchy emphasizes status readiness and conflicts", async ()
   assert.match(
     css,
     /\.planning-workspace-timeline,[\s\S]*?\.planning-workspace-publication[\s\S]*?background: transparent/,
+  );
+});
+
+
+test("Planning P1 keeps technical contract details available but secondary", async () => {
+  const [components, css] = await Promise.all([
+    frontendFile("assets/js/modules/planning-workspace/components.js"),
+    frontendFile("assets/css/planning-workspace.css"),
+  ]);
+
+  assert.match(components, /planning-technical-detail/);
+  for (const label of [
+    "Versione",
+    "Ultima modifica",
+    "Ultimo controllo",
+    "Responsabile",
+    "Fingerprint",
+  ]) {
+    assert.match(components, new RegExp(label));
+  }
+  assert.match(css, /\.planning-technical-detail[\s\S]*?background: var\(--surface-subtle\)/);
+  assert.match(
+    css,
+    /\.planning-technical-detail dt,[\s\S]*?\.planning-technical-detail dd[\s\S]*?color: var\(--text-muted\)/,
+  );
+  assert.match(
+    css,
+    /\[data-planning-role="publication-fingerprint"\][\s\S]*?overflow-wrap: anywhere/,
   );
 });
 

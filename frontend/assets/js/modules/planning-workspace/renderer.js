@@ -34,7 +34,7 @@ function renderReadiness(refs, readiness) {
   renderIssues(refs.readinessBlockers, refs.readinessBlockerList, readiness.blockers);
   renderIssues(refs.readinessWarnings, refs.readinessWarningList, readiness.warnings);
   refs.readinessMetadata.hidden = !available;
-  setNodeText(refs.readinessUnit, readiness.operationalUnit || "Non disponibile");
+  setNodeText(refs.readinessUnit, readiness.operationalUnit || "Non indicata");
   setNodeText(refs.readinessDate, formatPlanningDate(readiness.planningDate));
   setNodeText(refs.readinessUpdated, formatPlanningTimestamp(readiness.evaluatedAt));
   setNodeText(
@@ -135,7 +135,7 @@ function renderConflicts(refs, report) {
     refs.conflictEmpty,
     available
       ? "Nessun conflitto rilevato."
-      : "Conflict Review non disponibile.",
+      : "Verifica conflitti non disponibile.",
   );
   if (!available) {
     refs.conflictGroups.replaceChildren();
@@ -252,18 +252,18 @@ function renderTimeline(refs, timeline) {
   refs.timelineError.hidden = !failed;
   setNodeText(
     refs.timelineErrorText,
-    timeline?.message || "Planning Timeline non disponibile.",
+    timeline?.message || "Cronologia del piano non disponibile.",
   );
   setNodeText(refs.timelineCount, ready || empty ? timeline.eventCount : "-");
   setNodeText(
     refs.timelineStatus,
-    ready || empty ? timeline.currentStatus : "Non disponibile",
+    ready || empty ? timeline.currentStatus : "Non determinato",
   );
   setNodeText(
     refs.timelineUpdated,
     ready || empty
       ? formatPlanningTimestamp(timeline.lastUpdated)
-      : "Non disponibile",
+      : "Non registrato",
   );
   if (ready) {
     renderTimelineGroups(refs, timeline);
@@ -333,15 +333,15 @@ function renderDraft(refs, draft) {
   refs.draftError.hidden = !failed;
   setNodeText(
     refs.draftErrorText,
-    draft?.message || "Planning Draft non disponibile.",
+    draft?.message || "Bozza di pianificazione non disponibile.",
   );
   refs.draftSummary.hidden = !hasDraft;
   refs.draftEmpty.hidden = !empty;
   setNodeText(
     refs.draftEmpty,
     readOnly
-      ? "Draft eliminato. La cronologia resta disponibile in sola lettura."
-      : "Nessun Draft disponibile. Crea una proposta separata dal Planning operativo.",
+      ? "Bozza eliminata. La cronologia resta disponibile in sola lettura."
+      : "Nessuna bozza disponibile. Crea una proposta separata dal piano operativo.",
   );
   refs.draftEditor.hidden = loading || (failed && !hasDraft);
 
@@ -449,7 +449,7 @@ function renderConfirmationHistory(refs, history) {
     node.append(
       meta,
       element("p", {
-        text: `Draft v${item.draftVersion} · Readiness ${item.readinessScore}/100`,
+        text: `Bozza v${item.draftVersion} · Preparazione ${item.readinessScore}/100`,
       }),
     );
     return node;
@@ -472,7 +472,7 @@ function renderConfirmation(refs, confirmation, draftWorkspace) {
   refs.confirmationError.hidden = !failed;
   setNodeText(
     refs.confirmationErrorText,
-    confirmation?.message || "Planning Confirmation non disponibile.",
+    confirmation?.message || "Conferma del piano non disponibile.",
   );
   refs.confirmationSummary.hidden = loading;
   refs.confirmationValidation.hidden = !result || loading;
@@ -483,13 +483,13 @@ function renderConfirmation(refs, confirmation, draftWorkspace) {
   );
   setNodeText(
     refs.confirmationDraft,
-    current?.draftName || draft?.name || "Nessun Draft",
+    current?.draftName || draft?.name || "Nessuna bozza",
   );
   setNodeText(
     refs.confirmationVersion,
     current
-      ? `Conferma v${current.version} · Draft v${current.draftVersion}`
-      : draft ? `Draft v${draft.version.number}` : "-",
+      ? `Conferma v${current.version} · Bozza v${current.draftVersion}`
+      : draft ? `Bozza v${draft.version.number}` : "-",
   );
   setNodeText(
     refs.confirmationUpdated,
@@ -514,10 +514,10 @@ function renderConfirmation(refs, confirmation, draftWorkspace) {
   setNodeText(
     refs.confirmationHint,
     current
-      ? "Il Confirmed Plan e immutabile. Publication non e ancora disponibile."
+      ? "Il piano confermato è immutabile. La pubblicazione non è ancora disponibile."
       : result?.canConfirm
         ? "Tutte le regole sono superate. La conferma non pubblica il piano."
-        : result?.rationale || "Completa il Draft e ripeti la verifica.",
+        : result?.rationale || "Completa la bozza e ripeti la verifica.",
   );
   refs.confirmationExplicit.hidden = true;
   refs.confirmationConfirmButton.disabled = busy || !result?.canConfirm;
@@ -565,14 +565,14 @@ function renderPublicationHistory(refs, history) {
     const node = element("li", {
       attributes: {
         tabindex: "0",
-        "aria-label": `Publication versione ${item.version}, ${formatPlanningTimestamp(item.publishedAt)}`,
+        "aria-label": `Pubblicazione versione ${item.version}, ${formatPlanningTimestamp(item.publishedAt)}`,
       },
     });
     const meta = element("div", {
       className: "planning-publication-history-meta",
     });
     meta.append(
-      element("strong", { text: `Publication v${item.version}` }),
+      element("strong", { text: `Pubblicazione v${item.version}` }),
       element("time", {
         text: formatPlanningTimestamp(item.publishedAt),
         attributes: { datetime: item.publishedAt },
@@ -581,7 +581,7 @@ function renderPublicationHistory(refs, history) {
     node.append(
       meta,
       element("p", {
-        text: `Confirmed Plan v${item.confirmationVersion} · ${item.actor}`,
+        text: `Piano confermato v${item.confirmationVersion} · ${item.actor}`,
       }),
     );
     return node;
@@ -604,7 +604,7 @@ function renderPublication(refs, publication, confirmationWorkspace) {
   refs.publicationError.hidden = !failed;
   setNodeText(
     refs.publicationErrorText,
-    publication?.message || "Planning Publication non disponibile.",
+    publication?.message || "Pubblicazione del piano non disponibile.",
   );
   refs.publicationSummary.hidden = loading;
   refs.publicationValidation.hidden = !result || loading;
@@ -615,7 +615,7 @@ function renderPublication(refs, publication, confirmationWorkspace) {
   );
   setNodeText(
     refs.publicationVersion,
-    current ? `Publication v${current.version}` : "-",
+    current ? `Pubblicazione v${current.version}` : "-",
   );
   setNodeText(
     refs.publicationUpdated,
@@ -654,10 +654,10 @@ function renderPublication(refs, publication, confirmationWorkspace) {
   setNodeText(
     refs.publicationHint,
     current
-      ? "Il Published Plan e immutabile. Nessuna esecuzione e stata avviata."
+      ? "Il piano pubblicato è immutabile. Nessuna esecuzione è stata avviata."
       : result?.canPublish
-        ? "Tutte le regole sono superate. La Publication non esegue il piano."
-        : result?.rationale || "Conferma il Draft e ripeti la verifica.",
+        ? "Tutte le regole sono superate. La pubblicazione non esegue il piano."
+        : result?.rationale || "Conferma la bozza e ripeti la verifica.",
   );
   refs.publicationExplicit.hidden = true;
   refs.publicationPublishButton.disabled = (

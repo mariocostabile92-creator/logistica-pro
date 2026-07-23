@@ -93,7 +93,7 @@ function normalizeGroup(value) {
 
 export function normalizePlanningConflictResult(payload) {
   if (!payload || typeof payload !== "object" || !payload.report) {
-    throw new TypeError("Risposta Conflict Review non valida.");
+    throw new TypeError("Risposta di verifica conflitti non valida.");
   }
   const readiness = normalizePlanningReadiness(payload.readiness);
   const conflicts = Object.freeze(

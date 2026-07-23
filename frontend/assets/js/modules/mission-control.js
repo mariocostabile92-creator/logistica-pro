@@ -111,7 +111,7 @@ function renderStatus(view) {
     setText("missionFleetKpi", view.fleet.availableLabel);
     setText(
       "missionConflictKpi",
-      view.planning.blocking === null ? "Non disponibile" : view.planning.blocking,
+      view.planning.blocking === null ? "Dato non esposto" : view.planning.blocking,
     );
   });
 }
@@ -221,7 +221,7 @@ function renderSnapshots(view) {
     setText("missionPlanningConflicts", view.planning.conflictsLabel);
     setText(
       "missionPlanningGenerated",
-      view.planning.generatedAt ? shortTimestamp(view.planning.generatedAt) : "Non disponibile",
+      view.planning.generatedAt ? shortTimestamp(view.planning.generatedAt) : "Non registrata",
     );
   });
 }
@@ -241,8 +241,8 @@ function renderOperationalUnits(view) {
     setText(
       "missionOperationalUnitHint",
       unitCount
-        ? `${unitCount} unit\u00e0 nello snapshot \u00b7 filtro temporaneo`
-        : "Selettore predisposto \u00b7 snapshot aggregato",
+        ? `${unitCount} unit\u00e0 nei dati \u00b7 filtro temporaneo`
+        : "Selettore predisposto \u00b7 dati aggregati",
     );
   });
 }
@@ -255,7 +255,7 @@ function renderTimeline(view) {
       list.replaceChildren(element(
         "li",
         "mission-timeline-placeholder",
-        "Nessuna attivit\u00e0 disponibile nello snapshot corrente.",
+        "Nessuna attivit\u00e0 disponibile nei dati correnti.",
       ));
       return;
     }

@@ -115,6 +115,22 @@ body[data-active-workspace="workforce"] .app-shell {
   box-shadow: 0 2px 8px rgb(14 27 23 / 5%);
 }
 
+.workforce-kpis > div[data-priority="attention"] {
+  border-top: 3px solid var(--warning);
+}
+
+.workforce-kpis > div[data-priority="critical"] {
+  border-top: 4px solid var(--danger);
+}
+
+.workforce-kpis > div[data-priority="attention"] dd {
+  color: var(--attention-text);
+}
+
+.workforce-kpis > div[data-priority="critical"] dd {
+  color: var(--critical-text);
+}
+
 .workforce-kpis dt {
   display: flex;
   align-items: center;

@@ -173,7 +173,7 @@ test("page embeds the existing Briefing inside Mission Control", async () => {
 
   assert.match(html, /Mission Control/);
   assert.match(html, /Azioni richieste/);
-  assert.match(html, /Operational Unit/);
+  assert.match(html, /Unità operativa/);
   assert.match(html, /id="briefingTitle">Briefing/);
   assert.match(
     html,

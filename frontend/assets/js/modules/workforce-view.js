@@ -125,6 +125,22 @@ export function renderWorkforceSummary(summary) {
     summary.coverageConfigured ? summary.margin : "Non configurato"
   );
   document.getElementById("workforceRequirementNotice").hidden = summary.coverageConfigured;
+  const priorities = {
+    resources: "normal",
+    scheduled: "normal",
+    available: "normal",
+    rest: "normal",
+    absent: summary.absent > 0 ? "attention" : "normal",
+    deficit: !summary.coverageConfigured
+      ? "attention"
+      : summary.deficit > 0 ? "critical" : "normal",
+    margin: !summary.coverageConfigured
+      ? "attention"
+      : summary.margin < 0 ? "critical" : "normal",
+  };
+  for (const [key, priority] of Object.entries(priorities)) {
+    document.querySelector(`[data-kpi="${key}"]`).dataset.priority = priority;
+  }
 }
 
 

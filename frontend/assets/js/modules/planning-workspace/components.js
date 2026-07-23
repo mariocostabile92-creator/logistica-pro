@@ -15,7 +15,7 @@ export function createPlanningHeader() {
   heading.append(
     element("p", { className: "eyebrow", text: "Pianificazione operativa" }),
     element("h2", {
-      text: "Planning Workspace",
+      text: "Planning operativo",
       attributes: { id: "planningWorkspaceTitle" },
     }),
     element("p", {
@@ -34,7 +34,7 @@ export function createPlanningHeader() {
   );
   const unit = element("div");
   unit.append(
-    element("dt", { text: "Operational Unit" }),
+    element("dt", { text: "Unità operativa" }),
     element("dd", { attributes: { "data-planning-role": "unit" } }),
   );
   context.append(date, unit);
@@ -72,7 +72,7 @@ export function createStatusCard() {
       type: "button",
       "data-planning-action": "retry-conflicts",
       hidden: "",
-      "aria-label": "Riprova il caricamento del Conflict Review",
+      "aria-label": "Riprova il caricamento della verifica conflitti",
     },
   });
   card.append(copy, retry);
@@ -119,7 +119,7 @@ export function createReadinessCard() {
   heading.append(
     element("p", { className: "eyebrow", text: "Verifica" }),
     element("h3", {
-      text: "Planning Readiness",
+      text: "Preparazione del piano",
       attributes: { id: "planningWorkspaceReadinessTitle" },
     }),
   );
@@ -169,13 +169,15 @@ export function createReadinessCard() {
     className: "planning-readiness-metadata",
     attributes: { "data-planning-role": "readiness-metadata" },
   });
-  for (const [label, role] of [
-    ["Operational Unit", "readiness-unit"],
+  for (const [label, role, technical = false] of [
+    ["Unità operativa", "readiness-unit"],
     ["Data operativa", "readiness-date"],
-    ["Ultimo aggiornamento", "readiness-updated"],
-    ["Flusso legacy", "readiness-legacy"],
+    ["Ultimo aggiornamento", "readiness-updated", true],
+    ["Flusso precedente", "readiness-legacy", true],
   ]) {
-    const item = element("div");
+    const item = element("div", {
+      className: technical ? "planning-technical-detail" : "",
+    });
     item.append(
       element("dt", { text: label }),
       element("dd", { attributes: { "data-planning-role": role } }),
@@ -202,7 +204,7 @@ export function createConflictSummary() {
   heading.append(
     element("p", { className: "eyebrow", text: "Controlli" }),
     element("h3", {
-      text: "Conflict Summary",
+      text: "Riepilogo conflitti",
       attributes: {
         id: "planningWorkspaceConflictsTitle",
         tabindex: "-1",
@@ -281,7 +283,7 @@ export function createPlanningTimeline() {
   heading.append(
     element("p", { className: "eyebrow", text: "Sequenza" }),
     element("h3", {
-      text: "Planning Timeline",
+      text: "Cronologia del piano",
       attributes: { id: "planningWorkspaceTimelineTitle" },
     }),
     element("p", {
@@ -297,12 +299,14 @@ export function createPlanningTimeline() {
     },
   });
   const summary = element("dl", { className: "planning-timeline-summary" });
-  for (const [label, role] of [
+  for (const [label, role, technical = false] of [
     ["Eventi", "timeline-count"],
     ["Stato corrente", "timeline-status"],
-    ["Ultimo aggiornamento", "timeline-updated"],
+    ["Ultimo aggiornamento", "timeline-updated", true],
   ]) {
-    const item = element("div");
+    const item = element("div", {
+      className: technical ? "planning-technical-detail" : "",
+    });
     item.append(
       element("dt", { text: label }),
       element("dd", { attributes: { "data-planning-role": role } }),
@@ -319,7 +323,7 @@ export function createPlanningTimeline() {
   loading.append(
     element("span", {
       className: "visually-hidden",
-      text: "Caricamento Timeline",
+      text: "Caricamento cronologia",
     }),
     element("span", { className: "planning-timeline-skeleton" }),
     element("span", { className: "planning-timeline-skeleton" }),
@@ -343,7 +347,7 @@ export function createPlanningTimeline() {
     }),
     element("button", {
       className: "secondary",
-      text: "Riprova Timeline",
+      text: "Riprova cronologia",
       attributes: {
         type: "button",
         "data-planning-action": "retry-timeline",
@@ -354,7 +358,7 @@ export function createPlanningTimeline() {
     className: "planning-timeline-groups",
     attributes: {
       "data-planning-role": "timeline-groups",
-      "aria-label": "Cronologia Planning",
+      "aria-label": "Cronologia del piano",
     },
   });
   body.append(summary, loading, empty, error, groups);
@@ -377,12 +381,12 @@ export function createPlanningDraft() {
   heading.append(
     element("p", { className: "eyebrow", text: "Proposta" }),
     element("h3", {
-      text: "Planning Draft",
+      text: "Bozza di pianificazione",
       attributes: { id: "planningWorkspaceDraftTitle" },
     }),
     element("p", {
       className: "planning-workspace-description",
-      text: "Proposta modificabile senza effetti sul Planning operativo.",
+      text: "Proposta modificabile senza effetti sul piano operativo.",
     }),
   );
   const body = element("div", {
@@ -396,13 +400,15 @@ export function createPlanningDraft() {
     className: "planning-draft-summary",
     attributes: { "data-planning-role": "draft-summary", hidden: "" },
   });
-  for (const [label, role] of [
-    ["Nome Draft", "draft-summary-name"],
+  for (const [label, role, technical = false] of [
+    ["Nome bozza", "draft-summary-name"],
     ["Stato", "draft-summary-state"],
-    ["Versione", "draft-summary-version"],
-    ["Ultima modifica", "draft-summary-updated"],
+    ["Versione", "draft-summary-version", true],
+    ["Ultima modifica", "draft-summary-updated", true],
   ]) {
-    const item = element("div");
+    const item = element("div", {
+      className: technical ? "planning-technical-detail" : "",
+    });
     item.append(
       element("dt", { text: label }),
       element("dd", { attributes: { "data-planning-role": role } }),
@@ -419,7 +425,7 @@ export function createPlanningDraft() {
   loading.append(
     element("span", {
       className: "visually-hidden",
-      text: "Caricamento Planning Draft",
+      text: "Caricamento bozza di pianificazione",
     }),
     element("span", { className: "planning-draft-skeleton" }),
     element("span", { className: "planning-draft-skeleton short" }),
@@ -436,7 +442,7 @@ export function createPlanningDraft() {
     element("p", { attributes: { "data-planning-role": "draft-error-text" } }),
     element("button", {
       className: "secondary",
-      text: "Riprova Draft",
+      text: "Riprova bozza",
       attributes: {
         type: "button",
         "data-planning-action": "retry-draft",
@@ -445,20 +451,20 @@ export function createPlanningDraft() {
   );
   const empty = element("p", {
     className: "planning-draft-empty",
-    text: "Nessun Draft disponibile. Crea una proposta separata dal Planning operativo.",
+    text: "Nessuna bozza disponibile. Crea una proposta separata dal piano operativo.",
     attributes: { "data-planning-role": "draft-empty", hidden: "" },
   });
   const editor = element("form", {
     className: "planning-draft-editor",
     attributes: {
       "data-planning-role": "draft-editor",
-      "aria-label": "Metadati Planning Draft",
+      "aria-label": "Dati della bozza di pianificazione",
     },
   });
   const fields = element("div", { className: "planning-draft-fields" });
   const nameLabel = element("label");
   nameLabel.append(
-    element("span", { text: "Nome Draft" }),
+    element("span", { text: "Nome bozza" }),
     element("input", {
       attributes: {
         type: "text",
@@ -495,7 +501,7 @@ export function createPlanningDraft() {
   });
   actions.append(
     element("button", {
-      text: "Nuovo Draft",
+      text: "Nuova bozza",
       attributes: { type: "button", "data-planning-action": "create-draft" },
     }),
     element("button", {
@@ -543,12 +549,12 @@ export function createPlanningDraft() {
     attributes: {
       "data-planning-role": "draft-delete-confirm",
       role: "group",
-      "aria-label": "Conferma eliminazione Draft",
+      "aria-label": "Conferma eliminazione bozza",
       hidden: "",
     },
   });
   confirmation.append(
-    element("p", { text: "Eliminare il Draft dal workspace attivo?" }),
+    element("p", { text: "Eliminare la bozza dall'area attiva?" }),
     element("button", {
       className: "secondary",
       text: "Annulla",
@@ -596,12 +602,12 @@ export function createPlanningConfirmation() {
   heading.append(
     element("p", { className: "eyebrow", text: "Conferma" }),
     element("h3", {
-      text: "Planning Confirmation",
+      text: "Conferma del piano",
       attributes: { id: "planningWorkspaceConfirmationTitle" },
     }),
     element("p", {
       className: "planning-workspace-description",
-      text: "Congela il Draft come Confirmed Plan senza pubblicarlo.",
+      text: "Rende immutabile la bozza confermata senza pubblicarla.",
     }),
   );
   const body = element("div", {
@@ -616,13 +622,15 @@ export function createPlanningConfirmation() {
     className: "planning-confirmation-summary",
     attributes: { "data-planning-role": "confirmation-summary" },
   });
-  for (const [label, role] of [
+  for (const [label, role, technical = false] of [
     ["Stato", "confirmation-state"],
-    ["Draft", "confirmation-draft"],
-    ["Versione", "confirmation-version"],
-    ["Ultimo controllo", "confirmation-updated"],
+    ["Bozza", "confirmation-draft"],
+    ["Versione", "confirmation-version", true],
+    ["Ultimo controllo", "confirmation-updated", true],
   ]) {
-    const item = element("div");
+    const item = element("div", {
+      className: technical ? "planning-technical-detail" : "",
+    });
     item.append(
       element("dt", { text: label }),
       element("dd", { attributes: { "data-planning-role": role } }),
@@ -639,7 +647,7 @@ export function createPlanningConfirmation() {
   loading.append(
     element("span", {
       className: "visually-hidden",
-      text: "Caricamento Planning Confirmation",
+      text: "Caricamento conferma del piano",
     }),
     element("span", { className: "planning-confirmation-skeleton" }),
     element("span", { className: "planning-confirmation-skeleton short" }),
@@ -658,7 +666,7 @@ export function createPlanningConfirmation() {
     }),
     element("button", {
       className: "secondary",
-      text: "Riprova Confirmation",
+      text: "Riprova conferma",
       attributes: {
         type: "button",
         "data-planning-action": "retry-confirmation",
@@ -763,13 +771,13 @@ export function createPlanningConfirmation() {
     attributes: {
       "data-planning-role": "confirmation-explicit",
       role: "group",
-      "aria-label": "Conferma definitiva del Draft",
+      "aria-label": "Conferma definitiva della bozza",
       hidden: "",
     },
   });
   explicit.append(
     element("p", {
-      text: "Il Draft diventera un Confirmed Plan immutabile. Non verra pubblicato.",
+      text: "La bozza diventerà un piano confermato immutabile. Non verrà pubblicato.",
     }),
     element("button", {
       className: "secondary",
@@ -835,12 +843,12 @@ export function createPlanningPublication() {
   heading.append(
     element("p", { className: "eyebrow", text: "Pubblicazione" }),
     element("h3", {
-      text: "Planning Publication",
+      text: "Pubblicazione del piano",
       attributes: { id: "planningWorkspacePublicationTitle" },
     }),
     element("p", {
       className: "planning-workspace-description",
-      text: "Rende disponibile il Confirmed Plan senza avviare l'esecuzione.",
+      text: "Rende disponibile il piano confermato senza avviare l'esecuzione.",
     }),
   );
   const body = element("div", {
@@ -855,15 +863,17 @@ export function createPlanningPublication() {
     className: "planning-publication-summary",
     attributes: { "data-planning-role": "publication-summary" },
   });
-  for (const [label, role] of [
+  for (const [label, role, technical = false] of [
     ["Stato", "publication-state"],
-    ["Versione", "publication-version"],
-    ["Timestamp", "publication-updated"],
-    ["Actor", "publication-actor"],
-    ["Confirmed Plan", "publication-confirmation"],
-    ["Fingerprint", "publication-fingerprint"],
+    ["Versione", "publication-version", true],
+    ["Pubblicato", "publication-updated", true],
+    ["Responsabile", "publication-actor", true],
+    ["Piano confermato", "publication-confirmation", true],
+    ["Fingerprint", "publication-fingerprint", true],
   ]) {
-    const item = element("div");
+    const item = element("div", {
+      className: technical ? "planning-technical-detail" : "",
+    });
     item.append(
       element("dt", { text: label }),
       element("dd", { attributes: { "data-planning-role": role } }),
@@ -880,7 +890,7 @@ export function createPlanningPublication() {
   loading.append(
     element("span", {
       className: "visually-hidden",
-      text: "Caricamento Planning Publication",
+      text: "Caricamento pubblicazione del piano",
     }),
     element("span", { className: "planning-publication-skeleton" }),
     element("span", { className: "planning-publication-skeleton short" }),
@@ -899,7 +909,7 @@ export function createPlanningPublication() {
     }),
     element("button", {
       className: "secondary",
-      text: "Riprova Publication",
+      text: "Riprova pubblicazione",
       attributes: {
         type: "button",
         "data-planning-action": "retry-publication",
@@ -1004,13 +1014,13 @@ export function createPlanningPublication() {
     attributes: {
       "data-planning-role": "publication-explicit",
       role: "group",
-      "aria-label": "Pubblicazione esplicita del Confirmed Plan",
+      "aria-label": "Pubblicazione esplicita del piano confermato",
       hidden: "",
     },
   });
   explicit.append(
     element("p", {
-      text: "Il Confirmed Plan diventera disponibile agli altri workspace. Nessuna esecuzione verra avviata.",
+      text: "Il piano confermato diventerà disponibile agli altri workspace. Nessuna esecuzione verrà avviata.",
     }),
     element("button", {
       className: "secondary",
@@ -1067,7 +1077,7 @@ export function createFooterActions() {
     className: "planning-workspace-footer",
     attributes: {
       "data-planning-component": "actions",
-      "aria-label": "Azioni Planning Workspace",
+      "aria-label": "Azioni del Planning operativo",
     },
   });
   const copy = element("div");
@@ -1109,7 +1119,7 @@ export function createPlanningLoadingState() {
   loading.append(
     element("span", {
       className: "visually-hidden",
-      text: "Caricamento Planning Workspace",
+      text: "Caricamento Planning operativo",
     }),
     element("span", { className: "planning-workspace-skeleton" }),
     element("span", { className: "planning-workspace-skeleton" }),

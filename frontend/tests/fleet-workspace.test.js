@@ -58,7 +58,7 @@ test("Fleet is a registry-first workspace with the requested toolbar and six KPI
   ]) {
     assert.match(fleet, new RegExp(label));
   }
-  assert.match(fleet, /Asset Registry[\s\S]*Registro mezzi/);
+  assert.match(fleet, /Registro asset[\s\S]*Registro mezzi/);
   assert.match(fleet, /<th>Targa<\/th>[\s\S]*<th>Stato<\/th>[\s\S]*<th>Driver associato<\/th>[\s\S]*<th>Categoria<\/th>[\s\S]*<th>Ultimo aggiornamento<\/th>/);
   assert.doesNotMatch(fleet, /<th>(Identificativo|Capability|Documenti|Azioni)<\/th>/);
 });
@@ -98,7 +98,7 @@ test("Fleet detail derives an observed driver and export contains only visible r
     },
   }]);
   assert.equal(driver, "Risorsa Due");
-  assert.equal(fleetDriverLabel(assets[1]), "Non disponibile");
+  assert.equal(fleetDriverLabel(assets[1]), "Non associato");
   const csv = fleetRegistryCsv(assets);
   assert.match(csv, /^"Targa","Stato","Driver associato","Categoria","Ultimo aggiornamento"/);
   assert.match(csv, /"AA001AA","Disponibile","Risorsa Uno"/);
@@ -146,7 +146,29 @@ test("Fleet mobile cards prioritize status and plate without removing metadata",
     fleetCss,
     /@media \(max-width: 620px\)[\s\S]*?\.fleet-card-grid[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,
   );
-  for (const label of ["Driver associato", "Categoria", "Ultimo aggiornamento"]) {
+  for (const label of ["Driver associato", "Categoria", "Aggiornato"]) {
     assert.match(view, new RegExp(label));
   }
+});
+
+
+test("Fleet P1 retains secondary data while reducing missing-value and timestamp noise", async () => {
+  const [html, view, page, css] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/js/modules/fleet-view.js"),
+    frontendFile("assets/js/modules/fleet-page.js"),
+    frontendFile("assets/css/fleet.css"),
+  ]);
+
+  for (const value of ["Non associato", "Non indicata", "Non registrato"]) {
+    assert.match(view, new RegExp(value));
+  }
+  assert.match(view, /fleet-secondary-value/);
+  assert.match(view, /fleet-timestamp/);
+  assert.match(html, /data-kpi="unavailable"/);
+  assert.match(html, /data-kpi="documents"/);
+  assert.match(page, /setFleetMetricPriority\("fleetRecentUpdates"/);
+  assert.match(css, /\.fleet-secondary-value[\s\S]*?color: var\(--text-muted\)/);
+  assert.match(css, /\.fleet-summary > div\[data-priority="attention"\]/);
+  assert.match(css, /\.fleet-summary > div\[data-priority="critical"\]/);
 });

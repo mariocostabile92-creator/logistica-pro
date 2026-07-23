@@ -86,7 +86,7 @@ function normalizeGroup(value) {
 
 export function normalizePlanningTimelineResult(payload) {
   if (!payload || typeof payload !== "object" || !payload.report) {
-    throw new TypeError("Risposta Planning Timeline non valida.");
+    throw new TypeError("Risposta della cronologia del piano non valida.");
   }
   const events = Object.freeze((payload.report.events || []).map(normalizeEvent));
   const eventCount = count(payload.report.event_count, "event_count");

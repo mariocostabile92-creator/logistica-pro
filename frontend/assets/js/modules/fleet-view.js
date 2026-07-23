@@ -33,7 +33,7 @@ function eventLabel(eventType) {
 
 
 function timestamp(value) {
-  if (!value) return "Non disponibile";
+  if (!value) return "Non registrato";
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString("it-IT");
 }
@@ -67,7 +67,7 @@ export function fleetDriverLabel(asset, events = []) {
     const value = association?.after;
     if (typeof value === "string" && value.trim()) return value.trim();
   }
-  return "Non disponibile";
+  return "Non associato";
 }
 
 
@@ -108,6 +108,13 @@ export function fleetSummary(assets, today = new Date()) {
 }
 
 
+export function setFleetMetricPriority(id, value, positivePriority = "attention") {
+  const metric = byId(id).closest("div");
+  if (!metric) return;
+  metric.dataset.priority = Number(value) > 0 ? positivePriority : "normal";
+}
+
+
 function renderFleetSummary(assets) {
   const summary = fleetSummary(assets);
   byId("fleetTotalAssets").textContent = summary.total;
@@ -116,6 +123,11 @@ function renderFleetSummary(assets) {
   byId("fleetReserveAssets").textContent = summary.reserve;
   byId("fleetMaintenanceAssets").textContent = summary.maintenance;
   byId("fleetDocumentsAttention").textContent = summary.documentsAttention;
+  setFleetMetricPriority("fleetTotalAssets", 0);
+  setFleetMetricPriority("fleetAvailableAssets", 0);
+  setFleetMetricPriority("fleetMaintenanceAssets", summary.maintenance);
+  setFleetMetricPriority("fleetUnavailableAssets", summary.unavailable, "critical");
+  setFleetMetricPriority("fleetDocumentsAttention", summary.documentsAttention);
 }
 
 
@@ -135,15 +147,18 @@ export function filterFleetAssets(assets, query) {
 
 function assetRow(asset) {
   const primaryIdentifier = asset.plate || asset.external_identifier;
+  const driver = fleetDriverLabel(asset);
+  const category = assetValueLabel(asset.category) || "Non indicata";
+  const updatedAt = timestamp(asset.updated_at);
   return `
     <tr data-fleet-action="select" data-asset-id="${asset.id}" tabindex="0" aria-label="Apri ${escapeHtml(primaryIdentifier)}">
       <td>
         <strong>${escapeHtml(primaryIdentifier)}</strong>
       </td>
       <td>${statusBadge(asset)}</td>
-      <td>${escapeHtml(fleetDriverLabel(asset))}</td>
-      <td>${escapeHtml(assetValueLabel(asset.category) || "—")}</td>
-      <td>${escapeHtml(timestamp(asset.updated_at))}</td>
+      <td><span class="fleet-secondary-value${driver === "Non associato" ? " is-missing" : ""}">${escapeHtml(driver)}</span></td>
+      <td><span class="fleet-secondary-value${category === "Non indicata" ? " is-missing" : ""}">${escapeHtml(category)}</span></td>
+      <td><span class="fleet-secondary-value fleet-timestamp${updatedAt === "Non registrato" ? " is-missing" : ""}">${escapeHtml(updatedAt)}</span></td>
     </tr>
   `;
 }
@@ -151,6 +166,9 @@ function assetRow(asset) {
 
 function assetCard(asset) {
   const primaryIdentifier = asset.plate || asset.external_identifier;
+  const driver = fleetDriverLabel(asset);
+  const category = assetValueLabel(asset.category) || "Non indicata";
+  const updatedAt = timestamp(asset.updated_at);
   return `
     <button type="button" class="fleet-asset-card" data-fleet-action="select" data-asset-id="${asset.id}">
       <span class="fleet-card-heading">
@@ -158,9 +176,9 @@ function assetCard(asset) {
         ${statusBadge(asset)}
       </span>
       <span class="fleet-card-grid">
-        <span><small>Driver associato</small><strong>${escapeHtml(fleetDriverLabel(asset))}</strong></span>
-        <span><small>Categoria</small><strong>${escapeHtml(assetValueLabel(asset.category) || "—")}</strong></span>
-        <span><small>Ultimo aggiornamento</small><strong>${escapeHtml(timestamp(asset.updated_at))}</strong></span>
+        <span><small>Driver associato</small><strong class="fleet-secondary-value${driver === "Non associato" ? " is-missing" : ""}">${escapeHtml(driver)}</strong></span>
+        <span><small>Categoria</small><strong class="fleet-secondary-value${category === "Non indicata" ? " is-missing" : ""}">${escapeHtml(category)}</strong></span>
+        <span class="fleet-card-updated"><small>Aggiornato</small><strong class="fleet-secondary-value fleet-timestamp${updatedAt === "Non registrato" ? " is-missing" : ""}">${escapeHtml(updatedAt)}</strong></span>
       </span>
     </button>
   `;

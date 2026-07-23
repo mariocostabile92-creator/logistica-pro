@@ -391,7 +391,7 @@
 .mission-snapshots {
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 8px;
 }
 
 .mission-snapshots > .mission-section-heading {
@@ -402,7 +402,7 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface);
-  padding: 15px 16px 13px;
+  padding: 12px 14px 10px;
 }
 
 .mission-snapshot > header {
@@ -440,8 +440,8 @@
 
 .mission-snapshot dl {
   display: grid;
-  gap: 6px;
-  margin: 13px 0 8px;
+  gap: 4px;
+  margin: 9px 0 5px;
 }
 
 .mission-snapshot dl > div {
@@ -466,8 +466,8 @@
 }
 
 .mission-timeline {
-  margin-top: 28px;
-  padding: 22px 0 24px;
+  margin-top: 22px;
+  padding: 17px 0 19px;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
@@ -476,7 +476,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
-  margin: 16px 0 0;
+  margin: 11px 0 0;
   padding: 0;
   border: 1px solid var(--border);
   background: var(--border);
@@ -486,8 +486,8 @@
 .mission-timeline-item,
 .mission-timeline-placeholder {
   min-width: 0;
-  min-height: 86px;
-  padding: 14px 15px;
+  min-height: 72px;
+  padding: 11px 13px;
   background: var(--surface);
 }
 
@@ -518,7 +518,7 @@ body[data-active-workspace="home"][data-home-state="ready"] #briefingSection:not
 }
 
 .mission-briefing {
-  margin: 28px 0 0;
+  margin: 22px 0 0;
   padding: 0;
   border-bottom: 0;
 }
@@ -547,8 +547,8 @@ body[data-active-workspace="home"][data-home-state="ready"] #briefingSection:not
 
 .mission-briefing .briefing-hero {
   display: block;
-  margin-top: 12px;
-  padding: 18px 20px;
+  margin-top: 9px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: none;
@@ -580,8 +580,8 @@ body[data-active-workspace="home"][data-home-state="ready"] #briefingSection:not
 }
 
 .mission-briefing .briefing-view-state {
-  min-height: 118px;
-  margin-top: 12px;
+  min-height: 100px;
+  margin-top: 9px;
   border-radius: 6px;
 }
 
@@ -590,8 +590,8 @@ body[data-active-workspace="home"][data-home-state="ready"] #briefingSection:not
 }
 
 .mission-briefing .briefing-empty {
-  min-height: 116px;
-  padding: 18px 20px;
+  min-height: 98px;
+  padding: 14px 16px;
 }
 
 .mission-briefing .briefing-empty strong {
@@ -751,12 +751,12 @@ body[data-active-workspace="home"][data-home-state="ready"] #briefingSection:not
   }
 
   .mission-snapshot {
-    padding: 11px 12px;
+    padding: 9px 10px;
   }
 
   .mission-snapshot dl {
-    gap: 3px;
-    margin: 8px 0 4px;
+    gap: 2px;
+    margin: 6px 0 3px;
   }
 
   .mission-section-heading {
@@ -774,23 +774,23 @@ body[data-active-workspace="home"][data-home-state="ready"] #briefingSection:not
   }
 
   .mission-timeline {
-    margin-top: 18px;
-    padding: 16px 0 18px;
+    margin-top: 14px;
+    padding: 13px 0 15px;
   }
 
   .mission-timeline-item,
   .mission-timeline-placeholder {
-    min-height: 72px;
-    padding: 10px 11px;
+    min-height: 64px;
+    padding: 8px 9px;
   }
 
   .mission-briefing {
-    margin-top: 18px;
+    margin-top: 14px;
   }
 
   .mission-briefing .briefing-hero {
-    margin-top: 9px;
-    padding: 13px 14px;
+    margin-top: 7px;
+    padding: 11px 12px;
   }
 
   .mission-briefing .briefing-summary {
@@ -803,8 +803,8 @@ body[data-active-workspace="home"][data-home-state="ready"] #briefingSection:not
 
   .mission-briefing .briefing-view-state,
   .mission-briefing .briefing-empty {
-    min-height: 88px;
-    padding: 13px 14px;
+    min-height: 78px;
+    padding: 10px 12px;
   }
 }
 

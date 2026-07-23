@@ -15,7 +15,7 @@ const frontendFile = (path) => readFile(
 );
 
 
-test("primary navigation is Home Operations Workforce Fleet Learn", async () => {
+test("primary navigation is Home Planning Workforce Fleet Learn", async () => {
   const html = await frontendFile("index.html");
   const navigation = html.match(
     /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
@@ -23,6 +23,10 @@ test("primary navigation is Home Operations Workforce Fleet Learn", async () => 
 
   assert.match(navigation, /data-workspace-view="home"/);
   assert.match(navigation, /data-workspace-view="operations"/);
+  assert.match(
+    navigation,
+    /data-workspace-view="operations"[\s\S]*?>\s*Planning\s*<\/button>/,
+  );
   assert.match(navigation, /data-workspace-view="workforce"/);
   assert.match(navigation, /data-workspace-view="fleet"/);
   assert.match(navigation, /data-workspace-view="learn"/);

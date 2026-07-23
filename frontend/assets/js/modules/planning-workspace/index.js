@@ -90,7 +90,7 @@ async function loadTimeline() {
     if (error?.name === "AbortError") return;
     commit({
       type: "timeline-load-failed",
-      message: error?.message || "Planning Timeline non disponibile. Riprova.",
+      message: error?.message || "Cronologia del piano non disponibile. Riprova.",
     });
   }
 }
@@ -112,7 +112,7 @@ async function loadDraft() {
     if (error?.name === "AbortError") return;
     commit({
       type: "draft-load-failed",
-      message: error?.message || "Planning Draft non disponibile. Riprova.",
+      message: error?.message || "Bozza di pianificazione non disponibile. Riprova.",
     });
   }
 }
@@ -137,7 +137,7 @@ async function loadConfirmation({ force = false } = {}) {
     if (error?.name === "AbortError") return;
     commit({
       type: "confirmation-load-failed",
-      message: error?.message || "Planning Confirmation non disponibile. Riprova.",
+      message: error?.message || "Conferma del piano non disponibile. Riprova.",
     });
   }
 }
@@ -162,7 +162,7 @@ async function loadPublication({ force = false } = {}) {
     if (error?.name === "AbortError") return;
     commit({
       type: "publication-load-failed",
-      message: error?.message || "Planning Publication non disponibile. Riprova.",
+      message: error?.message || "Pubblicazione del piano non disponibile. Riprova.",
     });
   }
 }
@@ -193,7 +193,7 @@ async function loadConflictReview() {
     if (error?.name === "AbortError") return;
     commit({
       type: "load-failed",
-      message: error?.message || "Conflict Review non disponibile. Riprova.",
+      message: error?.message || "Verifica conflitti non disponibile. Riprova.",
     });
   }
 }
@@ -223,7 +223,7 @@ async function runDraftMutation(operation, successMessage, focusTarget = null) {
     if (error?.name === "AbortError") return;
     commit({
       type: "draft-mutation-failed",
-      message: error?.message || "Operazione Draft non riuscita. Riprova.",
+      message: error?.message || "Operazione sulla bozza non riuscita. Riprova.",
     });
   }
 }
@@ -267,7 +267,7 @@ async function runConfirmationMutation(operation, successMessage) {
     if (error?.name === "AbortError") return;
     commit({
       type: "confirmation-mutation-failed",
-      message: error?.message || "Operazione Confirmation non riuscita. Riprova.",
+      message: error?.message || "Operazione di conferma non riuscita. Riprova.",
     });
   }
 }
@@ -311,7 +311,7 @@ async function runPublicationMutation(operation, successMessage) {
     if (error?.name === "AbortError") return;
     commit({
       type: "publication-mutation-failed",
-      message: error?.message || "Operazione Publication non riuscita. Riprova.",
+      message: error?.message || "Operazione di pubblicazione non riuscita. Riprova.",
     });
   }
 }
@@ -325,7 +325,7 @@ function validatePublication() {
   }
   runPublicationMutation(
     () => validatePlanningPublication(payload),
-    "Validazione Publication aggiornata.",
+    "Verifica della pubblicazione aggiornata.",
   );
 }
 
@@ -335,7 +335,7 @@ function publishNow() {
   if (!payload) return;
   runPublicationMutation(
     () => publishPlanningPublication(payload),
-    "Confirmed Plan pubblicato. Nessuna esecuzione avviata.",
+    "Piano confermato pubblicato. Nessuna esecuzione avviata.",
   );
 }
 
@@ -348,7 +348,7 @@ function validateConfirmation() {
   }
   runConfirmationMutation(
     () => validatePlanningConfirmation(payload),
-    "Validazione Confirmation aggiornata.",
+    "Verifica della conferma aggiornata.",
   );
 }
 
@@ -358,7 +358,7 @@ function confirmNow() {
   if (!payload) return;
   runConfirmationMutation(
     () => confirmPlanningConfirmation(payload),
-    "Draft congelato come Confirmed Plan. Nessuna pubblicazione eseguita.",
+    "Bozza resa immutabile come piano confermato. Nessuna pubblicazione eseguita.",
   );
 }
 
@@ -378,7 +378,7 @@ function createDraft() {
       name,
       note: note || null,
     }),
-    "Draft creato. Nessun effetto sul Planning operativo.",
+    "Bozza creata. Nessun effetto sul piano operativo.",
     () => refs.draftNameInput,
   );
 }
@@ -412,7 +412,7 @@ function saveDraft() {
       });
     }
     return current;
-  }, "Draft salvato.", () => refs.draftSaveButton);
+  }, "Bozza salvata.", () => refs.draftSaveButton);
 }
 
 
@@ -436,7 +436,7 @@ function confirmDeleteDraft() {
   if (!draft) return;
   runDraftMutation(
     () => deletePlanningDraft(draft.id, draft.version.number),
-    "Draft eliminato. La cronologia e stata conservata.",
+    "Bozza eliminata. La cronologia è stata conservata.",
     () => refs.draftNameInput,
   );
 }

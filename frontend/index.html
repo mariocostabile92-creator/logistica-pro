@@ -38,7 +38,7 @@
           data-workspace-view="operations"
           aria-selected="false"
         >
-          Operations
+          Planning
         </button>
         <button
           type="button"
@@ -147,7 +147,7 @@
 
         <div class="mission-context-controls">
           <label class="mission-unit-control" for="missionOperationalUnit">
-            <span>Operational Unit</span>
+            <span>Unità operativa</span>
             <select
               id="missionOperationalUnit"
               aria-describedby="missionOperationalUnitHint"
@@ -157,7 +157,7 @@
             </select>
           </label>
           <span id="missionOperationalUnitHint" class="mission-temporary-note">
-            Selettore predisposto · snapshot aggregato
+            Selettore predisposto · dati aggregati
           </span>
           <button id="missionRefreshBtn" type="button" class="secondary">
             Aggiorna
@@ -185,7 +185,7 @@
               </span>
             </div>
             <p id="missionDayStatusDescription">
-              Verifica degli snapshot operativi disponibili.
+              Verifica dei dati operativi disponibili.
             </p>
           </div>
         </div>
@@ -251,7 +251,7 @@
               </div>
               <div>
                 <dt>Assenze</dt>
-                <dd id="missionWorkforceAbsences">Non esposte</dd>
+                <dd id="missionWorkforceAbsences">Dato non esposto</dd>
               </div>
             </dl>
             <button type="button" class="mission-workspace-link" data-mission-workspace="workforce">
@@ -269,15 +269,15 @@
             <dl>
               <div>
                 <dt>Mezzi disponibili</dt>
-                <dd id="missionFleetAvailable">Non esposti</dd>
+                <dd id="missionFleetAvailable">Dato non esposto</dd>
               </div>
               <div>
                 <dt>Officina</dt>
-                <dd id="missionFleetMaintenance">Non disponibile</dd>
+                <dd id="missionFleetMaintenance">Dato non esposto</dd>
               </div>
               <div>
                 <dt>Documenti</dt>
-                <dd id="missionFleetDocuments">Non disponibili</dd>
+                <dd id="missionFleetDocuments">Dato non esposto</dd>
               </div>
             </dl>
             <button type="button" class="mission-workspace-link" data-mission-workspace="fleet">
@@ -294,20 +294,20 @@
             </header>
             <dl>
               <div>
-                <dt>Readiness</dt>
-                <dd id="missionPlanningReadiness">Non disponibile</dd>
+                <dt>Preparazione</dt>
+                <dd id="missionPlanningReadiness">Dato non esposto</dd>
               </div>
               <div>
                 <dt>Conflitti</dt>
-                <dd id="missionPlanningConflicts">Non disponibili</dd>
+                <dd id="missionPlanningConflicts">Dato non esposto</dd>
               </div>
               <div>
                 <dt>Ultima generazione</dt>
-                <dd id="missionPlanningGenerated">Non disponibile</dd>
+                <dd id="missionPlanningGenerated">Non registrata</dd>
               </div>
             </dl>
             <button type="button" class="mission-workspace-link" data-mission-workspace="operations">
-              Apri Operations
+              Apri Planning
             </button>
           </article>
         </aside>
@@ -317,9 +317,9 @@
         <header class="mission-section-heading">
           <div>
             <p class="eyebrow">Oggi</p>
-            <h3 id="missionTimelineTitle">Timeline operativa</h3>
+            <h3 id="missionTimelineTitle">Cronologia operativa</h3>
           </div>
-          <span class="mission-temporary-note">Eventi disponibili nello snapshot</span>
+          <span class="mission-temporary-note">Eventi disponibili nei dati</span>
         </header>
         <ol id="missionTimelineList" class="mission-timeline-list" aria-live="polite">
           <li class="mission-timeline-placeholder">Cronologia in aggiornamento.</li>
@@ -552,12 +552,12 @@
 
           <div class="briefing-snapshots">
             <section aria-labelledby="briefingReadinessTitle">
-              <span id="briefingReadinessTitle">Readiness</span>
+              <span id="briefingReadinessTitle">Preparazione</span>
               <strong id="briefingReadinessLevel">--</strong>
               <small id="briefingReadinessIssues">--</small>
             </section>
             <section aria-labelledby="briefingCapacityTitle">
-              <span id="briefingCapacityTitle">Margine Capacity</span>
+              <span id="briefingCapacityTitle">Margine di capacità</span>
               <strong id="briefingCapacityMargin">--</strong>
               <small id="briefingCapacityDetail">--</small>
             </section>
@@ -663,7 +663,7 @@
         aria-live="polite"
         aria-busy="true"
       >
-        <h2 id="planningWorkspaceTitle">Planning Workspace</h2>
+        <h2 id="planningWorkspaceTitle">Area Planning</h2>
         <p>Preparazione del workspace di pianificazione.</p>
       </div>
     </section>
@@ -700,7 +700,7 @@
             <input id="planningOperationDate" type="date" />
           </label>
           <label>
-            Operational Unit
+            Unità operativa
             <input id="planningStation" type="text" placeholder="Tutte" />
           </label>
           <label>
@@ -789,7 +789,7 @@
 
       <div class="assignment-filters" aria-label="Filtri assegnazioni">
         <label>
-          Operational Unit
+          Unità operativa
           <select id="assignmentFilterStation">
             <option value="">Tutte</option>
           </select>
@@ -824,7 +824,7 @@
           <table class="assignment-table">
             <thead>
               <tr>
-                <th>Operational Unit</th>
+                <th>Unità operativa</th>
                 <th>Task</th>
                 <th>Finestra</th>
                 <th>Risorsa</th>
@@ -854,10 +854,10 @@
 
       <section class="capacity-section" aria-labelledby="stationCapacityTitle">
         <div class="section-heading compact">
-          <h3 id="stationCapacityTitle">Capacity per Operational Unit</h3>
+          <h3 id="stationCapacityTitle">Capacità per unità operativa</h3>
         </div>
         <div id="stationCapacity" class="station-capacity-grid">
-          <div class="empty-state">Nessun dato Capacity disponibile.</div>
+          <div class="empty-state">Nessun dato di capacità disponibile.</div>
         </div>
       </section>
 
@@ -988,7 +988,7 @@
 
         <aside class="readiness-column" aria-labelledby="readinessTitle">
           <button id="readinessCard" class="readiness-card neutral" type="button" data-dashboard-card="readiness" aria-pressed="false">
-            <span class="readiness-label">Operational Readiness</span>
+            <span class="readiness-label">Preparazione operativa</span>
             <strong id="readinessTitle">Non calcolata</strong>
             <span id="readinessRisk">Rischio non disponibile</span>
             <span id="readinessMargin" class="readiness-margin">Margine --</span>
@@ -1455,7 +1455,7 @@
     >
       <div class="section-heading fleet-toolbar">
         <div>
-          <p class="eyebrow">Fleet workspace</p>
+          <p class="eyebrow">Parco mezzi</p>
           <h2 id="fleetPluginTitle">Parco Mezzi</h2>
           <p id="fleetPluginTimestamp" class="section-note">Ultimo aggiornamento non disponibile.</p>
         </div>
@@ -1530,28 +1530,28 @@
 
       <div id="fleetDataView" hidden>
       <div id="fleetSummary" class="fleet-summary" aria-label="Riepilogo Fleet">
-        <div>
+        <div data-kpi="total">
           <span>Totale mezzi</span>
           <strong id="fleetTotalAssets">0</strong>
         </div>
-        <div>
+        <div data-kpi="available">
           <span>Disponibili</span>
           <strong id="fleetAvailableAssets">0</strong>
         </div>
-        <div>
+        <div data-kpi="maintenance">
           <span>In officina</span>
           <strong id="fleetMaintenanceAssets">0</strong>
         </div>
-        <div>
+        <div data-kpi="unavailable">
           <span>Indisponibili</span>
           <strong id="fleetUnavailableAssets">0</strong>
         </div>
-        <div>
+        <div data-kpi="documents">
           <span>Documenti in attenzione</span>
           <strong id="fleetDocumentsAttention">0</strong>
           <small>Scaduti o entro 30 giorni</small>
         </div>
-        <div>
+        <div data-kpi="updates">
           <span>Nuovi aggiornamenti</span>
           <strong id="fleetRecentUpdates">0</strong>
         </div>
@@ -1560,7 +1560,7 @@
       </div>
       <div class="fleet-registry-heading">
         <div>
-          <p class="eyebrow">Asset Registry</p>
+          <p class="eyebrow">Registro asset</p>
           <h3>Registro mezzi</h3>
           <p id="fleetRegistryCount" class="section-note">0 mezzi</p>
         </div>
@@ -1612,7 +1612,7 @@
           </div>
           <div>
             <dt>Driver</dt>
-            <dd id="fleetAssetDriver">Non disponibile</dd>
+            <dd id="fleetAssetDriver">Non associato</dd>
           </div>
           <div>
             <dt>Stato</dt>
@@ -1664,7 +1664,7 @@
               />
             </label>
             <label>
-              Operational Unit
+              Unità operativa
               <input
                 id="settingsOperationalUnit"
                 type="text"
@@ -1914,7 +1914,7 @@
           </div>
           <div class="demo-workspace-actions">
             <button type="button" data-demo-action="open-operations">
-              Apri Operations
+              Apri Planning
             </button>
             <button type="button" class="secondary" data-demo-action="open-fleet">
               Apri Fleet

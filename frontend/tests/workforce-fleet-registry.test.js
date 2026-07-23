@@ -295,7 +295,11 @@ test("Workforce polish keeps operational signals compact and accessible", async 
   ]);
   assert.match(html, /aria-label="Settimana precedente"[\s\S]*?&larr;/);
   assert.match(html, /id="workforceCalendarWindow" class="workforce-period-focus"/);
-  assert.equal((html.match(/data-kpi=/g) || []).length, 7);
+  const workforce = html.slice(
+    html.indexOf('id="workforceSection"'),
+    html.indexOf('id="fleetPluginSection"'),
+  );
+  assert.equal((workforce.match(/data-kpi=/g) || []).length, 7);
   assert.match(calendar, /class="workforce-status-badge"/);
   assert.match(calendarCss, /\.workforce-status-badge::before/);
   assert.match(insights, /covered: "Coperto"/);
@@ -414,6 +418,25 @@ test("new pages cover wide desktop tablet and mobile without fixed canvas widths
   assert.match(css, /@media \(max-width: 720px\)/);
   assert.match(css, /@media \(max-width: 620px\)/);
   assert.doesNotMatch(css, /width:\s*[1-9]\d{3,}px/);
+});
+
+
+test("Workforce P1 prioritizes critical and attention KPIs without changing metrics", async () => {
+  const [view, css] = await Promise.all([
+    frontendFile("assets/js/modules/workforce-view.js"),
+    frontendFile("assets/css/workforce-layout.css"),
+  ]);
+
+  assert.match(view, /resources: "normal"/);
+  assert.match(view, /summary\.absent > 0 \? "attention" : "normal"/);
+  assert.match(view, /summary\.deficit > 0 \? "critical" : "normal"/);
+  assert.match(view, /dataset\.priority = priority/);
+  assert.match(css, /\.workforce-kpis > div\[data-priority="attention"\]/);
+  assert.match(css, /\.workforce-kpis > div\[data-priority="critical"\]/);
+  assert.match(
+    css,
+    /\.workforce-kpis > div\[data-priority="critical"\] dd[\s\S]*?color: var\(--critical-text\)/,
+  );
 });
 
 

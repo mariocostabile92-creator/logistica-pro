@@ -251,6 +251,20 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   overflow-wrap: anywhere;
 }
 
+.planning-technical-detail {
+  background: var(--surface-subtle) !important;
+}
+
+.planning-technical-detail dt,
+.planning-technical-detail dd {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+[data-planning-role="publication-fingerprint"] {
+  overflow-wrap: anywhere;
+}
+
 .planning-workspace-conflicts {
   align-items: stretch;
   border-color: var(--border-strong);

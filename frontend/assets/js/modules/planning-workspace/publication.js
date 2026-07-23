@@ -9,7 +9,7 @@ const PUBLICATION_STATES = Object.freeze([
 
 function text(value, field) {
   if (typeof value !== "string" || !value.trim()) {
-    throw new TypeError(`Valore Publication non valido: ${field}.`);
+    throw new TypeError(`Valore della pubblicazione non valido: ${field}.`);
   }
   return value.trim();
 }
@@ -17,7 +17,7 @@ function text(value, field) {
 
 function count(value, field, minimum = 0) {
   if (!Number.isInteger(value) || value < minimum) {
-    throw new TypeError(`Conteggio Publication non valido: ${field}.`);
+    throw new TypeError(`Conteggio della pubblicazione non valido: ${field}.`);
   }
   return value;
 }
@@ -26,7 +26,7 @@ function count(value, field, minimum = 0) {
 function fingerprint(value, field) {
   const normalized = text(value, field);
   if (!/^[a-f0-9]{64}$/i.test(normalized)) {
-    throw new TypeError(`Fingerprint Publication non valido: ${field}.`);
+    throw new TypeError(`Fingerprint della pubblicazione non valido: ${field}.`);
   }
   return normalized;
 }
@@ -48,13 +48,13 @@ function normalizeRule(value) {
 function normalizeResult(value) {
   const state = text(value?.state, "result.state").toUpperCase();
   if (!PUBLICATION_STATES.includes(state)) {
-    throw new TypeError("Stato Publication non riconosciuto.");
+    throw new TypeError("Stato della pubblicazione non riconosciuto.");
   }
   const rules = Object.freeze((value?.rules || []).map(normalizeRule));
-  if (!rules.length) throw new TypeError("Regole Publication mancanti.");
+  if (!rules.length) throw new TypeError("Regole di pubblicazione mancanti.");
   const canPublish = value?.can_publish === true;
   if (canPublish !== (state === "READY_TO_PUBLISH")) {
-    throw new TypeError("Disponibilita Publication incoerente.");
+    throw new TypeError("Disponibilità della pubblicazione incoerente.");
   }
   return Object.freeze({
     state,
@@ -70,7 +70,7 @@ function normalizePublication(value) {
   if (!value) return null;
   const state = text(value?.state, "publication.state").toUpperCase();
   if (state !== "PUBLISHED") {
-    throw new TypeError("Published Plan non valido.");
+    throw new TypeError("Piano pubblicato non valido.");
   }
   return Object.freeze({
     id: text(value?.publication_id, "publication.publication_id"),
@@ -105,7 +105,7 @@ function normalizeHistory(value) {
   );
   const total = count(value?.total, "history.total");
   if (total < publications.length) {
-    throw new TypeError("Cronologia Publication incoerente.");
+    throw new TypeError("Cronologia delle pubblicazioni incoerente.");
   }
   return Object.freeze({ total, publications });
 }
@@ -113,16 +113,16 @@ function normalizeHistory(value) {
 
 export function normalizePlanningPublicationReport(payload) {
   if (!payload || typeof payload !== "object") {
-    throw new TypeError("Risposta Planning Publication non valida.");
+    throw new TypeError("Risposta di pubblicazione del piano non valida.");
   }
   const state = text(payload.state, "state").toUpperCase();
   const result = normalizeResult(payload.result);
   if (state !== result.state) {
-    throw new TypeError("Stato report Publication incoerente.");
+    throw new TypeError("Stato del report di pubblicazione incoerente.");
   }
   const current = normalizePublication(payload.current);
   if (state === "PUBLISHED" && !current) {
-    throw new TypeError("Published Plan corrente mancante.");
+    throw new TypeError("Piano pubblicato corrente mancante.");
   }
   return Object.freeze({
     viewState: state === "ERROR" ? "error" : "ready",

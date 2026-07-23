@@ -1,0 +1,515 @@
+{
+  "createdAt": "2026-07-23T12:33:02.441Z",
+  "url": "http://127.0.0.1:8765/app/",
+  "responsive": [
+    {
+      "viewport": {
+        "name": "desktop-1440",
+        "width": 1440,
+        "height": 900
+      },
+      "domContentLoadedMs": 201,
+      "workspaces": [
+        {
+          "workspace": "home",
+          "visibleMs": 70,
+          "settledMs": 737,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-desktop-1440-home.png",
+          "layout": {
+            "viewportWidth": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        },
+        {
+          "workspace": "operations",
+          "visibleMs": 79,
+          "settledMs": 1008,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-desktop-1440-operations.png",
+          "layout": {
+            "viewportWidth": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        },
+        {
+          "workspace": "workforce",
+          "visibleMs": 49,
+          "settledMs": 624,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-desktop-1440-workforce.png",
+          "layout": {
+            "viewportWidth": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        },
+        {
+          "workspace": "fleet",
+          "visibleMs": 26,
+          "settledMs": 661,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-desktop-1440-fleet.png",
+          "layout": {
+            "viewportWidth": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        }
+      ],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "httpErrors": [],
+      "apiRequestCount": 13,
+      "apiRequests": [
+        {
+          "method": "GET",
+          "path": "/api/briefing/v1/daily/latest"
+        },
+        {
+          "method": "GET",
+          "path": "/api/workspace/v1/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/health"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/conflicts"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/latest"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/fleet/v1/assets"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/timeline"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/drafts/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/confirmation/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/publication/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/operations/dashboard"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/workforce/v1/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/fleet/v1/assets"
+        }
+      ],
+      "requestsAfterSettled": 0
+    },
+    {
+      "viewport": {
+        "name": "tablet-768",
+        "width": 768,
+        "height": 1024
+      },
+      "domContentLoadedMs": 220,
+      "workspaces": [
+        {
+          "workspace": "home",
+          "visibleMs": 85,
+          "settledMs": 884,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-tablet-768-home.png",
+          "layout": {
+            "viewportWidth": 768,
+            "documentWidth": 768,
+            "bodyWidth": 768,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        },
+        {
+          "workspace": "operations",
+          "visibleMs": 33,
+          "settledMs": 868,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-tablet-768-operations.png",
+          "layout": {
+            "viewportWidth": 768,
+            "documentWidth": 768,
+            "bodyWidth": 768,
+            "horizontalOverflow": false,
+            "offenders": [
+              {
+                "tag": "table",
+                "id": "",
+                "className": "assignment-table",
+                "left": 51,
+                "right": 1231
+              },
+              {
+                "tag": "thead",
+                "id": "",
+                "className": "",
+                "left": 51,
+                "right": 1231
+              },
+              {
+                "tag": "tr",
+                "id": "",
+                "className": "",
+                "left": 51,
+                "right": 1231
+              },
+              {
+                "tag": "th",
+                "id": "",
+                "className": "",
+                "left": 735,
+                "right": 847
+              },
+              {
+                "tag": "th",
+                "id": "",
+                "className": "",
+                "left": 847,
+                "right": 935
+              },
+              {
+                "tag": "th",
+                "id": "",
+                "className": "",
+                "left": 935,
+                "right": 1231
+              },
+              {
+                "tag": "tbody",
+                "id": "assignmentTableBody",
+                "className": "",
+                "left": 51,
+                "right": 1231
+              },
+              {
+                "tag": "tr",
+                "id": "",
+                "className": "",
+                "left": 51,
+                "right": 1231
+              },
+              {
+                "tag": "td",
+                "id": "",
+                "className": "",
+                "left": 735,
+                "right": 847
+              },
+              {
+                "tag": "div",
+                "id": "",
+                "className": "warning-list",
+                "left": 745,
+                "right": 837
+              }
+            ]
+          }
+        },
+        {
+          "workspace": "workforce",
+          "visibleMs": 23,
+          "settledMs": 574,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-tablet-768-workforce.png",
+          "layout": {
+            "viewportWidth": 768,
+            "documentWidth": 768,
+            "bodyWidth": 768,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        },
+        {
+          "workspace": "fleet",
+          "visibleMs": 30,
+          "settledMs": 755,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-tablet-768-fleet.png",
+          "layout": {
+            "viewportWidth": 768,
+            "documentWidth": 768,
+            "bodyWidth": 768,
+            "horizontalOverflow": false,
+            "offenders": [
+              {
+                "tag": "table",
+                "id": "",
+                "className": "fleet-table",
+                "left": 33,
+                "right": 813
+              },
+              {
+                "tag": "thead",
+                "id": "",
+                "className": "",
+                "left": 33,
+                "right": 813
+              },
+              {
+                "tag": "tr",
+                "id": "",
+                "className": "",
+                "left": 33,
+                "right": 813
+              },
+              {
+                "tag": "th",
+                "id": "",
+                "className": "",
+                "left": 615,
+                "right": 813
+              },
+              {
+                "tag": "tbody",
+                "id": "fleetAssetTableBody",
+                "className": "",
+                "left": 33,
+                "right": 813
+              },
+              {
+                "tag": "tr",
+                "id": "",
+                "className": "",
+                "left": 33,
+                "right": 813
+              },
+              {
+                "tag": "td",
+                "id": "",
+                "className": "",
+                "left": 615,
+                "right": 813
+              },
+              {
+                "tag": "span",
+                "id": "",
+                "className": "fleet-secondary-value fleet-timestamp",
+                "left": 629,
+                "right": 770
+              },
+              {
+                "tag": "tr",
+                "id": "",
+                "className": "",
+                "left": 33,
+                "right": 813
+              },
+              {
+                "tag": "td",
+                "id": "",
+                "className": "",
+                "left": 615,
+                "right": 813
+              }
+            ]
+          }
+        }
+      ],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "httpErrors": [],
+      "apiRequestCount": 13,
+      "apiRequests": [
+        {
+          "method": "GET",
+          "path": "/api/briefing/v1/daily/latest"
+        },
+        {
+          "method": "GET",
+          "path": "/api/workspace/v1/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/health"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/conflicts"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/latest"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/fleet/v1/assets"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/timeline"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/drafts/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/confirmation/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/publication/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/operations/dashboard"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/workforce/v1/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/fleet/v1/assets"
+        }
+      ],
+      "requestsAfterSettled": 0
+    },
+    {
+      "viewport": {
+        "name": "mobile-390",
+        "width": 390,
+        "height": 844
+      },
+      "domContentLoadedMs": 191,
+      "workspaces": [
+        {
+          "workspace": "home",
+          "visibleMs": 165,
+          "settledMs": 775,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-mobile-390-home.png",
+          "layout": {
+            "viewportWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        },
+        {
+          "workspace": "operations",
+          "visibleMs": 38,
+          "settledMs": 767,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-mobile-390-operations.png",
+          "layout": {
+            "viewportWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        },
+        {
+          "workspace": "workforce",
+          "visibleMs": 43,
+          "settledMs": 622,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-mobile-390-workforce.png",
+          "layout": {
+            "viewportWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        },
+        {
+          "workspace": "fleet",
+          "visibleMs": 59,
+          "settledMs": 675,
+          "screenshot": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx3\\after-mobile-390-fleet.png",
+          "layout": {
+            "viewportWidth": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "horizontalOverflow": false,
+            "offenders": []
+          }
+        }
+      ],
+      "consoleErrors": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "httpErrors": [],
+      "apiRequestCount": 13,
+      "apiRequests": [
+        {
+          "method": "GET",
+          "path": "/api/briefing/v1/daily/latest"
+        },
+        {
+          "method": "GET",
+          "path": "/api/workspace/v1/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/health"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/conflicts"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/latest"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/fleet/v1/assets"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/timeline"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/drafts/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/confirmation/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/planning/publication/current"
+        },
+        {
+          "method": "GET",
+          "path": "/api/operations/dashboard"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/workforce/v1/status"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plugins/fleet/v1/assets"
+        }
+      ],
+      "requestsAfterSettled": 0
+    }
+  ],
+  "passed": true
+}

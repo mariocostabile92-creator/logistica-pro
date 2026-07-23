@@ -17,7 +17,7 @@ const CHANGE_TYPES = Object.freeze([
 
 function text(value, field) {
   if (typeof value !== "string" || !value.trim()) {
-    throw new TypeError(`Campo Draft non valido: ${field}.`);
+    throw new TypeError(`Campo della bozza non valido: ${field}.`);
   }
   return value.trim();
 }
@@ -25,7 +25,7 @@ function text(value, field) {
 
 function count(value, field) {
   if (!Number.isInteger(value) || value < 0) {
-    throw new TypeError(`Conteggio Draft non valido: ${field}.`);
+    throw new TypeError(`Conteggio della bozza non valido: ${field}.`);
   }
   return value;
 }
@@ -33,7 +33,7 @@ function count(value, field) {
 
 function normalizeVersion(value) {
   const number = count(value?.number, "version.number");
-  if (number < 1) throw new TypeError("Versione Draft non valida.");
+  if (number < 1) throw new TypeError("Versione della bozza non valida.");
   return Object.freeze({
     number,
     createdAt: text(value?.created_at, "version.created_at"),
@@ -46,7 +46,7 @@ function normalizeVersion(value) {
 function normalizeDraft(value) {
   const state = text(value?.state, "draft.state").toUpperCase();
   if (!DRAFT_STATES.includes(state) || ["EMPTY", "ERROR"].includes(state)) {
-    throw new TypeError("Stato Draft persistito non riconosciuto.");
+    throw new TypeError("Stato persistito della bozza non riconosciuto.");
   }
   return Object.freeze({
     id: text(value?.draft_id, "draft.draft_id"),
@@ -75,7 +75,7 @@ function normalizeDraft(value) {
 function normalizeChange(value) {
   const changeType = text(value?.change_type, "change.change_type").toUpperCase();
   if (!CHANGE_TYPES.includes(changeType)) {
-    throw new TypeError("Tipo modifica Draft non riconosciuto.");
+    throw new TypeError("Tipo di modifica della bozza non riconosciuto.");
   }
   return Object.freeze({
     id: text(value?.change_id, "change.change_id"),
@@ -92,7 +92,7 @@ function normalizeChange(value) {
 function normalizeSnapshot(value) {
   const state = text(value?.state, "snapshot.state").toUpperCase();
   if (!DRAFT_STATES.includes(state) || ["EMPTY", "ERROR"].includes(state)) {
-    throw new TypeError("Stato snapshot Draft non riconosciuto.");
+    throw new TypeError("Stato della versione della bozza non riconosciuto.");
   }
   return Object.freeze({
     id: text(value?.snapshot_id, "snapshot.snapshot_id"),
@@ -109,10 +109,10 @@ function normalizeHistory(value, draftId) {
   const totalChanges = count(value?.total_changes, "history.total_changes");
   const totalVersions = count(value?.total_versions, "history.total_versions");
   if (text(value?.draft_id, "history.draft_id") !== draftId) {
-    throw new TypeError("Cronologia associata a un altro Draft.");
+    throw new TypeError("Cronologia associata a un'altra bozza.");
   }
   if (totalChanges < changes.length || totalVersions < snapshots.length) {
-    throw new TypeError("Conteggi cronologia Draft incoerenti.");
+    throw new TypeError("Conteggi della cronologia della bozza incoerenti.");
   }
   return Object.freeze({ totalChanges, totalVersions, changes, snapshots });
 }
@@ -120,21 +120,21 @@ function normalizeHistory(value, draftId) {
 
 export function normalizePlanningDraftWorkspace(payload) {
   if (!payload || typeof payload !== "object") {
-    throw new TypeError("Risposta Planning Draft non valida.");
+    throw new TypeError("Risposta della bozza di pianificazione non valida.");
   }
   const state = text(payload.state, "state").toUpperCase();
   if (!DRAFT_STATES.includes(state)) {
-    throw new TypeError("Stato Planning Draft non riconosciuto.");
+    throw new TypeError("Stato della bozza di pianificazione non riconosciuto.");
   }
   if (state === "EMPTY") {
     return Object.freeze({ viewState: "empty", state, draft: null, history: null });
   }
   if (!payload.draft || !payload.history) {
-    throw new TypeError("Draft e cronologia sono obbligatori.");
+    throw new TypeError("Bozza e cronologia sono obbligatorie.");
   }
   const draft = normalizeDraft(payload.draft);
   if (draft.state !== state) {
-    throw new TypeError("Stato workspace Draft incoerente.");
+    throw new TypeError("Stato dell'area bozza incoerente.");
   }
   return Object.freeze({
     viewState: state === "READ_ONLY" ? "read-only" : "ready",

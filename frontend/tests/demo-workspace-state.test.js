@@ -113,7 +113,7 @@ test("page contains demo controls and accessible reset confirmation", async () =
     /Carica un ambiente sintetico e prova l'intero flusso senza usare dati reali\./,
   );
   assert.match(html, /Carica demo/);
-  assert.match(html, /Apri Operations/);
+  assert.match(html, /Apri Planning/);
   assert.match(html, /Apri Fleet/);
   assert.match(html, /Esporta CSV/);
   assert.match(html, /Ripristina workspace/);

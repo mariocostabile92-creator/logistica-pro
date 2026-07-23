@@ -34,18 +34,18 @@ function operationalUnitLabel(value) {
 
 export function normalizePlanningReadiness(payload) {
   if (!payload || typeof payload !== "object") {
-    throw new TypeError("Risposta readiness non valida.");
+    throw new TypeError("Risposta di preparazione non valida.");
   }
   const status = normalizedText(payload.status)?.toUpperCase();
   if (!READINESS_STATUSES.includes(status)) {
-    throw new TypeError("Stato readiness non riconosciuto.");
+    throw new TypeError("Stato di preparazione non riconosciuto.");
   }
   const rawScore = typeof payload.score === "object"
     ? payload.score?.value
     : payload.score;
   const score = Number(rawScore);
   if (!Number.isInteger(score) || score < 0 || score > 100) {
-    throw new TypeError("Score readiness non valido.");
+    throw new TypeError("Punteggio di preparazione non valido.");
   }
   return Object.freeze({
     status,
@@ -69,7 +69,7 @@ export function normalizePlanningReadiness(payload) {
 export function readinessEventType(status) {
   const normalized = normalizedText(status)?.toUpperCase();
   if (!READINESS_STATUSES.includes(normalized)) {
-    throw new TypeError("Stato readiness non riconosciuto.");
+    throw new TypeError("Stato di preparazione non riconosciuto.");
   }
   return `${normalized.toLowerCase()}-received`;
 }
