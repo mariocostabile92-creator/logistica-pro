@@ -501,6 +501,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         or path == "/api/runtime/execution-intent"
         or path == "/api/runtime/execution-attempt"
         or path == "/api/runtime/shadow"
+        or path == "/api/runtime/output"
         or path.startswith("/api/plugins/workforce/")
         or path.startswith("/api/planning/drafts")
         or path.startswith("/api/planning/confirmation")

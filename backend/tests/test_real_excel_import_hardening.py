@@ -394,6 +394,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
         and path != "/api/runtime/execution-intent"
         and path != "/api/runtime/execution-attempt"
         and path != "/api/runtime/shadow"
+        and path != "/api/runtime/output"
         and not path.startswith("/api/plugins/workforce/")
         and not path.startswith("/api/planning/drafts")
         and not path.startswith("/api/planning/confirmation")

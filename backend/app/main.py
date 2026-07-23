@@ -20,6 +20,7 @@ from app.api.routers import (
     planning_drafts,
     planning_publication,
     planning_readiness,
+    planning_runtime_output,
     planning_timeline,
     runtime_authority,
     runtime_shadow,
@@ -178,6 +179,7 @@ app.include_router(runtime_authority.router)
 app.include_router(execution_intent.router)
 app.include_router(execution_attempt.router)
 app.include_router(runtime_shadow.router)
+app.include_router(planning_runtime_output.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)
