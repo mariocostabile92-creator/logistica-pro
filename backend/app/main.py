@@ -23,6 +23,7 @@ from app.api.routers import (
     planning_runtime_output,
     planning_timeline,
     runtime_authority,
+    runtime_canary,
     runtime_shadow,
 )
 from app.briefing.repository import init_schema as init_briefing_schema
@@ -180,6 +181,7 @@ app.include_router(execution_intent.router)
 app.include_router(execution_attempt.router)
 app.include_router(runtime_shadow.router)
 app.include_router(planning_runtime_output.router)
+app.include_router(runtime_canary.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)
