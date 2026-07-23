@@ -500,8 +500,7 @@ textarea:focus-visible {
   }
 
   .fleet-toolbar-actions,
-  .fleet-form-grid,
-  .fleet-card-grid {
+  .fleet-form-grid {
     display: grid;
     grid-template-columns: 1fr;
   }
@@ -512,6 +511,40 @@ textarea:focus-visible {
 
   .fleet-registry-heading {
     align-items: center;
+  }
+
+  .fleet-asset-card {
+    gap: 8px;
+    padding: 11px 12px;
+  }
+
+  .fleet-card-heading {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .fleet-card-heading .fleet-status-badge {
+    order: -1;
+  }
+
+  .fleet-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+  }
+
+  .fleet-card-grid > span:last-child {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+
+  .fleet-card-grid > span:last-child strong {
+    margin-top: 0;
+    text-align: right;
   }
 
   .fleet-detail-summary {

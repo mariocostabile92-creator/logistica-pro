@@ -97,14 +97,16 @@
   }
 
   .workforce-kpis {
-    display: flex;
-    overflow-x: auto;
-    scrollbar-gutter: stable;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 9px;
+    overflow-x: visible;
   }
 
   .workforce-kpis > div {
-    flex: 0 0 142px;
-    min-height: 82px;
+    min-height: 62px;
+    padding: 8px 9px;
   }
 
   .workforce-tabs {
@@ -193,6 +195,16 @@
   }
 
   .workforce-kpis dd {
+    margin-top: 4px;
     font-size: 17px;
+  }
+
+  .workforce-kpis > div {
+    min-height: 56px;
+    padding: 7px 8px;
+  }
+
+  .workforce-kpis dt::before {
+    display: none;
   }
 }

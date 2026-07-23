@@ -1,0 +1,500 @@
+{
+  "generatedAt": "2026-07-23T11:43:47.644Z",
+  "results": [
+    {
+      "viewport": "desktop-1440",
+      "workspace": "home",
+      "renderWaitMs": 1266,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\home-desktop-1440.png",
+      "metrics": {
+        "active": "home",
+        "pageOverflow": false,
+        "scrollWidth": 1425,
+        "clientWidth": 1425,
+        "scrollHeight": 1524,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": {
+            "top": 425,
+            "height": 614,
+            "width": 948
+          },
+          "snapshots": {
+            "top": 425,
+            "height": 614,
+            "width": 388
+          },
+          "timeline": {
+            "top": 1066,
+            "height": 206,
+            "width": 1360
+          },
+          "briefing": {
+            "top": 1301,
+            "height": 159,
+            "width": 1360
+          }
+        }
+      }
+    },
+    {
+      "viewport": "desktop-1440",
+      "workspace": "operations",
+      "renderWaitMs": 1515,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\operations-desktop-1440.png",
+      "metrics": {
+        "active": "operations",
+        "pageOverflow": false,
+        "scrollWidth": 1425,
+        "clientWidth": 1425,
+        "scrollHeight": 4935,
+        "planning": {
+          "status": {
+            "top": 238,
+            "height": 131,
+            "width": 1360
+          },
+          "readiness": {
+            "top": 383,
+            "height": 149,
+            "width": 1360
+          },
+          "conflicts": {
+            "top": 546,
+            "height": 1173,
+            "width": 1360
+          },
+          "timeline": {
+            "top": 1743,
+            "height": 753,
+            "width": 1360
+          }
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "desktop-1440",
+      "workspace": "workforce",
+      "renderWaitMs": 1224,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\workforce-desktop-1440.png",
+      "metrics": {
+        "active": "workforce",
+        "pageOverflow": false,
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "desktop-1440",
+      "workspace": "fleet",
+      "renderWaitMs": 1253,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\fleet-desktop-1440.png",
+      "metrics": {
+        "active": "fleet",
+        "pageOverflow": false,
+        "scrollWidth": 1425,
+        "clientWidth": 1425,
+        "scrollHeight": 1204,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "desktop-1440",
+      "navigation": {
+        "domContentLoadedMs": 221,
+        "loadMs": 225
+      },
+      "diagnostics": {
+        "consoleErrors": [],
+        "pageErrors": [],
+        "requestFailures": [],
+        "httpErrors": []
+      }
+    },
+    {
+      "viewport": "tablet-768",
+      "workspace": "home",
+      "renderWaitMs": 1325,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\home-tablet-768.png",
+      "metrics": {
+        "active": "home",
+        "pageOverflow": false,
+        "scrollWidth": 753,
+        "clientWidth": 753,
+        "scrollHeight": 2418,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": {
+            "top": 734,
+            "height": 595,
+            "width": 689
+          },
+          "snapshots": {
+            "top": 1352,
+            "height": 445,
+            "width": 689
+          },
+          "timeline": {
+            "top": 1825,
+            "height": 300,
+            "width": 689
+          },
+          "briefing": {
+            "top": 2153,
+            "height": 201,
+            "width": 689
+          }
+        }
+      }
+    },
+    {
+      "viewport": "tablet-768",
+      "workspace": "operations",
+      "renderWaitMs": 1321,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\operations-tablet-768.png",
+      "metrics": {
+        "active": "operations",
+        "pageOverflow": false,
+        "scrollWidth": 753,
+        "clientWidth": 753,
+        "scrollHeight": 5891,
+        "planning": {
+          "status": {
+            "top": 386,
+            "height": 131,
+            "width": 689
+          },
+          "readiness": {
+            "top": 532,
+            "height": 313,
+            "width": 689
+          },
+          "conflicts": {
+            "top": 859,
+            "height": 1359,
+            "width": 689
+          },
+          "timeline": {
+            "top": 2242,
+            "height": 861,
+            "width": 689
+          }
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "tablet-768",
+      "workspace": "workforce",
+      "renderWaitMs": 1245,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\workforce-tablet-768.png",
+      "metrics": {
+        "active": "workforce",
+        "pageOverflow": false,
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "scrollHeight": 1024,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "tablet-768",
+      "workspace": "fleet",
+      "renderWaitMs": 1385,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\fleet-tablet-768.png",
+      "metrics": {
+        "active": "fleet",
+        "pageOverflow": false,
+        "scrollWidth": 753,
+        "clientWidth": 753,
+        "scrollHeight": 1395,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "tablet-768",
+      "navigation": {
+        "domContentLoadedMs": 120,
+        "loadMs": 125
+      },
+      "diagnostics": {
+        "consoleErrors": [],
+        "pageErrors": [],
+        "requestFailures": [],
+        "httpErrors": []
+      }
+    },
+    {
+      "viewport": "mobile-390",
+      "workspace": "home",
+      "renderWaitMs": 1283,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\home-mobile-390.png",
+      "metrics": {
+        "active": "home",
+        "pageOverflow": false,
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "scrollHeight": 2999,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": {
+            "top": 841,
+            "height": 1017,
+            "width": 351
+          },
+          "snapshots": {
+            "top": 1873,
+            "height": 554,
+            "width": 351
+          },
+          "timeline": {
+            "top": 2445,
+            "height": 303,
+            "width": 351
+          },
+          "briefing": {
+            "top": 2766,
+            "height": 169,
+            "width": 351
+          }
+        }
+      }
+    },
+    {
+      "viewport": "mobile-390",
+      "workspace": "operations",
+      "renderWaitMs": 1339,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\operations-mobile-390.png",
+      "metrics": {
+        "active": "operations",
+        "pageOverflow": false,
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "scrollHeight": 8417,
+        "planning": {
+          "status": {
+            "top": 502,
+            "height": 145,
+            "width": 351
+          },
+          "readiness": {
+            "top": 661,
+            "height": 469,
+            "width": 351
+          },
+          "conflicts": {
+            "top": 1144,
+            "height": 1877,
+            "width": 351
+          },
+          "timeline": {
+            "top": 3505,
+            "height": 1131,
+            "width": 351
+          }
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "mobile-390",
+      "workspace": "workforce",
+      "renderWaitMs": 1214,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\workforce-mobile-390.png",
+      "metrics": {
+        "active": "workforce",
+        "pageOverflow": false,
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 844,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 0,
+          "firstCardHeight": null
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "mobile-390",
+      "workspace": "fleet",
+      "renderWaitMs": 1275,
+      "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\fleet-mobile-390.png",
+      "metrics": {
+        "active": "fleet",
+        "pageOverflow": false,
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "scrollHeight": 2505,
+        "planning": {
+          "status": null,
+          "readiness": null,
+          "conflicts": null,
+          "timeline": null
+        },
+        "workforce": null,
+        "fleet": {
+          "cardCount": 11,
+          "firstCardHeight": 130
+        },
+        "mission": {
+          "actions": null,
+          "snapshots": null,
+          "timeline": null,
+          "briefing": null
+        }
+      }
+    },
+    {
+      "viewport": "mobile-390",
+      "navigation": {
+        "domContentLoadedMs": 139,
+        "loadMs": 144
+      },
+      "diagnostics": {
+        "consoleErrors": [],
+        "pageErrors": [],
+        "requestFailures": [],
+        "httpErrors": []
+      }
+    }
+  ]
+}

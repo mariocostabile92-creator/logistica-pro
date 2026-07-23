@@ -130,3 +130,23 @@ test("Fleet detail and Excel update are native dialogs with a responsive registr
   assert.match(syncCss, /max-height: calc\(100dvh - 32px\)/);
   assert.doesNotMatch(`${page}\n${sync}`, /fetch\(|console\.(log|warn|error)/);
 });
+
+
+test("Fleet mobile cards prioritize status and plate without removing metadata", async () => {
+  const [fleetCss, view] = await Promise.all([
+    frontendFile("assets/css/fleet.css"),
+    frontendFile("assets/js/modules/fleet-view.js"),
+  ]);
+
+  assert.match(
+    fleetCss,
+    /@media \(max-width: 620px\)[\s\S]*?\.fleet-card-heading \.fleet-status-badge[\s\S]*?order: -1/,
+  );
+  assert.match(
+    fleetCss,
+    /@media \(max-width: 620px\)[\s\S]*?\.fleet-card-grid[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,
+  );
+  for (const label of ["Driver associato", "Categoria", "Ultimo aggiornamento"]) {
+    assert.match(view, new RegExp(label));
+  }
+});

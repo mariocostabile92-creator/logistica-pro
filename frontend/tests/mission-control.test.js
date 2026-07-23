@@ -227,3 +227,21 @@ test("Mission Control is responsive and does not introduce direct API calls", as
   assert.match(source, /briefing:changed/);
   assert.match(source, /workspace:status-changed/);
 });
+
+
+test("Mission Control mobile keeps actions primary and compacts secondary blocks", async () => {
+  const css = await readFile(
+    new URL("../assets/css/mission-control.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    css,
+    /@media \(max-width: 620px\)[\s\S]*?\.mission-action-row[\s\S]*?padding: 11px 12px/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 620px\)[\s\S]*?\.mission-timeline-list[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/,
+  );
+  assert.match(css, /\.mission-briefing \.briefing-summary[\s\S]*?-webkit-line-clamp: 2/);
+});

@@ -272,6 +272,14 @@ test("Workforce layout is bounded, wide and responsive", async () => {
   assert.match(responsive, /@media \(max-width: 1180px\)/);
   assert.match(responsive, /@media \(max-width: 720px\)/);
   assert.match(responsive, /@media \(max-width: 620px\)/);
+  assert.match(
+    responsive,
+    /@media \(max-width: 720px\)[\s\S]*?\.workforce-kpis[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)[\s\S]*?overflow-x: visible/,
+  );
+  assert.doesNotMatch(
+    responsive,
+    /\.workforce-kpis\s*\{[\s\S]{0,180}?overflow-x: auto/,
+  );
 });
 
 

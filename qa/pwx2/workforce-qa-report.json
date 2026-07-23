@@ -1,0 +1,56 @@
+[
+  {
+    "viewport": "desktop-1440",
+    "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\workforce-desktop-1440.png",
+    "metrics": {
+      "pageOverflow": false,
+      "kpiOverflow": false,
+      "kpiHeight": 89,
+      "kpiColumns": "189.844px 189.859px 189.859px 189.859px 189.859px 189.859px 189.859px",
+      "calendarTop": 401,
+      "calendarHeight": 590,
+      "scrollHeight": 1112
+    },
+    "diagnostics": {
+      "consoleErrors": [],
+      "pageErrors": [],
+      "httpErrors": []
+    }
+  },
+  {
+    "viewport": "tablet-768",
+    "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\workforce-tablet-768.png",
+    "metrics": {
+      "pageOverflow": false,
+      "kpiOverflow": false,
+      "kpiHeight": 186,
+      "kpiColumns": "170.25px 170.25px 170.25px 170.25px",
+      "calendarTop": 601,
+      "calendarHeight": 714,
+      "scrollHeight": 1436
+    },
+    "diagnostics": {
+      "consoleErrors": [],
+      "pageErrors": [],
+      "httpErrors": []
+    }
+  },
+  {
+    "viewport": "mobile-390",
+    "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\workforce-mobile-390.png",
+    "metrics": {
+      "pageOverflow": false,
+      "kpiOverflow": false,
+      "kpiHeight": 127,
+      "kpiColumns": "83.25px 83.25px 83.25px 83.25px",
+      "calendarTop": 730,
+      "calendarHeight": 544,
+      "scrollHeight": 1395
+    },
+    "diagnostics": {
+      "consoleErrors": [],
+      "pageErrors": [],
+      "httpErrors": []
+    }
+  }
+]

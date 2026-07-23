@@ -75,7 +75,7 @@ test("state accepts every declared presentation without deriving decisions", () 
 });
 
 
-test("legacy state names the disconnected Runtime and preserves placeholders", () => {
+test("legacy state presents the disconnected Runtime once in the primary status", () => {
   const state = applyPlanningWorkspaceEvent(
     createPlanningWorkspaceState(),
     { type: "legacy-active" },
@@ -85,6 +85,13 @@ test("legacy state names the disconnected Runtime and preserves placeholders", (
   assert.equal(view.badge, "Legacy");
   assert.equal(view.statusDescription, "Planning Runtime non ancora collegato.");
   assert.equal(view.readiness.value, "Non disponibile");
+  assert.equal(view.readiness.detail, "Nessuna valutazione Readiness disponibile.");
+  assert.equal(
+    [view.statusDescription, view.readiness.detail]
+      .filter((value) => value.includes("Planning Runtime non ancora collegato."))
+      .length,
+    1,
+  );
   assert.equal(view.conflicts, null);
   assert.equal(view.draft.viewState, "loading");
   assert.equal(view.publication.viewState, "loading");
@@ -980,6 +987,19 @@ test("responsive styles cover tablet mobile order and horizontal containment", a
   assert.match(css, /planning-workspace-publication[\s\S]*?order: 7/);
   assert.match(css, /planning-publication-summary[\s\S]*grid-template-columns: 1fr/);
   assert.match(css, /planning-publication-rules li:focus-visible/);
+});
+
+
+test("Planning P0 hierarchy emphasizes status readiness and conflicts", async () => {
+  const css = await frontendFile("assets/css/planning-workspace.css");
+
+  assert.match(css, /\.planning-workspace-status[\s\S]*?box-shadow: var\(--shadow-sm\)/);
+  assert.match(css, /\.planning-workspace-readiness[\s\S]*?border-left: 4px solid/);
+  assert.match(css, /\.planning-workspace-conflicts[\s\S]*?border-left: 3px solid/);
+  assert.match(
+    css,
+    /\.planning-workspace-timeline,[\s\S]*?\.planning-workspace-publication[\s\S]*?background: transparent/,
+  );
 });
 
 

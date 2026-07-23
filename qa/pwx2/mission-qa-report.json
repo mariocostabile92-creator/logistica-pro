@@ -1,0 +1,89 @@
+[
+  {
+    "viewport": "desktop-1440",
+    "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\home-desktop-1440.png",
+    "metrics": {
+      "pageOverflow": false,
+      "scrollHeight": 1524,
+      "actions": {
+        "top": 425,
+        "height": 614
+      },
+      "snapshots": {
+        "top": 425,
+        "height": 614
+      },
+      "timeline": {
+        "top": 1066,
+        "height": 206
+      },
+      "briefing": {
+        "top": 1301,
+        "height": 159
+      }
+    },
+    "diagnostics": {
+      "consoleErrors": [],
+      "pageErrors": [],
+      "httpErrors": []
+    }
+  },
+  {
+    "viewport": "tablet-768",
+    "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\home-tablet-768.png",
+    "metrics": {
+      "pageOverflow": false,
+      "scrollHeight": 2418,
+      "actions": {
+        "top": 734,
+        "height": 595
+      },
+      "snapshots": {
+        "top": 1352,
+        "height": 445
+      },
+      "timeline": {
+        "top": 1825,
+        "height": 300
+      },
+      "briefing": {
+        "top": 2153,
+        "height": 201
+      }
+    },
+    "diagnostics": {
+      "consoleErrors": [],
+      "pageErrors": [],
+      "httpErrors": []
+    }
+  },
+  {
+    "viewport": "mobile-390",
+    "file": "C:\\Users\\Mario\\Documents\\Codex\\2026-07-19\\referenced-chatgpt-conversation-this-is-untrusted\\logistica-mvp-history-cleanup-candidate\\qa\\pwx2\\home-mobile-390.png",
+    "metrics": {
+      "pageOverflow": false,
+      "scrollHeight": 2918,
+      "actions": {
+        "top": 841,
+        "height": 918
+      },
+      "snapshots": {
+        "top": 1774,
+        "height": 572
+      },
+      "timeline": {
+        "top": 2363,
+        "height": 303
+      },
+      "briefing": {
+        "top": 2685,
+        "height": 169
+      }
+    },
+    "diagnostics": {
+      "consoleErrors": [],
+      "pageErrors": [],
+      "httpErrors": []
+    }
+  }
+]

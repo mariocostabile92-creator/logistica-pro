@@ -200,7 +200,6 @@ function placeholder(value, detail) {
 export function derivePlanningWorkspaceView(state) {
   const presentation = PLANNING_WORKSPACE_PRESENTATION[state.state];
   const snapshot = state.snapshot || {};
-  const noRuntime = "Planning Runtime non ancora collegato.";
   const readiness = snapshot.readiness || null;
   return Object.freeze({
     state: state.state,
@@ -217,7 +216,7 @@ export function derivePlanningWorkspaceView(state) {
         detail: readiness.rationale,
         ...readiness,
       })
-      : placeholder("Non disponibile", state.message || noRuntime),
+      : placeholder("Non disponibile", "Nessuna valutazione Readiness disponibile."),
     conflicts: snapshot.conflicts || null,
     timeline: snapshot.timeline || Object.freeze({ state: "loading" }),
     draft: snapshot.draft || Object.freeze({

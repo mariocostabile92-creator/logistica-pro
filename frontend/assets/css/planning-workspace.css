@@ -91,6 +91,7 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   gap: 20px;
   padding: 20px;
   border-left: 5px solid var(--info);
+  box-shadow: var(--shadow-sm);
 }
 
 .planning-workspace-retry {
@@ -162,6 +163,9 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
 
 .planning-workspace-readiness {
   align-items: stretch;
+  border-color: var(--border-strong);
+  border-left: 4px solid var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .planning-readiness-body {
@@ -249,6 +253,36 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
 
 .planning-workspace-conflicts {
   align-items: stretch;
+  border-color: var(--border-strong);
+  border-left: 3px solid var(--border-strong);
+}
+
+.planning-workspace-timeline {
+  margin-top: 10px;
+}
+
+.planning-workspace-timeline,
+.planning-workspace-draft,
+.planning-workspace-confirmation,
+.planning-workspace-publication {
+  border-color: var(--border);
+  background: transparent;
+}
+
+.planning-workspace-timeline .planning-workspace-block-heading,
+.planning-workspace-draft .planning-workspace-block-heading,
+.planning-workspace-confirmation .planning-workspace-block-heading,
+.planning-workspace-publication .planning-workspace-block-heading {
+  padding-block: 13px;
+  background: var(--surface-subtle);
+}
+
+.planning-workspace-timeline .planning-workspace-block-body,
+.planning-workspace-draft .planning-workspace-block-body,
+.planning-workspace-confirmation .planning-workspace-block-body,
+.planning-workspace-publication .planning-workspace-block-body {
+  padding-block: 14px;
+  background: var(--surface);
 }
 
 .planning-conflict-body {
@@ -1347,6 +1381,17 @@ body[data-active-workspace="operations"] .workspace-tab.active:hover:not(:disabl
   .planning-workspace-block-heading,
   .planning-workspace-block-body {
     padding: 15px;
+  }
+
+  .planning-workspace-timeline .planning-workspace-block-heading,
+  .planning-workspace-draft .planning-workspace-block-heading,
+  .planning-workspace-confirmation .planning-workspace-block-heading,
+  .planning-workspace-publication .planning-workspace-block-heading,
+  .planning-workspace-timeline .planning-workspace-block-body,
+  .planning-workspace-draft .planning-workspace-block-body,
+  .planning-workspace-confirmation .planning-workspace-block-body,
+  .planning-workspace-publication .planning-workspace-block-body {
+    padding: 12px 14px;
   }
 
   .planning-workspace-status {
