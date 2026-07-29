@@ -48,6 +48,32 @@ test("visible branding uses Operations Engine", async () => {
 });
 
 
+test("Journal reuses the Operations Engine shell and marks its navigation active", async () => {
+  const [journal, layout, components, responsive] = await Promise.all([
+    frontendFile("journal/index.html"),
+    frontendFile("assets/css/driver-journal-layout.css"),
+    frontendFile("assets/css/driver-journal-components.css"),
+    frontendFile("assets/css/driver-journal-responsive.css"),
+  ]);
+
+  assert.match(journal, /<h1>Operations Engine<\/h1>/);
+  assert.match(journal, /<h2>Giornale di bordo<\/h2>/);
+  assert.match(journal, /Fleet Operations/);
+  assert.match(
+    journal,
+    /workspace-tab workspace-tab-link active[\s\S]*?aria-current="page"/,
+  );
+  assert.match(journal, /Workspace produzione/);
+  assert.match(journal, /id="healthStatus"/);
+  assert.match(journal, /Configurazione/);
+  assert.match(layout, /\.journal-workspace/);
+  assert.match(components, /var\(--surface\)/);
+  assert.match(responsive, /@media \(max-width: 768px\)/);
+  assert.match(responsive, /\.journal-mobile-context/);
+  assert.doesNotMatch(journal, /MyJob/i);
+});
+
+
 test("Home and Operations use progressive disclosure", async () => {
   const [html, navigation, layout] = await Promise.all([
     frontendFile("index.html"),

@@ -22,6 +22,11 @@ def test_journal_has_both_paths_progress_summary_and_accessibility():
     assert 'id="summary"' in HTML
     assert 'aria-live="assertive"' in HTML
     assert 'name="viewport"' in HTML
+    assert "<h1>Operations Engine</h1>" in HTML
+    assert "Fleet Operations" in HTML
+    assert "<h2>Giornale di bordo</h2>" in HTML
+    assert 'href="/app/journal/"' in HTML
+    assert 'aria-current="page"' in HTML
 
 
 def test_frontend_prevents_double_tap_and_handles_api_errors():
@@ -38,9 +43,30 @@ def test_photo_upload_and_removal_are_real():
 
 def test_390px_layout_has_no_horizontal_overflow_contract():
     assert "@media (max-width: 480px)" in CSS
-    assert "overflow-x: hidden" in CSS
-    assert "width: 100%" in CSS
+    assert "@media (max-width: 768px)" in CSS
+    assert "grid-template-columns: 1fr" in CSS
     assert "min-width: 0" in CSS
+    assert ".journal-mobile-context" in CSS
+
+
+def test_journal_reuses_operations_engine_design_system_and_shell():
+    for stylesheet in (
+        "../assets/css/base.css",
+        "../assets/css/layout.css",
+        "../assets/css/components.css",
+        "../assets/css/responsive.css?v=3",
+        "../assets/css/workspace-lifecycle.css?v=5",
+    ):
+        assert f'href="{stylesheet}"' in HTML
+    for item in (
+        "Home",
+        "Planning",
+        "Workforce",
+        "Fleet",
+        "Learn",
+        "Giornale di bordo",
+    ):
+        assert item in HTML
 
 
 def test_sensitive_data_is_not_persisted_client_side():

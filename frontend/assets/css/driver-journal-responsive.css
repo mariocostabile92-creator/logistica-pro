@@ -1,7 +1,119 @@
-@media (max-width: 480px) {
-  .journal-shell { width: 100%; padding: 18px 16px; overflow-x: hidden; }
-  .journal-header h1 { font-size: 1.85rem; }
-  .equipment-item { grid-template-columns: 1fr; }
-  .equipment-item select { width: 100%; }
+@media (max-width: 1180px) {
+  .journal-header-actions .workspace-status-badge {
+    display: none;
+  }
 }
-@media (min-width: 600px) { .choice-grid { grid-template-columns: 1fr 1fr; } }
+
+@media (max-width: 768px) {
+  .journal-app-header .workspace-tabs,
+  .journal-header-actions {
+    display: none;
+  }
+
+  .journal-app-header .app-header-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .journal-mobile-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 10px;
+    border-top: 1px solid #43514c;
+  }
+
+  .journal-mobile-context a {
+    color: #ecf3f0;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .journal-mobile-context strong {
+    font-size: 14px;
+  }
+
+  .journal-module-header {
+    align-items: flex-start;
+  }
+
+  .journal-home-link {
+    display: none;
+  }
+
+  .journal-panel {
+    min-height: 0;
+    padding: 22px;
+  }
+
+  .media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .journal-workspace {
+    width: calc(100% - 24px);
+    margin-top: 20px;
+  }
+
+  .journal-module-header h2 {
+    font-size: 28px;
+  }
+
+  .journal-module-header p:not(.eyebrow) {
+    font-size: 15px;
+  }
+
+  .journal-panel {
+    padding: 18px 16px;
+  }
+
+  .journal-progress-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .progress {
+    margin: 12px 0 24px;
+  }
+
+  .choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .choice {
+    min-height: 126px;
+    padding: 16px;
+  }
+
+  #journalForm .equipment-item {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-item select {
+    width: 100%;
+  }
+
+  .summary {
+    grid-template-columns: 1fr;
+  }
+
+  .summary dt {
+    padding-bottom: 4px;
+    border-bottom: 0;
+  }
+
+  .summary dd {
+    padding-top: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress span {
+    transition: none;
+  }
+}

@@ -1,16 +1,133 @@
-:root { color-scheme: light; font-family: Inter, system-ui, sans-serif; color: #172033; background: #eef2f7; }
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 0; }
-.journal-shell { width: min(100%, 680px); min-height: 100vh; margin: 0 auto; background: #fff; padding: 24px; }
-.journal-header { margin-bottom: 24px; }
-.journal-header h1 { margin: 4px 0 8px; font-size: clamp(1.75rem, 8vw, 2.5rem); }
-.journal-header p { color: #5b6578; }
-.eyebrow { margin: 0; color: #1368ce !important; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; }
-.progress { height: 8px; overflow: hidden; border-radius: 99px; background: #e4e9f1; }
-.progress span { display: block; width: 16.67%; height: 100%; background: #1368ce; transition: width .2s; }
-.step { display: none; }
-.step.active { display: block; }
-.step h2 { font-size: 1.35rem; margin: 0 0 20px; }
-.navigation { display: flex; gap: 12px; margin-top: 24px; }
-.navigation button { flex: 1; }
-.receipt-step { text-align: center; }
+.journal-page {
+  min-width: 0;
+  background: var(--bg);
+}
+
+.journal-product-brand {
+  color: inherit;
+  text-decoration: none;
+}
+
+.journal-mobile-context {
+  display: none;
+}
+
+.journal-workspace {
+  display: grid;
+  gap: 20px;
+}
+
+.journal-module-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 0;
+}
+
+.journal-module-header h2 {
+  margin: 3px 0 6px;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.1;
+}
+
+.journal-module-header p:not(.eyebrow) {
+  max-width: 720px;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.journal-home-link {
+  flex: 0 0 auto;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.journal-panel {
+  width: 100%;
+  min-height: 520px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.journal-progress-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.journal-progress-header h3 {
+  margin: 2px 0 0;
+  font-size: 20px;
+}
+
+.journal-progress-kicker,
+.step-label {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.progress {
+  height: 6px;
+  margin: 16px 0 30px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-strong);
+}
+
+.progress span {
+  display: block;
+  width: 16.67%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms ease;
+}
+
+#journalForm {
+  max-width: 980px;
+}
+
+.step {
+  display: none;
+}
+
+.step.active {
+  display: block;
+}
+
+.step > h3,
+.journal-step-heading h3 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.journal-step-heading {
+  margin-bottom: 18px;
+}
+
+.journal-step-heading p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.navigation {
+  display: flex;
+  gap: 12px;
+  max-width: 620px;
+  margin-top: 24px;
+}
+
+.navigation button {
+  flex: 1;
+}
+
+.receipt-step {
+  text-align: center;
+}

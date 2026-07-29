@@ -1,28 +1,224 @@
-button, input, select, textarea { font: inherit; }
-[hidden] { display: none !important; }
-button { min-height: 52px; padding: 12px 18px; border: 0; border-radius: 12px; background: #1368ce; color: #fff; font-weight: 750; cursor: pointer; }
-button:disabled { opacity: .55; cursor: wait; }
-button.secondary { color: #263044; background: #edf1f6; }
-label { display: grid; gap: 8px; margin: 16px 0; font-weight: 700; }
-input, select, textarea { width: 100%; min-height: 50px; padding: 12px; border: 1px solid #b8c1cf; border-radius: 10px; background: #fff; color: #172033; }
-textarea { min-height: 90px; resize: vertical; }
-.choice-grid { display: grid; gap: 16px; }
-.choice { min-height: 112px; text-align: left; display: grid; align-content: center; gap: 6px; }
-.choice strong { font-size: 1.2rem; }.choice span { opacity: .82; }
-.step-label { font-size: .85rem; }
-.asset-result { padding: 14px; border-radius: 10px; background: #e9f7ef; color: #17613a; }
-.equipment-list { display: grid; gap: 10px; }
-.equipment-item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #d6dce5; border-radius: 10px; }
-.equipment-item select { width: auto; min-width: 130px; }
-.check-line { grid-template-columns: 24px 1fr; align-items: center; }
-.check-line input { min-height: 22px; width: 22px; }
-.upload-button { display: block; padding: 16px; text-align: center; border: 2px dashed #1368ce; border-radius: 12px; color: #1368ce; cursor: pointer; }
-.media-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.media-card { position: relative; }.media-card img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; }
-.media-card button { position: absolute; right: 6px; top: 6px; min-height: 38px; padding: 6px 10px; background: #9d2434; }
-.summary { text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #dbe1e9; border-radius: 12px; overflow: hidden; }
-.summary dt, .summary dd { margin: 0; padding: 12px; border-bottom: 1px solid #e5e9ef; overflow-wrap: anywhere; }
-.summary dt { background: #f4f6f9; color: #596579; }.summary dd { font-weight: 700; }
-.error { min-height: 24px; color: #a52234; font-weight: 700; }
-.loading { position: fixed; inset: 0; display: grid; place-items: center; background: rgb(255 255 255 / .88); font-weight: 800; }
-.success-mark { width: 72px; height: 72px; margin: 0 auto 16px; display: grid; place-items: center; border-radius: 50%; background: #dff5e7; color: #177044; font-size: 2.4rem; }
+[hidden] {
+  display: none !important;
+}
+
+.journal-config-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.journal-header-actions .workspace-status-badge {
+  min-height: 34px;
+}
+
+#journalForm label {
+  display: grid;
+  gap: 8px;
+  max-width: 620px;
+  margin: 16px 0;
+  font-weight: 700;
+}
+
+#journalForm input,
+#journalForm select,
+#journalForm textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: #1d2624;
+  font: inherit;
+}
+
+#journalForm textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 900px;
+}
+
+.choice {
+  min-height: 150px;
+  padding: 20px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: #1d2624;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-content: center;
+  gap: 5px 12px;
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-strong);
+  color: #1d2624;
+}
+
+.choice-icon {
+  grid-row: 1 / span 2;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--stable-bg);
+  color: var(--accent-dark);
+  font-size: 18px;
+}
+
+.choice strong {
+  font-size: 18px;
+}
+
+.choice > span:last-child {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.asset-result {
+  max-width: 620px;
+  padding: 14px;
+  border: 1px solid #a9d4bd;
+  border-radius: var(--radius);
+  background: #edf8f2;
+  color: #17613a;
+}
+
+.equipment-list {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+}
+
+#journalForm .equipment-item {
+  max-width: none;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.equipment-item select {
+  width: auto;
+  min-width: 160px;
+}
+
+#journalForm .check-line {
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+}
+
+#journalForm .check-line input {
+  width: 22px;
+  min-height: 22px;
+}
+
+#journalForm .upload-button {
+  display: block;
+  max-width: 620px;
+  padding: 18px;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  background: var(--stable-bg);
+  color: var(--accent-dark);
+  text-align: center;
+  cursor: pointer;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 900px;
+}
+
+.media-card {
+  position: relative;
+}
+
+.media-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.media-card button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-height: 34px;
+  padding: 4px 9px;
+  background: var(--danger);
+}
+
+.summary {
+  max-width: 760px;
+  display: grid;
+  grid-template-columns: minmax(150px, .7fr) 1.3fr;
+  margin: 18px 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-align: left;
+}
+
+.summary dt,
+.summary dd {
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.summary dt {
+  background: var(--surface-strong);
+  color: var(--text-muted);
+}
+
+.summary dd {
+  font-weight: 700;
+}
+
+.error {
+  min-height: 24px;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.loading {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgb(247 250 248 / .9);
+  font-weight: 800;
+}
+
+.success-mark {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--stable-bg);
+  color: var(--accent-dark);
+  font-size: 32px;
+}
