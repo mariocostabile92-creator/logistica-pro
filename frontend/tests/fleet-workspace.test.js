@@ -58,7 +58,7 @@ test("Fleet is a registry-first workspace with the requested toolbar and six KPI
   ]) {
     assert.match(fleet, new RegExp(label));
   }
-  assert.match(fleet, /Registro asset[\s\S]*Registro mezzi/);
+  assert.match(fleet, /Vehicle Library[\s\S]*Schede mezzo/);
   assert.match(fleet, /<th>Targa<\/th>[\s\S]*<th>Stato<\/th>[\s\S]*<th>Driver associato<\/th>[\s\S]*<th>Categoria<\/th>[\s\S]*<th>Ultimo aggiornamento<\/th>/);
   assert.doesNotMatch(fleet, /<th>(Identificativo|Capability|Documenti|Azioni)<\/th>/);
 });
@@ -171,6 +171,38 @@ test("Fleet P1 retains secondary data while reducing missing-value and timestamp
   assert.match(css, /\.fleet-secondary-value[\s\S]*?color: var\(--text-muted\)/);
   assert.match(css, /\.fleet-summary > div\[data-priority="attention"\]/);
   assert.match(css, /\.fleet-summary > div\[data-priority="critical"\]/);
+});
+
+
+test("Fleet secondary navigation follows the Fleet Manager workflow", async () => {
+  const [html, css, journal, vehicle] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/css/fleet.css"),
+    frontendFile("journal/index.html"),
+    frontendFile("vehicles/index.html"),
+  ]);
+  const primary = html.match(
+    /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
+  )?.[0] || "";
+  const fleet = html.match(
+    /<nav class="fleet-subnav"[\s\S]*?<\/nav>/,
+  )?.[0] || "";
+  assert.doesNotMatch(primary, /Giornale di bordo|\/app\/journal\//);
+  for (const item of ["Parco mezzi", "Vehicle Library", "Giornale di bordo"]) {
+    assert.match(fleet, new RegExp(item));
+  }
+  for (const item of ["Documenti", "Franchigie", "Noleggi", "Danni"]) {
+    assert.match(fleet, new RegExp(`${item}[\\s\\S]*?Prossimamente`));
+  }
+  assert.match(fleet, /href="\/app\/journal\/"/);
+  assert.match(css, /\.fleet-subnav/);
+  assert.match(css, /overflow-x: auto/);
+  for (const page of [journal, vehicle]) {
+    const nav = page.match(
+      /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
+    )?.[0] || "";
+    assert.doesNotMatch(nav, /Giornale di bordo|\/app\/journal\//);
+  }
 });
 
 

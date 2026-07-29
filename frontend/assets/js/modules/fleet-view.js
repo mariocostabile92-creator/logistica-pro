@@ -151,7 +151,7 @@ function assetRow(asset) {
   const category = assetValueLabel(asset.category) || "Non indicata";
   const updatedAt = timestamp(asset.updated_at);
   return `
-    <tr data-fleet-action="select" data-asset-id="${asset.id}" tabindex="0" aria-label="Apri ${escapeHtml(primaryIdentifier)}">
+    <tr data-fleet-action="select" data-asset-id="${asset.id}" tabindex="0" aria-label="Apri scheda mezzo ${escapeHtml(primaryIdentifier)}">
       <td>
         <strong>${escapeHtml(primaryIdentifier)}</strong>
       </td>
@@ -170,7 +170,7 @@ function assetCard(asset) {
   const category = assetValueLabel(asset.category) || "Non indicata";
   const updatedAt = timestamp(asset.updated_at);
   return `
-    <button type="button" class="fleet-asset-card" data-fleet-action="select" data-asset-id="${asset.id}">
+    <button type="button" class="fleet-asset-card" data-fleet-action="select" data-asset-id="${asset.id}" aria-label="Apri scheda mezzo ${escapeHtml(primaryIdentifier)}">
       <span class="fleet-card-heading">
         <strong>${escapeHtml(primaryIdentifier)}</strong>
         ${statusBadge(asset)}

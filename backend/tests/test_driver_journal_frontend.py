@@ -25,8 +25,11 @@ def test_journal_has_both_paths_progress_summary_and_accessibility():
     assert "<h1>Operations Engine</h1>" in HTML
     assert "Fleet Operations" in HTML
     assert "<h2>Giornale di bordo</h2>" in HTML
-    assert 'href="/app/journal/"' in HTML
-    assert 'aria-current="page"' in HTML
+    navigation = HTML.split('<nav class="workspace-tabs"', 1)[1].split(
+        "</nav>", 1
+    )[0]
+    assert 'href="/app/journal/"' not in navigation
+    assert "Giornale di bordo" not in navigation
 
 
 def test_frontend_prevents_double_tap_and_handles_api_errors():
@@ -64,7 +67,6 @@ def test_journal_reuses_operations_engine_design_system_and_shell():
         "Workforce",
         "Fleet",
         "Learn",
-        "Giornale di bordo",
     ):
         assert item in HTML
 

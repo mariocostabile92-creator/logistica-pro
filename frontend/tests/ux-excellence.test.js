@@ -15,7 +15,7 @@ const frontendFile = (path) => readFile(
 );
 
 
-test("primary navigation exposes the driver journal without replacing workspaces", async () => {
+test("primary navigation is administrative and routes Journal through Fleet", async () => {
   const html = await frontendFile("index.html");
   const navigation = html.match(
     /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
@@ -30,10 +30,12 @@ test("primary navigation exposes the driver journal without replacing workspaces
   assert.match(navigation, /data-workspace-view="workforce"/);
   assert.match(navigation, /data-workspace-view="fleet"/);
   assert.match(navigation, /data-workspace-view="learn"/);
-  assert.match(
-    navigation,
-    /href="\/app\/journal\/"[\s\S]*?>\s*Giornale di bordo\s*<\/a>/,
-  );
+  assert.doesNotMatch(navigation, /Giornale di bordo|\/app\/journal\//);
+  const fleet = html.match(
+    /<nav class="fleet-subnav"[\s\S]*?<\/nav>/,
+  )?.[0] || "";
+  assert.match(fleet, /href="\/app\/journal\/"[\s\S]*?>\s*Giornale di bordo/);
+  assert.match(fleet, /Vehicle Library/);
   assert.doesNotMatch(navigation, /settings|getting-started/i);
   assert.match(html, /id="configurationNavBtn"/);
 });
@@ -48,7 +50,7 @@ test("visible branding uses Operations Engine", async () => {
 });
 
 
-test("Journal reuses the Operations Engine shell and marks its navigation active", async () => {
+test("Journal reuses the Operations Engine shell without entering primary navigation", async () => {
   const [journal, layout, components, responsive] = await Promise.all([
     frontendFile("journal/index.html"),
     frontendFile("assets/css/driver-journal-layout.css"),
@@ -59,10 +61,10 @@ test("Journal reuses the Operations Engine shell and marks its navigation active
   assert.match(journal, /<h1>Operations Engine<\/h1>/);
   assert.match(journal, /<h2>Giornale di bordo<\/h2>/);
   assert.match(journal, /Fleet Operations/);
-  assert.match(
-    journal,
-    /workspace-tab workspace-tab-link active[\s\S]*?aria-current="page"/,
-  );
+  const navigation = journal.match(
+    /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
+  )?.[0] || "";
+  assert.doesNotMatch(navigation, /Giornale di bordo|\/app\/journal\//);
   assert.match(journal, /Workspace produzione/);
   assert.match(journal, /id="healthStatus"/);
   assert.match(journal, /Configurazione/);

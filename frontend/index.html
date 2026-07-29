@@ -64,12 +64,6 @@
         >
           Learn
         </button>
-        <a
-          class="workspace-tab workspace-tab-link"
-          href="/app/journal/"
-        >
-          Giornale di bordo
-        </a>
       </nav>
 
       <div class="app-header-actions">
@@ -1459,6 +1453,30 @@
       aria-labelledby="fleetPluginTitle"
       hidden
     >
+      <nav class="fleet-subnav" aria-label="Navigazione Fleet">
+        <a class="fleet-subnav-link active" href="#fleetOverview" aria-current="page">
+          Parco mezzi
+        </a>
+        <a class="fleet-subnav-link" href="#fleetVehicleLibrary">
+          Vehicle Library
+        </a>
+        <a class="fleet-subnav-link" href="/app/journal/">
+          Giornale di bordo
+        </a>
+        <span class="fleet-subnav-placeholder">
+          Documenti <span class="tag">Prossimamente</span>
+        </span>
+        <span class="fleet-subnav-placeholder">
+          Franchigie <span class="tag">Prossimamente</span>
+        </span>
+        <span class="fleet-subnav-placeholder">
+          Noleggi <span class="tag">Prossimamente</span>
+        </span>
+        <span class="fleet-subnav-placeholder">
+          Danni <span class="tag">Prossimamente</span>
+        </span>
+      </nav>
+
       <div class="section-heading fleet-toolbar">
         <div>
           <p class="eyebrow">Parco mezzi</p>
@@ -1535,7 +1553,7 @@
       </div>
 
       <div id="fleetDataView" hidden>
-      <div id="fleetSummary" class="fleet-summary" aria-label="Riepilogo Fleet">
+      <div id="fleetOverview" class="fleet-summary" aria-label="Riepilogo Fleet">
         <div data-kpi="total">
           <span>Totale mezzi</span>
           <strong id="fleetTotalAssets">0</strong>
@@ -1564,10 +1582,11 @@
         <strong id="fleetReserveAssets" hidden>0</strong>
         <strong id="fleetUnresolvedConflicts" hidden>0</strong>
       </div>
-      <div class="fleet-registry-heading">
+      <div id="fleetVehicleLibrary" class="fleet-registry-heading">
         <div>
-          <p class="eyebrow">Registro asset</p>
-          <h3>Registro mezzi</h3>
+          <p class="eyebrow">Vehicle Library</p>
+          <h3>Schede mezzo</h3>
+          <p class="section-note">Apri un mezzo per consultarne timeline, movimentazioni e allegati.</p>
           <p id="fleetRegistryCount" class="section-note">0 mezzi</p>
         </div>
         <button id="createAssetBtn" type="button" class="quiet">Nuovo Asset</button>
