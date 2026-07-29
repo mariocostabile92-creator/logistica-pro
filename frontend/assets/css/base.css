@@ -1,0 +1,67 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  background: #f3f5f4;
+  color: #1d2624;
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --surface-strong: #e9eeeb;
+  --border: #d4dbd7;
+  --text-muted: #62706b;
+  --accent: #147568;
+  --accent-dark: #0d584f;
+  --danger: #b8322a;
+  --warning: #a86608;
+  --info: #2d6690;
+  --header: #202725;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--bg);
+}
+
+h1,
+h2,
+h3,
+p {
+  letter-spacing: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 18px;
+}
+
+button.secondary {
+  background: #274c77;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(20, 117, 104, 0.28);
+  outline-offset: 2px;
+}

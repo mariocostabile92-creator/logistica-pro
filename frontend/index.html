@@ -2,1110 +2,689 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <title>Logistica Pro MVP</title>
-
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0d1117;
-      color: white;
-    }
-
-    .container {
-      max-width: 1000px;
-      margin: 40px auto;
-      background: #161b22;
-      padding: 30px;
-      border-radius: 18px;
-      box-shadow: 0 0 25px rgba(0,0,0,0.45);
-    }
-
-    h1 {
-      color: #2ecc71;
-      text-align: center;
-      font-size: 40px;
-      margin-bottom: 5px;
-    }
-
-    h2 {
-      color: #2ecc71;
-    }
-
-    .subtitle {
-      text-align: center;
-      color: #aaa;
-      margin-bottom: 25px;
-      font-size: 17px;
-    }
-
-    .section, .result {
-      background: #0d1117;
-      border: 1px solid #30363d;
-      padding: 22px;
-      border-radius: 14px;
-      margin-top: 25px;
-    }
-
-    .result {
-      display: none;
-    }
-
-    label {
-      display: block;
-      margin-top: 18px;
-      font-weight: bold;
-    }
-
-    input, textarea, select {
-      width: 100%;
-      padding: 14px;
-      margin-top: 8px;
-      border-radius: 8px;
-      border: none;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-
-    select {
-      background: white;
-      color: #111;
-    }
-
-    textarea {
-      resize: vertical;
-    }
-
-    button {
-      margin-top: 18px;
-      width: 100%;
-      padding: 15px;
-      background: #2ecc71;
-      color: #000;
-      font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 18px;
-    }
-
-    button:hover {
-      background: #27ae60;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .secondary-btn {
-      background: #1f6feb;
-      color: white;
-    }
-
-    .danger-btn {
-      background: #e74c3c;
-      color: white;
-    }
-
-    .small-btn {
-      margin-top: 12px;
-      padding: 10px;
-      font-size: 14px;
-      background: #2ecc71;
-      color: #000;
-    }
-
-    .auth-box {
-      max-width: 520px;
-      margin: 40px auto;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .top-box {
-      background: #0d1117;
-      padding: 18px;
-      border-radius: 14px;
-      margin-top: 20px;
-      border: 1px solid #30363d;
-      line-height: 1.6;
-    }
-
-    .route-item {
-      padding: 16px;
-      border-bottom: 1px solid #333;
-      line-height: 1.5;
-    }
-
-    .customer-box, .delivery-status-box, .kpi-box {
-      margin-top: 12px;
-      padding: 14px;
-      background: #111827;
-      border-radius: 10px;
-      border: 1px solid #30363d;
-      line-height: 1.6;
-    }
-
-    .summary {
-      margin-top: 20px;
-      padding: 16px;
-      background: #1f6feb;
-      border-radius: 10px;
-      font-weight: bold;
-      font-size: 17px;
-    }
-
-    .error {
-      color: #ff4d4d;
-      margin-top: 20px;
-      font-weight: bold;
-    }
-
-    .success {
-      color: #2ecc71;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-
-    .hint {
-      color: #aaa;
-      font-size: 14px;
-      margin-top: 8px;
-      line-height: 1.5;
-    }
-
-    .loading {
-      color: #f1c40f;
-      margin-top: 18px;
-      font-weight: bold;
-      display: none;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-    }
-
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 15px;
-      margin-top: 20px;
-    }
-
-    .analytics-card {
-      background: #111827;
-      border: 1px solid #30363d;
-      padding: 18px;
-      border-radius: 12px;
-      text-align: center;
-    }
-
-    .analytics-card .number {
-      font-size: 30px;
-      font-weight: bold;
-      color: #2ecc71;
-      margin-top: 8px;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 20px;
-      background: #1f6feb;
-      color: white;
-      font-size: 13px;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .driver-badge {
-      background: #f39c12;
-      color: #000;
-    }
-
-    .client-badge {
-      background: #9b59b6;
-      color: white;
-    }
-
-    .status-badge {
-      background: #2ecc71;
-      color: #000;
-    }
-
-    .analytics-badge {
-      background: #00b894;
-      color: #000;
-    }
-
-    .user-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 15px;
-      margin-top: 15px;
-      background: #0d1117;
-      border: 1px solid #30363d;
-      padding: 12px;
-      border-radius: 12px;
-    }
-
-    .user-bar button {
-      width: auto;
-      margin-top: 0;
-      padding: 10px 16px;
-      font-size: 14px;
-    }
-
-    @media (max-width: 800px) {
-      .grid-2, .grid-4 {
-        grid-template-columns: 1fr;
-      }
-
-      .container {
-        margin: 15px;
-        padding: 20px;
-      }
-
-      .user-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .user-bar button {
-        width: 100%;
-      }
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DSP Operations OS</title>
+  <link rel="stylesheet" href="./assets/css/base.css" />
+  <link rel="stylesheet" href="./assets/css/layout.css" />
+  <link rel="stylesheet" href="./assets/css/components.css" />
+  <link rel="stylesheet" href="./assets/css/fleet.css" />
+  <link rel="stylesheet" href="./assets/css/settings.css" />
+  <link rel="stylesheet" href="./assets/css/responsive.css" />
 </head>
-
 <body>
-
-  <div class="container">
-
-    <div id="authScreen" class="auth-box">
-      <h1>🚚 Logistica Pro</h1>
-      <div class="subtitle">Accedi per usare la dashboard logistica aziendale.</div>
-
-      <div class="section">
-        <h2>🔐 Login</h2>
-
-        <label>Email</label>
-        <input id="loginEmail" type="email" placeholder="email@azienda.it" />
-
-        <label>Password</label>
-        <input id="loginPassword" type="password" placeholder="Password" />
-
-        <label>
-          <input id="rememberMe" type="checkbox" style="width:auto; margin-right:8px;" />
-          Ricordami su questo dispositivo
-        </label>
-
-        <button onclick="login()">ACCEDI</button>
-      </div>
-
-      <div class="section">
-        <h2>🆕 Registrazione</h2>
-
-        <label>Email</label>
-        <input id="registerEmail" type="email" placeholder="email@azienda.it" />
-
-        <label>Password</label>
-        <input id="registerPassword" type="password" placeholder="Minimo 6 caratteri" />
-
-        <button class="secondary-btn" onclick="register()">REGISTRATI</button>
-
-        <div class="hint">
-          Dopo la registrazione riceverai un <strong>codice recupero password</strong>. Conservalo.
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>🔁 Recupero password</h2>
-
-        <label>Email</label>
-        <input id="resetEmail" type="email" placeholder="email@azienda.it" />
-
-        <label>Codice recupero</label>
-        <input id="resetCode" placeholder="Esempio: A1B2C3D4" />
-
-        <label>Nuova password</label>
-        <input id="resetPassword" type="password" placeholder="Nuova password" />
-
-        <button class="secondary-btn" onclick="resetPassword()">RECUPERA PASSWORD</button>
-      </div>
-
-      <div id="authSuccess" class="success"></div>
-      <div id="authError" class="error"></div>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Last-mile control room</p>
+      <h1>DSP Operations OS</h1>
     </div>
+    <div id="healthStatus" class="status-pill">Backend non verificato</div>
+  </header>
 
-    <div id="appScreen" class="hidden">
-      <h1>🚚 Logistica Pro</h1>
-      <div class="subtitle">
-        Dashboard per aziende di consegna: ottimizza giri, importa clienti, controlla costi, km reali, stato consegne e analytics.
-      </div>
+  <main class="app-shell">
+    <nav class="workspace-tabs" aria-label="Aree di lavoro">
+      <button
+        type="button"
+        class="workspace-tab active"
+        data-workspace-view="operations"
+        aria-selected="true"
+      >
+        Operations
+      </button>
+      <button
+        type="button"
+        class="workspace-tab"
+        data-workspace-view="fleet"
+        aria-selected="false"
+      >
+        Fleet
+      </button>
+      <button
+        type="button"
+        class="workspace-tab"
+        data-workspace-view="settings"
+        aria-selected="false"
+      >
+        Settings
+      </button>
+    </nav>
 
-      <div class="user-bar">
+    <section id="planningSection" class="planning-section" aria-labelledby="planningTitle">
+      <div class="section-heading planning-toolbar">
         <div>
-          👤 Utente: <strong id="userEmail"></strong>
+          <p class="eyebrow">Area di lavoro</p>
+          <h2 id="planningTitle">Planning Operativo</h2>
+          <p id="planningTimestamp" class="section-note">Nessun planning generato.</p>
         </div>
-        <button class="danger-btn" onclick="logout()">LOGOUT</button>
-      </div>
-
-      <div class="top-box">
-        <strong>Obiettivo software:</strong><br>
-        🏢 <strong>Azienda:</strong> crea e ottimizza i giri di consegna.<br>
-        👤 <strong>Cliente:</strong> dati importati da Excel: nome, indirizzo, telefono e note.<br>
-        🚚 <strong>Driver:</strong> comunica km reali, stato consegna e note operative.<br>
-        📊 <strong>Analytics:</strong> controlla percentuali consegne, problemi e rendimento operativo.
-      </div>
-
-      <div class="section">
-        <span class="badge">🏢 DASHBOARD AZIENDA</span>
-        <h2>Creazione giro consegne</h2>
-
-        <label>Indirizzo deposito / punto di partenza</label>
-        <input id="depot" placeholder="Esempio: Origgio, Varese" />
-
-        <label>Importa Excel clienti/consegne</label>
-        <input type="file" id="excelFile" accept=".xlsx" />
-
-        <button class="secondary-btn" onclick="importExcel()">IMPORTA EXCEL</button>
-
-        <div class="hint">
-          Excel consigliato:<br>
-          <strong>Cliente | Indirizzo | Telefono | Note</strong><br>
-          Esempio: Rossi SRL | Lomazzo, Como | 3331234567 | Citofono 5
-        </div>
-
-        <label>Indirizzi consegne</label>
-        <textarea id="deliveries" rows="8" placeholder="Gli indirizzi importati da Excel appariranno qui. Oppure inseriscili manualmente, uno per riga."></textarea>
-      </div>
-
-      <div class="section">
-        <span class="badge driver-badge">🚚 DATI DRIVER / FINE GIRO</span>
-        <h2>Km reali mezzo</h2>
-
-        <div class="grid-2">
-          <div>
-            <label>Km iniziali mezzo</label>
-            <input id="kmStart" type="number" placeholder="Esempio: 125000" />
-          </div>
-
-          <div>
-            <label>Km finali mezzo</label>
-            <input id="kmEnd" type="number" placeholder="Esempio: 125035" />
-          </div>
+        <div class="planning-actions">
+          <label>
+            Data operativa
+            <input id="planningOperationDate" type="date" />
+          </label>
+          <label>
+            Station
+            <input id="planningStation" type="text" placeholder="Tutte" />
+          </label>
+          <label>
+            Riserva
+            <input id="planningReserveThreshold" type="number" min="0" max="1000" value="1" />
+          </label>
+          <button id="generatePlanningBtn" type="button">Genera planning</button>
         </div>
       </div>
 
-      <div class="section">
-        <span class="badge">💰 PARAMETRI COSTO AZIENDA</span>
-        <h2>Calcolo costi operativi</h2>
-
-        <div class="grid-2">
-          <div>
-            <label>Costo carburante €/L</label>
-            <input id="fuelPrice" type="number" step="0.01" value="1.80" />
-          </div>
-
-          <div>
-            <label>Consumo mezzo km/L</label>
-            <input id="fuelConsumption" type="number" step="0.1" value="12" />
-          </div>
+      <div class="planning-command-bar">
+        <div class="planning-identity">
+          <span id="planningStatusChip" class="planning-status neutral">Non generato</span>
+          <span id="planningVersion">Versione --</span>
         </div>
-
-        <div class="grid-2">
-          <div>
-            <label>Costo autista €/ora</label>
-            <input id="driverCost" type="number" step="0.01" value="12" />
-          </div>
-
-          <div>
-            <label>Costo operativo €/km</label>
-            <input id="costPerKm" type="number" step="0.01" value="0.20" />
-          </div>
+        <div class="command-actions">
+          <button id="recalculatePlanningBtn" type="button" class="secondary" disabled>Ricalcola</button>
+          <button id="confirmPlanningBtn" type="button" class="secondary" disabled>Conferma assegnazioni</button>
+          <button id="exportPlanningBtn" type="button" disabled>Esporta CSV</button>
         </div>
       </div>
 
-      <button id="calculateBtn" onclick="calculateRoute()">CALCOLA GIRO AZIENDALE</button>
-      <button class="secondary-btn" onclick="loadStorico()">📜 VEDI STORICO AZIENDA</button>
-      <button class="secondary-btn" onclick="loadAnalytics()">📊 VEDI ANALYTICS</button>
-      <button class="danger-btn" onclick="clearStorico()">🗑️ CANCELLA STORICO</button>
-
-      <div id="loading" class="loading">⏳ Calcolo giro in corso... attendi qualche secondo.</div>
-      <div id="success" class="success"></div>
-      <div id="error" class="error"></div>
-
-      <div id="result" class="result"></div>
-      <div id="storico" class="result"></div>
-      <div id="analytics" class="result"></div>
-    </div>
-
-  </div>
-
-  <script>
-    const API_BASE = "http://127.0.0.1:8000";
-
-    window.deliveriesData = [];
-    window.lastRouteData = null;
-    window.authToken = localStorage.getItem("authToken") || sessionStorage.getItem("authToken") || "";
-    window.currentEmail = localStorage.getItem("userEmail") || sessionStorage.getItem("userEmail") || "";
-
-    function getAuthHeaders(extra = {}) {
-      return {
-        ...extra,
-        "Authorization": "Bearer " + window.authToken
-      };
-    }
-
-    function showAuthError(message) {
-      document.getElementById("authError").innerHTML = message;
-      document.getElementById("authSuccess").innerHTML = "";
-    }
-
-    function showAuthSuccess(message) {
-      document.getElementById("authSuccess").innerHTML = message;
-      document.getElementById("authError").innerHTML = "";
-    }
-
-    function showApp() {
-      document.getElementById("authScreen").classList.add("hidden");
-      document.getElementById("appScreen").classList.remove("hidden");
-      document.getElementById("userEmail").innerText = window.currentEmail || "-";
-    }
-
-    function showAuth() {
-      document.getElementById("authScreen").classList.remove("hidden");
-      document.getElementById("appScreen").classList.add("hidden");
-    }
-
-    async function checkSession() {
-      if (!window.authToken) {
-        showAuth();
-        return;
-      }
-
-      try {
-        const response = await fetch(API_BASE + "/me", {
-          headers: getAuthHeaders()
-        });
-
-        if (!response.ok) {
-          logout(false);
-          return;
-        }
-
-        const data = await response.json();
-        window.currentEmail = data.email;
-        showApp();
-
-      } catch {
-        showAuth();
-      }
-    }
-
-    async function register() {
-      const email = document.getElementById("registerEmail").value.trim();
-      const password = document.getElementById("registerPassword").value.trim();
-
-      try {
-        const response = await fetch(API_BASE + "/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore registrazione");
-        }
-
-        window.authToken = data.token;
-        window.currentEmail = data.email;
-
-        sessionStorage.setItem("authToken", data.token);
-        sessionStorage.setItem("userEmail", data.email);
-
-        showAuthSuccess(
-          "Registrazione completata. Codice recupero password: <strong>" +
-          data.recovery_code +
-          "</strong>. Salvalo subito."
-        );
-
-        setTimeout(showApp, 1500);
-
-      } catch (error) {
-        showAuthError(error.message);
-      }
-    }
-
-    async function login() {
-      const email = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value.trim();
-      const remember = document.getElementById("rememberMe").checked;
-
-      try {
-        const response = await fetch(API_BASE + "/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore login");
-        }
-
-        window.authToken = data.token;
-        window.currentEmail = data.email;
-
-        if (remember) {
-          localStorage.setItem("authToken", data.token);
-          localStorage.setItem("userEmail", data.email);
-        } else {
-          sessionStorage.setItem("authToken", data.token);
-          sessionStorage.setItem("userEmail", data.email);
-        }
-
-        showApp();
-
-      } catch (error) {
-        showAuthError(error.message);
-      }
-    }
-
-    async function resetPassword() {
-      const email = document.getElementById("resetEmail").value.trim();
-      const recovery_code = document.getElementById("resetCode").value.trim();
-      const new_password = document.getElementById("resetPassword").value.trim();
-
-      try {
-        const response = await fetch(API_BASE + "/reset-password", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, recovery_code, new_password })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore recupero password");
-        }
-
-        window.authToken = data.token;
-        window.currentEmail = email;
-
-        sessionStorage.setItem("authToken", data.token);
-        sessionStorage.setItem("userEmail", email);
-
-        showAuthSuccess(
-          "Password aggiornata. Nuovo codice recupero: <strong>" +
-          data.new_recovery_code +
-          "</strong>. Salvalo subito."
-        );
-
-        setTimeout(showApp, 1500);
-
-      } catch (error) {
-        showAuthError(error.message);
-      }
-    }
-
-    function logout(showMessage = true) {
-      window.authToken = "";
-      window.currentEmail = "";
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("userEmail");
-      sessionStorage.removeItem("authToken");
-      sessionStorage.removeItem("userEmail");
-
-      hidePanels();
-      showAuth();
-
-      if (showMessage) {
-        showAuthSuccess("Logout effettuato.");
-      }
-    }
-
-    function hidePanels() {
-      ["result", "storico", "analytics"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.style.display = "none";
-          el.innerHTML = "";
-        }
-      });
-
-      const error = document.getElementById("error");
-      const success = document.getElementById("success");
-
-      if (error) error.innerHTML = "";
-      if (success) success.innerHTML = "";
-    }
-
-    async function importExcel() {
-      const fileInput = document.getElementById("excelFile");
-      const errorDiv = document.getElementById("error");
-      const successDiv = document.getElementById("success");
-
-      hidePanels();
-
-      if (!fileInput.files.length) {
-        errorDiv.innerHTML = "Seleziona prima un file Excel.";
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("file", fileInput.files[0]);
-
-      try {
-        const response = await fetch(API_BASE + "/import-excel", {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: formData
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore durante import Excel");
-        }
-
-        window.deliveriesData = data.deliveries || [];
-
-        document.getElementById("deliveries").value =
-          window.deliveriesData.map(d => d.indirizzo).join("\n");
-
-        successDiv.innerHTML = "Importati " + data.count + " clienti/consegne da Excel.";
-
-      } catch (error) {
-        errorDiv.innerHTML = error.message;
-      }
-    }
-
-    function toNumber(value) {
-      const n = Number(value);
-      return isNaN(n) ? 0 : n;
-    }
-
-    function formatEuro(value) {
-      return value.toFixed(2).replace(".", ",") + " €";
-    }
-
-    function findCustomerByAddress(address) {
-      if (!window.deliveriesData || window.deliveriesData.length === 0) {
-        return null;
-      }
-
-      return window.deliveriesData.find(d =>
-        d.indirizzo &&
-        d.indirizzo.trim().toLowerCase() === address.trim().toLowerCase()
-      );
-    }
-
-    async function calculateRoute() {
-      const depot = document.getElementById("depot").value.trim();
-      const deliveriesText = document.getElementById("deliveries").value;
-
-      const deliveries = deliveriesText
-        .split("\n")
-        .map(x => x.trim())
-        .filter(x => x.length > 0);
-
-      const resultDiv = document.getElementById("result");
-      const errorDiv = document.getElementById("error");
-      const successDiv = document.getElementById("success");
-      const loadingDiv = document.getElementById("loading");
-      const calculateBtn = document.getElementById("calculateBtn");
-
-      hidePanels();
-
-      if (!depot) {
-        errorDiv.innerHTML = "Inserisci l'indirizzo del deposito.";
-        return;
-      }
-
-      if (deliveries.length === 0) {
-        errorDiv.innerHTML = "Inserisci almeno una consegna.";
-        return;
-      }
-
-      try {
-        loadingDiv.style.display = "block";
-        calculateBtn.disabled = true;
-        calculateBtn.innerHTML = "CALCOLO IN CORSO...";
-
-        const response = await fetch(API_BASE + "/optimize-route", {
-          method: "POST",
-          headers: getAuthHeaders({ "Content-Type": "application/json" }),
-          body: JSON.stringify({
-            depot: depot,
-            deliveries: deliveries
-          })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore nel calcolo del giro");
-        }
-
-        window.lastRouteData = data;
-
-        const kmStimati = toNumber(data.total_km);
-        const minutiStimati = toNumber(data.total_minutes);
-        const numeroConsegne = data.route.length;
-
-        const kmStart = toNumber(document.getElementById("kmStart").value);
-        const kmEnd = toNumber(document.getElementById("kmEnd").value);
-        const fuelPrice = toNumber(document.getElementById("fuelPrice").value);
-        const fuelConsumption = toNumber(document.getElementById("fuelConsumption").value);
-        const driverCost = toNumber(document.getElementById("driverCost").value);
-        const costPerKm = toNumber(document.getElementById("costPerKm").value);
-
-        let kmReali = 0;
-        let differenzaKm = 0;
-        let differenzaPercentuale = 0;
-
-        if (kmStart > 0 && kmEnd > kmStart) {
-          kmReali = kmEnd - kmStart;
-          differenzaKm = kmReali - kmStimati;
-          differenzaPercentuale = kmStimati > 0 ? (differenzaKm / kmStimati) * 100 : 0;
-        }
-
-        const kmPerCosto = kmReali > 0 ? kmReali : kmStimati;
-
-        const litriStimati = fuelConsumption > 0 ? kmPerCosto / fuelConsumption : 0;
-        const costoCarburante = litriStimati * fuelPrice;
-        const costoAutista = (minutiStimati / 60) * driverCost;
-        const costoOperativoKm = kmPerCosto * costPerKm;
-        const costoTotale = costoCarburante + costoAutista + costoOperativoKm;
-
-        const mediaKmConsegna = numeroConsegne > 0 ? kmStimati / numeroConsegne : 0;
-        const mediaMinConsegna = numeroConsegne > 0 ? minutiStimati / numeroConsegne : 0;
-
-        successDiv.innerHTML = "Giro aziendale calcolato correttamente.";
-
-        let html = "<h2>📍 Giro ottimizzato per azienda</h2>";
-
-        data.route.forEach((stop, index) => {
-          const customer = findCustomerByAddress(stop.address);
-
-          let customerHtml = "";
-
-          if (customer) {
-            customerHtml = `
-              <div class="customer-box">
-                <span class="badge client-badge">👤 DATI CLIENTE</span><br>
-                Cliente: <strong>${customer.cliente || "-"}</strong><br>
-                Telefono: <strong>${customer.telefono || "-"}</strong><br>
-                Note: <strong>${customer.note || "-"}</strong>
+      <div id="planningSummary" class="planning-summary-grid">
+        <div class="planning-metric">
+          <span>Rotte</span>
+          <strong id="planningRoutesValue">--</strong>
+        </div>
+        <div class="planning-metric">
+          <span>Assegnate</span>
+          <strong id="planningAssignedValue">--</strong>
+        </div>
+        <div class="planning-metric">
+          <span>Scoperte</span>
+          <strong id="planningUnassignedValue">--</strong>
+        </div>
+        <div class="planning-metric">
+          <span>Override manuali</span>
+          <strong id="planningOverridesValue">--</strong>
+        </div>
+      </div>
+
+      <section class="capacity-section" aria-labelledby="stationCapacityTitle">
+        <div class="section-heading compact">
+          <h3 id="stationCapacityTitle">Capacity per station</h3>
+        </div>
+        <div id="stationCapacity" class="station-capacity-grid">
+          <div class="empty-state">Nessuna capacità station disponibile.</div>
+        </div>
+      </section>
+
+      <section class="planning-issues-section" aria-labelledby="planningIssuesTitle">
+        <div class="section-heading compact">
+          <h3 id="planningIssuesTitle">Problemi planning</h3>
+          <span id="planningIssuesCount" class="count-badge">0</span>
+        </div>
+        <div id="planningIssues" class="planning-issues-list">
+          <div class="empty-state">Nessun problema planning disponibile.</div>
+        </div>
+      </section>
+
+      <div class="assignment-filters" aria-label="Filtri assegnazioni">
+        <label>
+          Station
+          <select id="assignmentFilterStation">
+            <option value="">Tutte</option>
+          </select>
+        </label>
+        <label>
+          Stato
+          <select id="assignmentFilterStatus">
+            <option value="">Tutti</option>
+          </select>
+        </label>
+        <label>
+          Driver
+          <input id="assignmentFilterDriver" type="search" />
+        </label>
+        <label>
+          Mezzo
+          <input id="assignmentFilterVehicle" type="search" />
+        </label>
+        <label>
+          Problemi
+          <select id="assignmentFilterProblems">
+            <option value="">Tutti</option>
+            <option value="critical">Con warning</option>
+            <option value="unassigned">Rotte scoperte</option>
+            <option value="manual">Modifiche manuali</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="assignment-workspace">
+        <div class="assignment-table-wrap">
+          <table class="assignment-table">
+            <thead>
+              <tr>
+                <th>Station</th>
+                <th>Route</th>
+                <th>Cycle/Wave</th>
+                <th>Driver</th>
+                <th>Vehicle</th>
+                <th>Stato</th>
+                <th>Origine</th>
+                <th>Warning</th>
+                <th>Alternative</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="assignmentTableBody"></tbody>
+          </table>
+        </div>
+        <div id="assignmentCards" class="assignment-cards"></div>
+      </div>
+
+      <div class="planning-secondary-grid">
+        <section class="simulator-panel" aria-labelledby="simulatorTitle">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">What-if</p>
+              <h3 id="simulatorTitle">Simulazione eventi</h3>
+            </div>
+          </div>
+          <form id="eventSimulationForm" class="simulator-form">
+            <label>
+              Evento
+              <select id="eventType">
+                <option value="driver_absent">Driver assente</option>
+                <option value="vehicle_unavailable">Mezzo KO</option>
+                <option value="route_aborted">Abort rotta</option>
+              </select>
+            </label>
+            <label>
+              Entità
+              <input id="eventEntityId" type="text" required />
+            </label>
+            <label>
+              Motivo
+              <input id="eventReason" type="text" required />
+            </label>
+            <div class="button-row">
+              <button type="submit">Simula</button>
+              <button id="cancelSimulationBtn" type="button" class="secondary">Annulla</button>
+            </div>
+          </form>
+          <div id="simulationResult" class="simulation-result">
+            <div class="empty-state">Nessuna simulazione attiva.</div>
+          </div>
+          <button id="applySimulationBtn" type="button" disabled>Applica evento</button>
+        </section>
+
+        <section class="history-panel" aria-labelledby="historyTitle">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Audit</p>
+              <h3 id="historyTitle">Storico planning</h3>
+            </div>
+          </div>
+          <div id="planningHistory" class="planning-history">
+            <div class="empty-state">Nessuna versione disponibile.</div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="dashboardSection" class="dashboard-section" aria-labelledby="dashboardTitle">
+      <div class="section-heading dashboard-toolbar">
+        <div>
+          <p class="eyebrow">Stato operativo</p>
+          <h2 id="dashboardTitle">Operations Summary</h2>
+          <p id="dashboardTimestamp" class="section-note">Nessuna analisi disponibile.</p>
+        </div>
+        <div class="dashboard-actions">
+          <label class="threshold-control">
+            Scorta minima
+            <input id="reserveThreshold" type="number" min="0" max="1000" value="1" />
+          </label>
+          <button id="analyzeBtn" type="button">Calcola stato operativo</button>
+        </div>
+      </div>
+
+      <div class="dashboard-layout">
+        <div class="dashboard-main">
+          <div id="summary" class="summary-grid" aria-label="Riepilogo operativo">
+            <button class="metric-card" type="button" data-dashboard-card="routes" aria-pressed="false">
+              <span>Rotte</span>
+              <strong id="routesValue">--</strong>
+              <small id="routesMeta">In attesa dei dati</small>
+            </button>
+            <button class="metric-card" type="button" data-dashboard-card="drivers" aria-pressed="false">
+              <span>Driver</span>
+              <strong id="driversValue">--</strong>
+              <small id="driversMeta">In attesa dei dati</small>
+            </button>
+            <button class="metric-card" type="button" data-dashboard-card="vehicles" aria-pressed="false">
+              <span>Mezzi operativi</span>
+              <strong id="vehiclesValue">--</strong>
+              <small id="vehiclesMeta">In attesa dei dati</small>
+            </button>
+          </div>
+
+          <div id="metricDetail" class="metric-detail" tabindex="-1">
+            Lo stato operativo non è ancora stato calcolato.
+          </div>
+
+          <section class="issues-section" aria-labelledby="issuesTitle">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Priorità</p>
+                <h2 id="issuesTitle">Operational Issues</h2>
               </div>
-            `;
-          }
-
-          html += `
-            <div class="route-item" data-address="${stop.address}">
-              <strong>${index + 1}. ${stop.address}</strong><br>
-              ${customerHtml}
-
-              <div class="delivery-status-box">
-                <span class="badge status-badge">📦 STATO CONSEGNA</span>
-
-                <label>Stato consegna</label>
-                <select id="status_${index}">
-                  <option value="consegnato">✅ Consegnato</option>
-                  <option value="non_trovato">❌ Non trovato</option>
-                  <option value="problema">⚠️ Problema</option>
-                  <option value="rimandato">🔁 Rimandato</option>
-                </select>
-
-                <label>Note driver</label>
-                <input id="note_${index}" placeholder="Es: cliente assente, chiamato, pacco danneggiato..." />
-              </div>
-
-              <br>
-              Distanza dalla tappa precedente: ${stop.km_from_previous} km<br>
-              Tempo stimato: ${stop.minutes_from_previous} min
+              <span id="issuesCount" class="count-badge">0</span>
             </div>
-          `;
-        });
+            <div id="conflicts" class="conflict-list">
+              <div class="empty-state">Nessun problema operativo disponibile.</div>
+            </div>
+          </section>
+        </div>
 
-        html += `
-          <div class="summary">
-            Totale stimato aziendale: ${kmStimati} km — ${minutiStimati} minuti
-          </div>
-
-          <div class="kpi-box">
-            <h2>📊 KPI azienda</h2>
-            Numero consegne: <strong>${numeroConsegne}</strong><br>
-            Media km per consegna: <strong>${mediaKmConsegna.toFixed(2)} km</strong><br>
-            Media minuti per consegna: <strong>${mediaMinConsegna.toFixed(1)} min</strong><br>
-          </div>
-
-          <div class="kpi-box">
-            <h2>🚚 Report driver / km reali</h2>
-            Km iniziali: <strong>${kmStart || "-"}</strong><br>
-            Km finali: <strong>${kmEnd || "-"}</strong><br>
-            Km reali dichiarati: <strong>${kmReali > 0 ? kmReali.toFixed(2) + " km" : "non inseriti"}</strong><br>
-            Scostamento da giro stimato:
-            <strong>${kmReali > 0 ? differenzaKm.toFixed(2) + " km (" + differenzaPercentuale.toFixed(1) + "%)" : "non disponibile"}</strong>
-          </div>
-
-          <div class="kpi-box">
-            <h2>💰 Costi operativi azienda</h2>
-            Km usati per costo: <strong>${kmPerCosto.toFixed(2)} km</strong><br>
-            Costo carburante stimato: <strong>${formatEuro(costoCarburante)}</strong><br>
-            Costo autista stimato: <strong>${formatEuro(costoAutista)}</strong><br>
-            Costo operativo chilometrico: <strong>${formatEuro(costoOperativoKm)}</strong><br><br>
-            <div class="summary">
-              Costo totale stimato giro: ${formatEuro(costoTotale)}
+        <aside class="readiness-column" aria-labelledby="readinessTitle">
+          <button id="readinessCard" class="readiness-card neutral" type="button" data-dashboard-card="readiness" aria-pressed="false">
+            <span class="readiness-label">Operational Readiness</span>
+            <strong id="readinessTitle">Non calcolata</strong>
+            <span id="readinessRisk">Rischio non disponibile</span>
+            <span id="readinessMargin" class="readiness-margin">Margine --</span>
+          </button>
+          <div class="readiness-facts">
+            <div>
+              <span>Mezzi fisici</span>
+              <strong id="physicalVehiclesValue">--</strong>
+            </div>
+            <div>
+              <span>Mezzi bloccati</span>
+              <strong id="blockedVehiclesValue">--</strong>
+            </div>
+            <div>
+              <span>Mezzi riserva</span>
+              <strong id="reserveVehiclesValue">--</strong>
             </div>
           </div>
-
-          <button onclick="salvaStatoConsegne()">💾 SALVA REPORT CONSEGNE</button>
-        `;
-
-        resultDiv.innerHTML = html;
-        resultDiv.style.display = "block";
-
-      } catch (error) {
-        resultDiv.style.display = "none";
-        resultDiv.innerHTML = "";
-        errorDiv.innerHTML = error.message;
-      } finally {
-        loadingDiv.style.display = "none";
-        calculateBtn.disabled = false;
-        calculateBtn.innerHTML = "CALCOLA GIRO AZIENDALE";
-      }
-    }
-
-    async function salvaStatoConsegne() {
-      const errorDiv = document.getElementById("error");
-      const successDiv = document.getElementById("success");
-
-      errorDiv.innerHTML = "";
-      successDiv.innerHTML = "";
-
-      if (!window.lastRouteData || !window.lastRouteData.route) {
-        errorDiv.innerHTML = "Prima calcola un giro.";
-        return;
-      }
-
-      const report = window.lastRouteData.route.map((stop, index) => {
-        const customer = findCustomerByAddress(stop.address);
-
-        return {
-          ordine: index + 1,
-          address: stop.address,
-          cliente: customer ? customer.cliente : "",
-          telefono: customer ? customer.telefono : "",
-          note_cliente: customer ? customer.note : "",
-          km_from_previous: stop.km_from_previous,
-          minutes_from_previous: stop.minutes_from_previous,
-          status: document.getElementById(`status_${index}`).value,
-          note_driver: document.getElementById(`note_${index}`).value
-        };
-      });
-
-      const payload = {
-        data_salvataggio: new Date().toLocaleString("it-IT"),
-        depot: document.getElementById("depot").value.trim(),
-        km_iniziali: document.getElementById("kmStart").value,
-        km_finali: document.getElementById("kmEnd").value,
-        report: report
-      };
-
-      try {
-        const response = await fetch(API_BASE + "/save-report", {
-          method: "POST",
-          headers: getAuthHeaders({ "Content-Type": "application/json" }),
-          body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore salvataggio report");
-        }
-
-        successDiv.innerHTML = "Report consegne salvato correttamente.";
-
-      } catch (error) {
-        errorDiv.innerHTML = error.message;
-      }
-    }
-
-    async function loadAnalytics() {
-      const analyticsDiv = document.getElementById("analytics");
-      const errorDiv = document.getElementById("error");
-
-      hidePanels();
-
-      try {
-        const response = await fetch(API_BASE + "/analytics", {
-          headers: getAuthHeaders()
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore caricamento analytics");
-        }
-
-        let html = `
-          <span class="badge analytics-badge">📊 ANALYTICS AZIENDA</span>
-          <h2>Dashboard performance consegne</h2>
-
-          <div class="grid-4">
-            <div class="analytics-card">
-              Report salvati
-              <div class="number">${data.totale_report}</div>
-            </div>
-
-            <div class="analytics-card">
-              Totale consegne
-              <div class="number">${data.totale_consegne}</div>
-            </div>
-
-            <div class="analytics-card">
-              Consegnate
-              <div class="number">${data.consegnate}</div>
-            </div>
-
-            <div class="analytics-card">
-              Efficienza
-              <div class="number">${data.efficienza}</div>
-            </div>
+          <div id="readinessReasons" class="readiness-reasons">
+            <p>Nessuna regola valutata.</p>
           </div>
+        </aside>
+      </div>
+    </section>
 
-          <div class="kpi-box">
-            <h2>📦 Stato consegne</h2>
-            ✅ Consegnate: <strong>${data.consegnate}</strong> (${data.percentuale_successo}%)<br>
-            ❌ Non trovate: <strong>${data.non_trovate}</strong> (${data.percentuale_non_trovate}%)<br>
-            ⚠️ Problemi: <strong>${data.problemi}</strong> (${data.percentuale_problemi}%)<br>
-            🔁 Rimandate: <strong>${data.rimandate}</strong> (${data.percentuale_rimandate}%)
+    <section id="importsSection" class="imports-section" aria-labelledby="importsTitle">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Dati operativi</p>
+          <h2 id="importsTitle">Importazione operativa</h2>
+        </div>
+      </div>
+      <div class="workflow">
+      <article class="panel" data-import-card="planning">
+        <div class="panel-heading">
+          <div>
+            <p class="step-label">A</p>
+            <h2>Planning giornaliero</h2>
           </div>
-
-          <div class="summary">
-            Valutazione operativa: ${data.efficienza}
+          <span id="planningState" class="tag">In attesa</span>
+        </div>
+        <form id="planningForm" class="import-form">
+          <label>
+            File planning
+            <input id="planningFile" type="file" accept=".xlsx,.xls,.csv" required />
+          </label>
+          <label>
+            Foglio
+            <select id="planningSheet">
+              <option value="">Automatico</option>
+            </select>
+          </label>
+          <div class="button-row">
+            <button type="button" id="planningPreviewBtn">Preview</button>
+            <button type="submit" class="secondary">Importa planning</button>
           </div>
-        `;
+        </form>
+        <div id="planningMapping" class="mapping-grid"></div>
+        <div id="planningPreview" class="table-wrap"></div>
+      </article>
 
-        analyticsDiv.innerHTML = html;
-        analyticsDiv.style.display = "block";
+      <article class="panel" data-import-card="fleet">
+        <div class="panel-heading">
+          <div>
+            <p class="step-label">B</p>
+            <h2>Stato parco auto</h2>
+          </div>
+          <span id="fleetState" class="tag">In attesa</span>
+        </div>
+        <form id="fleetForm" class="import-form">
+          <label>
+            File parco auto
+            <input id="fleetFile" type="file" accept=".xlsx,.xls,.csv" required />
+          </label>
+          <label>
+            Foglio
+            <select id="fleetSheet">
+              <option value="">Automatico</option>
+            </select>
+          </label>
+          <div class="button-row">
+            <button type="button" id="fleetPreviewBtn">Preview</button>
+            <button type="submit" class="secondary">Importa parco</button>
+          </div>
+        </form>
+        <div id="fleetMapping" class="mapping-grid"></div>
+        <div id="fleetPreview" class="table-wrap"></div>
+      </article>
+      </div>
+    </section>
 
-      } catch (error) {
-        errorDiv.innerHTML = error.message;
-      }
-    }
+    <section
+      id="fleetPluginSection"
+      class="fleet-section"
+      aria-labelledby="fleetPluginTitle"
+      hidden
+    >
+      <div class="section-heading fleet-toolbar">
+        <div>
+          <p class="eyebrow">Asset lifecycle</p>
+          <h2 id="fleetPluginTitle">Fleet</h2>
+          <p id="fleetPluginTimestamp" class="section-note">Asset non caricati.</p>
+        </div>
+        <button id="createAssetBtn" type="button">Nuovo asset</button>
+      </div>
 
-    async function loadStorico() {
-      const storicoDiv = document.getElementById("storico");
-      const errorDiv = document.getElementById("error");
+      <div class="fleet-table-wrap">
+        <table class="fleet-table">
+          <thead>
+            <tr>
+              <th>Identificativo</th>
+              <th>Targa</th>
+              <th>Categoria</th>
+              <th>Stato</th>
+              <th>Disponibilità</th>
+              <th>Capability</th>
+              <th>Documenti</th>
+              <th>Aggiornato</th>
+              <th>Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="fleetAssetTableBody">
+            <tr>
+              <td colspan="9" class="empty-state">Nessun Asset disponibile.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="fleetAssetCards" class="fleet-asset-cards"></div>
 
-      hidePanels();
+      <section
+        id="fleetAssetDetail"
+        class="fleet-asset-detail"
+        aria-labelledby="fleetAssetDetailTitle"
+        hidden
+      >
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Asset selezionato</p>
+            <h3 id="fleetAssetDetailTitle">Dettaglio Asset</h3>
+          </div>
+          <div class="fleet-detail-actions">
+            <button id="editAssetBtn" type="button" class="secondary">Modifica</button>
+            <button id="observeAvailabilityBtn" type="button" class="secondary">Disponibilità</button>
+            <button id="addAssetDocumentBtn" type="button">Documento</button>
+          </div>
+        </div>
+        <div class="fleet-detail-grid">
+          <section aria-labelledby="assetDocumentsTitle">
+            <h3 id="assetDocumentsTitle">Documenti</h3>
+            <div id="fleetAssetDocuments" class="fleet-document-list"></div>
+          </section>
+          <section aria-labelledby="assetEventsTitle">
+            <h3 id="assetEventsTitle">Cronologia eventi</h3>
+            <div id="fleetAssetEvents" class="fleet-event-list"></div>
+          </section>
+        </div>
+      </section>
+    </section>
 
-      try {
-        const response = await fetch(API_BASE + "/storico", {
-          headers: getAuthHeaders()
-        });
+    <section
+      id="settingsSection"
+      class="settings-section"
+      aria-labelledby="settingsTitle"
+      hidden
+    >
+      <div class="section-heading settings-toolbar">
+        <div>
+          <p class="eyebrow">Configuration Engine v1</p>
+          <h2 id="settingsTitle">Settings</h2>
+          <p id="settingsTimestamp" class="section-note">
+            Configurazione non caricata.
+          </p>
+        </div>
+        <form id="settingsScopeForm" class="settings-scope-form">
+          <label>
+            Organizzazione
+            <input
+              id="settingsOrganization"
+              type="text"
+              value="default"
+              maxlength="120"
+              required
+            />
+          </label>
+          <label>
+            Operational Unit
+            <input
+              id="settingsOperationalUnit"
+              type="text"
+              maxlength="120"
+              placeholder="Globale"
+            />
+          </label>
+          <button type="submit">Carica</button>
+        </form>
+      </div>
 
-        const data = await response.json();
+      <div class="settings-metadata" aria-label="Metadati configurazione">
+        <div>
+          <span>Versione</span>
+          <strong id="settingsVersion">--</strong>
+        </div>
+        <div>
+          <span>Aggiornata</span>
+          <strong id="settingsUpdatedAt">--</strong>
+        </div>
+        <div>
+          <span>Ambito risolto</span>
+          <strong id="settingsResolvedScope">--</strong>
+        </div>
+        <div>
+          <span>Fallback</span>
+          <strong id="settingsFallback">--</strong>
+        </div>
+      </div>
 
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore caricamento storico");
-        }
+      <div class="section-heading compact settings-sections-heading">
+        <h3>Sezioni disponibili</h3>
+        <span id="settingsSectionCount" class="count-badge">0</span>
+      </div>
+      <div id="settingsSections" class="settings-sections">
+        <div class="empty-state">Nessuna configurazione disponibile.</div>
+      </div>
+    </section>
 
-        if (data.length === 0) {
-          storicoDiv.innerHTML = "<p>Nessun giro salvato.</p>";
-          storicoDiv.style.display = "block";
-          return;
-        }
+    <dialog id="assetEditor" class="assignment-editor fleet-dialog">
+      <form id="assetEditorForm" method="dialog">
+        <div class="editor-heading">
+          <div>
+            <p class="eyebrow">Fleet Plugin v1</p>
+            <h3 id="assetEditorTitle">Nuovo Asset</h3>
+          </div>
+          <button
+            id="closeAssetEditorBtn"
+            type="button"
+            class="icon-button"
+            aria-label="Chiudi"
+            title="Chiudi"
+          >&times;</button>
+        </div>
+        <input id="assetId" type="hidden" />
+        <label>
+          Identificativo esterno
+          <input id="assetExternalIdentifier" type="text" maxlength="120" required />
+        </label>
+        <div class="fleet-form-grid">
+          <label>
+            Targa
+            <input id="assetPlate" type="text" maxlength="40" />
+          </label>
+          <label>
+            Categoria
+            <input id="assetCategory" type="text" maxlength="80" />
+          </label>
+          <label>
+            Stato
+            <input id="assetStatus" type="text" maxlength="64" value="active" required />
+          </label>
+          <label id="assetAvailabilityField">
+            Disponibilità iniziale
+            <input id="assetAvailability" type="text" maxlength="64" value="available" required />
+          </label>
+        </div>
+        <label>
+          Capability
+          <input
+            id="assetCapabilities"
+            type="text"
+            placeholder="electric, refrigerated"
+          />
+        </label>
+        <label>
+          Note
+          <textarea id="assetNotes" rows="3" maxlength="2000"></textarea>
+        </label>
+        <div class="editor-actions">
+          <button id="cancelAssetEditorBtn" type="button" class="secondary">Annulla</button>
+          <button type="submit">Salva Asset</button>
+        </div>
+      </form>
+    </dialog>
 
-        let html = "<h2>📜 Storico azienda</h2>";
+    <dialog id="availabilityEditor" class="assignment-editor fleet-dialog">
+      <form id="availabilityEditorForm" method="dialog">
+        <div class="editor-heading">
+          <div>
+            <p class="eyebrow">Osservazione</p>
+            <h3>Aggiorna disponibilità</h3>
+          </div>
+          <button
+            id="closeAvailabilityEditorBtn"
+            type="button"
+            class="icon-button"
+            aria-label="Chiudi"
+            title="Chiudi"
+          >&times;</button>
+        </div>
+        <input id="availabilityAssetId" type="hidden" />
+        <label>
+          Disponibilità
+          <input id="assetAvailabilityValue" type="text" maxlength="64" required />
+        </label>
+        <label>
+          Nota
+          <textarea id="assetAvailabilityNote" rows="3" maxlength="1000"></textarea>
+        </label>
+        <div class="editor-actions">
+          <button id="cancelAvailabilityEditorBtn" type="button" class="secondary">Annulla</button>
+          <button type="submit">Registra</button>
+        </div>
+      </form>
+    </dialog>
 
-        data.forEach((giro, index) => {
-          const depotEncoded = encodeURIComponent(JSON.stringify(giro.depot));
-          const deliveriesEncoded = encodeURIComponent(JSON.stringify(giro.deliveries));
+    <dialog id="documentEditor" class="assignment-editor fleet-dialog">
+      <form id="documentEditorForm" method="dialog">
+        <div class="editor-heading">
+          <div>
+            <p class="eyebrow">Metadati documento</p>
+            <h3>Nuovo documento</h3>
+          </div>
+          <button
+            id="closeDocumentEditorBtn"
+            type="button"
+            class="icon-button"
+            aria-label="Chiudi"
+            title="Chiudi"
+          >&times;</button>
+        </div>
+        <input id="documentAssetId" type="hidden" />
+        <div class="fleet-form-grid">
+          <label>
+            Tipo
+            <input id="documentType" type="text" maxlength="64" required />
+          </label>
+          <label>
+            Nome
+            <input id="documentName" type="text" maxlength="160" required />
+          </label>
+          <label>
+            Riferimento
+            <input id="documentReference" type="text" maxlength="160" />
+          </label>
+          <label>
+            Data emissione
+            <input id="documentIssuedOn" type="date" />
+          </label>
+          <label>
+            Data scadenza
+            <input id="documentExpiresOn" type="date" />
+          </label>
+        </div>
+        <label>
+          Note
+          <textarea id="documentNotes" rows="3" maxlength="1000"></textarea>
+        </label>
+        <div class="editor-actions">
+          <button id="cancelDocumentEditorBtn" type="button" class="secondary">Annulla</button>
+          <button type="submit">Aggiungi documento</button>
+        </div>
+      </form>
+    </dialog>
 
-          html += `
-            <div class="route-item">
-              <strong>${index + 1}. ${giro.data}</strong><br>
-              Deposito: ${giro.depot}<br>
-              Consegne: ${giro.deliveries.length}<br>
-              Totale: ${giro.totale_km} km — ${giro.totale_minuti} min<br>
+    <dialog id="assignmentEditor" class="assignment-editor">
+      <form id="assignmentEditorForm" method="dialog">
+        <div class="editor-heading">
+          <div>
+            <p class="eyebrow">Modifica assegnazione</p>
+            <h3 id="editorRoute">Route</h3>
+          </div>
+          <button id="closeAssignmentEditorBtn" type="button" class="icon-button" aria-label="Chiudi">×</button>
+        </div>
+        <input id="editorAssignmentId" type="hidden" />
+        <label>
+          Driver
+          <select id="editorDriver"></select>
+        </label>
+        <label>
+          Mezzo
+          <select id="editorVehicle"></select>
+        </label>
+        <label>
+          Nota
+          <input id="editorNote" type="text" />
+        </label>
+        <label class="checkbox-control">
+          <input id="editorConfirm" type="checkbox" />
+          Conferma modifica
+        </label>
+        <div id="editorAlternatives" class="editor-alternatives"></div>
+        <div class="editor-actions">
+          <button id="removeDriverBtn" type="button" class="secondary">Rimuovi driver</button>
+          <button id="removeVehicleBtn" type="button" class="secondary">Rimuovi mezzo</button>
+          <button type="submit">Salva</button>
+        </div>
+      </form>
+    </dialog>
 
-              <button class="small-btn" onclick="riprendiGiro('${depotEncoded}', '${deliveriesEncoded}')">
-                🔄 RIPRENDI GIRO AZIENDALE
-              </button>
-            </div>
-          `;
-        });
+    <div id="message" class="message" role="status"></div>
+  </main>
 
-        storicoDiv.innerHTML = html;
-        storicoDiv.style.display = "block";
-
-      } catch (error) {
-        errorDiv.innerHTML = error.message;
-      }
-    }
-
-    function riprendiGiro(depotEncoded, deliveriesEncoded) {
-      const depot = JSON.parse(decodeURIComponent(depotEncoded));
-      const deliveries = JSON.parse(decodeURIComponent(deliveriesEncoded));
-
-      document.getElementById("depot").value = depot;
-      document.getElementById("deliveries").value = deliveries.join("\n");
-
-      document.getElementById("success").innerHTML = "Giro aziendale ricaricato. Ora puoi cliccare CALCOLA GIRO AZIENDALE.";
-      document.getElementById("error").innerHTML = "";
-
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    async function clearStorico() {
-      const conferma = confirm("Sei sicuro di voler cancellare tutto lo storico aziendale?");
-      const storicoDiv = document.getElementById("storico");
-      const errorDiv = document.getElementById("error");
-      const successDiv = document.getElementById("success");
-
-      if (!conferma) return;
-
-      errorDiv.innerHTML = "";
-      successDiv.innerHTML = "";
-
-      try {
-        const response = await fetch(API_BASE + "/storico", {
-          method: "DELETE",
-          headers: getAuthHeaders()
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || "Errore cancellazione storico");
-        }
-
-        storicoDiv.innerHTML = "";
-        storicoDiv.style.display = "none";
-        successDiv.innerHTML = "Storico aziendale cancellato correttamente.";
-
-      } catch (error) {
-        errorDiv.innerHTML = error.message;
-      }
-    }
-
-    checkSession();
-  </script>
-
+  <script type="module" src="./assets/js/app.js"></script>
 </body>
 </html>

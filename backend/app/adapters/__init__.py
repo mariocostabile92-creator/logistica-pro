@@ -1,0 +1,1 @@
+"""External-domain adapters."""
