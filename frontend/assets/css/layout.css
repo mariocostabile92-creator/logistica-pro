@@ -28,8 +28,8 @@
 
 .app-header .workspace-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(94px, 1fr));
-  width: min(620px, 100%);
+  grid-template-columns: repeat(6, minmax(94px, 1fr));
+  width: min(744px, 100%);
   margin: 0;
   padding: 3px;
   border: 1px solid #43514c;
@@ -43,6 +43,14 @@
   background: transparent;
   color: #dbe4e0;
   font-size: 14px;
+}
+
+.workspace-tab-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
 }
 
 .workspace-tab:hover:not(:disabled) {

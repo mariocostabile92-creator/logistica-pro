@@ -15,7 +15,7 @@ const frontendFile = (path) => readFile(
 );
 
 
-test("primary navigation is Home Planning Workforce Fleet Learn", async () => {
+test("primary navigation exposes the driver journal without replacing workspaces", async () => {
   const html = await frontendFile("index.html");
   const navigation = html.match(
     /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
@@ -30,6 +30,10 @@ test("primary navigation is Home Planning Workforce Fleet Learn", async () => {
   assert.match(navigation, /data-workspace-view="workforce"/);
   assert.match(navigation, /data-workspace-view="fleet"/);
   assert.match(navigation, /data-workspace-view="learn"/);
+  assert.match(
+    navigation,
+    /href="\/app\/journal\/"[\s\S]*?>\s*Giornale di bordo\s*<\/a>/,
+  );
   assert.doesNotMatch(navigation, /settings|getting-started/i);
   assert.match(html, /id="configurationNavBtn"/);
 });
@@ -156,7 +160,7 @@ test("design system covers wide desktop tablet and mobile breakpoints", async ()
   assert.match(css, /@media \(max-width: 980px\)/);
   assert.match(css, /@media \(max-width: 720px\)/);
   assert.match(css, /@media \(max-width: 620px\)/);
-  assert.match(responsive, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
+  assert.match(responsive, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(
     briefing,
     /@media \(max-width: 980px\)[\s\S]*?\.briefing-metrics[\s\S]*?repeat\(2,/,

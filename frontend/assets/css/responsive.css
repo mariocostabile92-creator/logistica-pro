@@ -82,7 +82,7 @@
   }
 
   .app-header .workspace-tabs {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 2px;
   }
 
@@ -92,6 +92,11 @@
     font-size: 10px;
     overflow-wrap: normal;
     white-space: nowrap;
+  }
+
+  .workspace-tab-link {
+    line-height: 1.15;
+    white-space: normal;
   }
 
   .app-header-actions {
