@@ -26,7 +26,7 @@ import {
   renderVehicleDossier,
   setFleetMetricPriority,
 } from "./fleet-view.js";
-import { showDamageWorkspace } from "./damage-workspace.js";
+import { showDamageWorkspace } from "./damage-workspace.js?v=2";
 
 
 let loaded = false;

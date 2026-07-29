@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { sortDamageCases } from "../assets/js/modules/damage-workspace.js";
 
 const file = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -30,9 +31,24 @@ test("damage workspace exposes real KPIs search combinable filters and inline de
   ]) assert.match(module, new RegExp(`\\["${filter}"`));
   assert.match(module, /data-damage-case/);
   assert.match(module, /damage-detail-grid/);
+  assert.match(module, /damage-navigator/);
+  assert.match(module, /damage-case-navigator/);
+  assert.match(module, /damage-detail-pane/);
+  assert.match(module, /aria-current/);
+  assert.match(module, /Torna alla lista/);
   assert.match(module, /damage-timeline/);
   assert.match(module, /Anomalie da gestire/);
   assert.match(module, /Nuova pratica manuale/);
+});
+
+test("case navigator orders stopped vehicles then severity and recency", () => {
+  const items = [
+    { id: 1, vehicle_operational_status: "disponibile", severity: "critica", occurred_at: "2026-07-30T10:00:00Z" },
+    { id: 2, vehicle_operational_status: "fermo", severity: "bassa", occurred_at: "2026-07-28T10:00:00Z" },
+    { id: 3, vehicle_operational_status: "disponibile", severity: "alta", occurred_at: "2026-07-30T11:00:00Z" },
+    { id: 4, vehicle_operational_status: "disponibile", severity: "alta", occurred_at: "2026-07-30T12:00:00Z" },
+  ];
+  assert.deepEqual(sortDamageCases(items).map(({ id }) => id), [2, 1, 4, 3]);
 });
 
 test("damage workflow uses API persistence and accessible controls", async () => {
@@ -49,6 +65,9 @@ test("damage workflow uses API persistence and accessible controls", async () =>
   assert.match(module, /aria-pressed/);
   assert.match(css, /@media \(max-width: 480px\)/);
   assert.match(css, /overflow-x: auto/);
+  assert.match(css, /grid-template-columns: minmax\(300px, 360px\) minmax\(0, 1fr\)/);
+  assert.match(css, /@media \(max-width: 900px\)/);
+  assert.match(css, /\.damage-case-card\.selected/);
   assert.match(documents, /Crea pratica danno/);
   assert.match(documents, /Apri pratica/);
 });
