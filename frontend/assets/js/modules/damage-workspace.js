@@ -8,6 +8,7 @@ import {
   updateDamageCase,
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
+import { openOperationalStatusControl } from "./operational-status-control.js";
 
 const STATUS = {
   nuova: "Nuova", in_valutazione: "In valutazione",
@@ -208,6 +209,7 @@ async function renderDetail(caseId) {
           <label>Gravità<select name="severity">${Object.entries(SEVERITY).map(([key,label]) => `<option value="${key}" ${key === item.severity ? "selected" : ""}>${label}</option>`).join("")}</select></label>
           <label>Stato operativo<select name="vehicle_operational_status">${Object.entries(VEHICLE).map(([key,label]) => `<option value="${key}" ${key === item.vehicle_operational_status ? "selected" : ""}>${label}</option>`).join("")}</select></label>
           <label>Motivazione cambio operativo<textarea name="operational_reason" placeholder="Obbligatoria per rimuovere un blocco"></textarea></label>
+          <button type="button" class="secondary" data-manual-operational-status>Cambia stato con controllo Fleet</button>
           <label>Officina<input name="repair_shop" value="${escapeHtml(item.repair_shop || "")}"></label>
           <label>Costo stimato EUR<input name="estimated_cost" type="number" min="0" step="0.01" value="${item.estimated_cost || ""}"></label>
           <label>Costo finale EUR<input name="final_cost" type="number" min="0" step="0.01" value="${item.final_cost || ""}"></label>
@@ -224,6 +226,23 @@ async function renderDetail(caseId) {
 }
 
 function bindDetail(caseId) {
+  root.querySelector("[data-manual-operational-status]").addEventListener("click", async () => {
+    const item = await getDamageCase(caseId);
+    openOperationalStatusControl({
+      asset: {
+        id: item.vehicle_id,
+        plate: item.plate,
+        availability: item.asset_availability,
+      },
+      origin: "damage_case",
+      linkedCase: item,
+      onChanged: async () => {
+        await refresh();
+        renderNavigator();
+        await renderDetail(caseId);
+      },
+    });
+  });
   root.querySelector("#damageAssessmentForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const values = formValues(event.currentTarget);

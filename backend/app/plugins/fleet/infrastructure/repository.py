@@ -287,6 +287,7 @@ def observe_availability(
     note: str | None,
     actor: str,
     event_type: AssetEventType,
+    extra_details: dict[str, object] | None = None,
 ) -> Asset | None:
     with db_session() as conn:
         current = _get_asset_in_session(conn, asset_id)
@@ -307,6 +308,8 @@ def observe_availability(
         }
         if note:
             details["note"] = note
+        if extra_details:
+            details.update(extra_details)
         _append_event(
             conn,
             asset_id,

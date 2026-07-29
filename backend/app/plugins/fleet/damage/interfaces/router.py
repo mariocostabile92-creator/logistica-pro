@@ -6,6 +6,7 @@ from app.plugins.fleet.damage.interfaces.schemas import (
     DamageNoteRequest,
     DamageStatusRequest,
     DamageUpdateRequest,
+    ManualOperationalStatusRequest,
 )
 
 router = APIRouter(prefix="/api/fleet", tags=["fleet-damage"])
@@ -77,3 +78,19 @@ def damage_events(case_id: int):
 @router.get("/damage-candidates")
 def damage_candidates():
     return guarded(service.list_candidates)
+
+
+@router.patch("/vehicles/{vehicle_id}/operational-status")
+def manual_operational_status(
+    vehicle_id: int,
+    request: ManualOperationalStatusRequest,
+):
+    try:
+        return service.operational_status_service.manual_change(
+            vehicle_id=vehicle_id,
+            **request.model_dump(),
+        )
+    except service.operational_status_service.ManualStatusConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (ValueError, service.AssetNotFoundError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

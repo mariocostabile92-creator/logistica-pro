@@ -300,6 +300,20 @@ def open_case_operational_states(vehicle_id: int, excluding_case_id: int | None 
     return [str(row["vehicle_operational_status"]) for row in rows]
 
 
+def open_cases_for_vehicle(vehicle_id: int):
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, case_number, severity, status, vehicle_operational_status
+            FROM damage_cases
+            WHERE vehicle_id = ? AND status NOT IN ('chiusa', 'annullata')
+            ORDER BY occurred_at DESC, id DESC
+            """,
+            (vehicle_id,),
+        ).fetchall()
+    return [_dict(row) for row in rows]
+
+
 def record_operational_status(
     case_id: int,
     previous: str,

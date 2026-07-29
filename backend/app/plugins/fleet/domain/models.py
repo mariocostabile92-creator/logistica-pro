@@ -16,6 +16,7 @@ class AssetEventType(str, Enum):
     ASSET_RESERVE_ASSIGNED = "AssetReserveAssigned"
     ASSET_DOCUMENT_OBSERVED = "AssetDocumentObserved"
     ASSET_ASSOCIATION_CHANGED = "AssetAssociationChanged"
+    OPERATIONAL_STATUS_CHANGED = "stato_operativo_mezzo_modificato"
 
 
 class AssetDocument(BaseModel):

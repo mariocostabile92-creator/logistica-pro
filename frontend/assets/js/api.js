@@ -136,6 +136,15 @@ export async function getFleetAssetEvents(assetId) {
 }
 
 
+export async function changeVehicleOperationalStatus(vehicleId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/vehicles/${vehicleId}/operational-status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+
 export async function getFleetVehicleHistory(assetId) {
   return parseResponse(await fetch(
     `${API_BASE}/api/plugins/fleet/v1/journal/vehicles/${assetId}/history`,

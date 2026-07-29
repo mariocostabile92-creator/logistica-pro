@@ -391,6 +391,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
         for path, value in app.openapi()["paths"].items()
             if not path.startswith("/api/imports/")
             and not path.startswith("/api/fleet/damage")
+            and not path.startswith("/api/fleet/vehicles/")
         and not path.startswith("/api/plugins/fleet/v1/journal/")
         and path != "/api/runtime/authority"
         and path != "/api/runtime/execution-intent"

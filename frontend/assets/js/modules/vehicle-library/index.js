@@ -1,8 +1,10 @@
 import { getFleetVehicleHistory, getHealth } from "../../api.js";
 import { escapeHtml } from "../../utils/dom.js";
 import { mountOperationalDocumentHistory } from "./operational-documents.js";
+import { openOperationalStatusControl } from "../operational-status-control.js";
 
 const byId = (id) => document.getElementById(id);
+let currentAsset = null;
 
 function label(value, labels) {
   return labels[value] || value || "Non registrato";
@@ -51,6 +53,7 @@ function operation(value) {
 
 function render(payload) {
   const { asset, kpis, movements } = payload;
+  currentAsset = asset;
   byId("vehiclePlate").textContent = asset.plate || asset.external_identifier;
   byId("vehicleModel").textContent = asset.model || "Modello non disponibile";
   byId("vehicleStatus").textContent = label(asset.status, {
@@ -103,6 +106,13 @@ async function loadVehicle() {
 }
 
 if (typeof document !== "undefined") {
+  byId("vehicleChangeStatus").addEventListener("click", () => {
+    openOperationalStatusControl({
+      asset: currentAsset,
+      origin: "vehicle_library",
+      onChanged: loadVehicle,
+    });
+  });
   checkHealth();
   loadVehicle().catch((error) => {
     byId("vehicleState").innerHTML = `

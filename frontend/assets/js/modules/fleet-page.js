@@ -6,7 +6,6 @@ import {
   getLatestFleetSync,
   listFleetAssets,
   listDamageCases,
-  observeFleetAssetAvailability,
   updateFleetAsset,
 } from "../api.js";
 import { state } from "../state.js";
@@ -26,8 +25,9 @@ import {
   renderFleetTree,
   renderVehicleDossier,
   setFleetMetricPriority,
-} from "./fleet-view.js?v=2";
-import { showDamageWorkspace } from "./damage-workspace.js?v=3";
+} from "./fleet-view.js?v=3";
+import { showDamageWorkspace } from "./damage-workspace.js?v=4";
+import { openOperationalStatusControl } from "./operational-status-control.js";
 
 
 let loaded = false;
@@ -255,35 +255,6 @@ async function submitAsset(event) {
 }
 
 
-function openAvailabilityEditor(asset) {
-  byId("availabilityEditorForm").reset();
-  byId("availabilityAssetId").value = asset.id;
-  byId("assetAvailabilityValue").value = asset.availability;
-  byId("availabilityEditor").showModal();
-}
-
-
-async function submitAvailability(event) {
-  event.preventDefault();
-  const submit = event.submitter;
-  setLoading(submit, true, "Registrazione...");
-  const assetId = Number(byId("availabilityAssetId").value);
-  try {
-    await observeFleetAssetAvailability(assetId, {
-      availability: byId("assetAvailabilityValue").value.trim(),
-      note: byId("assetAvailabilityNote").value.trim() || null,
-    });
-    closeDialog("availabilityEditor");
-    await refreshFleet(assetId);
-    setMessage("");
-  } catch (error) {
-    showFleetActionError("fleet.observe-availability", error);
-  } finally {
-    setLoading(submit, false);
-  }
-}
-
-
 function openDocumentEditor(asset) {
   byId("documentEditorForm").reset();
   byId("documentAssetId").value = asset.id;
@@ -317,6 +288,15 @@ async function submitDocument(event) {
 
 
 async function handleAssetSelection(event) {
+  const statusAction = event.target.closest("[data-operational-status-asset]");
+  if (statusAction) {
+    event.stopPropagation();
+    const asset = state.fleetPlugin.assets.find(
+      (item) => item.id === Number(statusAction.dataset.operationalStatusAsset),
+    );
+    if (asset) openOperationalStatusControl({ asset, origin: "parco_mezzi" });
+    return;
+  }
   const target = event.target.closest("[data-fleet-action='select']");
   if (!target) return;
   try {
@@ -481,18 +461,25 @@ export function initFleetPage() {
   byId("fleetAssetDetailClose").addEventListener("click", hideAssetDetail);
   byId("editAssetBtn").addEventListener("click", () => openAssetEditor(selectedAsset()));
   byId("observeAvailabilityBtn").addEventListener("click", () => {
-    openAvailabilityEditor(selectedAsset());
+    openOperationalStatusControl({
+      asset: selectedAsset(),
+      origin: "parco_mezzi",
+    });
+  });
+  byId("fleetDossierChangeStatus").addEventListener("click", () => {
+    const asset = selectedAsset();
+    openOperationalStatusControl({
+      asset,
+      origin: "vehicle_library",
+    });
   });
   byId("addAssetDocumentBtn").addEventListener("click", () => {
     openDocumentEditor(selectedAsset());
   });
   byId("assetEditorForm").addEventListener("submit", submitAsset);
-  byId("availabilityEditorForm").addEventListener("submit", submitAvailability);
   byId("documentEditorForm").addEventListener("submit", submitDocument);
   byId("closeAssetEditorBtn").addEventListener("click", () => closeDialog("assetEditor"));
   byId("cancelAssetEditorBtn").addEventListener("click", () => closeDialog("assetEditor"));
-  byId("closeAvailabilityEditorBtn").addEventListener("click", () => closeDialog("availabilityEditor"));
-  byId("cancelAvailabilityEditorBtn").addEventListener("click", () => closeDialog("availabilityEditor"));
   byId("closeDocumentEditorBtn").addEventListener("click", () => closeDialog("documentEditor"));
   byId("cancelDocumentEditorBtn").addEventListener("click", () => closeDialog("documentEditor"));
 }

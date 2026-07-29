@@ -1,4 +1,5 @@
 from app.plugins.fleet.application.asset_service import get_asset, observe_availability
+from app.plugins.fleet.domain.models import AssetEventType
 from app.plugins.fleet.damage.infrastructure import repository
 
 
@@ -29,6 +30,11 @@ AUTOMATIC_CASE_STATUS = {
     "in_riparazione": "in_officina",
 }
 BLOCKING_STATES = {"indisponibile", "in_manutenzione", "in_officina"}
+MANUAL_ORIGINS = {"parco_mezzi", "vehicle_library", "damage_case", "sistema"}
+
+
+class ManualStatusConflict(ValueError):
+    pass
 
 
 def normalize(value: str) -> str:
@@ -121,3 +127,65 @@ def automatic_for_case_status(case_id: int, status: str, actor: str, note: str) 
         case_id=case_id, requested=requested, actor=actor, reason=note,
         origin=f"Pratica {repository.get_case(case_id)['case_number']}",
     )
+
+
+def manual_change(
+    *,
+    vehicle_id: int,
+    status: str,
+    reason: str,
+    origin: str,
+    actor: str,
+    override_restriction: bool = False,
+):
+    requested = normalize(status)
+    if origin not in MANUAL_ORIGINS:
+        raise ValueError("Origine della modifica non valida.")
+    if not reason.strip():
+        raise ValueError("La motivazione è obbligatoria.")
+    asset = get_asset(vehicle_id)
+    previous = normalize(asset.availability)
+    open_cases = repository.open_cases_for_vehicle(vehicle_id)
+    required = _most_restrictive(
+        [str(item["vehicle_operational_status"]) for item in open_cases],
+        requested,
+    )
+    conflict = bool(open_cases) and PRIORITY[requested] < PRIORITY[required]
+    if conflict and not override_restriction:
+        raise ManualStatusConflict(
+            "Il mezzo presenta una pratica aperta che richiede uno stato più "
+            "restrittivo. Confermare comunque la modifica e indicare la motivazione."
+        )
+    linked_case = open_cases[0] if open_cases else None
+    updated = observe_availability(
+        vehicle_id,
+        requested,
+        reason.strip(),
+        actor,
+        event_type=AssetEventType.OPERATIONAL_STATUS_CHANGED,
+        details={
+            "vehicle_id": vehicle_id,
+            "plate": asset.plate,
+            "origin": origin,
+            "reason": reason.strip(),
+            "linked_damage_case_id": linked_case["id"] if linked_case else None,
+            "linked_damage_case_number": (
+                linked_case["case_number"] if linked_case else None
+            ),
+            "override_restriction": override_restriction,
+        },
+    )
+    for case in open_cases:
+        repository.record_operational_status(
+            int(case["id"]), previous, requested, reason.strip(), actor, origin,
+        )
+    return {
+        "asset": updated.model_dump(),
+        "previous_status": previous,
+        "new_status": requested,
+        "origin": origin,
+        "reason": reason.strip(),
+        "actor": actor,
+        "linked_damage_case": linked_case,
+        "override_restriction": override_restriction,
+    }

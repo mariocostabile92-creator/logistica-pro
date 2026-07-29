@@ -161,7 +161,11 @@ function assetRow(asset) {
       <td>
         <strong>${escapeHtml(primaryIdentifier)}</strong>
       </td>
-      <td>${statusBadge(asset)}</td>
+      <td>${statusBadge(asset)}
+        <button type="button" class="quiet" data-operational-status-asset="${asset.id}">
+          Modifica stato operativo
+        </button>
+      </td>
       <td><span class="fleet-secondary-value${driver === "Non associato" ? " is-missing" : ""}">${escapeHtml(driver)}</span></td>
       <td><span class="fleet-secondary-value${category === "Non indicata" ? " is-missing" : ""}">${escapeHtml(category)}</span></td>
       <td><span class="fleet-secondary-value fleet-timestamp${updatedAt === "Non registrato" ? " is-missing" : ""}">${escapeHtml(updatedAt)}</span></td>

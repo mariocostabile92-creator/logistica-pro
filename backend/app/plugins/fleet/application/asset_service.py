@@ -58,18 +58,21 @@ def observe_availability(
     availability: str,
     note: str | None,
     actor: str,
+    *,
+    event_type: AssetEventType | None = None,
+    details: dict[str, object] | None = None,
 ) -> Asset:
     current = get_asset(asset_id)
-    event_type = availability_event_type(
-        current.availability,
-        availability,
+    effective_event_type = event_type or availability_event_type(
+        current.availability, availability,
     )
     asset = repository.observe_availability(
         asset_id=asset_id,
         availability=availability,
         note=note,
         actor=actor,
-        event_type=event_type,
+        event_type=effective_event_type,
+        extra_details=details,
     )
     if not asset:
         raise AssetNotFoundError("Asset non trovato.")

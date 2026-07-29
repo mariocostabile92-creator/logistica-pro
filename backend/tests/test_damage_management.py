@@ -250,3 +250,82 @@ def test_manual_unblock_requires_reason_and_other_open_case_remains_restrictive(
     )
     assert closed.status_code == 200
     assert closed.json()["asset_availability"] == "in_officina"
+
+
+def test_manual_operational_status_without_damage_updates_asset_audit_and_planning():
+    created = asset()
+    response = client.patch(
+        f"{DAMAGE}/vehicles/{created['id']}/operational-status",
+        json={
+            "status": "in_manutenzione",
+            "reason": "Tagliando programmato",
+            "origin": "parco_mezzi",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["asset"]["availability"] == "in_manutenzione"
+    events = client.get(
+        f"/api/plugins/fleet/v1/assets/{created['id']}/events"
+    ).json()["items"]
+    event = events[-1]
+    assert event["event_type"] == "stato_operativo_mezzo_modificato"
+    assert event["details"]["previous"] == "available"
+    assert event["details"]["current"] == "in_manutenzione"
+    assert event["details"]["origin"] == "parco_mezzi"
+    assert event["details"]["reason"] == "Tagliando programmato"
+    availability = client.get(
+        "/api/plugins/fleet/v1/availability"
+    ).json()
+    observed = next(
+        item for item in availability
+        if item["resource_identifier"] == created["external_identifier"]
+    )
+    assert observed["available"] is False
+    assert observed["observed_state"] == "in_manutenzione"
+
+
+def test_manual_operational_status_requires_reason_and_valid_state():
+    created = asset()
+    missing = client.patch(
+        f"{DAMAGE}/vehicles/{created['id']}/operational-status",
+        json={
+            "status": "indisponibile",
+            "reason": "",
+            "origin": "vehicle_library",
+        },
+    )
+    assert missing.status_code == 422
+    invalid = client.patch(
+        f"{DAMAGE}/vehicles/{created['id']}/operational-status",
+        json={
+            "status": "inventato",
+            "reason": "Test",
+            "origin": "vehicle_library",
+        },
+    )
+    assert invalid.status_code == 422
+
+
+def test_manual_override_of_open_damage_case_is_explicit_and_append_only():
+    case, _ = create_from_anomaly()
+    endpoint = f"{DAMAGE}/vehicles/{case['vehicle_id']}/operational-status"
+    conflict = client.patch(endpoint, json={
+        "status": "disponibile",
+        "reason": "Collaudo interno completato",
+        "origin": "vehicle_library",
+    })
+    assert conflict.status_code == 409
+    overridden = client.patch(endpoint, json={
+        "status": "disponibile",
+        "reason": "Collaudo interno completato",
+        "origin": "vehicle_library",
+        "override_restriction": True,
+    })
+    assert overridden.status_code == 200
+    assert overridden.json()["asset"]["availability"] == "disponibile"
+    assert overridden.json()["linked_damage_case"]["case_number"] == case["case_number"]
+    damage_events = client.get(
+        f"{DAMAGE}/damage-cases/{case['id']}/events"
+    ).json()["items"]
+    assert damage_events[-1]["event_type"] == "stato_operativo_mezzo_modificato"
+    assert damage_events[-1]["note"].startswith("vehicle_library.")

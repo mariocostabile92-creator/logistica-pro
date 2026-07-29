@@ -51,3 +51,14 @@ class DamageStatusRequest(BaseModel):
 class DamageNoteRequest(BaseModel):
     note: str = Field(min_length=1, max_length=2000)
     actor: str = "fleet_manager"
+
+
+class ManualOperationalStatusRequest(BaseModel):
+    status: str
+    reason: str = Field(min_length=1, max_length=2000)
+    origin: str
+    actor: str = "fleet_manager"
+    override_restriction: bool = False
+
+    _reason = field_validator("reason")(required)
+    _actor = field_validator("actor")(required)
