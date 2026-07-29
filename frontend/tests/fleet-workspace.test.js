@@ -172,3 +172,35 @@ test("Fleet P1 retains secondary data while reducing missing-value and timestamp
   assert.match(css, /\.fleet-summary > div\[data-priority="attention"\]/);
   assert.match(css, /\.fleet-summary > div\[data-priority="critical"\]/);
 });
+
+
+test("Vehicle Library is a read-only operational record using the shared shell", async () => {
+  const [html, script, css, fleetHtml, fleetView] = await Promise.all([
+    frontendFile("vehicles/index.html"),
+    frontendFile("assets/js/modules/vehicle-library/index.js"),
+    frontendFile("assets/css/vehicle-library.css"),
+    frontendFile("index.html"),
+    frontendFile("assets/js/modules/fleet-view.js"),
+  ]);
+
+  assert.match(html, /Operations Engine/);
+  assert.match(html, /Vehicle Library · Cartella operativa/);
+  assert.match(html, /aria-current="page">Fleet/);
+  assert.match(html, /Timeline movimentazioni/);
+  for (const value of [
+    "Km attuali",
+    "Ultimo utilizzo",
+    "Giorni fermo",
+    "Ultimo driver dichiarato",
+    "Ultima movimentazione",
+  ]) {
+    assert.match(html, new RegExp(value));
+  }
+  assert.match(script, /\/journal\/vehicles\/\$\{assetId\}\/history/);
+  assert.match(script, /Video non disponibili in questa versione/);
+  assert.doesNotMatch(script, /method:\s*["'](?:POST|PATCH|PUT|DELETE)/);
+  assert.match(css, /@media \(max-width: 480px\)/);
+  assert.match(css, /\.movement-timeline/);
+  assert.match(fleetHtml, /id="openVehicleLibrary"/);
+  assert.match(fleetView, /\/app\/vehicles\/\?id=/);
+});

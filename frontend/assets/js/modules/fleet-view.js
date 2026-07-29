@@ -269,6 +269,7 @@ export function renderFleetFailure() {
 
 export function renderAssetDetail(asset, events) {
   const detail = byId("fleetAssetDetail");
+  byId("openVehicleLibrary").href = `/app/vehicles/?id=${encodeURIComponent(asset.id)}`;
   byId("fleetAssetDetailTitle").textContent = asset.plate || asset.external_identifier;
   byId("fleetAssetPlate").textContent = asset.plate || asset.external_identifier;
   byId("fleetAssetDriver").textContent = fleetDriverLabel(asset, events);

@@ -7,6 +7,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 
 from app.plugins.fleet.journal.application import service
 from app.plugins.fleet.journal.interfaces.schemas import (
@@ -87,3 +88,14 @@ def complete_session(
 @router.get("/movements/{movement_id}/receipt")
 def movement_receipt(movement_id: str):
     return guarded(service.receipt, movement_id)
+
+
+@router.get("/vehicles/{asset_id}/history")
+def vehicle_history(asset_id: int):
+    return guarded(service.vehicle_history, asset_id)
+
+
+@router.get("/media/{media_id}")
+def movement_media(media_id: str):
+    path, media_type = guarded(service.get_movement_media, media_id)
+    return FileResponse(path, media_type=media_type)

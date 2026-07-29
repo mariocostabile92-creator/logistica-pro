@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import json
 import secrets
 import sqlite3
 import uuid
@@ -74,6 +75,70 @@ def find_asset(plate: str) -> dict[str, object]:
     if not asset:
         raise JournalNotFound("Mezzo non trovato nel Fleet Registry.")
     return asset
+
+
+def vehicle_history(asset_id: int) -> dict[str, object]:
+    payload = repository.asset_history(asset_id)
+    if not payload:
+        raise JournalNotFound("Mezzo non trovato.")
+    asset = payload["asset"]
+    movements = payload["movements"]
+    assert isinstance(asset, dict)
+    assert isinstance(movements, list)
+    capabilities = asset.get("capabilities")
+    if isinstance(capabilities, str):
+        try:
+            asset["capabilities"] = json.loads(capabilities)
+        except json.JSONDecodeError:
+            asset["capabilities"] = []
+    asset["model"] = asset.get("vehicle_model") or asset.get("category")
+    normalized_capabilities = {
+        str(value).strip().casefold()
+        for value in (asset.get("capabilities") or [])
+    }
+    asset["term"] = next(
+        (
+            label
+            for code, label in (("bt", "BT"), ("lt", "LT"))
+            if code in normalized_capabilities
+        ),
+        None,
+    )
+    latest = movements[0] if movements else None
+    last_occurred = str(latest["occurred_at"]) if latest else None
+    days_stopped = None
+    if last_occurred:
+        occurred = datetime.fromisoformat(last_occurred)
+        if occurred.tzinfo is None:
+            occurred = occurred.replace(tzinfo=timezone.utc)
+        days_stopped = max(
+            0,
+            (datetime.now(timezone.utc) - occurred.astimezone(timezone.utc)).days,
+        )
+    return {
+        "contract_version": "1.0",
+        "asset": asset,
+        "kpis": {
+            "current_odometer_km": latest["odometer_km"] if latest else None,
+            "last_use_at": last_occurred,
+            "days_stopped": days_stopped,
+            "last_declared_driver": (
+                latest["declared_driver_identifier"] if latest else None
+            ),
+            "last_movement": latest["operation_type"] if latest else None,
+        },
+        "movements": movements,
+    }
+
+
+def get_movement_media(media_id: str) -> tuple[str, str]:
+    media = repository.movement_media(media_id)
+    if not media:
+        raise JournalNotFound("Media non trovato.")
+    path = media_storage.path(str(media["storage_key"]))
+    if not path.is_file():
+        raise JournalNotFound("Media non disponibile.")
+    return str(path), str(media["verified_mime_type"])
 
 
 def create_session(values: dict[str, object]) -> dict[str, object]:

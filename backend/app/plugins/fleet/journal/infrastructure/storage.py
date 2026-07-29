@@ -7,6 +7,7 @@ from app.core.config import DATA_DIR
 class MediaStorage(Protocol):
     def save(self, session_id: str, media_id: str, data: bytes) -> str: ...
     def delete(self, storage_key: str) -> None: ...
+    def path(self, storage_key: str) -> Path: ...
 
 
 class PrivateLocalMediaStorage:
@@ -21,10 +22,16 @@ class PrivateLocalMediaStorage:
         return key
 
     def delete(self, storage_key: str) -> None:
-        target = (self.root / storage_key).resolve()
+        target = self.path(storage_key)
         if self.root.resolve() not in target.parents:
             return
         target.unlink(missing_ok=True)
+
+    def path(self, storage_key: str) -> Path:
+        target = (self.root / storage_key).resolve()
+        if self.root.resolve() not in target.parents:
+            return self.root / "__invalid__"
+        return target
 
 
 media_storage: MediaStorage = PrivateLocalMediaStorage(

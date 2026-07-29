@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cartella mezzo · Operations Engine</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="../assets/css/base.css" />
+  <link rel="stylesheet" href="../assets/css/layout.css" />
+  <link rel="stylesheet" href="../assets/css/components.css" />
+  <link rel="stylesheet" href="../assets/css/workspace-lifecycle.css?v=5" />
+  <link rel="stylesheet" href="../assets/css/responsive.css?v=3" />
+  <link rel="stylesheet" href="../assets/css/vehicle-library.css?v=1" />
+</head>
+<body class="vehicle-library-page">
+  <header class="app-header vehicle-library-header">
+    <div class="app-header-inner">
+      <a class="product-brand vehicle-library-brand" href="/app/">
+        <p class="eyebrow">Private Beta</p>
+        <h1>Operations Engine</h1>
+      </a>
+      <nav class="workspace-tabs" aria-label="Navigazione principale">
+        <a class="workspace-tab workspace-tab-link" href="/app/">Home</a>
+        <a class="workspace-tab workspace-tab-link" href="/app/?view=operations">Planning</a>
+        <a class="workspace-tab workspace-tab-link" href="/app/?view=workforce">Workforce</a>
+        <a class="workspace-tab workspace-tab-link active" href="/app/?view=fleet" aria-current="page">Fleet</a>
+        <a class="workspace-tab workspace-tab-link" href="/app/?view=learn">Learn</a>
+        <a class="workspace-tab workspace-tab-link" href="/app/journal/">Giornale di bordo</a>
+      </nav>
+      <div class="app-header-actions vehicle-library-actions">
+        <span class="workspace-status-badge production">
+          <span aria-hidden="true"></span>Workspace produzione
+        </span>
+        <span id="healthStatus" class="status-pill">Backend non verificato</span>
+        <a class="header-config-button" href="/app/?view=settings">Configurazione</a>
+      </div>
+      <div class="vehicle-mobile-context">
+        <a href="/app/?view=fleet">← Fleet</a>
+        <strong>Cartella mezzo</strong>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell vehicle-library-shell">
+    <div id="vehicleState" class="vehicle-state" aria-live="polite">
+      <strong>Caricamento cartella mezzo…</strong>
+    </div>
+    <div id="vehicleContent" hidden>
+      <header class="vehicle-identity">
+        <div>
+          <p class="eyebrow">Vehicle Library · Cartella operativa</p>
+          <div class="vehicle-title-line">
+            <h2 id="vehiclePlate">—</h2>
+            <span id="vehicleStatus" class="fleet-status-badge">—</span>
+          </div>
+          <p id="vehicleModel" class="vehicle-model">Modello non disponibile</p>
+        </div>
+        <dl class="vehicle-facts">
+          <div><dt>Disponibilità</dt><dd id="vehicleAvailability">—</dd></div>
+          <div><dt>BT/LT</dt><dd id="vehicleTerm">Non classificato</dd></div>
+        </dl>
+      </header>
+
+      <section class="vehicle-kpis" aria-label="Indicatori operativi">
+        <article><span>Km attuali</span><strong id="currentKm">—</strong></article>
+        <article><span>Ultimo utilizzo</span><strong id="lastUse">—</strong></article>
+        <article><span>Giorni fermo</span><strong id="daysStopped">—</strong></article>
+        <article><span>Ultimo driver dichiarato</span><strong id="lastDriver">—</strong></article>
+        <article><span>Ultima movimentazione</span><strong id="lastMovement">—</strong></article>
+      </section>
+
+      <section class="vehicle-history" aria-labelledby="historyTitle">
+        <div class="vehicle-section-heading">
+          <div>
+            <p class="eyebrow">Storia operativa</p>
+            <h3 id="historyTitle">Timeline movimentazioni</h3>
+          </div>
+          <span id="movementCount" class="tag">0 eventi</span>
+        </div>
+        <div id="movementTimeline" class="movement-timeline"></div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="../assets/js/modules/vehicle-library/index.js?v=1"></script>
+</body>
+</html>

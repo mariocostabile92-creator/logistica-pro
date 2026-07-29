@@ -322,3 +322,98 @@ def receipt(movement_id: str) -> dict[str, object] | None:
         f"JM-{str(payload['id']).split('-')[0].upper()}"
     )
     return payload
+
+
+def asset_history(asset_id: int) -> dict[str, object] | None:
+    with db_session() as conn:
+        asset = conn.execute(
+            """
+            SELECT a.id, a.external_identifier, a.plate, a.category,
+                   a.status, a.availability, a.capabilities, a.notes,
+                   a.created_at, a.updated_at,
+                   m.vehicle_model, m.rental_company
+            FROM fleet_assets a
+            LEFT JOIN fleet_asset_metadata m ON m.asset_id = a.id
+            WHERE a.id = ?
+            """,
+            (asset_id,),
+        ).fetchone()
+        if not asset:
+            return None
+        movements = conn.execute(
+            """
+            SELECT id, plate_snapshot, declared_driver_identifier,
+                   operation_type, operational_shift, occurred_at, timezone,
+                   odometer_km, fuel_percentage, cleanliness_status,
+                   anomaly_present, anomaly_description, operational_note,
+                   created_at
+            FROM asset_movements
+            WHERE asset_id = ?
+            ORDER BY occurred_at DESC, created_at DESC
+            """,
+            (asset_id,),
+        ).fetchall()
+        movement_ids = [row["id"] for row in movements]
+        equipment_by_movement: dict[str, list[dict[str, object]]] = {
+            movement_id: [] for movement_id in movement_ids
+        }
+        media_by_movement: dict[str, list[dict[str, object]]] = {
+            movement_id: [] for movement_id in movement_ids
+        }
+        if movement_ids:
+            placeholders = ",".join("?" for _ in movement_ids)
+            equipment = conn.execute(
+                f"""
+                SELECT movement_id, equipment_code, equipment_label_snapshot,
+                       equipment_status, note
+                FROM movement_equipment
+                WHERE movement_id IN ({placeholders})
+                ORDER BY movement_id, equipment_label_snapshot
+                """,
+                movement_ids,
+            ).fetchall()
+            media = conn.execute(
+                f"""
+                SELECT id, movement_id, media_type, verified_mime_type,
+                       size_bytes, display_order
+                FROM movement_media
+                WHERE movement_id IN ({placeholders})
+                ORDER BY movement_id, display_order
+                """,
+                movement_ids,
+            ).fetchall()
+            for row in equipment:
+                equipment_by_movement[row["movement_id"]].append(_dict(row))
+            for row in media:
+                item = _dict(row)
+                assert item is not None
+                item["url"] = (
+                    f"/api/plugins/fleet/v1/journal/media/{row['id']}"
+                )
+                media_by_movement[row["movement_id"]].append(item)
+
+    asset_payload = _dict(asset)
+    assert asset_payload is not None
+    history = []
+    for row in movements:
+        item = _dict(row)
+        assert item is not None
+        item["anomaly_present"] = bool(item["anomaly_present"])
+        item["equipment"] = equipment_by_movement[str(item["id"])]
+        item["media"] = media_by_movement[str(item["id"])]
+        history.append(item)
+    return {"asset": asset_payload, "movements": history}
+
+
+def movement_media(media_id: str) -> dict[str, object] | None:
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT id, movement_id, media_type, storage_key,
+                   verified_mime_type, size_bytes
+            FROM movement_media
+            WHERE id = ? AND movement_id IS NOT NULL
+            """,
+            (media_id,),
+        ).fetchone()
+    return _dict(row)
