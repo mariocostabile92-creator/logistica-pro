@@ -1690,10 +1690,25 @@
           <div class="fleet-dossier-sections">
             <section>
               <div class="fleet-registry-heading">
-                <div><p class="eyebrow">Storia operativa</p><h3>Timeline e movimentazioni</h3></div>
-                <span id="fleetDossierMovementCount" class="tag">0 eventi</span>
+                <div><p class="eyebrow">Storico documentale</p><h3>Documenti operativi</h3></div>
+                <span id="fleetDossierMovementCount" class="tag">0 documenti</span>
               </div>
-              <div id="fleetDossierTimeline" class="fleet-dossier-timeline"></div>
+              <div class="operational-document-tools">
+                <label class="operational-document-search">
+                  <span class="sr-only">Cerca nello storico documentale</span>
+                  <input id="fleetOperationalDocumentSearch" type="search" placeholder="Cerca data, driver o tipo movimentazione" />
+                </label>
+                <div id="fleetOperationalDocumentFilters" class="operational-document-filters" aria-label="Filtra documenti">
+                  <button type="button" class="active" data-document-filter="all" aria-pressed="true">Tutto</button>
+                  <button type="button" data-document-filter="check_out" aria-pressed="false">Ritiro</button>
+                  <button type="button" data-document-filter="check_in" aria-pressed="false">Rientro</button>
+                  <button type="button" data-document-filter="anomaly" aria-pressed="false">Con anomalie</button>
+                  <button type="button" data-document-filter="no_anomaly" aria-pressed="false">Senza anomalie</button>
+                  <button type="button" data-document-filter="last_7_days" aria-pressed="false">Ultimi 7 giorni</button>
+                  <button type="button" data-document-filter="last_30_days" aria-pressed="false">Ultimi 30 giorni</button>
+                </div>
+              </div>
+              <div id="fleetDossierTimeline" class="operational-document-list"></div>
             </section>
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div></div>

@@ -124,6 +124,7 @@ def test_vehicle_library_frontend_contract():
     assert "Vehicle Library" in html
     assert "Cartella operativa" in html
     assert 'aria-current="page">Fleet' in html
-    assert "Timeline movimentazioni" in html
+    assert "Documenti operativi" in html
+    assert "Cerca data, driver o tipo movimentazione" in html
     assert "Giorni fermo" in html
     assert "BT/LT" in html

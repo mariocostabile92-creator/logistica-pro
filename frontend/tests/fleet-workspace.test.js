@@ -9,6 +9,9 @@ import {
   fleetRegistryCsv,
   fleetSummary,
 } from "../assets/js/modules/fleet-view.js";
+import {
+  filterOperationalDocuments,
+} from "../assets/js/modules/vehicle-library/operational-documents.js";
 
 
 const frontendFile = (path) => readFile(
@@ -220,18 +223,19 @@ test("Fleet tree navigation follows the Fleet Manager workflow", async () => {
 
 
 test("Vehicle Library is a read-only operational record using the shared shell", async () => {
-  const [html, script, css, fleetHtml, fleetView] = await Promise.all([
+  const [html, script, css, fleetHtml, fleetView, documents] = await Promise.all([
     frontendFile("vehicles/index.html"),
     frontendFile("assets/js/modules/vehicle-library/index.js"),
     frontendFile("assets/css/vehicle-library.css"),
     frontendFile("index.html"),
     frontendFile("assets/js/modules/fleet-view.js"),
+    frontendFile("assets/js/modules/vehicle-library/operational-documents.js"),
   ]);
 
   assert.match(html, /Operations Engine/);
   assert.match(html, /Vehicle Library · Cartella operativa/);
   assert.match(html, /aria-current="page">Fleet/);
-  assert.match(html, /Timeline movimentazioni/);
+  assert.match(html, /Documenti operativi/);
   for (const value of [
     "Km attuali",
     "Ultimo utilizzo",
@@ -241,11 +245,46 @@ test("Vehicle Library is a read-only operational record using the shared shell",
   ]) {
     assert.match(html, new RegExp(value));
   }
-  assert.match(script, /\/journal\/vehicles\/\$\{assetId\}\/history/);
-  assert.match(script, /Video non disponibili in questa versione/);
+  assert.match(script, /getFleetVehicleHistory\(assetId\)/);
+  assert.match(documents, /Video non disponibili in questa versione/);
+  for (const filter of ["check_out", "check_in", "anomaly", "no_anomaly", "last_7_days", "last_30_days"]) {
+    assert.match(html, new RegExp(`data-document-filter="${filter}"`));
+    assert.match(fleetHtml, new RegExp(`data-document-filter="${filter}"`));
+  }
+  assert.match(documents, /Identificativo documento/);
+  assert.match(documents, /Registrazione completata/);
+  assert.match(documents, /Fleet Vision Engine/);
   assert.doesNotMatch(script, /method:\s*["'](?:POST|PATCH|PUT|DELETE)/);
+  assert.doesNotMatch(documents, /method:\s*["'](?:POST|PATCH|PUT|DELETE)/);
   assert.match(css, /@media \(max-width: 480px\)/);
   assert.match(css, /\.movement-timeline/);
   assert.match(fleetHtml, /id="openVehicleLibrary"/);
   assert.match(fleetView, /\/app\/vehicles\/\?id=/);
+});
+
+test("operational documents support movement, anomaly, period and text filters", () => {
+  const movements = [
+    {
+      id: "11111111-aaaa",
+      operation_type: "check_out",
+      occurred_at: "2026-07-29T08:00:00Z",
+      declared_driver_identifier: "Mario Rossi",
+      plate_snapshot: "AB123CD",
+      anomaly_present: false,
+    },
+    {
+      id: "22222222-bbbb",
+      operation_type: "check_in",
+      occurred_at: "2026-06-01T18:00:00Z",
+      declared_driver_identifier: "Luigi Bianchi",
+      plate_snapshot: "AB123CD",
+      anomaly_present: true,
+    },
+  ];
+  const now = new Date("2026-07-30T12:00:00Z");
+  assert.deepEqual(filterOperationalDocuments(movements, { filter: "check_out", now }).map(({ id }) => id), ["11111111-aaaa"]);
+  assert.deepEqual(filterOperationalDocuments(movements, { filter: "anomaly", now }).map(({ id }) => id), ["22222222-bbbb"]);
+  assert.deepEqual(filterOperationalDocuments(movements, { filter: "last_7_days", now }).map(({ id }) => id), ["11111111-aaaa"]);
+  assert.deepEqual(filterOperationalDocuments(movements, { query: "rientro", now }).map(({ id }) => id), ["22222222-bbbb"]);
+  assert.deepEqual(filterOperationalDocuments(movements, { query: "Mario Rossi", now }).map(({ id }) => id), ["11111111-aaaa"]);
 });
