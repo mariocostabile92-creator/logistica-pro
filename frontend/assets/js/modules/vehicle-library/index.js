@@ -16,13 +16,33 @@ function fullDate(value) {
     : parsed.toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" });
 }
 
-function availability(value) {
-  return label(value, {
-    available: "Disponibile",
-    unavailable: "Indisponibile",
-    maintenance: "Officina",
-    reserve: "Riserva",
-  });
+const AVAILABILITY = Object.freeze({
+  disponibile: { label: "Disponibile", tone: "available" },
+  available: { label: "Disponibile", tone: "available" },
+  disponibile_con_limitazioni: {
+    label: "Disponibile con limitazioni",
+    tone: "reserve",
+  },
+  reserve: { label: "Disponibile con limitazioni", tone: "reserve" },
+  indisponibile: { label: "Indisponibile", tone: "unavailable" },
+  unavailable: { label: "Indisponibile", tone: "unavailable" },
+  in_manutenzione: { label: "In manutenzione", tone: "maintenance" },
+  maintenance: { label: "In manutenzione", tone: "maintenance" },
+  in_officina: { label: "In officina", tone: "maintenance" },
+  workshop: { label: "In officina", tone: "maintenance" },
+});
+
+function availabilityPresentation(value) {
+  const originalValue = String(value || "").trim();
+  return AVAILABILITY[originalValue.toLowerCase()] || {
+    label: "Non classificato",
+    tone: "unknown",
+    originalValue,
+  };
+}
+
+export function availability(value) {
+  return availabilityPresentation(value).label;
 }
 
 function operation(value) {
@@ -37,7 +57,10 @@ function render(payload) {
     active: "Operativo",
     inactive: "Non operativo",
   });
-  byId("vehicleAvailability").textContent = availability(asset.availability);
+  const operationalStatus = availabilityPresentation(asset.availability);
+  byId("vehicleAvailability").textContent = operationalStatus.label;
+  byId("vehicleAvailability").className =
+    `fleet-status-badge fleet-status-${operationalStatus.tone}`;
   byId("vehicleTerm").textContent = asset.term || "Non classificato";
   byId("currentKm").textContent = kpis.current_odometer_km == null
     ? "Non registrati"
@@ -79,12 +102,14 @@ async function loadVehicle() {
   render(await getFleetVehicleHistory(assetId));
 }
 
-checkHealth();
-loadVehicle().catch((error) => {
-  byId("vehicleState").innerHTML = `
-    <div>
-      <strong>${escapeHtml(error.message)}</strong>
-      <p><a href="/app/?view=fleet">Torna al Fleet Registry</a></p>
-    </div>
-  `;
-});
+if (typeof document !== "undefined") {
+  checkHealth();
+  loadVehicle().catch((error) => {
+    byId("vehicleState").innerHTML = `
+      <div>
+        <strong>${escapeHtml(error.message)}</strong>
+        <p><a href="/app/?view=fleet">Torna al Fleet Registry</a></p>
+      </div>
+    `;
+  });
+}
