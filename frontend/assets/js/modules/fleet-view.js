@@ -44,8 +44,13 @@ export function availabilityPresentation(value) {
   const key = String(value || "").trim().toLowerCase();
   return {
     available: { label: "Disponibile", tone: "available" },
+    disponibile: { label: "Disponibile", tone: "available" },
+    disponibile_con_limitazioni: { label: "Disponibile con limitazioni", tone: "reserve" },
     maintenance: { label: "Officina", tone: "maintenance" },
+    in_manutenzione: { label: "In manutenzione", tone: "maintenance" },
+    in_officina: { label: "In officina", tone: "maintenance" },
     unavailable: { label: "Indisponibile", tone: "unavailable" },
+    indisponibile: { label: "Indisponibile", tone: "unavailable" },
     reserve: { label: "Riserva", tone: "reserve" },
   }[key] || { label: "Da verificare", tone: "unknown" };
 }
@@ -95,15 +100,15 @@ export function fleetSummary(assets, today = new Date()) {
       }
     }
   }
-  const countAvailability = (value) => assets.filter(
-    (asset) => asset.availability === value,
+  const countAvailability = (...values) => assets.filter(
+    (asset) => values.includes(asset.availability),
   ).length;
   return {
     total: assets.length,
-    available: countAvailability("available"),
-    reserve: countAvailability("reserve"),
-    maintenance: countAvailability("maintenance"),
-    unavailable: countAvailability("unavailable"),
+    available: countAvailability("available", "disponibile"),
+    reserve: countAvailability("reserve", "disponibile_con_limitazioni"),
+    maintenance: countAvailability("maintenance", "in_manutenzione", "in_officina"),
+    unavailable: countAvailability("unavailable", "indisponibile"),
     documentsAttention,
   };
 }
@@ -278,7 +283,7 @@ function dossierTimestamp(value) {
 }
 
 
-export function renderVehicleDossier(payload, assetDetail) {
+export function renderVehicleDossier(payload, assetDetail, linkedCases = []) {
   const { asset, kpis, movements } = payload;
   const damageCases = movements.filter((movement) => movement.damage_case_id);
   const openDamageCases = damageCases.filter(
@@ -293,6 +298,20 @@ export function renderVehicleDossier(payload, assetDetail) {
   byId("fleetDossierOpenDamageCases").textContent = String(openDamageCases.length);
   byId("fleetDossierLastDamageCase").textContent = damageCases[0]?.damage_case_number || "Nessuna";
   byId("fleetDossierOperationalStatus").textContent = availabilityPresentation(asset.availability).label;
+  const latestOperationalCase = [...linkedCases]
+    .sort((left, right) => new Date(right.updated_at) - new Date(left.updated_at))
+    .find((item) => item.events?.some(
+      (event) => event.event_type === "stato_operativo_mezzo_modificato",
+    ));
+  const operationalEvent = latestOperationalCase?.events?.filter(
+    (event) => event.event_type === "stato_operativo_mezzo_modificato",
+  ).at(-1);
+  byId("fleetDossierOperationalOrigin").textContent =
+    latestOperationalCase
+      ? `Pratica ${latestOperationalCase.case_number}`
+      : "Aggiornamento Fleet";
+  byId("fleetDossierOperationalUpdated").textContent =
+    dossierTimestamp(operationalEvent?.created_at || asset.updated_at);
   byId("fleetDossierDamageCases").innerHTML = damageCases.length
     ? damageCases.map((movement) => `
         <button type="button" class="fleet-document-item" data-damage-case-link="${movement.damage_case_id}">

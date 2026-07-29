@@ -75,6 +75,9 @@ test("Fleet status, summary and search remain deterministic without API calls", 
   assert.equal(availabilityPresentation("maintenance").label, "Officina");
   assert.equal(availabilityPresentation("unavailable").label, "Indisponibile");
   assert.equal(availabilityPresentation("reserve").label, "Riserva");
+  assert.equal(availabilityPresentation("disponibile_con_limitazioni").label, "Disponibile con limitazioni");
+  assert.equal(availabilityPresentation("in_manutenzione").label, "In manutenzione");
+  assert.equal(availabilityPresentation("in_officina").label, "In officina");
   assert.equal(availabilityPresentation("custom").label, "Da verificare");
   assert.equal(filterFleetAssets(assets, "aa001").length, 1);
   assert.equal(filterFleetAssets(assets, "officina")[0].id, 2);

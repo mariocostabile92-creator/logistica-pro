@@ -44,11 +44,25 @@ test("damage workspace exposes real KPIs search combinable filters and inline de
 test("case navigator orders stopped vehicles then severity and recency", () => {
   const items = [
     { id: 1, vehicle_operational_status: "disponibile", severity: "critica", occurred_at: "2026-07-30T10:00:00Z" },
-    { id: 2, vehicle_operational_status: "fermo", severity: "bassa", occurred_at: "2026-07-28T10:00:00Z" },
+    { id: 2, asset_availability: "indisponibile", vehicle_operational_status: "indisponibile", severity: "bassa", occurred_at: "2026-07-28T10:00:00Z" },
     { id: 3, vehicle_operational_status: "disponibile", severity: "alta", occurred_at: "2026-07-30T11:00:00Z" },
     { id: 4, vehicle_operational_status: "disponibile", severity: "alta", occurred_at: "2026-07-30T12:00:00Z" },
   ];
   assert.deepEqual(sortDamageCases(items).map(({ id }) => id), [2, 1, 4, 3]);
+});
+
+test("damage status changes refresh Fleet surfaces without reload", async () => {
+  const [damage, fleet, dossier] = await Promise.all([
+    file("assets/js/modules/damage-workspace.js"),
+    file("assets/js/modules/fleet-page.js"),
+    file("assets/js/modules/fleet-view.js"),
+  ]);
+  assert.match(damage, /fleet:operational-status-changed/);
+  assert.match(damage, /operational_reason/);
+  assert.match(damage, /restoration_status/);
+  assert.match(fleet, /fleet:operational-status-changed[\s\S]*?refreshFleet/);
+  assert.match(dossier, /fleetDossierOperationalOrigin/);
+  assert.doesNotMatch(damage, /location\.reload/);
 });
 
 test("damage workflow uses API persistence and accessible controls", async () => {

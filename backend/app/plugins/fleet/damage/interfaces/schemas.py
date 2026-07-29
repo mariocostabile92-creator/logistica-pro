@@ -34,6 +34,7 @@ class DamageUpdateRequest(BaseModel):
     description: str | None = Field(default=None, max_length=4000)
     severity: str | None = None
     vehicle_operational_status: str | None = None
+    operational_reason: str | None = Field(default=None, max_length=2000)
     repair_shop: str | None = None
     estimated_cost: Decimal | None = Field(default=None, ge=0)
     final_cost: Decimal | None = Field(default=None, ge=0)
@@ -43,6 +44,7 @@ class DamageUpdateRequest(BaseModel):
 class DamageStatusRequest(BaseModel):
     status: str
     note: str = Field(min_length=1, max_length=2000)
+    restoration_status: str | None = None
     actor: str = "fleet_manager"
 
 

@@ -101,7 +101,7 @@ def test_manual_case_requires_reason_and_supports_search_filters_detail():
 def test_status_rules_notes_timeline_and_vehicle_source_of_truth():
     case, _ = create_from_anomaly()
     vehicle = client.get(f"/api/plugins/fleet/v1/assets/{case['vehicle_id']}").json()
-    assert vehicle["availability"] == "unavailable"
+    assert vehicle["availability"] == "indisponibile"
     invalid = client.post(f"{DAMAGE}/damage-cases/{case['id']}/status", json={
         "status": "chiusa", "note": "",
     })
@@ -116,7 +116,8 @@ def test_status_rules_notes_timeline_and_vehicle_source_of_truth():
     assert note.status_code == 200
     events = client.get(f"{DAMAGE}/damage-cases/{case['id']}/events").json()["items"]
     assert [event["event_type"] for event in events] == [
-        "pratica_creata", "stato_modificato", "nota_aggiunta",
+        "pratica_creata", "stato_operativo_mezzo_modificato",
+        "stato_modificato", "nota_aggiunta",
     ]
 
 
@@ -129,6 +130,7 @@ def test_close_and_reopen_require_explicit_notes():
     ):
         response = client.post(f"{DAMAGE}/damage-cases/{case['id']}/status", json={
             "status": target, "note": f"{current} → {target}",
+            **({"restoration_status": "disponibile"} if target == "chiusa" else {}),
         })
         assert response.status_code == 200
         current = target
@@ -143,3 +145,108 @@ def test_close_and_reopen_require_explicit_notes():
     assert reopened.status_code == 200
     assert reopened.json()["closed_at"] is None
     assert reopened.json()["events"][-1]["event_type"] == "pratica_riaperta"
+
+
+def test_medium_does_not_block_and_critical_blocks_with_timeline():
+    created = asset()
+    base = {
+        "vehicle_id": created["id"], "occurred_at": "2026-07-30T10:00:00Z",
+        "origin": "manual", "manual_reason": "Controllo deposito",
+        "description": "Verifica carrozzeria", "severity": "media",
+        "vehicle_operational_status": "disponibile",
+    }
+    medium = client.post(f"{DAMAGE}/damage-cases", json=base)
+    assert medium.status_code == 201
+    assert medium.json()["operational_notice"] == (
+        "Valutare eventuali limitazioni operative del mezzo."
+    )
+    assert client.get(
+        f"/api/plugins/fleet/v1/assets/{created['id']}"
+    ).json()["availability"] == "available"
+
+    updated = client.patch(
+        f"{DAMAGE}/damage-cases/{medium.json()['id']}",
+        json={"severity": "critica"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["asset_availability"] == "indisponibile"
+    operational = [
+        event for event in updated.json()["events"]
+        if event["event_type"] == "stato_operativo_mezzo_modificato"
+    ][-1]
+    assert operational["previous_status"] == "disponibile"
+    assert operational["new_status"] == "indisponibile"
+
+
+def test_repair_states_and_closure_require_explicit_restoration():
+    case, _ = create_from_anomaly()
+    for target, expected in (
+        ("in_valutazione", "indisponibile"),
+        ("preventivo_richiesto", "indisponibile"),
+        ("preventivo_ricevuto", "indisponibile"),
+        ("riparazione_programmata", "in_manutenzione"),
+        ("in_riparazione", "in_officina"),
+    ):
+        response = client.post(
+            f"{DAMAGE}/damage-cases/{case['id']}/status",
+            json={"status": target, "note": f"Passaggio a {target}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["asset_availability"] == expected
+    no_choice = client.post(
+        f"{DAMAGE}/damage-cases/{case['id']}/status",
+        json={"status": "chiusa", "note": "Riparazione completata"},
+    )
+    assert no_choice.status_code == 422
+    closed = client.post(
+        f"{DAMAGE}/damage-cases/{case['id']}/status",
+        json={
+            "status": "chiusa", "note": "Collaudo completato",
+            "restoration_status": "disponibile",
+        },
+    )
+    assert closed.status_code == 200
+    assert closed.json()["asset_availability"] == "disponibile"
+
+
+def test_manual_unblock_requires_reason_and_other_open_case_remains_restrictive():
+    case, _ = create_from_anomaly()
+    blocked = client.patch(
+        f"{DAMAGE}/damage-cases/{case['id']}",
+        json={"vehicle_operational_status": "disponibile"},
+    )
+    assert blocked.status_code == 422
+    confirmed = client.patch(
+        f"{DAMAGE}/damage-cases/{case['id']}",
+        json={
+            "vehicle_operational_status": "disponibile",
+            "operational_reason": "Verifica tecnica completata",
+        },
+    )
+    assert confirmed.status_code == 200
+    assert confirmed.json()["asset_availability"] == "disponibile"
+    held = client.patch(
+        f"{DAMAGE}/damage-cases/{case['id']}",
+        json={
+            "vehicle_operational_status": "in_officina",
+            "operational_reason": "Presa in carico officina",
+        },
+    )
+    assert held.json()["asset_availability"] == "in_officina"
+
+    second_payload = {
+        "vehicle_id": case["vehicle_id"],
+        "occurred_at": "2026-07-30T12:00:00Z", "origin": "manual",
+        "manual_reason": "Seconda segnalazione", "description": "Danno critico",
+        "severity": "critica", "vehicle_operational_status": "indisponibile",
+    }
+    second = client.post(f"{DAMAGE}/damage-cases", json=second_payload).json()
+    closed = client.post(
+        f"{DAMAGE}/damage-cases/{second['id']}/status",
+        json={
+            "status": "chiusa", "note": "Pratica amministrativa chiusa",
+            "restoration_status": "disponibile",
+        },
+    )
+    assert closed.status_code == 200
+    assert closed.json()["asset_availability"] == "in_officina"

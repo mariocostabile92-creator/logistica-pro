@@ -12,8 +12,10 @@ SEVERITIES = ("bassa", "media", "alta", "critica")
 VEHICLE_STATUSES = (
     "disponibile",
     "disponibile_con_limitazioni",
-    "fermo",
+    "indisponibile",
+    "in_manutenzione",
     "in_officina",
+    "fermo",
 )
 ORIGINS = ("journal", "vehicle_library", "manual")
 
@@ -52,9 +54,4 @@ def validate_transition(previous: str, current: str, note: str | None) -> None:
 
 
 def fleet_availability(vehicle_status: str) -> str:
-    return {
-        "disponibile": "available",
-        "disponibile_con_limitazioni": "available",
-        "fermo": "unavailable",
-        "in_officina": "maintenance",
-    }[vehicle_status]
+    return vehicle_status

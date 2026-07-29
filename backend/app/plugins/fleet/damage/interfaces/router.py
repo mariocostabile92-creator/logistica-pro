@@ -59,7 +59,8 @@ def update_damage_case(case_id: int, request: DamageUpdateRequest):
 @router.post("/damage-cases/{case_id}/status")
 def update_damage_status(case_id: int, request: DamageStatusRequest):
     return guarded(
-        service.change_status, case_id, request.status, request.note, request.actor,
+        service.change_status, case_id, request.status, request.note,
+        request.actor, request.restoration_status,
     )
 
 

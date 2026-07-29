@@ -5,6 +5,7 @@ import {
   getFleetVehicleHistory,
   getLatestFleetSync,
   listFleetAssets,
+  listDamageCases,
   observeFleetAssetAvailability,
   updateFleetAsset,
 } from "../api.js";
@@ -25,8 +26,8 @@ import {
   renderFleetTree,
   renderVehicleDossier,
   setFleetMetricPriority,
-} from "./fleet-view.js";
-import { showDamageWorkspace } from "./damage-workspace.js?v=2";
+} from "./fleet-view.js?v=2";
+import { showDamageWorkspace } from "./damage-workspace.js?v=3";
 
 
 let loaded = false;
@@ -107,15 +108,20 @@ async function showAsset(assetId) {
   byId("fleetDossierState").className = "view-state loading";
   byId("fleetDossierState").textContent = "Caricamento scheda mezzo";
   byId("fleetDossierContent").hidden = true;
-  const [asset, history] = await Promise.all([
+  const [asset, history, damageCases] = await Promise.all([
     getFleetAsset(assetId),
     getFleetVehicleHistory(assetId),
+    listDamageCases().then((response) => response.items),
   ]);
   state.fleetPlugin.selectedAssetId = assetId;
   renderFleetTree(state.fleetPlugin.assets, assetId);
   byId("fleetTreeSelection").textContent = asset.plate || asset.external_identifier;
   byId("fleetTreeSelection").hidden = false;
-  renderVehicleDossier(history, asset);
+  renderVehicleDossier(
+    history,
+    asset,
+    damageCases.filter((item) => Number(item.vehicle_id) === Number(assetId)),
+  );
   byId("fleetAssetTree").open = false;
   closeFleetSidebar();
 }
@@ -456,6 +462,9 @@ export function initFleetPage() {
     showDamageWorkspace(event.detail || {}).catch(
       (error) => showFleetActionError("fleet.damage", error),
     );
+  });
+  document.addEventListener("fleet:operational-status-changed", async () => {
+    await refreshFleet(state.fleetPlugin.selectedAssetId);
   });
   byId("fleetDossierDamageCases").addEventListener("click", (event) => {
     const caseId = event.target.closest("[data-damage-case-link]")?.dataset.damageCaseLink;

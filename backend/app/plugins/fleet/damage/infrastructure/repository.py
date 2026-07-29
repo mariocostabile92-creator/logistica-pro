@@ -282,6 +282,53 @@ def list_events(case_id: int):
     return [_dict(row) for row in rows]
 
 
+def open_case_operational_states(vehicle_id: int, excluding_case_id: int | None = None):
+    parameters: list[object] = [vehicle_id]
+    exclusion = ""
+    if excluding_case_id is not None:
+        exclusion = "AND id != ?"
+        parameters.append(excluding_case_id)
+    with db_session() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT vehicle_operational_status
+            FROM damage_cases
+            WHERE vehicle_id = ? AND status NOT IN ('chiusa', 'annullata') {exclusion}
+            """,
+            parameters,
+        ).fetchall()
+    return [str(row["vehicle_operational_status"]) for row in rows]
+
+
+def record_operational_status(
+    case_id: int,
+    previous: str,
+    current: str,
+    reason: str,
+    actor: str,
+    origin: str,
+):
+    now = utc_now_iso()
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE damage_cases
+            SET vehicle_operational_status = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (current, now, case_id),
+        )
+        conn.execute(
+            """
+            INSERT INTO damage_case_events
+                (damage_case_id, event_type, previous_status, new_status,
+                 note, created_at, actor)
+            VALUES (?, 'stato_operativo_mezzo_modificato', ?, ?, ?, ?, ?)
+            """,
+            (case_id, previous, current, f"{origin}. {reason}", now, actor),
+        )
+
+
 def candidates():
     with db_session() as conn:
         rows = conn.execute(

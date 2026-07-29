@@ -20,7 +20,8 @@ const SEVERITY = { bassa: "Bassa", media: "Media", alta: "Alta", critica: "Criti
 const VEHICLE = {
   disponibile: "Disponibile",
   disponibile_con_limitazioni: "Disponibile con limitazioni",
-  fermo: "Fermo",
+  indisponibile: "Indisponibile",
+  in_manutenzione: "In manutenzione",
   in_officina: "In officina",
 };
 const CLOSED = new Set(["chiusa", "annullata"]);
@@ -56,8 +57,9 @@ async function refresh() {
 export function sortDamageCases(items) {
   const severityOrder = { critica: 0, alta: 1, media: 2, bassa: 3 };
   return [...items].sort((left, right) => {
-    const leftStopped = ["fermo", "in_officina"].includes(left.vehicle_operational_status) ? 0 : 1;
-    const rightStopped = ["fermo", "in_officina"].includes(right.vehicle_operational_status) ? 0 : 1;
+    const blocked = ["indisponibile", "in_manutenzione", "in_officina"];
+    const leftStopped = blocked.includes(left.asset_availability || left.vehicle_operational_status) ? 0 : 1;
+    const rightStopped = blocked.includes(right.asset_availability || right.vehicle_operational_status) ? 0 : 1;
     return leftStopped - rightStopped
       || severityOrder[left.severity] - severityOrder[right.severity]
       || new Date(right.occurred_at) - new Date(left.occurred_at);
@@ -77,7 +79,7 @@ function filteredCases() {
       in_valutazione: item.status === "in_valutazione",
       in_riparazione: item.status === "in_riparazione",
       closed: item.status === "chiusa",
-      stopped: ["fermo", "in_officina"].includes(item.vehicle_operational_status),
+      stopped: ["indisponibile", "in_manutenzione", "in_officina"].includes(item.asset_availability),
       severe: ["alta", "critica"].includes(item.severity),
       last_7_days: new Date(item.occurred_at).getTime() >= now - 7 * 86400000,
       last_30_days: new Date(item.occurred_at).getTime() >= now - 30 * 86400000,
@@ -93,7 +95,7 @@ function metrics() {
       <article><span>Pratiche aperte</span><strong>${open.length}</strong></article>
       <article><span>In valutazione</span><strong>${allCases.filter((item) => item.status === "in_valutazione").length}</strong></article>
       <article><span>In riparazione</span><strong>${allCases.filter((item) => item.status === "in_riparazione").length}</strong></article>
-      <article><span>Veicoli fermi</span><strong>${allCases.filter((item) => ["fermo", "in_officina"].includes(item.vehicle_operational_status)).length}</strong></article>
+      <article><span>Veicoli fermi</span><strong>${new Set(allCases.filter((item) => ["indisponibile", "in_manutenzione", "in_officina"].includes(item.asset_availability)).map((item) => item.vehicle_id)).size}</strong></article>
       <article><span>Costo stimato aperto</span><strong>${money(open.reduce((sum, item) => sum + Number(item.estimated_cost || 0), 0))}</strong></article>
     </div>`;
 }
@@ -107,7 +109,7 @@ function caseCard(item) {
       <span class="damage-case-date"><small>Data</small><strong>${escapeHtml(date(item.occurred_at))}</strong></span>
       <span class="damage-case-status">${STATUS[item.status]}</span>
       <span class="damage-case-severity severity-${item.severity}">${SEVERITY[item.severity]}</span>
-      <span class="damage-case-vehicle-status">${VEHICLE[item.vehicle_operational_status]}</span>
+      <span class="damage-case-vehicle-status">${VEHICLE[item.asset_availability] || VEHICLE[item.vehicle_operational_status]}</span>
     </button>`;
 }
 
@@ -191,7 +193,7 @@ async function renderDetail(caseId) {
     <button type="button" class="quiet damage-mobile-back" data-damage-list-back>← Torna alla lista</button>
     <header class="damage-detail-header">
       <div><p class="eyebrow">Pratica danno</p><h3>${escapeHtml(item.case_number)}</h3><p>${escapeHtml(item.plate || item.external_identifier)} · aperta ${escapeHtml(date(item.created_at))}</p></div>
-      <div class="damage-detail-badges"><span>${STATUS[item.status]}</span><span>${SEVERITY[item.severity]}</span><span>${VEHICLE[item.vehicle_operational_status]}</span></div>
+      <div class="damage-detail-badges"><span>${STATUS[item.status]}</span><span>${SEVERITY[item.severity]}</span><span>${VEHICLE[item.asset_availability] || VEHICLE[item.vehicle_operational_status]}</span></div>
     </header>
     <div class="damage-detail-grid">
       <section><h4>Identità pratica ed evento di origine</h4><dl>
@@ -205,6 +207,7 @@ async function renderDetail(caseId) {
         <form id="damageAssessmentForm" class="damage-form">
           <label>Gravità<select name="severity">${Object.entries(SEVERITY).map(([key,label]) => `<option value="${key}" ${key === item.severity ? "selected" : ""}>${label}</option>`).join("")}</select></label>
           <label>Stato operativo<select name="vehicle_operational_status">${Object.entries(VEHICLE).map(([key,label]) => `<option value="${key}" ${key === item.vehicle_operational_status ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+          <label>Motivazione cambio operativo<textarea name="operational_reason" placeholder="Obbligatoria per rimuovere un blocco"></textarea></label>
           <label>Officina<input name="repair_shop" value="${escapeHtml(item.repair_shop || "")}"></label>
           <label>Costo stimato EUR<input name="estimated_cost" type="number" min="0" step="0.01" value="${item.estimated_cost || ""}"></label>
           <label>Costo finale EUR<input name="final_cost" type="number" min="0" step="0.01" value="${item.final_cost || ""}"></label>
@@ -212,7 +215,7 @@ async function renderDetail(caseId) {
         </form><p class="section-note">Franchigia prevista e applicata: predisposte per il futuro modulo Franchigie.</p>
       </section>
       <section><h4>Foto</h4><div class="damage-media">${media.filter((entry) => entry.media_type === "image").map((entry) => `<a href="${escapeHtml(entry.url)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(entry.url)}" alt="Foto anomalia"></a>`).join("") || "<p>Nessuna foto allegata.</p>"}</div><h4>Video</h4><div class="damage-empty">Video non disponibile in questa versione.</div></section>
-      <section><h4>Cambio stato</h4><form id="damageStatusForm" class="damage-form"><label>Nuovo stato<select name="status">${Object.entries(STATUS).map(([key,label]) => `<option value="${key}" ${key === item.status ? "selected" : ""}>${label}</option>`).join("")}</select></label><label>Motivazione<textarea name="note" required></textarea></label><button type="submit">Registra cambio stato</button></form><p id="damageActionStatus" class="section-note" role="status" aria-live="polite"></p></section>
+      <section><h4>Cambio stato</h4><form id="damageStatusForm" class="damage-form"><label>Nuovo stato<select name="status">${Object.entries(STATUS).map(([key,label]) => `<option value="${key}" ${key === item.status ? "selected" : ""}>${label}</option>`).join("")}</select></label><label>Stato mezzo alla chiusura<select name="restoration_status"><option value="">Seleziona alla chiusura</option>${Object.entries(VEHICLE).map(([key,label]) => `<option value="${key}">${label}</option>`).join("")}</select></label><label>Motivazione<textarea name="note" required></textarea></label><button type="submit">Registra cambio stato</button></form><p id="damageActionStatus" class="section-note" role="status" aria-live="polite"></p></section>
       <section><h4>Note Fleet Manager</h4><form id="damageNoteForm" class="damage-form"><label>Nuova nota<textarea name="note" required></textarea></label><button type="submit">Aggiungi nota</button></form></section>
       <section class="damage-timeline-section"><h4>Timeline</h4><ol class="damage-timeline">${timeline(item.events)}</ol></section>
       <section><h4>Collegamenti futuri</h4><div class="operational-document-future"><span>Franchigia</span><span>Assicurazione</span><span>Fleet Vision Engine</span><span>PDF</span><span>Firma</span></div></section>
@@ -228,8 +231,9 @@ function bindDetail(caseId) {
       if (values[field] === "") values[field] = null;
     }
     try {
-      await updateDamageCase(caseId, values);
-      await refresh(); await renderDetail(caseId);
+      const updated = await updateDamageCase(caseId, values);
+      document.dispatchEvent(new CustomEvent("fleet:operational-status-changed", { detail: updated }));
+      await refresh(); renderNavigator(); await renderDetail(caseId);
     } catch (error) {
       root.querySelector("#damageActionStatus").textContent = error.message;
     }
@@ -237,8 +241,9 @@ function bindDetail(caseId) {
   root.querySelector("#damageStatusForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
-      await changeDamageCaseStatus(caseId, formValues(event.currentTarget));
-      await refresh(); await renderDetail(caseId);
+      const updated = await changeDamageCaseStatus(caseId, formValues(event.currentTarget));
+      document.dispatchEvent(new CustomEvent("fleet:operational-status-changed", { detail: updated }));
+      await refresh(); renderNavigator(); await renderDetail(caseId);
     } catch (error) {
       root.querySelector("#damageActionStatus").textContent = error.message;
     }
@@ -276,7 +281,7 @@ async function createFromCandidate(movementId) {
     occurred_at: candidate.occurred_at, origin: "journal",
     description: candidate.description || "Anomalia rilevata dal Journal",
     severity: "media",
-    vehicle_operational_status: candidate.availability === "maintenance" ? "in_officina" : "disponibile",
+    vehicle_operational_status: ["maintenance", "in_manutenzione", "in_officina"].includes(candidate.availability) ? "in_officina" : "disponibile",
   });
   await refresh(); renderShell(); await renderDetail(created.id);
 }

@@ -20,7 +20,9 @@ from app.plugins.fleet.domain.models import Asset
 from app.plugins.fleet.infrastructure import repository
 
 
-AVAILABLE_ASSET_STATES = frozenset({"available", "reserve"})
+AVAILABLE_ASSET_STATES = frozenset({
+    "available", "reserve", "disponibile", "disponibile_con_limitazioni",
+})
 
 
 def _timestamp(value: str) -> datetime:
