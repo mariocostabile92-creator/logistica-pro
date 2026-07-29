@@ -174,10 +174,12 @@ test("Fleet P1 retains secondary data while reducing missing-value and timestamp
 });
 
 
-test("Fleet secondary navigation follows the Fleet Manager workflow", async () => {
-  const [html, css, journal, vehicle] = await Promise.all([
+test("Fleet tree navigation follows the Fleet Manager workflow", async () => {
+  const [html, css, page, view, journal, vehicle] = await Promise.all([
     frontendFile("index.html"),
     frontendFile("assets/css/fleet.css"),
+    frontendFile("assets/js/modules/fleet-page.js"),
+    frontendFile("assets/js/modules/fleet-view.js"),
     frontendFile("journal/index.html"),
     frontendFile("vehicles/index.html"),
   ]);
@@ -185,18 +187,29 @@ test("Fleet secondary navigation follows the Fleet Manager workflow", async () =
     /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
   )?.[0] || "";
   const fleet = html.match(
-    /<nav class="fleet-subnav"[\s\S]*?<\/nav>/,
+    /<nav class="fleet-tree"[\s\S]*?<\/nav>/,
   )?.[0] || "";
   assert.doesNotMatch(primary, /Giornale di bordo|\/app\/journal\//);
-  for (const item of ["Parco mezzi", "Vehicle Library", "Giornale di bordo"]) {
+  for (const item of ["Parco Mezzi", "Vehicle Library", "Giornale di bordo"]) {
     assert.match(fleet, new RegExp(item));
   }
   for (const item of ["Documenti", "Franchigie", "Noleggi", "Danni"]) {
     assert.match(fleet, new RegExp(`${item}[\\s\\S]*?Prossimamente`));
   }
-  assert.match(fleet, /href="\/app\/journal\/"/);
-  assert.match(css, /\.fleet-subnav/);
-  assert.match(css, /overflow-x: auto/);
+  assert.match(page, /href="\/app\/journal\/">Apri Giornale di bordo/);
+  assert.match(html, /id="fleetAssetTree"[\s\S]*?id="fleetTreeAssets"/);
+  assert.match(html, /id="fleetVehicleDossier"/);
+  assert.match(css, /\.fleet-workspace-layout/);
+  assert.match(css, /grid-template-columns: 248px minmax\(0, 1fr\)/);
+  assert.match(css, /@media \(max-width: 620px\)[\s\S]*?transform: translateX\(-105%\)/);
+  assert.match(page, /getFleetVehicleHistory\(assetId\)/);
+  assert.match(page, /byId\("fleetAssetTree"\)\.open = false/);
+  assert.doesNotMatch(
+    page,
+    /history\.pushState|location\.href\s*=|window\.open\(/,
+  );
+  assert.match(view, /renderFleetTree/);
+  assert.match(view, /renderVehicleDossier/);
   for (const page of [journal, vehicle]) {
     const nav = page.match(
       /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,

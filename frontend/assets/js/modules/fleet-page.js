@@ -2,7 +2,7 @@ import {
   addFleetAssetDocument,
   createFleetAsset,
   getFleetAsset,
-  getFleetAssetEvents,
+  getFleetVehicleHistory,
   getLatestFleetSync,
   listFleetAssets,
   observeFleetAssetAvailability,
@@ -19,10 +19,11 @@ import {
   filterFleetAssets,
   fleetRegistryCsv,
   hideAssetDetail,
-  renderAssetDetail,
   renderAssetList,
   renderFleetFailure,
   renderFleetLoading,
+  renderFleetTree,
+  renderVehicleDossier,
   setFleetMetricPriority,
 } from "./fleet-view.js";
 
@@ -74,6 +75,7 @@ function renderFilteredFleet() {
     demoEnabled,
     searchTerm,
   });
+  renderFleetTree(state.fleetPlugin.assets, state.fleetPlugin.selectedAssetId);
 }
 
 
@@ -97,12 +99,64 @@ function closeDialog(id) {
 
 
 async function showAsset(assetId) {
-  const [asset, events] = await Promise.all([
+  byId("fleetWorkspaceHome").hidden = true;
+  byId("fleetVehicleDossier").hidden = false;
+  byId("fleetDossierState").hidden = false;
+  byId("fleetDossierState").className = "view-state loading";
+  byId("fleetDossierState").textContent = "Caricamento scheda mezzo";
+  byId("fleetDossierContent").hidden = true;
+  const [asset, history] = await Promise.all([
     getFleetAsset(assetId),
-    getFleetAssetEvents(assetId),
+    getFleetVehicleHistory(assetId),
   ]);
   state.fleetPlugin.selectedAssetId = assetId;
-  renderAssetDetail(asset, events.items);
+  renderFleetTree(state.fleetPlugin.assets, assetId);
+  byId("fleetTreeSelection").textContent = asset.plate || asset.external_identifier;
+  byId("fleetTreeSelection").hidden = false;
+  renderVehicleDossier(history, asset);
+  byId("fleetAssetTree").open = false;
+  closeFleetSidebar();
+}
+
+
+function showFleetLibrary() {
+  state.fleetPlugin.selectedAssetId = null;
+  byId("fleetVehicleDossier").hidden = true;
+  byId("fleetWorkspaceHome").hidden = false;
+  byId("fleetAssetTree").open = true;
+  byId("fleetTreeSelection").hidden = true;
+  renderFleetTree(state.fleetPlugin.assets);
+  document.querySelector("[data-fleet-module='library']")?.classList.add("active");
+  closeFleetSidebar();
+}
+
+
+function showJournalGateway() {
+  state.fleetPlugin.selectedAssetId = null;
+  byId("fleetWorkspaceHome").hidden = true;
+  byId("fleetVehicleDossier").hidden = false;
+  byId("fleetDossierContent").hidden = true;
+  byId("fleetDossierState").hidden = false;
+  byId("fleetDossierState").className = "fleet-module-gateway";
+  byId("fleetDossierState").innerHTML = `
+    <p class="eyebrow">Fleet Operations</p>
+    <h2>Giornale di bordo</h2>
+    <p>Il flusso operativo Driver resta disponibile sul suo accesso dedicato.</p>
+    <a class="header-config-button" href="/app/journal/">Apri Giornale di bordo</a>
+  `;
+  closeFleetSidebar();
+}
+
+
+function setFleetSidebar(open) {
+  byId("fleetWorkspaceSidebar").classList.toggle("open", open);
+  byId("fleetSidebarBackdrop").hidden = !open;
+  byId("fleetSidebarToggle").setAttribute("aria-expanded", String(open));
+}
+
+
+function closeFleetSidebar() {
+  setFleetSidebar(false);
 }
 
 
@@ -129,6 +183,7 @@ async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId)
   } else {
     state.fleetPlugin.selectedAssetId = null;
     hideAssetDetail();
+    renderFleetTree(response.items);
   }
   loaded = true;
 }
@@ -370,6 +425,28 @@ export function initFleetPage() {
   byId("fleetAssetTableBody").addEventListener("click", handleAssetSelection);
   byId("fleetAssetTableBody").addEventListener("keydown", handleAssetSelectionKeydown);
   byId("fleetAssetCards").addEventListener("click", handleAssetSelection);
+  byId("fleetTreeAssets").addEventListener("click", (event) => {
+    const target = event.target.closest("[data-fleet-tree-asset]");
+    if (!target) return;
+    showAsset(Number(target.dataset.fleetTreeAsset)).catch((error) => {
+      showFleetActionError("fleet.asset-detail", error);
+    });
+  });
+  byId("fleetWorkspaceSidebar").addEventListener("click", (event) => {
+    const module = event.target.closest("[data-fleet-module]")?.dataset.fleetModule;
+    if (!module) return;
+    document.querySelectorAll("[data-fleet-module]").forEach(
+      (node) => node.classList.toggle("active", node.dataset.fleetModule === module),
+    );
+    if (module === "library") showFleetLibrary();
+    if (module === "journal") showJournalGateway();
+  });
+  byId("fleetDossierBack").addEventListener("click", showFleetLibrary);
+  byId("fleetSidebarToggle").addEventListener("click", () => {
+    setFleetSidebar(!byId("fleetWorkspaceSidebar").classList.contains("open"));
+  });
+  byId("fleetSidebarClose").addEventListener("click", closeFleetSidebar);
+  byId("fleetSidebarBackdrop").addEventListener("click", closeFleetSidebar);
   byId("fleetAssetDetailClose").addEventListener("click", hideAssetDetail);
   byId("editAssetBtn").addEventListener("click", () => openAssetEditor(selectedAsset()));
   byId("observeAvailabilityBtn").addEventListener("click", () => {

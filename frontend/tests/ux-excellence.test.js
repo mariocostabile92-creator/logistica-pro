@@ -32,9 +32,9 @@ test("primary navigation is administrative and routes Journal through Fleet", as
   assert.match(navigation, /data-workspace-view="learn"/);
   assert.doesNotMatch(navigation, /Giornale di bordo|\/app\/journal\//);
   const fleet = html.match(
-    /<nav class="fleet-subnav"[\s\S]*?<\/nav>/,
+    /<nav class="fleet-tree"[\s\S]*?<\/nav>/,
   )?.[0] || "";
-  assert.match(fleet, /href="\/app\/journal\/"[\s\S]*?>\s*Giornale di bordo/);
+  assert.match(fleet, /data-fleet-module="journal"[\s\S]*?Giornale di bordo/);
   assert.match(fleet, /Vehicle Library/);
   assert.doesNotMatch(navigation, /settings|getting-started/i);
   assert.match(html, /id="configurationNavBtn"/);

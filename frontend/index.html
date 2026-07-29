@@ -1453,30 +1453,77 @@
       aria-labelledby="fleetPluginTitle"
       hidden
     >
-      <nav class="fleet-subnav" aria-label="Navigazione Fleet">
-        <a class="fleet-subnav-link active" href="#fleetOverview" aria-current="page">
-          Parco mezzi
-        </a>
-        <a class="fleet-subnav-link" href="#fleetVehicleLibrary">
-          Vehicle Library
-        </a>
-        <a class="fleet-subnav-link" href="/app/journal/">
-          Giornale di bordo
-        </a>
-        <span class="fleet-subnav-placeholder">
-          Documenti <span class="tag">Prossimamente</span>
-        </span>
-        <span class="fleet-subnav-placeholder">
-          Franchigie <span class="tag">Prossimamente</span>
-        </span>
-        <span class="fleet-subnav-placeholder">
-          Noleggi <span class="tag">Prossimamente</span>
-        </span>
-        <span class="fleet-subnav-placeholder">
-          Danni <span class="tag">Prossimamente</span>
-        </span>
-      </nav>
+      <button
+        id="fleetSidebarToggle"
+        class="fleet-sidebar-toggle secondary"
+        type="button"
+        aria-controls="fleetWorkspaceSidebar"
+        aria-expanded="false"
+      >
+        <span aria-hidden="true">☰</span>
+        Navigazione Fleet
+      </button>
+      <div id="fleetSidebarBackdrop" class="fleet-sidebar-backdrop" hidden></div>
+      <div class="fleet-workspace-layout">
+      <aside id="fleetWorkspaceSidebar" class="fleet-workspace-sidebar" aria-label="Esplora Fleet">
+        <div class="fleet-sidebar-heading">
+          <div>
+            <p class="eyebrow">Workspace</p>
+            <strong>Fleet</strong>
+          </div>
+          <button id="fleetSidebarClose" class="quiet" type="button" aria-label="Chiudi navigazione">&times;</button>
+        </div>
+        <nav class="fleet-tree" aria-label="Navigazione Fleet">
+          <details id="fleetAssetTree" class="fleet-tree-branch" open>
+            <summary>
+              <span class="fleet-tree-chevron" aria-hidden="true"></span>
+              <span>Parco Mezzi</span>
+              <span id="fleetTreeCount" class="count-badge">0</span>
+              <span id="fleetTreeSelection" class="fleet-tree-selection" hidden></span>
+            </summary>
+            <div id="fleetTreeAssets" class="fleet-tree-assets" role="tree"></div>
+          </details>
+          <button class="fleet-tree-node active" type="button" data-fleet-module="library">
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Vehicle Library
+          </button>
+          <button class="fleet-tree-node" type="button" data-fleet-module="journal">
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Giornale di bordo
+          </button>
+          <button class="fleet-tree-node" type="button" disabled>
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Documenti <span class="tag">Prossimamente</span>
+          </button>
+          <button class="fleet-tree-node" type="button" disabled>
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Franchigie <span class="tag">Prossimamente</span>
+          </button>
+          <button class="fleet-tree-node" type="button" disabled>
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Noleggi <span class="tag">Prossimamente</span>
+          </button>
+          <button class="fleet-tree-node" type="button" disabled>
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Danni <span class="tag">Prossimamente</span>
+          </button>
+          <button class="fleet-tree-node" type="button" disabled>
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Fleet Vision Engine <span class="tag">Prossimamente</span>
+          </button>
+          <button class="fleet-tree-node" type="button" disabled>
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Assicurazioni <span class="tag">Prossimamente</span>
+          </button>
+          <button class="fleet-tree-node" type="button" disabled>
+            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
+            Manutenzioni <span class="tag">Prossimamente</span>
+          </button>
+        </nav>
+      </aside>
 
+      <div class="fleet-workspace-main">
+      <div id="fleetWorkspaceHome">
       <div class="section-heading fleet-toolbar">
         <div>
           <p class="eyebrow">Parco mezzi</p>
@@ -1612,6 +1659,49 @@
       </div>
       <div id="fleetAssetCards" class="fleet-asset-cards"></div>
       </div>
+      </div>
+
+      <section
+        id="fleetVehicleDossier"
+        class="fleet-vehicle-dossier"
+        aria-labelledby="fleetDossierTitle"
+        hidden
+      >
+        <div id="fleetDossierState" class="view-state loading" aria-live="polite">
+          Caricamento scheda mezzo
+        </div>
+        <div id="fleetDossierContent" hidden>
+          <div class="fleet-dossier-header">
+            <div>
+              <button id="fleetDossierBack" type="button" class="quiet">← Vehicle Library</button>
+              <p class="eyebrow">Cartella operativa</p>
+              <div class="fleet-dossier-title">
+                <h2 id="fleetDossierTitle">—</h2>
+                <span id="fleetDossierStatus" class="fleet-status-badge">—</span>
+              </div>
+              <p id="fleetDossierModel" class="section-note">Modello non disponibile</p>
+            </div>
+            <dl class="fleet-dossier-facts">
+              <div><dt>Disponibilità</dt><dd id="fleetDossierAvailability">—</dd></div>
+              <div><dt>BT/LT</dt><dd id="fleetDossierTerm">—</dd></div>
+              <div><dt>Ultimo utilizzo</dt><dd id="fleetDossierLastUse">—</dd></div>
+            </dl>
+          </div>
+          <div class="fleet-dossier-sections">
+            <section>
+              <div class="fleet-registry-heading">
+                <div><p class="eyebrow">Storia operativa</p><h3>Timeline e movimentazioni</h3></div>
+                <span id="fleetDossierMovementCount" class="tag">0 eventi</span>
+              </div>
+              <div id="fleetDossierTimeline" class="fleet-dossier-timeline"></div>
+            </section>
+            <section>
+              <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div></div>
+              <div id="fleetDossierDocuments" class="fleet-document-list"></div>
+            </section>
+          </div>
+        </div>
+      </section>
 
       <dialog
         id="fleetAssetDetail"
@@ -1662,6 +1752,8 @@
           </section>
         </div>
       </dialog>
+      </div>
+      </div>
     </section>
 
     <section

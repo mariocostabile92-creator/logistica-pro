@@ -136,6 +136,13 @@ export async function getFleetAssetEvents(assetId) {
 }
 
 
+export async function getFleetVehicleHistory(assetId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/fleet/v1/journal/vehicles/${assetId}/history`,
+  ));
+}
+
+
 export async function getWorkforceStatus() {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/status`));
 }

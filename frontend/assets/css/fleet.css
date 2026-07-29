@@ -2,53 +2,320 @@
   width: 100%;
 }
 
-.fleet-subnav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 22px;
-  padding: 8px;
-  overflow-x: auto;
+.fleet-workspace-layout {
+  min-height: 680px;
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
-.fleet-subnav-link,
-.fleet-subnav-placeholder {
-  min-height: 38px;
-  display: inline-flex;
-  flex: 0 0 auto;
+.fleet-workspace-sidebar {
+  min-width: 0;
+  padding: 18px 12px;
+  border-right: 1px solid var(--border);
+  background: var(--surface-strong);
+}
+
+.fleet-sidebar-heading {
+  display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 11px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fleet-sidebar-heading strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 20px;
+}
+
+.fleet-sidebar-heading .quiet {
+  display: none;
+}
+
+.fleet-tree {
+  display: grid;
+  gap: 3px;
+  margin-top: 12px;
+}
+
+.fleet-tree-branch summary,
+.fleet-tree-node,
+.fleet-tree-asset {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 0;
   border-radius: 6px;
-  color: var(--text-muted);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
   font-size: 13px;
   font-weight: 700;
-  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fleet-tree-branch summary {
+  list-style: none;
+}
+
+.fleet-tree-branch summary::-webkit-details-marker {
+  display: none;
+}
+
+.fleet-tree-selection {
+  max-width: 92px;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--accent-dark);
+  font-size: 10px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.fleet-subnav-link:hover,
-.fleet-subnav-link:focus-visible {
-  background: var(--surface-strong);
-  color: var(--text);
+.fleet-tree-chevron {
+  width: 14px;
+  flex: 0 0 14px;
+  color: var(--text-muted);
+  text-align: center;
 }
 
-.fleet-subnav-link.active {
-  background: var(--stable-bg);
+.fleet-tree-branch summary .fleet-tree-chevron::before {
+  content: "▶";
+  font-size: 10px;
+}
+
+.fleet-tree-branch[open] summary .fleet-tree-chevron::before {
+  content: "▼";
+}
+
+.fleet-tree-node:hover:not(:disabled),
+.fleet-tree-node:focus-visible,
+.fleet-tree-branch summary:hover,
+.fleet-tree-asset:hover,
+.fleet-tree-asset:focus-visible {
+  background: #e7efeb;
   color: var(--accent-dark);
 }
 
-.fleet-subnav-placeholder {
+.fleet-tree-node.active,
+.fleet-tree-asset.selected {
+  background: var(--stable-bg);
+  color: var(--accent-dark);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.fleet-tree-node:disabled {
   color: var(--unavailable-text);
   cursor: default;
 }
 
-.fleet-subnav-placeholder .tag {
-  padding: 2px 6px;
-  font-size: 9px;
+.fleet-tree-node .tag {
+  margin-left: auto;
+  padding: 2px 5px;
+  font-size: 8px;
+}
+
+.fleet-tree-assets {
+  display: grid;
+  gap: 2px;
+  padding: 3px 0 7px 17px;
+}
+
+.fleet-tree-asset {
+  min-height: 34px;
+  font-weight: 650;
+}
+
+.fleet-tree-asset > span:first-child {
+  color: var(--accent);
+  font-size: 10px;
+  transform: rotate(90deg);
+}
+
+.fleet-tree-empty {
+  margin: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.fleet-workspace-main {
+  min-width: 0;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.fleet-sidebar-toggle {
+  display: none;
+  margin-bottom: 12px;
+}
+
+.fleet-sidebar-backdrop {
+  display: none;
+}
+
+.fleet-vehicle-dossier {
+  min-width: 0;
+}
+
+.fleet-dossier-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fleet-dossier-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.fleet-dossier-title h2 {
+  margin: 0;
+  font-size: 34px;
+}
+
+.fleet-dossier-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.fleet-dossier-facts div {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.fleet-dossier-facts dt,
+.fleet-dossier-movement dt {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.fleet-dossier-facts dd,
+.fleet-dossier-movement dd {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.fleet-dossier-sections {
+  display: grid;
+  gap: 28px;
+}
+
+.fleet-dossier-timeline {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.fleet-dossier-movement {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.fleet-dossier-movement summary {
+  display: grid;
+  grid-template-columns: 1fr repeat(3, minmax(90px, auto));
+  align-items: center;
+  gap: 18px;
+  padding: 15px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.fleet-dossier-movement summary > span {
+  display: grid;
+  gap: 3px;
+}
+
+.fleet-dossier-movement small {
+  color: var(--text-muted);
+}
+
+.fleet-dossier-movement .has-anomaly {
+  color: var(--danger);
+}
+
+.fleet-dossier-movement-body {
+  display: grid;
+  gap: 18px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.fleet-dossier-movement-body dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.fleet-dossier-movement-body dl > div {
+  min-width: 0;
+  padding: 10px;
+  background: var(--surface-strong);
+}
+
+.fleet-dossier-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fleet-dossier-chip {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.fleet-dossier-media {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 160px));
+  gap: 8px;
+}
+
+.fleet-dossier-media img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.fleet-video-placeholder,
+.fleet-module-gateway {
+  padding: 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.fleet-module-gateway h2 {
+  color: var(--text);
 }
 
 .fleet-toolbar {
@@ -519,6 +786,49 @@ textarea:focus-visible {
 }
 
 @media (max-width: 860px) {
+  .fleet-workspace-layout {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .fleet-workspace-sidebar {
+    padding: 14px 8px;
+  }
+
+  .fleet-sidebar-heading strong,
+  .fleet-sidebar-heading .eyebrow,
+  .fleet-tree-node > :not(.fleet-tree-chevron),
+  .fleet-tree-node .tag,
+  .fleet-tree-branch summary > :not(.fleet-tree-chevron),
+  .fleet-tree-assets {
+    display: none;
+  }
+
+  .fleet-tree-node,
+  .fleet-tree-branch summary {
+    justify-content: center;
+  }
+
+  .fleet-tree-node {
+    font-size: 0;
+  }
+
+  .fleet-tree-node .fleet-tree-chevron {
+    font-size: 14px;
+  }
+
+  .fleet-dossier-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .fleet-dossier-facts {
+    width: 100%;
+  }
+
+  .fleet-dossier-movement-body dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .fleet-toolbar {
     align-items: flex-start;
   }
@@ -574,14 +884,88 @@ textarea:focus-visible {
 }
 
 @media (max-width: 620px) {
-  .fleet-subnav {
-    margin-right: -12px;
-    margin-left: -12px;
-    padding-right: 12px;
-    padding-left: 12px;
-    border-right: 0;
-    border-left: 0;
-    border-radius: 0;
+  .fleet-sidebar-toggle {
+    display: inline-flex;
+  }
+
+  .fleet-workspace-layout {
+    display: block;
+    min-height: 0;
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .fleet-workspace-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 42;
+    width: min(310px, 86vw);
+    padding: 18px 12px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+  }
+
+  .fleet-workspace-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .fleet-sidebar-backdrop:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 41;
+    display: block;
+    background: rgb(20 28 26 / .55);
+  }
+
+  .fleet-sidebar-heading strong,
+  .fleet-sidebar-heading .eyebrow,
+  .fleet-tree-node > :not(.fleet-tree-chevron),
+  .fleet-tree-node .tag,
+  .fleet-tree-branch summary > :not(.fleet-tree-chevron),
+  .fleet-tree-assets {
+    display: initial;
+  }
+
+  .fleet-tree-assets {
+    display: grid;
+  }
+
+  .fleet-tree-node,
+  .fleet-tree-branch summary {
+    justify-content: flex-start;
+  }
+
+  .fleet-tree-node {
+    font-size: 13px;
+  }
+
+  .fleet-sidebar-heading .quiet {
+    display: inline-flex;
+  }
+
+  .fleet-workspace-main {
+    padding: 0;
+  }
+
+  .fleet-dossier-facts,
+  .fleet-dossier-movement summary {
+    grid-template-columns: 1fr;
+  }
+
+  .fleet-dossier-movement summary > span:not(:first-child) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fleet-dossier-movement-body dl {
+    grid-template-columns: 1fr;
+  }
+
+  .fleet-dossier-media {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .fleet-toolbar {
