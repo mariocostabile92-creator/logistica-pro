@@ -17,6 +17,9 @@ from app.core.configuration.repository import (
     init_schema as init_configuration_schema,
 )
 from app.plugins.fleet.infrastructure.repository import init_schema as init_fleet_schema
+from app.plugins.fleet.journal.infrastructure.repository import (
+    init_schema as init_journal_schema,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -24,7 +27,12 @@ def reset_database():
     init_db()
     init_configuration_schema()
     init_fleet_schema()
+    init_journal_schema()
     with db_session() as conn:
+        conn.execute("DELETE FROM movement_media")
+        conn.execute("DELETE FROM movement_equipment")
+        conn.execute("DELETE FROM asset_movements")
+        conn.execute("DELETE FROM journal_sessions")
         conn.execute("DELETE FROM configuration_versions")
         conn.execute("DELETE FROM fleet_asset_events")
         conn.execute("DELETE FROM fleet_asset_documents")

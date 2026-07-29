@@ -14,6 +14,7 @@ _IDENTITY_TABLES = {
     "fleet_asset_documents",
     "fleet_asset_events",
     "fleet_assets",
+    "journal_sessions",
     "imports",
     "operation_snapshots",
     "planning_events",

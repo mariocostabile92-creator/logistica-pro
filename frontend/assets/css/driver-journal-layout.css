@@ -1,0 +1,16 @@
+:root { color-scheme: light; font-family: Inter, system-ui, sans-serif; color: #172033; background: #eef2f7; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 0; }
+.journal-shell { width: min(100%, 680px); min-height: 100vh; margin: 0 auto; background: #fff; padding: 24px; }
+.journal-header { margin-bottom: 24px; }
+.journal-header h1 { margin: 4px 0 8px; font-size: clamp(1.75rem, 8vw, 2.5rem); }
+.journal-header p { color: #5b6578; }
+.eyebrow { margin: 0; color: #1368ce !important; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; }
+.progress { height: 8px; overflow: hidden; border-radius: 99px; background: #e4e9f1; }
+.progress span { display: block; width: 16.67%; height: 100%; background: #1368ce; transition: width .2s; }
+.step { display: none; }
+.step.active { display: block; }
+.step h2 { font-size: 1.35rem; margin: 0 0 20px; }
+.navigation { display: flex; gap: 12px; margin-top: 24px; }
+.navigation button { flex: 1; }
+.receipt-step { text-align: center; }

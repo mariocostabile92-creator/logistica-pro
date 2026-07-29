@@ -1,0 +1,7 @@
+@media (max-width: 480px) {
+  .journal-shell { width: 100%; padding: 18px 16px; overflow-x: hidden; }
+  .journal-header h1 { font-size: 1.85rem; }
+  .equipment-item { grid-template-columns: 1fr; }
+  .equipment-item select { width: 100%; }
+}
+@media (min-width: 600px) { .choice-grid { grid-template-columns: 1fr 1fr; } }

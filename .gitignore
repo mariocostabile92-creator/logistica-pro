@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 backend/venv/
 backend/data/*.sqlite3
+backend/data/journal_media/
 .env
 .env.*
 !.env.example

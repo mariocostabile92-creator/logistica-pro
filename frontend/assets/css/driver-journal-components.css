@@ -1,0 +1,28 @@
+button, input, select, textarea { font: inherit; }
+[hidden] { display: none !important; }
+button { min-height: 52px; padding: 12px 18px; border: 0; border-radius: 12px; background: #1368ce; color: #fff; font-weight: 750; cursor: pointer; }
+button:disabled { opacity: .55; cursor: wait; }
+button.secondary { color: #263044; background: #edf1f6; }
+label { display: grid; gap: 8px; margin: 16px 0; font-weight: 700; }
+input, select, textarea { width: 100%; min-height: 50px; padding: 12px; border: 1px solid #b8c1cf; border-radius: 10px; background: #fff; color: #172033; }
+textarea { min-height: 90px; resize: vertical; }
+.choice-grid { display: grid; gap: 16px; }
+.choice { min-height: 112px; text-align: left; display: grid; align-content: center; gap: 6px; }
+.choice strong { font-size: 1.2rem; }.choice span { opacity: .82; }
+.step-label { font-size: .85rem; }
+.asset-result { padding: 14px; border-radius: 10px; background: #e9f7ef; color: #17613a; }
+.equipment-list { display: grid; gap: 10px; }
+.equipment-item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #d6dce5; border-radius: 10px; }
+.equipment-item select { width: auto; min-width: 130px; }
+.check-line { grid-template-columns: 24px 1fr; align-items: center; }
+.check-line input { min-height: 22px; width: 22px; }
+.upload-button { display: block; padding: 16px; text-align: center; border: 2px dashed #1368ce; border-radius: 12px; color: #1368ce; cursor: pointer; }
+.media-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.media-card { position: relative; }.media-card img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; }
+.media-card button { position: absolute; right: 6px; top: 6px; min-height: 38px; padding: 6px 10px; background: #9d2434; }
+.summary { text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #dbe1e9; border-radius: 12px; overflow: hidden; }
+.summary dt, .summary dd { margin: 0; padding: 12px; border-bottom: 1px solid #e5e9ef; overflow-wrap: anywhere; }
+.summary dt { background: #f4f6f9; color: #596579; }.summary dd { font-weight: 700; }
+.error { min-height: 24px; color: #a52234; font-weight: 700; }
+.loading { position: fixed; inset: 0; display: grid; place-items: center; background: rgb(255 255 255 / .88); font-weight: 800; }
+.success-mark { width: 72px; height: 72px; margin: 0 auto 16px; display: grid; place-items: center; border-radius: 50%; background: #dff5e7; color: #177044; font-size: 2.4rem; }
