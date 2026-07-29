@@ -142,6 +142,43 @@ export async function getFleetVehicleHistory(assetId) {
   ));
 }
 
+export async function listDamageCases(params = {}) {
+  const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value != null && value !== ""));
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases?${query}`));
+}
+
+export async function getDamageCase(caseId) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases/${caseId}`));
+}
+
+export async function listDamageCandidates() {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-candidates`));
+}
+
+export async function createDamageCase(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+  }));
+}
+
+export async function updateDamageCase(caseId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases/${caseId}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+  }));
+}
+
+export async function changeDamageCaseStatus(caseId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases/${caseId}/status`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+  }));
+}
+
+export async function addDamageCaseNote(caseId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases/${caseId}/notes`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+  }));
+}
+
 
 export async function getWorkforceStatus() {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/status`));

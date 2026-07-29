@@ -10,6 +10,8 @@ from app.plugins.fleet.journal.infrastructure.repository import (
     init_schema as init_journal_schema,
 )
 from app.plugins.fleet.journal.interfaces.router import router as journal_router
+from app.plugins.fleet.damage.infrastructure.repository import init_schema as init_damage_schema
+from app.plugins.fleet.damage.interfaces.router import router as damage_router
 
 
 def fleet_plugin_enabled() -> bool:
@@ -22,6 +24,7 @@ def initialize_fleet_plugin() -> None:
         init_schema()
         init_sync_schema()
         init_journal_schema()
+        init_damage_schema()
 
 
 def register_fleet_plugin(app: FastAPI) -> None:
@@ -29,3 +32,4 @@ def register_fleet_plugin(app: FastAPI) -> None:
         app.include_router(router)
         app.include_router(sync_router)
         app.include_router(journal_router)
+        app.include_router(damage_router)

@@ -346,7 +346,15 @@ def asset_history(asset_id: int) -> dict[str, object] | None:
                    operation_type, operational_shift, occurred_at, timezone,
                    odometer_km, fuel_percentage, cleanliness_status,
                    anomaly_present, anomaly_description, operational_note,
-                   created_at
+                   created_at,
+                   (SELECT id FROM damage_cases dc
+                    WHERE dc.source_movement_id = asset_movements.id) AS damage_case_id,
+                   (SELECT case_number FROM damage_cases dc
+                    WHERE dc.source_movement_id = asset_movements.id) AS damage_case_number,
+                   (SELECT status FROM damage_cases dc
+                    WHERE dc.source_movement_id = asset_movements.id) AS damage_case_status,
+                   (SELECT severity FROM damage_cases dc
+                    WHERE dc.source_movement_id = asset_movements.id) AS damage_case_severity
             FROM asset_movements
             WHERE asset_id = ?
             ORDER BY occurred_at DESC, created_at DESC

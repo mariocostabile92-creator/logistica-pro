@@ -1503,9 +1503,9 @@
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
             Noleggi <span class="tag">Prossimamente</span>
           </button>
-          <button class="fleet-tree-node" type="button" disabled>
+          <button class="fleet-tree-node" type="button" data-fleet-module="damage" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
-            Danni <span class="tag">Prossimamente</span>
+            Danni
           </button>
           <button class="fleet-tree-node" type="button" disabled>
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
@@ -1661,6 +1661,7 @@
       </div>
       </div>
 
+      <section id="damageWorkspace" class="damage-workspace" aria-labelledby="damageWorkspaceTitle" hidden></section>
       <section
         id="fleetVehicleDossier"
         class="fleet-vehicle-dossier"
@@ -1685,6 +1686,9 @@
               <div><dt>Disponibilità</dt><dd id="fleetDossierAvailability">—</dd></div>
               <div><dt>BT/LT</dt><dd id="fleetDossierTerm">—</dd></div>
               <div><dt>Ultimo utilizzo</dt><dd id="fleetDossierLastUse">—</dd></div>
+              <div><dt>Pratiche aperte</dt><dd id="fleetDossierOpenDamageCases">0</dd></div>
+              <div><dt>Ultima pratica</dt><dd id="fleetDossierLastDamageCase">Nessuna</dd></div>
+              <div><dt>Stato operativo corrente</dt><dd id="fleetDossierOperationalStatus">—</dd></div>
             </dl>
           </div>
           <div class="fleet-dossier-sections">
@@ -1709,6 +1713,10 @@
                 </div>
               </div>
               <div id="fleetDossierTimeline" class="operational-document-list"></div>
+            </section>
+            <section>
+              <div class="fleet-registry-heading"><div><p class="eyebrow">Danni</p><h3>Pratiche collegate</h3></div></div>
+              <div id="fleetDossierDamageCases" class="fleet-document-list"></div>
             </section>
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div></div>

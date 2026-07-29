@@ -105,6 +105,13 @@ function operationalDocument(item, movements) {
         </a>
       `).join("")
     : '<p class="section-note">Nessuna foto allegata.</p>';
+  const damageAction = item.anomaly_present
+    ? item.damage_case_id
+      ? `<button type="button" class="secondary" data-damage-case-link="${item.damage_case_id}">
+          ${escapeHtml(item.damage_case_number)} · ${escapeHtml(item.damage_case_status)} · ${escapeHtml(item.damage_case_severity)} · Apri pratica
+        </button>`
+      : `<button type="button" data-damage-candidate-link="${escapeHtml(item.id)}">Crea pratica danno</button>`
+    : "";
   return `
     <details class="operational-document" data-document-id="${escapeHtml(item.id)}">
       <summary>
@@ -140,6 +147,7 @@ function operationalDocument(item, movements) {
         <section><h4>Checklist completa</h4><div class="operational-document-chips">${checklist}</div></section>
         <section><h4>Foto</h4><div class="operational-document-media">${media}</div></section>
         <section><h4>Video</h4><div class="operational-document-placeholder">Video non disponibili in questa versione</div></section>
+        ${damageAction ? `<section class="operational-document-damage"><h4>Pratica danno</h4>${damageAction}</section>` : ""}
         <footer class="operational-document-future" aria-label="Predisposizioni future">
           <span>PDF</span><span>Firma</span><span>Fleet Vision Engine</span>
           <span>Franchigia</span><span>Pratica danno</span><span>Assicurazione</span>
@@ -175,6 +183,14 @@ export function mountOperationalDocumentHistory({ movements, list, search, filte
       button.setAttribute("aria-pressed", String(active));
     });
     render();
+  }, { signal: controller.signal });
+  list.addEventListener("click", (event) => {
+    const caseId = event.target.closest("[data-damage-case-link]")?.dataset.damageCaseLink;
+    const movementId = event.target.closest("[data-damage-candidate-link]")?.dataset.damageCandidateLink;
+    if (!caseId && !movementId) return;
+    document.dispatchEvent(new CustomEvent("damage:open", {
+      detail: { caseId: caseId || null, movementId: movementId || null },
+    }));
   }, { signal: controller.signal });
   render();
 }

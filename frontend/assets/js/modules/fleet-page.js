@@ -26,6 +26,7 @@ import {
   renderVehicleDossier,
   setFleetMetricPriority,
 } from "./fleet-view.js";
+import { showDamageWorkspace } from "./damage-workspace.js";
 
 
 let loaded = false;
@@ -99,6 +100,7 @@ function closeDialog(id) {
 
 
 async function showAsset(assetId) {
+  byId("damageWorkspace").hidden = true;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
   byId("fleetDossierState").hidden = false;
@@ -120,6 +122,7 @@ async function showAsset(assetId) {
 
 
 function showFleetLibrary() {
+  byId("damageWorkspace").hidden = true;
   state.fleetPlugin.selectedAssetId = null;
   byId("fleetVehicleDossier").hidden = true;
   byId("fleetWorkspaceHome").hidden = false;
@@ -132,6 +135,7 @@ function showFleetLibrary() {
 
 
 function showJournalGateway() {
+  byId("damageWorkspace").hidden = true;
   state.fleetPlugin.selectedAssetId = null;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
@@ -440,6 +444,24 @@ export function initFleetPage() {
     );
     if (module === "library") showFleetLibrary();
     if (module === "journal") showJournalGateway();
+    if (module === "damage") {
+      showDamageWorkspace().catch((error) => showFleetActionError("fleet.damage", error));
+      closeFleetSidebar();
+    }
+  });
+  document.addEventListener("damage:open", (event) => {
+    document.querySelectorAll("[data-fleet-module]").forEach(
+      (node) => node.classList.toggle("active", node.dataset.fleetModule === "damage"),
+    );
+    showDamageWorkspace(event.detail || {}).catch(
+      (error) => showFleetActionError("fleet.damage", error),
+    );
+  });
+  byId("fleetDossierDamageCases").addEventListener("click", (event) => {
+    const caseId = event.target.closest("[data-damage-case-link]")?.dataset.damageCaseLink;
+    if (caseId) {
+      document.dispatchEvent(new CustomEvent("damage:open", { detail: { caseId } }));
+    }
   });
   byId("fleetDossierBack").addEventListener("click", showFleetLibrary);
   byId("fleetSidebarToggle").addEventListener("click", () => {

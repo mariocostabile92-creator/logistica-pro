@@ -196,9 +196,14 @@ test("Fleet tree navigation follows the Fleet Manager workflow", async () => {
   for (const item of ["Parco Mezzi", "Vehicle Library", "Giornale di bordo"]) {
     assert.match(fleet, new RegExp(item));
   }
-  for (const item of ["Documenti", "Franchigie", "Noleggi", "Danni"]) {
+  for (const item of ["Documenti", "Franchigie", "Noleggi"]) {
     assert.match(fleet, new RegExp(`${item}[\\s\\S]*?Prossimamente`));
   }
+  assert.match(fleet, /data-fleet-module="damage"[\s\S]*?Danni/);
+  assert.doesNotMatch(
+    fleet.match(/data-fleet-module="damage"[\s\S]*?<\/button>/)?.[0] || "",
+    /Prossimamente|disabled/,
+  );
   assert.match(page, /href="\/app\/journal\/">Apri Giornale di bordo/);
   assert.match(html, /id="fleetAssetTree"[\s\S]*?id="fleetTreeAssets"/);
   assert.match(html, /id="fleetVehicleDossier"/);

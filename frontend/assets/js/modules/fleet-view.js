@@ -280,12 +280,27 @@ function dossierTimestamp(value) {
 
 export function renderVehicleDossier(payload, assetDetail) {
   const { asset, kpis, movements } = payload;
+  const damageCases = movements.filter((movement) => movement.damage_case_id);
+  const openDamageCases = damageCases.filter(
+    (movement) => !["chiusa", "annullata"].includes(movement.damage_case_status),
+  );
   byId("fleetDossierTitle").textContent = asset.plate || asset.external_identifier;
   byId("fleetDossierModel").textContent = asset.model || "Modello non disponibile";
   byId("fleetDossierStatus").textContent = asset.status === "active" ? "Operativo" : assetValueLabel(asset.status);
   byId("fleetDossierAvailability").textContent = availabilityPresentation(asset.availability).label;
   byId("fleetDossierTerm").textContent = asset.term || "Non classificato";
   byId("fleetDossierLastUse").textContent = dossierTimestamp(kpis.last_use_at);
+  byId("fleetDossierOpenDamageCases").textContent = String(openDamageCases.length);
+  byId("fleetDossierLastDamageCase").textContent = damageCases[0]?.damage_case_number || "Nessuna";
+  byId("fleetDossierOperationalStatus").textContent = availabilityPresentation(asset.availability).label;
+  byId("fleetDossierDamageCases").innerHTML = damageCases.length
+    ? damageCases.map((movement) => `
+        <button type="button" class="fleet-document-item" data-damage-case-link="${movement.damage_case_id}">
+          <strong>${escapeHtml(movement.damage_case_number)}</strong>
+          <span>${escapeHtml(movement.damage_case_status)} · ${escapeHtml(movement.damage_case_severity)}</span>
+        </button>
+      `).join("")
+    : '<div class="empty-state">Nessuna pratica collegata.</div>';
   mountOperationalDocumentHistory({
     movements,
     list: byId("fleetDossierTimeline"),

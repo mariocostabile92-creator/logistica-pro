@@ -1,0 +1,286 @@
+import {
+  addDamageCaseNote,
+  changeDamageCaseStatus,
+  createDamageCase,
+  getDamageCase,
+  listDamageCandidates,
+  listDamageCases,
+  updateDamageCase,
+} from "../api.js";
+import { escapeHtml } from "../utils/dom.js";
+
+const STATUS = {
+  nuova: "Nuova", in_valutazione: "In valutazione",
+  preventivo_richiesto: "Preventivo richiesto",
+  preventivo_ricevuto: "Preventivo ricevuto",
+  riparazione_programmata: "Riparazione programmata",
+  in_riparazione: "In riparazione", chiusa: "Chiusa", annullata: "Annullata",
+};
+const SEVERITY = { bassa: "Bassa", media: "Media", alta: "Alta", critica: "Critica" };
+const VEHICLE = {
+  disponibile: "Disponibile",
+  disponibile_con_limitazioni: "Disponibile con limitazioni",
+  fermo: "Fermo",
+  in_officina: "In officina",
+};
+const CLOSED = new Set(["chiusa", "annullata"]);
+let root;
+let allCases = [];
+let candidates = [];
+let activeFilter = "all";
+let query = "";
+let initialized = false;
+
+function date(value) {
+  return value ? new Date(value).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" }) : "—";
+}
+
+function money(value) {
+  return value == null
+    ? "—"
+    : new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(value);
+}
+
+function formValues(form) {
+  return Object.fromEntries(new FormData(form).entries());
+}
+
+async function refresh() {
+  [allCases, candidates] = await Promise.all([
+    listDamageCases().then((response) => response.items),
+    listDamageCandidates().then((response) => response.items),
+  ]);
+}
+
+function filteredCases() {
+  const term = query.trim().toLocaleLowerCase("it-IT");
+  const now = Date.now();
+  return allCases.filter((item) => {
+    const textMatch = !term || [
+      item.case_number, item.plate, item.declared_driver, item.description, item.repair_shop,
+    ].some((value) => String(value || "").toLocaleLowerCase("it-IT").includes(term));
+    const matches = {
+      all: true,
+      open: !CLOSED.has(item.status),
+      in_valutazione: item.status === "in_valutazione",
+      in_riparazione: item.status === "in_riparazione",
+      closed: item.status === "chiusa",
+      stopped: ["fermo", "in_officina"].includes(item.vehicle_operational_status),
+      severe: ["alta", "critica"].includes(item.severity),
+      last_7_days: new Date(item.occurred_at).getTime() >= now - 7 * 86400000,
+      last_30_days: new Date(item.occurred_at).getTime() >= now - 30 * 86400000,
+    };
+    return textMatch && matches[activeFilter];
+  });
+}
+
+function metrics() {
+  const open = allCases.filter((item) => !CLOSED.has(item.status));
+  return `
+    <div class="damage-kpis" aria-label="Indicatori pratiche danno">
+      <article><span>Pratiche aperte</span><strong>${open.length}</strong></article>
+      <article><span>In valutazione</span><strong>${allCases.filter((item) => item.status === "in_valutazione").length}</strong></article>
+      <article><span>In riparazione</span><strong>${allCases.filter((item) => item.status === "in_riparazione").length}</strong></article>
+      <article><span>Veicoli fermi</span><strong>${allCases.filter((item) => ["fermo", "in_officina"].includes(item.vehicle_operational_status)).length}</strong></article>
+      <article><span>Costo stimato aperto</span><strong>${money(open.reduce((sum, item) => sum + Number(item.estimated_cost || 0), 0))}</strong></article>
+    </div>`;
+}
+
+function caseCard(item) {
+  return `
+    <button type="button" class="damage-case-card severity-${item.severity}" data-damage-case="${item.id}">
+      <span><strong>${escapeHtml(item.case_number)}</strong><small>${escapeHtml(item.plate || item.external_identifier)}</small></span>
+      <span><small>Evento</small><strong>${escapeHtml(date(item.occurred_at))}</strong></span>
+      <span class="damage-description"><small>${escapeHtml(item.declared_driver || "Driver non dichiarato")}</small><strong>${escapeHtml(item.description)}</strong></span>
+      <span><small>Gravità</small><strong>${SEVERITY[item.severity]}</strong></span>
+      <span><small>Stato</small><strong>${STATUS[item.status]}</strong></span>
+      <span><small>Mezzo</small><strong>${VEHICLE[item.vehicle_operational_status]}</strong></span>
+      <span><small>Stimato</small><strong>${money(item.estimated_cost)}</strong></span>
+    </button>`;
+}
+
+function renderList() {
+  const visible = filteredCases();
+  root.querySelector("#damageMain").innerHTML = `
+    ${metrics()}
+    <div class="damage-tools">
+      <label><span class="visually-hidden">Cerca pratiche</span><input id="damageSearch" type="search" placeholder="Cerca pratica, targa, driver, descrizione o officina" value="${escapeHtml(query)}"></label>
+      <div class="damage-filters" aria-label="Filtri pratiche">
+        ${[
+          ["all", "Tutte"], ["open", "Aperte"], ["in_valutazione", "In valutazione"],
+          ["in_riparazione", "In riparazione"], ["closed", "Chiuse"],
+          ["stopped", "Veicoli fermi"], ["severe", "Alta o critica"],
+          ["last_7_days", "Ultimi 7 giorni"], ["last_30_days", "Ultimi 30 giorni"],
+        ].map(([value, label]) => `<button type="button" data-damage-filter="${value}" aria-pressed="${activeFilter === value}" class="${activeFilter === value ? "active" : ""}">${label}</button>`).join("")}
+      </div>
+    </div>
+    <section aria-labelledby="damageCasesTitle">
+      <div class="damage-section-heading"><h3 id="damageCasesTitle">Pratiche danno</h3><span class="tag">${visible.length} risultati</span></div>
+      <div class="damage-case-list">${visible.length ? visible.map(caseCard).join("") : '<div class="damage-empty">Nessun risultato per i filtri selezionati.</div>'}</div>
+    </section>`;
+}
+
+function renderShell() {
+  root.innerHTML = `
+    <header class="damage-header">
+      <div><p class="eyebrow">Fleet Operations</p><h2 id="damageWorkspaceTitle">Danni</h2>
+      <p class="section-note">Gestione delle pratiche danno del parco mezzi</p></div>
+      <div class="damage-actions">
+        <button type="button" data-damage-view="candidates">Anomalie da gestire <span class="count-badge">${candidates.length}</span></button>
+        <button type="button" class="secondary" data-damage-manual>Nuova pratica manuale</button>
+      </div>
+    </header><div id="damageMain"></div>`;
+  renderList();
+}
+
+function renderCandidates() {
+  root.querySelector("#damageMain").innerHTML = `
+    <button type="button" class="quiet damage-back" data-damage-back>← Pratiche danno</button>
+    <div class="damage-section-heading"><div><p class="eyebrow">Driver Journal</p><h3>Anomalie da gestire</h3></div><span class="tag">${candidates.length}</span></div>
+    <div class="damage-candidates">${candidates.length ? candidates.map((item) => `
+      <article><div><strong>${escapeHtml(item.plate)}</strong><small>${escapeHtml(date(item.occurred_at))}</small></div>
+      <p>${escapeHtml(item.description || "Anomalia senza descrizione")}</p>
+      <dl><div><dt>Driver</dt><dd>${escapeHtml(item.declared_driver)}</dd></div><div><dt>Foto</dt><dd>${item.photo_count}</dd></div><div><dt>Stato mezzo</dt><dd>${escapeHtml(item.availability)}</dd></div></dl>
+      <button type="button" data-create-candidate="${escapeHtml(item.movement_id)}">Crea pratica</button></article>`).join("") : '<div class="damage-empty">Nessuna anomalia da gestire.</div>'}</div>`;
+}
+
+function timeline(events) {
+  return events.map((event) => `
+    <li><time>${escapeHtml(date(event.created_at))}</time>
+    <strong>${escapeHtml(event.event_type.replaceAll("_", " "))}</strong>
+    <p>${escapeHtml(event.note || "")}</p><small>${escapeHtml(event.actor)}</small></li>`).join("");
+}
+
+async function renderDetail(caseId) {
+  const item = await getDamageCase(caseId);
+  const media = item.source_movement?.media || [];
+  root.querySelector("#damageMain").innerHTML = `
+    <button type="button" class="quiet damage-back" data-damage-back>← Pratiche danno</button>
+    <header class="damage-detail-header">
+      <div><p class="eyebrow">Pratica danno</p><h3>${escapeHtml(item.case_number)}</h3><p>${escapeHtml(item.plate || item.external_identifier)} · aperta ${escapeHtml(date(item.created_at))}</p></div>
+      <div class="damage-detail-badges"><span>${STATUS[item.status]}</span><span>${SEVERITY[item.severity]}</span><span>${VEHICLE[item.vehicle_operational_status]}</span></div>
+    </header>
+    <div class="damage-detail-grid">
+      <section><h4>Identità pratica ed evento di origine</h4><dl>
+        <div><dt>Origine</dt><dd>${escapeHtml(item.origin)}</dd></div>
+        <div><dt>Documento</dt><dd>${escapeHtml(item.source_document_id || "Manuale")}</dd></div>
+        <div><dt>Driver</dt><dd>${escapeHtml(item.declared_driver || "—")}</dd></div>
+        <div><dt>Data evento</dt><dd>${escapeHtml(date(item.occurred_at))}</dd></div>
+      </dl></section>
+      <section><h4>Descrizione</h4><p>${escapeHtml(item.description)}</p></section>
+      <section><h4>Stato, gravità, valutazione economica e officina</h4>
+        <form id="damageAssessmentForm" class="damage-form">
+          <label>Gravità<select name="severity">${Object.entries(SEVERITY).map(([key,label]) => `<option value="${key}" ${key === item.severity ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+          <label>Stato operativo<select name="vehicle_operational_status">${Object.entries(VEHICLE).map(([key,label]) => `<option value="${key}" ${key === item.vehicle_operational_status ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+          <label>Officina<input name="repair_shop" value="${escapeHtml(item.repair_shop || "")}"></label>
+          <label>Costo stimato EUR<input name="estimated_cost" type="number" min="0" step="0.01" value="${item.estimated_cost || ""}"></label>
+          <label>Costo finale EUR<input name="final_cost" type="number" min="0" step="0.01" value="${item.final_cost || ""}"></label>
+          <button type="submit">Salva valutazione</button>
+        </form><p class="section-note">Franchigia prevista e applicata: predisposte per il futuro modulo Franchigie.</p>
+      </section>
+      <section><h4>Foto</h4><div class="damage-media">${media.filter((entry) => entry.media_type === "image").map((entry) => `<a href="${escapeHtml(entry.url)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(entry.url)}" alt="Foto anomalia"></a>`).join("") || "<p>Nessuna foto allegata.</p>"}</div><h4>Video</h4><div class="damage-empty">Video non disponibile in questa versione.</div></section>
+      <section><h4>Cambio stato</h4><form id="damageStatusForm" class="damage-form"><label>Nuovo stato<select name="status">${Object.entries(STATUS).map(([key,label]) => `<option value="${key}" ${key === item.status ? "selected" : ""}>${label}</option>`).join("")}</select></label><label>Motivazione<textarea name="note" required></textarea></label><button type="submit">Registra cambio stato</button></form><p id="damageActionStatus" class="section-note" role="status" aria-live="polite"></p></section>
+      <section><h4>Note Fleet Manager</h4><form id="damageNoteForm" class="damage-form"><label>Nuova nota<textarea name="note" required></textarea></label><button type="submit">Aggiungi nota</button></form></section>
+      <section class="damage-timeline-section"><h4>Timeline</h4><ol class="damage-timeline">${timeline(item.events)}</ol></section>
+      <section><h4>Collegamenti futuri</h4><div class="operational-document-future"><span>Franchigia</span><span>Assicurazione</span><span>Fleet Vision Engine</span><span>PDF</span><span>Firma</span></div></section>
+    </div>`;
+  bindDetail(item.id);
+}
+
+function bindDetail(caseId) {
+  root.querySelector("#damageAssessmentForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const values = formValues(event.currentTarget);
+    for (const field of ["estimated_cost", "final_cost"]) {
+      if (values[field] === "") values[field] = null;
+    }
+    try {
+      await updateDamageCase(caseId, values);
+      await refresh(); await renderDetail(caseId);
+    } catch (error) {
+      root.querySelector("#damageActionStatus").textContent = error.message;
+    }
+  });
+  root.querySelector("#damageStatusForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await changeDamageCaseStatus(caseId, formValues(event.currentTarget));
+      await refresh(); await renderDetail(caseId);
+    } catch (error) {
+      root.querySelector("#damageActionStatus").textContent = error.message;
+    }
+  });
+  root.querySelector("#damageNoteForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await addDamageCaseNote(caseId, formValues(event.currentTarget));
+      await renderDetail(caseId);
+    } catch (error) {
+      root.querySelector("#damageActionStatus").textContent = error.message;
+    }
+  });
+}
+
+function renderManual() {
+  root.querySelector("#damageMain").innerHTML = `
+    <button type="button" class="quiet damage-back" data-damage-back>← Pratiche danno</button>
+    <section class="damage-manual"><p class="eyebrow">Inserimento secondario</p><h3>Nuova pratica manuale</h3>
+    <form id="damageManualForm" class="damage-form">
+      <label>ID veicolo<input name="vehicle_id" type="number" min="1" required></label>
+      <label>Data evento<input name="occurred_at" type="datetime-local" required></label>
+      <label>Descrizione<textarea name="description" required></textarea></label>
+      <label>Motivazione inserimento manuale<textarea name="manual_reason" required></textarea></label>
+      <label>Gravità<select name="severity"><option value="bassa">Bassa</option><option value="media" selected>Media</option><option value="alta">Alta</option><option value="critica">Critica</option></select></label>
+      <button type="submit">Crea pratica manuale</button>
+    </form></section>`;
+}
+
+async function createFromCandidate(movementId) {
+  const candidate = candidates.find((item) => item.movement_id === movementId);
+  const created = await createDamageCase({
+    vehicle_id: candidate.vehicle_id, source_movement_id: candidate.movement_id,
+    occurred_at: candidate.occurred_at, origin: "journal",
+    description: candidate.description || "Anomalia rilevata dal Journal",
+    severity: "media",
+    vehicle_operational_status: candidate.availability === "maintenance" ? "in_officina" : "disponibile",
+  });
+  await refresh(); renderShell(); await renderDetail(created.id);
+}
+
+export async function showDamageWorkspace(options = {}) {
+  root = document.getElementById("damageWorkspace");
+  await refresh();
+  renderShell();
+  root.hidden = false;
+  document.getElementById("fleetWorkspaceHome").hidden = true;
+  document.getElementById("fleetVehicleDossier").hidden = true;
+  if (options.caseId) await renderDetail(Number(options.caseId));
+  if (options.movementId) renderCandidates();
+  if (initialized) return;
+  initialized = true;
+  root.addEventListener("input", (event) => {
+    if (event.target.id !== "damageSearch") return;
+    query = event.target.value; renderList();
+  });
+  root.addEventListener("click", async (event) => {
+    const filter = event.target.closest("[data-damage-filter]")?.dataset.damageFilter;
+    if (filter) { activeFilter = filter; renderList(); return; }
+    const caseId = event.target.closest("[data-damage-case]")?.dataset.damageCase;
+    if (caseId) { await renderDetail(Number(caseId)); return; }
+    const candidateId = event.target.closest("[data-create-candidate]")?.dataset.createCandidate;
+    if (candidateId) { await createFromCandidate(candidateId); return; }
+    if (event.target.closest("[data-damage-view='candidates']")) { renderCandidates(); return; }
+    if (event.target.closest("[data-damage-manual]")) { renderManual(); return; }
+    if (event.target.closest("[data-damage-back]")) renderList();
+  });
+  root.addEventListener("submit", async (event) => {
+    if (event.target.id !== "damageManualForm") return;
+    event.preventDefault();
+    const values = formValues(event.target);
+    values.vehicle_id = Number(values.vehicle_id);
+    values.origin = "manual";
+    values.vehicle_operational_status = "disponibile";
+    const created = await createDamageCase(values);
+    await refresh(); renderShell(); await renderDetail(created.id);
+  });
+}
