@@ -4,6 +4,7 @@ __pycache__/
 backend/venv/
 .venv/
 backend/data/*.sqlite3
+backend/data/journal_media/
 .env
 .env.*
 !.env.example

@@ -176,7 +176,11 @@ def test_railway_configuration_and_secret_hygiene():
 
     assert railway["build"]["builder"] == "DOCKERFILE"
     assert railway["deploy"]["healthcheckPath"] == "/api/health"
-    assert railway["deploy"]["startCommand"] == "python -m app.start"
+    assert railway["deploy"]["startCommand"] == (
+        "sh -c \"python -m uvicorn app.main:app --host 0.0.0.0 "
+        "--port ${PORT:-8000} --proxy-headers "
+        "--forwarded-allow-ips '*'\""
+    )
     assert 'CMD ["python", "-m", "app.start"]' in dockerfile
     assert "EXPOSE 8000" not in dockerfile
     assert "${PORT:-8000}" not in dockerfile

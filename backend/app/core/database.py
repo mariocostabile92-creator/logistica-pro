@@ -51,6 +51,7 @@ class PostgresCursor:
     def __init__(self, cursor: Any, lastrowid: int | None = None) -> None:
         self._cursor = cursor
         self.lastrowid = lastrowid
+        self.rowcount = getattr(cursor, "rowcount", -1)
 
     def _columns(self) -> tuple[str, ...]:
         if not self._cursor.description:

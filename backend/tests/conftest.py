@@ -22,6 +22,9 @@ from app.core.configuration.repository import (
 from app.demo.repository import init_schema as init_demo_schema
 from app.plugins.fleet.infrastructure.repository import init_schema as init_fleet_schema
 from app.plugins.fleet.infrastructure.sync_schema import init_sync_schema as init_fleet_sync_schema
+from app.plugins.fleet.journal.infrastructure.repository import (
+    init_schema as init_journal_schema,
+)
 from app.plugins.workforce.infrastructure.schema import init_schema as init_workforce_schema
 from app.repositories.authority_repository import init_schema as init_authority_schema
 from app.repositories.execution_intent_repository import init_schema as init_execution_intent_schema
@@ -38,6 +41,7 @@ def reset_database():
     init_configuration_schema()
     init_fleet_schema()
     init_fleet_sync_schema()
+    init_journal_schema()
     init_workforce_schema()
     init_briefing_schema()
     init_demo_schema()
@@ -49,6 +53,10 @@ def reset_database():
     init_execution_intent_schema()
     init_execution_attempt_schema()
     with db_session() as conn:
+        conn.execute("DELETE FROM movement_media")
+        conn.execute("DELETE FROM movement_equipment")
+        conn.execute("DELETE FROM asset_movements")
+        conn.execute("DELETE FROM journal_sessions")
         conn.execute("DELETE FROM workspace_reset_audits")
         conn.execute("DELETE FROM demo_workspaces")
         conn.execute("DELETE FROM configuration_versions")

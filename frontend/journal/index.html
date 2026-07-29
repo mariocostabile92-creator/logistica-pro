@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Movimentazione mezzo</title>
+  <link rel="stylesheet" href="../assets/css/driver-journal-layout.css?v=journal-v0">
+  <link rel="stylesheet" href="../assets/css/driver-journal-components.css?v=journal-v0">
+  <link rel="stylesheet" href="../assets/css/driver-journal-responsive.css?v=journal-v0">
+</head>
+<body>
+  <main class="journal-shell">
+    <header class="journal-header">
+      <p class="eyebrow">MyJob · Fleet</p>
+      <h1>Movimentazione mezzo</h1>
+      <p>Registra il ritiro o il rientro. Data e ora saranno assegnate dal sistema.</p>
+      <div class="progress"><span id="progressBar"></span></div>
+      <p id="stepLabel" class="step-label">Passaggio 1 di 6</p>
+    </header>
+    <form id="journalForm" novalidate>
+      <section class="step active" data-step="0">
+        <h2>Cosa devi registrare?</h2>
+        <div class="choice-grid">
+          <button type="button" class="choice" data-operation="check_out"><strong>Ritiro mezzo</strong><span>Inizio utilizzo</span></button>
+          <button type="button" class="choice" data-operation="check_in"><strong>Rientro mezzo</strong><span>Fine utilizzo</span></button>
+        </div>
+      </section>
+      <section class="step" data-step="1">
+        <h2>Identificazione e mezzo</h2>
+        <label>Identificativo aziendale
+          <input id="driverIdentifier" autocomplete="off" maxlength="120" required>
+        </label>
+        <label>Targa
+          <input id="plate" autocomplete="off" autocapitalize="characters" maxlength="40" required>
+        </label>
+        <label id="shiftField">Fascia operativa
+          <select id="shift"><option value="">Seleziona</option><option value="morning">Mattino</option><option value="evening">Sera</option></select>
+        </label>
+        <div id="assetResult" class="asset-result" hidden></div>
+      </section>
+      <section class="step" data-step="2">
+        <h2>Dati operativi</h2>
+        <label>Chilometri <input id="odometer" type="number" min="0" step="1" inputmode="numeric" required></label>
+        <label>Carburante <span id="fuelValue">50%</span>
+          <input id="fuel" type="range" min="0" max="100" value="50">
+        </label>
+        <label id="cleanlinessField">Stato pulizia
+          <select id="cleanliness"><option value="">Seleziona</option><option value="compliant">Conforme</option><option value="non_compliant">Non conforme</option><option value="verify">Da verificare</option></select>
+        </label>
+        <label>Nota operativa (facoltativa)<textarea id="operationalNote" maxlength="2000"></textarea></label>
+      </section>
+      <section class="step" data-step="3">
+        <h2>Dotazioni e stato</h2>
+        <div id="equipmentList" class="equipment-list"></div>
+        <label class="check-line"><input id="anomaly" type="checkbox"> Sono presenti anomalie o danni</label>
+        <label id="anomalyDescriptionField" hidden>Descrizione anomalia
+          <textarea id="anomalyDescription" maxlength="2000"></textarea>
+        </label>
+      </section>
+      <section class="step" data-step="4">
+        <h2>Foto</h2>
+        <p>Aggiungi foto utili a documentare lo stato del mezzo (facoltativo).</p>
+        <label class="upload-button">Aggiungi foto
+          <input id="mediaInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+        </label>
+        <div id="mediaPreview" class="media-grid"></div>
+      </section>
+      <section class="step" data-step="5">
+        <h2>Controlla e conferma</h2>
+        <dl id="summary" class="summary"></dl>
+        <label class="check-line"><input id="confirmSummary" type="checkbox"> Confermo che il riepilogo è corretto</label>
+      </section>
+      <section class="step receipt-step" data-step="6">
+        <div class="success-mark" aria-hidden="true">✓</div>
+        <h2>Movimentazione salvata</h2>
+        <p id="receiptMessage"></p>
+        <dl id="receipt" class="summary"></dl>
+        <button id="restartButton" type="button">Nuova movimentazione</button>
+      </section>
+      <p id="journalError" class="error" role="alert" aria-live="assertive"></p>
+      <div id="navigation" class="navigation">
+        <button id="backButton" type="button" class="secondary">Indietro</button>
+        <button id="nextButton" type="button">Continua</button>
+      </div>
+      <div id="loading" class="loading" aria-live="polite" hidden>Salvataggio in corso…</div>
+    </form>
+  </main>
+  <script type="module" src="../assets/js/modules/driver-journal/index.js?v=journal-v0"></script>
+</body>
+</html>
