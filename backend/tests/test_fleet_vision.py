@@ -63,6 +63,8 @@ def test_vision_aggregates_existing_modules_without_new_table():
         "missing_documents": 1, "expired_insurance": 1,
         "expiring_contracts": 1,
         "decisions": 9, "high_priority_decisions": 3,
+        "critical_actions": 3, "important_actions": 4,
+        "informative_actions": 2,
     }
     insight = payload["items"][0]
     assert insight["contract_type"] == "lungo_termine"
@@ -102,6 +104,30 @@ def test_vision_aggregates_existing_modules_without_new_table():
         for item in insight["decisions"]
     )
     assert len({item["id"] for item in insight["decisions"]}) == len(insight["decisions"])
+    expected_actions = {
+        "contract_expiring": ("Apri Profilo Contrattuale", "library", "Contratti"),
+        "insurance_expired": ("Apri Assicurazione", "insurance", "Documentazione"),
+        "documents_missing": ("Apri Documenti", "documents", "Documentazione"),
+        "vehicle_not_operational": ("Apri Vehicle Library", "library", "Operatività"),
+        "damage_open": ("Apri Danni", "damage", "Operatività"),
+        "maintenance_open": ("Apri Manutenzione", "maintenance", "Operatività"),
+        "franchise_open": ("Apri Franchigie", "franchises", "Contratti"),
+        "rental_active": ("Apri Noleggi", "rentals", "Operatività"),
+        "deadline_soon": ("Apri Scadenziario", "deadlines", "Fleet"),
+    }
+    decisions_by_id = {item["id"]: item for item in insight["decisions"]}
+    assert len(insight["actions"]) == len(insight["decisions"]) == 9
+    assert payload["actions"] == insight["actions"]
+    assert len({item["id"] for item in insight["actions"]}) == len(insight["actions"])
+    for action in insight["actions"]:
+        decision = decisions_by_id[action["decision_id"]]
+        assert (
+            action["title"], action["module"], action["group"]
+        ) == expected_actions[decision["rule"]]
+        assert action["priority"] == decision["priority"]
+        assert action["motivation"] == decision["description"]
+        assert action["origin"] == decision["origin"]
+        assert action["vehicle_id"] == vehicle["id"]
     assert "risk_score" not in insight
     with db_session() as conn:
         tables = conn.execute(
@@ -125,3 +151,4 @@ def test_vision_lists_all_assets_and_filters_vehicle():
     filtered = client.get(VISION, params={"vehicle_id": first["id"]}).json()
     assert filtered["total"] == 1
     assert filtered["items"][0]["plate"] == "FV002AA"
+    assert all(action["vehicle_id"] == first["id"] for action in filtered["actions"])

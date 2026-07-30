@@ -1,7 +1,7 @@
 import { getFleetVision } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
 
-let state = { items: [], selected: null };
+let state = { items: [], selected: null, actions: [] };
 const root = () => document.getElementById("fleetVisionWorkspace");
 const statusLabel = (value) => ({
   disponibile: "Disponibile", disponibile_con_limitazioni: "Disponibile con limitazioni",
@@ -84,10 +84,32 @@ function detail(item) {
     <div class="fve-actions"><button type="button" class="primary" data-fve-action="library">Apri dossier mezzo</button></div>`;
 }
 
+function actionCenter() {
+  const groups = ["Documentazione", "Operatività", "Contratti", "Fleet"];
+  const content = groups.map((group) => {
+    const actions = state.actions.filter((action) => action.group === group);
+    if (!actions.length) return "";
+    return `<section class="fde-action-group"><h4>${escapeHtml(group)}</h4><div>
+      ${actions.map((action) => `<article class="fde-action priority-${escapeHtml(action.priority)}">
+        <header><span class="fde-priority">${escapeHtml(action.priority)}</span><h5>${escapeHtml(action.title)}</h5></header>
+        <p>${escapeHtml(action.motivation)}</p>
+        <dl>
+          <div><dt>Origine</dt><dd>${escapeHtml(action.origin)}</dd></div>
+          <div><dt>Priorità</dt><dd>${escapeHtml(action.priority)}</dd></div>
+        </dl>
+        <button type="button" class="quiet" data-fve-action="${escapeHtml(action.module)}"
+          data-fve-action-vehicle="${action.vehicle_id}">Vai al modulo</button>
+      </article>`).join("")}
+    </div></section>`;
+  }).join("");
+  return content || `<div class="view-state"><strong>Nessuna azione consigliata</strong><p>Non risultano Decision Card da trasformare in azioni.</p></div>`;
+}
+
 function render() {
   root().querySelector("[data-fve-list]").innerHTML = state.items.length
     ? state.items.map(listItem).join("") : `<div class="view-state">Nessun mezzo disponibile.</div>`;
   root().querySelector("[data-fve-detail]").innerHTML = detail(state.selected);
+  root().querySelector("[data-fde-actions]").innerHTML = actionCenter();
   root().classList.toggle("detail-open", Boolean(state.selected));
 }
 
@@ -103,10 +125,22 @@ export async function showFleetVisionWorkspace(options = {}) {
     <section class="fve-health" aria-labelledby="fleetHealthTitle"><h3 id="fleetHealthTitle">Fleet Health</h3>
       <div>${["open_damages","open_maintenances","active_rentals","missing_documents","expired_insurance","expiring_contracts"].map((key) => `<article><span data-fve-health-label="${key}"></span><strong data-fve-health="${key}">0</strong></article>`).join("")}</div>
     </section>
+    <section class="fde-action-center" aria-labelledby="fdeActionCenterTitle">
+      <header><div><p class="eyebrow">Action Center</p><h3 id="fdeActionCenterTitle">Azioni consigliate</h3></div>
+        <div class="fde-action-summary">
+          <article><span>Azioni critiche</span><strong data-fde-summary="critical_actions">0</strong></article>
+          <article><span>Azioni importanti</span><strong data-fde-summary="important_actions">0</strong></article>
+          <article><span>Azioni informative</span><strong data-fde-summary="informative_actions">0</strong></article>
+        </div>
+      </header>
+      <div data-fde-actions></div>
+    </section>
     <div class="fve-master-detail"><aside data-fve-list aria-label="Elenco mezzi"></aside><article data-fve-detail></article></div>`;
   const response = await getFleetVision(options.vehicle_id ? { vehicle_id: options.vehicle_id } : {});
   const labels = { operational: "Mezzi operativi", unavailable: "Mezzi indisponibili", in_maintenance: "Mezzi in manutenzione", open_damages: "Danni aperti", open_maintenances: "Manutenzioni aperte", active_rentals: "Noleggi attivi", missing_documents: "Documenti mancanti", expired_insurance: "Assicurazioni scadute", expiring_contracts: "Contratti in scadenza" };
   for (const [key, value] of Object.entries(response.summary)) {
+    const actionSummary = root().querySelector(`[data-fde-summary="${key}"]`);
+    if (actionSummary) actionSummary.textContent = value;
     const kpi = root().querySelector(`[data-fve-kpi="${key}"]`);
     if (kpi) {
       kpi.textContent = value;
@@ -118,7 +152,7 @@ export async function showFleetVisionWorkspace(options = {}) {
       root().querySelector(`[data-fve-health-label="${key}"]`).textContent = labels[key];
     }
   }
-  state = { items: response.items, selected: response.items[0] || null };
+  state = { items: response.items, selected: response.items[0] || null, actions: response.actions || [] };
   render();
 }
 
@@ -128,6 +162,8 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-fve-back]")) root().classList.remove("detail-open");
   const action = event.target.closest("[data-fve-action]")?.dataset.fveAction;
   if (!action || !state.selected) return;
+  const actionVehicle = Number(event.target.closest("[data-fve-action]")?.dataset.fveActionVehicle);
+  if (actionVehicle) state.selected = state.items.find((item) => item.id === actionVehicle) || state.selected;
   root().hidden = true;
   if (action === "library") document.dispatchEvent(new CustomEvent("fleet:vehicle-open", { detail: { assetId: state.selected.id } }));
   if (action === "damage") document.dispatchEvent(new CustomEvent("damage:open", { detail: { vehicle_id: state.selected.id } }));

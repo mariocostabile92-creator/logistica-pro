@@ -26,9 +26,13 @@ test("Fleet Vision exposes objective KPIs and correlated module data", async () 
     "Cronologia unificata", "Insight correlati", "Apri modulo origine",
     "Assicurazioni scadute", "Contratti in scadenza", "Decision Center",
     "Attenzioni generate da regole operative verificabili", "Origine",
-    "Modulo", "Perché", "Apri"]) assert.match(module, new RegExp(text));
+    "Modulo", "Perché", "Apri", "Azioni consigliate", "Azioni critiche",
+    "Azioni importanti", "Azioni informative", "Documentazione",
+    "Operatività", "Contratti", "Vai al modulo"]) assert.match(module, new RegExp(text));
   assert.match(module, /data-fve-action="\$\{escapeHtml\(decision\.module\)\}"/);
   assert.match(module, /priority-\$\{escapeHtml\(decision\.priority\)\}/);
+  assert.match(module, /response\.actions \|\| \[\]/);
+  assert.match(module, /data-fve-action-vehicle/);
   assert.doesNotMatch(module, /risk.?score|preditt|machine learning|heatmap/i);
   assert.match(module, /getFleetVision/);
 });
@@ -51,5 +55,8 @@ test("Fleet Vision responsive layout has no fixed canvas", async () => {
   assert.match(css, /\.fve-insights/);
   assert.match(css, /\.fde-decisions/);
   assert.match(css, /\.fde-decision/);
+  assert.match(css, /\.fde-action-center/);
+  assert.match(css, /\.fde-action-summary/);
+  assert.match(css, /\.fde-action-group/);
   assert.doesNotMatch(css, /width:(?:1440|768|390)px/);
 });

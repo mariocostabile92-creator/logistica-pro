@@ -214,6 +214,65 @@ def _decisions(
     return sorted(result, key=lambda item: (order[item["priority"]], item["rule"]))
 
 
+ACTION_RULES = {
+    "contract_expiring": {
+        "title": "Apri Profilo Contrattuale", "module": "library",
+        "group": "Contratti",
+    },
+    "insurance_expired": {
+        "title": "Apri Assicurazione", "module": "insurance",
+        "group": "Documentazione",
+    },
+    "documents_missing": {
+        "title": "Apri Documenti", "module": "documents",
+        "group": "Documentazione",
+    },
+    "maintenance_open": {
+        "title": "Apri Manutenzione", "module": "maintenance",
+        "group": "Operatività",
+    },
+    "damage_open": {
+        "title": "Apri Danni", "module": "damage",
+        "group": "Operatività",
+    },
+    "franchise_open": {
+        "title": "Apri Franchigie", "module": "franchises",
+        "group": "Contratti",
+    },
+    "rental_active": {
+        "title": "Apri Noleggi", "module": "rentals",
+        "group": "Operatività",
+    },
+    "vehicle_not_operational": {
+        "title": "Apri Vehicle Library", "module": "library",
+        "group": "Operatività",
+    },
+    "deadline_soon": {
+        "title": "Apri Scadenziario", "module": "deadlines",
+        "group": "Fleet",
+    },
+}
+
+
+def _actions(decisions: list[dict], asset_id: int) -> list[dict]:
+    actions = []
+    for decision in decisions:
+        rule = ACTION_RULES[decision["rule"]]
+        actions.append({
+            "id": f"action:{decision['id']}",
+            "decision_id": decision["id"],
+            "vehicle_id": asset_id,
+            "title": rule["title"],
+            "motivation": decision["description"],
+            "origin": decision["origin"],
+            "priority": decision["priority"],
+            "module": rule["module"],
+            "group": rule["group"],
+        })
+    order = {"alta": 0, "media": 1, "bassa": 2}
+    return sorted(actions, key=lambda item: (order[item["priority"]], item["title"]))
+
+
 def fleet_vision(vehicle_id: int | None = None) -> dict:
     data = repository.snapshot()
     deadlines = _group(list_deadlines()["items"])
@@ -248,6 +307,7 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
             asset, asset_damages, asset_maintenance, documents[asset_id],
             policy, asset_franchises, asset_rentals, imminent,
         )
+        actions = _actions(decisions, asset_id)
         timeline = _timeline(
             asset_id, asset_movements, asset_damages, asset_maintenance,
             asset_rentals, documents[asset_id], asset_franchises, event,
@@ -343,6 +403,7 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
             "timeline": timeline,
             "insights": insights,
             "decisions": decisions,
+            "actions": actions,
             "latest": {
                 "use": last_movement,
                 "damage": last_damage,
@@ -350,8 +411,10 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
                 "status_change": event,
             },
         })
+    all_actions = [action for item in items for action in item["actions"]]
     return {
         "items": items,
+        "actions": all_actions,
         "total": len(items),
         "summary": {
             "operational": sum(item["operational_status"] in OPERATIVE for item in items),
@@ -369,5 +432,8 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
                 for item in items
                 for decision in item["decisions"]
             ),
+            "critical_actions": sum(action["priority"] == "alta" for action in all_actions),
+            "important_actions": sum(action["priority"] == "media" for action in all_actions),
+            "informative_actions": sum(action["priority"] == "bassa" for action in all_actions),
         },
     }
