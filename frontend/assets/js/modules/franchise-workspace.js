@@ -78,6 +78,9 @@ async function renderDetail(caseId) {
       <div class="franchise-value"><dt>Franchigia prevista</dt><dd>${escapeHtml(money(item.franchise_expected))}</dd></div>
       <div><dt>Pratica danno</dt><dd>${escapeHtml(item.damage_case_number)}</dd></div>
       <div><dt>Manutenzione</dt><dd>${escapeHtml(item.maintenance_number || "Non collegata")}</dd></div>
+      <div><dt>Compagnia assicurativa</dt><dd>${escapeHtml(item.insurance_company || "Non registrata")}</dd></div>
+      <div><dt>Numero polizza</dt><dd>${escapeHtml(item.insurance_policy_number || "Non registrato")}</dd></div>
+      <div><dt>Tipo copertura</dt><dd>${escapeHtml(item.insurance_coverage_type?.replaceAll("_", " ") || "Non configurata")}</dd></div>
       <div class="franchise-detail-wide"><dt>Motivazione</dt><dd>${escapeHtml(item.motivation || "Da definire")}</dd></div>
       <div class="franchise-detail-wide"><dt>Note</dt><dd>${escapeHtml(item.notes || "Nessuna nota")}</dd></div>
     </dl>
@@ -146,7 +149,7 @@ function shell() {
 export async function showFranchiseWorkspace({ franchiseId = null, vehicleId = null } = {}) {
   const workspace = root();
   ["damageWorkspace", "maintenanceWorkspace", "documentsWorkspace",
-    "fleetWorkspaceHome", "fleetVehicleDossier"].forEach((id) => {
+    "insuranceWorkspace", "fleetWorkspaceHome", "fleetVehicleDossier"].forEach((id) => {
     document.getElementById(id).hidden = true;
   });
   workspace.hidden = false;

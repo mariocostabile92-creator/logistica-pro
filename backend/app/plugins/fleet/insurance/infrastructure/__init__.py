@@ -1,0 +1,1 @@
+"""Vehicle insurance infrastructure layer."""

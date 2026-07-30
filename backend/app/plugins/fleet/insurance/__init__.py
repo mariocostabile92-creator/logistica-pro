@@ -1,0 +1,1 @@
+"""Vehicle insurance bounded context."""

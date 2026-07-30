@@ -200,6 +200,7 @@ async function renderDetail(caseId) {
     <div class="damage-actions">
       <button type="button" class="secondary" data-create-maintenance>Crea manutenzione</button>
       <button type="button" class="secondary" data-open-franchise>Apri Franchigia</button>
+      <button type="button" class="secondary" data-open-insurance>Apri Assicurazione</button>
       <p id="damageMaintenanceStatus" class="section-note" role="status"></p>
     </div>
     <div class="damage-detail-grid">
@@ -230,6 +231,12 @@ async function renderDetail(caseId) {
         <div><dt>Autore</dt><dd>${escapeHtml(item.operational_status_actor || "Non registrato")}</dd></div>
         <div><dt>Aggiornato</dt><dd>${escapeHtml(date(item.operational_status_updated_at))}</dd></div>
       </dl></section>
+      <section><h4>Polizza associata</h4><dl>
+        <div><dt>Compagnia</dt><dd>${escapeHtml(item.insurance_policy?.company || "Non registrata")}</dd></div>
+        <div><dt>Numero polizza</dt><dd>${escapeHtml(item.insurance_policy?.policy_number || "Non registrato")}</dd></div>
+        <div><dt>Copertura</dt><dd>${escapeHtml(item.insurance_policy?.coverage_type?.replaceAll("_", " ") || "Non configurata")}</dd></div>
+        <div><dt>Scadenza</dt><dd>${escapeHtml(item.insurance_policy?.expires_on || "Non registrata")}</dd></div>
+      </dl></section>
       <section><h4>Stato, gravità, valutazione economica e officina</h4>
         <form id="damageAssessmentForm" class="damage-form">
           <label>Gravità<select name="severity">${Object.entries(SEVERITY).map(([key,label]) => `<option value="${key}" ${key === item.severity ? "selected" : ""}>${label}</option>`).join("")}</select></label>
@@ -252,6 +259,14 @@ async function renderDetail(caseId) {
 }
 
 function bindDetail(caseId) {
+  root.querySelector("[data-open-insurance]").addEventListener("click", async () => {
+    const item = await getDamageCase(caseId);
+    document.dispatchEvent(new CustomEvent("insurance:open", {
+      detail: item.insurance_policy
+        ? { policyId: item.insurance_policy.id }
+        : { vehicleId: item.vehicle_id },
+    }));
+  });
   root.querySelector("[data-open-franchise]").addEventListener("click", async () => {
     const status = root.querySelector("#damageMaintenanceStatus");
     status.textContent = "Apertura valutazione franchigia…";
@@ -356,6 +371,7 @@ export async function showDamageWorkspace(options = {}) {
   document.getElementById("maintenanceWorkspace").hidden = true;
   document.getElementById("documentsWorkspace").hidden = true;
   document.getElementById("franchiseWorkspace").hidden = true;
+  document.getElementById("insuranceWorkspace").hidden = true;
   await refresh();
   renderShell();
   root.hidden = false;

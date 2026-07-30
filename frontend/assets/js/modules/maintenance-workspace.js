@@ -235,6 +235,7 @@ export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
   document.getElementById("damageWorkspace").hidden = true;
   document.getElementById("documentsWorkspace").hidden = true;
   document.getElementById("franchiseWorkspace").hidden = true;
+  document.getElementById("insuranceWorkspace").hidden = true;
   document.getElementById("fleetWorkspaceHome").hidden = true;
   document.getElementById("fleetVehicleDossier").hidden = true;
   workspace.hidden = false;

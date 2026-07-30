@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="./assets/css/responsive.css?v=3" />
   <link rel="stylesheet" href="./assets/css/documents-workspace.css?v=1" />
   <link rel="stylesheet" href="./assets/css/franchise-workspace.css?v=1" />
+  <link rel="stylesheet" href="./assets/css/insurance-workspace.css?v=1" />
 </head>
 <body data-home-state="loading" data-planning-state="loading">
   <header class="app-header">
@@ -1513,9 +1514,9 @@
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
             Fleet Vision Engine <span class="tag">Prossimamente</span>
           </button>
-          <button class="fleet-tree-node" type="button" disabled>
+          <button class="fleet-tree-node" type="button" data-fleet-module="insurance" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
-            Assicurazioni <span class="tag">Prossimamente</span>
+            Assicurazioni
           </button>
           <button class="fleet-tree-node" type="button" data-fleet-module="maintenance" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
@@ -1670,6 +1671,7 @@
       <section id="maintenanceWorkspace" class="maintenance-workspace" aria-labelledby="maintenanceWorkspaceTitle" hidden></section>
       <section id="documentsWorkspace" class="documents-workspace" aria-labelledby="documentsWorkspaceTitle" hidden></section>
       <section id="franchiseWorkspace" class="franchise-workspace" aria-labelledby="franchiseWorkspaceTitle" hidden></section>
+      <section id="insuranceWorkspace" class="insurance-workspace" aria-labelledby="insuranceWorkspaceTitle" hidden></section>
       <section
         id="fleetVehicleDossier"
         class="fleet-vehicle-dossier"
@@ -1747,6 +1749,11 @@
               <div class="fleet-registry-heading"><div><p class="eyebrow">Impatto economico</p><h3>Franchigie</h3></div>
                 <button id="fleetDossierManageFranchises" type="button" class="quiet">Apri Franchigie</button></div>
               <div id="fleetDossierFranchises" class="fleet-document-list"></div>
+            </section>
+            <section>
+              <div class="fleet-registry-heading"><div><p class="eyebrow">Copertura</p><h3>Assicurazioni</h3></div>
+                <button id="fleetDossierManageInsurance" type="button" class="quiet">Gestisci assicurazione</button></div>
+              <div id="fleetDossierInsurance" class="fleet-document-list"></div>
             </section>
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div>

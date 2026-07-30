@@ -9,6 +9,7 @@ import {
   listMaintenances,
   listVehicleDocuments,
   listFranchiseCases,
+  listInsurancePolicies,
   saveFleetAssetProfile,
   updateFleetAsset,
 } from "../api.js";
@@ -34,6 +35,7 @@ import { showDamageWorkspace } from "./damage-workspace.js?v=4";
 import { showMaintenanceWorkspace } from "./maintenance-workspace.js?v=1";
 import { showDocumentsWorkspace } from "./documents-workspace.js?v=1";
 import { showFranchiseWorkspace } from "./franchise-workspace.js?v=1";
+import { showInsuranceWorkspace } from "./insurance-workspace.js?v=1";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 
 
@@ -112,19 +114,21 @@ async function showAsset(assetId) {
   byId("maintenanceWorkspace").hidden = true;
   byId("documentsWorkspace").hidden = true;
   byId("franchiseWorkspace").hidden = true;
+  byId("insuranceWorkspace").hidden = true;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
   byId("fleetDossierState").hidden = false;
   byId("fleetDossierState").className = "view-state loading";
   byId("fleetDossierState").textContent = "Caricamento scheda mezzo";
   byId("fleetDossierContent").hidden = true;
-  const [asset, history, damageCases, maintenances, documents, franchises] = await Promise.all([
+  const [asset, history, damageCases, maintenances, documents, franchises, insurance] = await Promise.all([
     getFleetAsset(assetId),
     getFleetVehicleHistory(assetId),
     listDamageCases().then((response) => response.items),
     listMaintenances({ vehicle_id: assetId }).then((response) => response.items),
     listVehicleDocuments({ vehicle_id: assetId }).then((response) => response.items),
     listFranchiseCases({ vehicle_id: assetId }).then((response) => response.items),
+    listInsurancePolicies({ vehicle_id: assetId }).then((response) => response.items),
   ]);
   state.fleetPlugin.selectedAssetId = assetId;
   renderFleetTree(state.fleetPlugin.assets, assetId);
@@ -137,6 +141,7 @@ async function showAsset(assetId) {
     maintenances,
     documents,
     franchises,
+    insurance,
   );
   byId("fleetAssetTree").open = false;
   closeFleetSidebar();
@@ -148,6 +153,7 @@ function showFleetLibrary() {
   byId("maintenanceWorkspace").hidden = true;
   byId("documentsWorkspace").hidden = true;
   byId("franchiseWorkspace").hidden = true;
+  byId("insuranceWorkspace").hidden = true;
   state.fleetPlugin.selectedAssetId = null;
   byId("fleetVehicleDossier").hidden = true;
   byId("fleetWorkspaceHome").hidden = false;
@@ -164,6 +170,7 @@ function showJournalGateway() {
   byId("maintenanceWorkspace").hidden = true;
   byId("documentsWorkspace").hidden = true;
   byId("franchiseWorkspace").hidden = true;
+  byId("insuranceWorkspace").hidden = true;
   state.fleetPlugin.selectedAssetId = null;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
@@ -538,6 +545,12 @@ export function initFleetPage() {
       );
       closeFleetSidebar();
     }
+    if (module === "insurance") {
+      showInsuranceWorkspace().catch(
+        (error) => showFleetActionError("fleet.insurance", error),
+      );
+      closeFleetSidebar();
+    }
   });
   document.addEventListener("damage:open", (event) => {
     document.querySelectorAll("[data-fleet-module]").forEach(
@@ -583,6 +596,17 @@ export function initFleetPage() {
       (error) => showFleetActionError("fleet.franchises", error),
     );
   });
+  document.addEventListener("insurance:open", (event) => {
+    document.querySelectorAll("[data-fleet-module]").forEach(
+      (node) => node.classList.toggle(
+        "active",
+        node.dataset.fleetModule === "insurance",
+      ),
+    );
+    showInsuranceWorkspace(event.detail || {}).catch(
+      (error) => showFleetActionError("fleet.insurance", error),
+    );
+  });
   document.addEventListener("fleet:vehicle-open", (event) => {
     showAsset(Number(event.detail.assetId)).catch(
       (error) => showFleetActionError("fleet.asset-detail", error),
@@ -615,6 +639,14 @@ export function initFleetPage() {
       }));
     }
   });
+  byId("fleetDossierInsurance").addEventListener("click", (event) => {
+    const policyId = event.target.closest("[data-insurance-link]")?.dataset.insuranceLink;
+    if (policyId) {
+      document.dispatchEvent(new CustomEvent("insurance:open", {
+        detail: { policyId: Number(policyId) },
+      }));
+    }
+  });
   byId("fleetDossierManageDocuments").addEventListener("click", () => {
     document.dispatchEvent(new CustomEvent("documents:open", {
       detail: { vehicleId: state.fleetPlugin.selectedAssetId },
@@ -622,6 +654,11 @@ export function initFleetPage() {
   });
   byId("fleetDossierManageFranchises").addEventListener("click", () => {
     document.dispatchEvent(new CustomEvent("franchise:open", {
+      detail: { vehicleId: state.fleetPlugin.selectedAssetId },
+    }));
+  });
+  byId("fleetDossierManageInsurance").addEventListener("click", () => {
+    document.dispatchEvent(new CustomEvent("insurance:open", {
       detail: { vehicleId: state.fleetPlugin.selectedAssetId },
     }));
   });

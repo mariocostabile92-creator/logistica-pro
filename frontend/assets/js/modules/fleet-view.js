@@ -391,6 +391,7 @@ export function renderVehicleDossier(
   maintenances = [],
   vehicleDocuments = [],
   franchises = [],
+  insurance = [],
 ) {
   const { asset, kpis, movements } = payload;
   const damageCases = movements.filter((movement) => movement.damage_case_id);
@@ -448,6 +449,15 @@ export function renderVehicleDossier(
         </button>
       `).join("")
     : '<div class="empty-state">Nessuna valutazione franchigia registrata.</div>';
+  byId("fleetDossierInsurance").innerHTML = insurance.length
+    ? insurance.map((item) => `
+        <button type="button" class="fleet-document-item" data-insurance-link="${item.id}">
+          <strong>${escapeHtml(item.company)}</strong>
+          <span>${escapeHtml(item.policy_number)} · ${escapeHtml(item.coverage_type.replaceAll("_", " "))}</span>
+          <span>Scadenza ${escapeHtml(item.expires_on)} · ${escapeHtml(item.status.replaceAll("_", " "))}</span>
+        </button>
+      `).join("")
+    : '<div class="empty-state">Nessuna polizza assicurativa registrata.</div>';
   mountOperationalDocumentHistory({
     movements,
     list: byId("fleetDossierTimeline"),

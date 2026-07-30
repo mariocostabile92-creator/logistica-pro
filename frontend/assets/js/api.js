@@ -285,6 +285,33 @@ export async function updateFranchiseCase(caseId, payload) {
   }));
 }
 
+export async function listInsurancePolicies(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  );
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/insurance-policies?${query}`));
+}
+
+export async function getInsurancePolicy(policyId) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/insurance-policies/${policyId}`));
+}
+
+export async function createInsurancePolicy(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/insurance-policies`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+export async function updateInsurancePolicy(policyId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/insurance-policies/${policyId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
 
 export async function getWorkforceStatus() {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/status`));

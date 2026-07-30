@@ -44,11 +44,15 @@ def _select() -> str:
                m.maintenance_number,
                p.contract_type, p.company, p.owner_company,
                p.contract_number, p.deductible
+               , i.id AS insurance_policy_id, i.company AS insurance_company,
+               i.policy_number AS insurance_policy_number,
+               i.coverage_type AS insurance_coverage_type
         FROM fleet_franchise_cases f
         JOIN fleet_assets a ON a.id = f.vehicle_id
         JOIN damage_cases d ON d.id = f.damage_case_id
         LEFT JOIN fleet_maintenances m ON m.damage_case_id = f.damage_case_id
         LEFT JOIN fleet_asset_profiles p ON p.asset_id = f.vehicle_id
+        LEFT JOIN fleet_insurance_policies i ON i.vehicle_id = f.vehicle_id
     """
 
 

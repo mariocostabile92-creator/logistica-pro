@@ -11,6 +11,7 @@ from app.plugins.fleet.damage.domain.rules import (
 )
 from app.plugins.fleet.damage.infrastructure import repository
 from app.plugins.fleet.journal.infrastructure import repository as journal_repository
+from app.plugins.fleet.insurance.application.service import policy_for_vehicle
 
 
 class DamageError(ValueError):
@@ -58,6 +59,7 @@ def _serialize(item):
         "operational_status_updated_at": asset.operational_status_updated_at,
         "operational_status_damage_case_id": asset.operational_status_damage_case_id,
         "asset_profile": asset.profile.model_dump() if asset.profile else None,
+        "insurance_policy": policy_for_vehicle(int(result["vehicle_id"])),
     })
     if result.get("source_movement_id"):
         history = journal_repository.asset_history(int(result["vehicle_id"]))
