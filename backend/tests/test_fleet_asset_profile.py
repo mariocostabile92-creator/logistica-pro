@@ -1,10 +1,28 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.plugins.fleet.infrastructure import repository
 
 
 client = TestClient(app)
 ASSETS = "/api/plugins/fleet/v1/assets"
+
+
+class RecordingPostgresConnection:
+    def __init__(self):
+        self.statements = []
+
+    def execute(self, statement, parameters=None):
+        self.statements.append(statement)
+
+
+def test_postgres_profile_migration_is_idempotent_and_uses_no_sqlite_pragma():
+    connection = RecordingPostgresConnection()
+    repository._ensure_profile_columns(connection, "postgresql")
+    repository._ensure_profile_columns(connection, "postgresql")
+    statements = "\n".join(connection.statements)
+    assert "PRAGMA" not in statements
+    assert statements.count("ADD COLUMN IF NOT EXISTS purchased_on") == 2
 
 
 def asset():

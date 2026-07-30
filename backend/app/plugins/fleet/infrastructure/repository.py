@@ -2,6 +2,7 @@ import json
 import sqlite3
 from collections import defaultdict
 
+from app.core.config import SETTINGS
 from app.core.database import db_session
 from app.plugins.fleet.domain.errors import AssetIdentifierConflictError
 from app.plugins.fleet.domain.models import (
@@ -12,6 +13,30 @@ from app.plugins.fleet.domain.models import (
     FleetAssetProfile,
 )
 from app.utils.date_utils import utc_now_iso
+
+
+def _ensure_profile_columns(conn, database_backend: str) -> None:
+    if database_backend == "postgresql":
+        conn.execute(
+            """
+            ALTER TABLE fleet_asset_profiles
+            ADD COLUMN IF NOT EXISTS purchased_on TEXT
+            """
+        )
+        return
+    profile_columns = {
+        row["name"]
+        for row in conn.execute(
+            "PRAGMA table_info(fleet_asset_profiles)"
+        ).fetchall()
+    }
+    if "purchased_on" not in profile_columns:
+        conn.execute(
+            """
+            ALTER TABLE fleet_asset_profiles
+            ADD COLUMN purchased_on TEXT
+            """
+        )
 
 
 def init_schema() -> None:
@@ -83,16 +108,7 @@ def init_schema() -> None:
                 ON fleet_asset_events(asset_id, id);
             """
         )
-        profile_columns = {
-            row["name"]
-            for row in conn.execute(
-                "PRAGMA table_info(fleet_asset_profiles)"
-            ).fetchall()
-        }
-        if "purchased_on" not in profile_columns:
-            conn.execute(
-                "ALTER TABLE fleet_asset_profiles ADD COLUMN purchased_on TEXT"
-            )
+        _ensure_profile_columns(conn, SETTINGS.database_backend)
 
 
 def _append_event(
