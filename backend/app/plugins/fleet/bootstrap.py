@@ -32,6 +32,7 @@ from app.plugins.fleet.insurance.infrastructure.repository import (
 from app.plugins.fleet.insurance.interfaces.router import router as insurance_router
 from app.plugins.fleet.rentals.infrastructure.repository import init_schema as init_rental_schema
 from app.plugins.fleet.rentals.interfaces.router import router as rental_router
+from app.plugins.fleet.deadlines.interfaces.router import router as deadlines_router
 
 
 def fleet_plugin_enabled() -> bool:
@@ -63,3 +64,4 @@ def register_fleet_plugin(app: FastAPI) -> None:
         app.include_router(franchise_router)
         app.include_router(insurance_router)
         app.include_router(rental_router)
+        app.include_router(deadlines_router)

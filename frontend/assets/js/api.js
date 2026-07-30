@@ -319,6 +319,13 @@ export async function listRentals(params = {}) {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/rentals?${query}`));
 }
 
+export async function listFleetDeadlines(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  );
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/deadlines?${query}`));
+}
+
 export async function getRental(rentalId) {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/rentals/${rentalId}`));
 }
