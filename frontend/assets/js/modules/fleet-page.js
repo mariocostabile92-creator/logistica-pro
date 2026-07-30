@@ -40,6 +40,7 @@ import { showFranchiseWorkspace } from "./franchise-workspace.js?v=1";
 import { showInsuranceWorkspace } from "./insurance-workspace.js?v=1";
 import { showRentalWorkspace } from "./rental-workspace.js?v=1";
 import { showDeadlinesWorkspace } from "./deadlines-workspace.js?v=1";
+import { showJournalControlRoom } from "./journal-control-room.js?v=1";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 
 
@@ -121,6 +122,7 @@ async function showAsset(assetId) {
   byId("insuranceWorkspace").hidden = true;
   byId("rentalWorkspace").hidden = true;
   byId("deadlinesWorkspace").hidden = true;
+  byId("journalControlRoom").hidden = true;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
   byId("fleetDossierState").hidden = false;
@@ -172,29 +174,6 @@ function showFleetLibrary() {
   byId("fleetTreeSelection").hidden = true;
   renderFleetTree(state.fleetPlugin.assets);
   document.querySelector("[data-fleet-module='library']")?.classList.add("active");
-  closeFleetSidebar();
-}
-
-
-function showJournalGateway() {
-  byId("damageWorkspace").hidden = true;
-  byId("maintenanceWorkspace").hidden = true;
-  byId("documentsWorkspace").hidden = true;
-  byId("franchiseWorkspace").hidden = true;
-  byId("insuranceWorkspace").hidden = true;
-  byId("rentalWorkspace").hidden = true;
-  state.fleetPlugin.selectedAssetId = null;
-  byId("fleetWorkspaceHome").hidden = true;
-  byId("fleetVehicleDossier").hidden = false;
-  byId("fleetDossierContent").hidden = true;
-  byId("fleetDossierState").hidden = false;
-  byId("fleetDossierState").className = "fleet-module-gateway";
-  byId("fleetDossierState").innerHTML = `
-    <p class="eyebrow">Fleet Operations</p>
-    <h2>Giornale di bordo</h2>
-    <p>Il flusso operativo Driver resta disponibile sul suo accesso dedicato.</p>
-    <a class="header-config-button" href="/app/journal/">Apri Giornale di bordo</a>
-  `;
   closeFleetSidebar();
 }
 
@@ -534,8 +513,14 @@ export function initFleetPage() {
       (node) => node.classList.toggle("active", node.dataset.fleetModule === module),
     );
     if (module !== "deadlines") byId("deadlinesWorkspace").hidden = true;
+    if (module !== "journal") byId("journalControlRoom").hidden = true;
     if (module === "library") showFleetLibrary();
-    if (module === "journal") showJournalGateway();
+    if (module === "journal") {
+      showJournalControlRoom().catch(
+        (error) => showFleetActionError("fleet.journal-control-room", error),
+      );
+      closeFleetSidebar();
+    }
     if (module === "damage") {
       showDamageWorkspace().catch((error) => showFleetActionError("fleet.damage", error));
       closeFleetSidebar();
@@ -725,6 +710,11 @@ export function initFleetPage() {
   byId("fleetDossierManageDeadlines").addEventListener("click", () => {
     showDeadlinesWorkspace({ vehicle_id: state.fleetPlugin.selectedAssetId }).catch(
       (error) => showFleetActionError("fleet.deadlines", error),
+    );
+  });
+  byId("fleetDossierOpenControlRoom").addEventListener("click", () => {
+    showJournalControlRoom({ vehicle_id: state.fleetPlugin.selectedAssetId }).catch(
+      (error) => showFleetActionError("fleet.journal-control-room", error),
     );
   });
   byId("fleetDossierBack").addEventListener("click", showFleetLibrary);

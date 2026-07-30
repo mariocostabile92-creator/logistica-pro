@@ -207,7 +207,8 @@ test("Fleet tree navigation follows the Fleet Manager workflow", async () => {
     fleet.match(/data-fleet-module="damage"[\s\S]*?<\/button>/)?.[0] || "",
     /Prossimamente|disabled/,
   );
-  assert.match(page, /href="\/app\/journal\/">Apri Giornale di bordo/);
+  assert.match(page, /showJournalControlRoom/);
+  assert.match(journal, /Driver|Journal|Giornale/i);
   assert.match(html, /id="fleetAssetTree"[\s\S]*?id="fleetTreeAssets"/);
   assert.match(html, /id="fleetVehicleDossier"/);
   assert.match(css, /\.fleet-workspace-layout/);

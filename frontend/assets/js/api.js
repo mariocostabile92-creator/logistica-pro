@@ -326,6 +326,19 @@ export async function listFleetDeadlines(params = {}) {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/deadlines?${query}`));
 }
 
+export async function listJournalControlRoom(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  );
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/journal-control-room?${query}`));
+}
+
+export async function getJournalControlRoomProcedure(procedureId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/journal-control-room/${encodeURIComponent(procedureId)}`,
+  ));
+}
+
 export async function getRental(rentalId) {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/rentals/${rentalId}`));
 }
