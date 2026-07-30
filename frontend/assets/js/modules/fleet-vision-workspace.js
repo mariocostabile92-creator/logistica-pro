@@ -32,6 +32,16 @@ function detail(item) {
   const policy = item.insurance
     ? `${escapeHtml(item.insurance.company)} · ${escapeHtml(item.insurance.policy_number)} · ${escapeHtml(item.insurance.status)}`
     : "Non registrata";
+  const insights = item.insights.map((insight) => `<article>
+    <span>${escapeHtml(insight.label)}</span><strong>${escapeHtml(insight.value ?? "Non disponibile")}</strong>
+    <small>Fonte: ${escapeHtml(insight.source)}</small>
+    <button type="button" class="quiet" data-fve-action="${escapeHtml(insight.module)}">Apri modulo origine</button>
+  </article>`).join("");
+  const timeline = item.timeline.length
+    ? item.timeline.map((entry) => `<li><time>${escapeHtml(new Date(entry.occurred_at).toLocaleString("it-IT"))}</time>
+        <strong>${escapeHtml(entry.label)}</strong><small>Fonte: ${escapeHtml(entry.module)}</small>
+        <button type="button" class="quiet" data-fve-action="${escapeHtml(entry.module)}">Apri modulo origine</button></li>`).join("")
+    : `<li class="view-state">Nessun evento operativo disponibile.</li>`;
   return `<button type="button" class="quiet fve-back" data-fve-back>← Torna alla lista</button>
     <p class="eyebrow">Fleet Insight</p><h3>${escapeHtml(item.plate || item.external_identifier)}</h3>
     <dl class="fve-identity">
@@ -52,6 +62,8 @@ function detail(item) {
       ${metric("Giorni fermo", item.days_stopped)}
       ${metric("Movimentazioni Journal", item.movement_count)}
     </section>
+    <section class="fve-correlation"><h4>Insight correlati</h4><div class="fve-insights">${insights}</div></section>
+    <section class="fve-timeline"><h4>Cronologia unificata</h4><ol>${timeline}</ol></section>
     <div class="fve-actions"><button type="button" class="primary" data-fve-action="library">Apri dossier mezzo</button></div>`;
 }
 
@@ -71,12 +83,23 @@ export async function showFleetVisionWorkspace(options = {}) {
     <section class="fve-kpis" aria-label="Riepilogo Fleet Vision">
       ${["operational","unavailable","in_maintenance","open_damages","open_maintenances","active_rentals"].map((key) => `<article><span data-fve-kpi-label="${key}"></span><strong data-fve-kpi="${key}">0</strong></article>`).join("")}
     </section>
+    <section class="fve-health" aria-labelledby="fleetHealthTitle"><h3 id="fleetHealthTitle">Fleet Health</h3>
+      <div>${["open_damages","open_maintenances","active_rentals","missing_documents","expired_insurance","expiring_contracts"].map((key) => `<article><span data-fve-health-label="${key}"></span><strong data-fve-health="${key}">0</strong></article>`).join("")}</div>
+    </section>
     <div class="fve-master-detail"><aside data-fve-list aria-label="Elenco mezzi"></aside><article data-fve-detail></article></div>`;
   const response = await getFleetVision(options.vehicle_id ? { vehicle_id: options.vehicle_id } : {});
-  const labels = { operational: "Mezzi operativi", unavailable: "Mezzi indisponibili", in_maintenance: "Mezzi in manutenzione", open_damages: "Danni aperti", open_maintenances: "Manutenzioni aperte", active_rentals: "Noleggi attivi" };
+  const labels = { operational: "Mezzi operativi", unavailable: "Mezzi indisponibili", in_maintenance: "Mezzi in manutenzione", open_damages: "Danni aperti", open_maintenances: "Manutenzioni aperte", active_rentals: "Noleggi attivi", missing_documents: "Documenti mancanti", expired_insurance: "Assicurazioni scadute", expiring_contracts: "Contratti in scadenza" };
   for (const [key, value] of Object.entries(response.summary)) {
-    root().querySelector(`[data-fve-kpi="${key}"]`).textContent = value;
-    root().querySelector(`[data-fve-kpi-label="${key}"]`).textContent = labels[key];
+    const kpi = root().querySelector(`[data-fve-kpi="${key}"]`);
+    if (kpi) {
+      kpi.textContent = value;
+      root().querySelector(`[data-fve-kpi-label="${key}"]`).textContent = labels[key];
+    }
+    const health = root().querySelector(`[data-fve-health="${key}"]`);
+    if (health) {
+      health.textContent = value;
+      root().querySelector(`[data-fve-health-label="${key}"]`).textContent = labels[key];
+    }
   }
   state = { items: response.items, selected: response.items[0] || null };
   render();
@@ -93,4 +116,9 @@ document.addEventListener("click", (event) => {
   if (action === "damage") document.dispatchEvent(new CustomEvent("damage:open", { detail: { vehicle_id: state.selected.id } }));
   if (action === "maintenance") document.dispatchEvent(new CustomEvent("maintenance:open", { detail: { vehicle_id: state.selected.id } }));
   if (action === "documents") document.dispatchEvent(new CustomEvent("documents:open", { detail: { vehicle_id: state.selected.id } }));
+  if (action === "journal") document.querySelector("[data-fleet-module='journal']")?.click();
+  if (action === "insurance") document.dispatchEvent(new CustomEvent("insurance:open", { detail: { vehicle_id: state.selected.id } }));
+  if (action === "rentals") document.dispatchEvent(new CustomEvent("rental:open", { detail: { vehicle_id: state.selected.id } }));
+  if (action === "franchises") document.dispatchEvent(new CustomEvent("franchise:open", { detail: { vehicle_id: state.selected.id } }));
+  if (action === "deadlines") document.querySelector("[data-fleet-module='deadlines']")?.click();
 });

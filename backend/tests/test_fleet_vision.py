@@ -43,7 +43,7 @@ def test_vision_aggregates_existing_modules_without_new_table():
         "vehicle_id": vehicle["id"], "company": "Sicura",
         "policy_number": "FVE-POL-1", "coverage_type": "kasko",
         "starts_on": "2026-01-01", "expires_on": "2027-01-01",
-        "status": "attiva",
+        "status": "scaduta",
     }).status_code == 201
     assert client.post("/api/fleet/franchises", json={
         "damage_case_id": damage.json()["id"],
@@ -60,6 +60,8 @@ def test_vision_aggregates_existing_modules_without_new_table():
     assert payload["summary"] == {
         "operational": 0, "unavailable": 1, "in_maintenance": 0,
         "open_damages": 1, "open_maintenances": 1, "active_rentals": 1,
+        "missing_documents": 1, "expired_insurance": 1,
+        "expiring_contracts": 1,
     }
     insight = payload["items"][0]
     assert insight["contract_type"] == "lungo_termine"
@@ -70,6 +72,18 @@ def test_vision_aggregates_existing_modules_without_new_table():
     assert insight["franchises_open"] == 1
     assert insight["rentals_active"] == 1
     assert insight["deadlines_imminent"] >= 1
+    assert insight["insurance_expired"] == 1
+    assert insight["contracts_expiring"] == 1
+    assert {item["source"] for item in insight["timeline"]} >= {
+        "damage", "maintenance", "document", "franchise", "rental",
+    }
+    assert len({item["id"] for item in insight["timeline"]}) == len(insight["timeline"])
+    assert {item["key"] for item in insight["insights"]} == {
+        "last_use", "last_damage", "last_maintenance", "last_status_change",
+        "missing_documents", "imminent_deadlines", "insurance", "contract",
+        "active_rental", "open_franchise",
+    }
+    assert all({"source", "module", "value"} <= item.keys() for item in insight["insights"])
     assert "risk_score" not in insight
     with db_session() as conn:
         tables = conn.execute(
