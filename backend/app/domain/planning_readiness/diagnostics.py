@@ -24,7 +24,7 @@ def _unique(items):
     return tuple(values.values())
 
 
-def _rule_issues(rule_results):
+def _rule_issues(report, rule_results):
     blockers = []
     warnings = []
     for result in rule_results:
@@ -39,6 +39,29 @@ def _rule_issues(rule_results):
             "source": rule.source,
             "remediation_hint": rule.remediation_hint,
         }
+        if rule.code == "FLEET_AVAILABLE" and report.fleet is not None:
+            unavailable = [
+                item
+                for item in report.fleet.contract.payload.availability
+                if not item.available
+            ]
+            contexts = [
+                " · ".join(
+                    value
+                    for value in (
+                        item.resource_identifier,
+                        item.reason,
+                        f"Origine: {item.origin}" if item.origin else None,
+                    )
+                    if value
+                )
+                for item in unavailable
+                if item.reason or item.origin
+            ]
+            if contexts:
+                values["message"] = (
+                    f"{rule.failure_message} Dettaglio: {'; '.join(contexts)}"
+                )
         if rule.blocking:
             blockers.append(PlanningReadinessBlocker(**values))
         else:
@@ -176,7 +199,7 @@ def build_readiness_diagnostics(
     tuple[PlanningReadinessMissingInput, ...],
     tuple[PlanningReadinessDiagnostic, ...],
 ]:
-    blockers, warnings = _rule_issues(rule_results)
+    blockers, warnings = _rule_issues(report, rule_results)
     validation_blockers, validation_warnings = _validation_issues(report)
     blockers.extend(validation_blockers)
     warnings.extend(validation_warnings)

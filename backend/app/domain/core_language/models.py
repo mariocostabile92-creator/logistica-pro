@@ -50,3 +50,5 @@ class ResourceAvailability(_CoreModel):
     resource_kind: ResourceKind
     available: bool
     observed_state: str | None = None
+    reason: str | None = None
+    origin: str | None = None

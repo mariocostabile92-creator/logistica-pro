@@ -68,6 +68,8 @@ def build_fleet_planning_input_snapshot(
                     item.availability in AVAILABLE_ASSET_STATES
                 ),
                 observed_state=item.availability,
+                reason=item.operational_status_reason,
+                origin=item.operational_status_origin,
             )
             for item in ordered_assets
         ),

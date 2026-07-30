@@ -90,13 +90,22 @@ def apply(
     repository.record_operational_status(
         case_id, previous, effective, reason, actor, origin,
     )
-    if effective != previous:
-        observe_availability(
-            int(case["vehicle_id"]),
-            effective,
-            f"{origin}: {reason}",
-            actor,
-        )
+    observe_availability(
+        int(case["vehicle_id"]),
+        asset.availability if effective == previous else effective,
+        reason.strip(),
+        actor,
+        event_type=AssetEventType.OPERATIONAL_STATUS_CHANGED,
+        details={
+            "vehicle_id": int(case["vehicle_id"]),
+            "plate": case.get("plate"),
+            "origin": origin,
+            "reason": reason.strip(),
+            "linked_damage_case_id": case_id,
+            "linked_damage_case_number": case.get("case_number"),
+            "automatic": True,
+        },
+    )
     return effective
 
 

@@ -156,12 +156,14 @@ function assetRow(asset) {
   const driver = fleetDriverLabel(asset);
   const category = assetValueLabel(asset.category) || "Non indicata";
   const updatedAt = timestamp(asset.updated_at);
+  const operationalDetail = operationalStatusDetail(asset);
   return `
     <tr data-fleet-action="select" data-asset-id="${asset.id}" tabindex="0" aria-label="Apri scheda mezzo ${escapeHtml(primaryIdentifier)}">
       <td>
         <strong>${escapeHtml(primaryIdentifier)}</strong>
       </td>
       <td>${statusBadge(asset)}
+        ${operationalDetail}
         <button type="button" class="quiet" data-operational-status-asset="${asset.id}">
           Modifica stato operativo
         </button>
@@ -179,12 +181,14 @@ function assetCard(asset) {
   const driver = fleetDriverLabel(asset);
   const category = assetValueLabel(asset.category) || "Non indicata";
   const updatedAt = timestamp(asset.updated_at);
+  const operationalDetail = operationalStatusDetail(asset);
   return `
     <button type="button" class="fleet-asset-card" data-fleet-action="select" data-asset-id="${asset.id}" aria-label="Apri scheda mezzo ${escapeHtml(primaryIdentifier)}">
       <span class="fleet-card-heading">
         <strong>${escapeHtml(primaryIdentifier)}</strong>
         ${statusBadge(asset)}
       </span>
+      ${operationalDetail}
       <span class="fleet-card-grid">
         <span><small>Driver associato</small><strong class="fleet-secondary-value${driver === "Non associato" ? " is-missing" : ""}">${escapeHtml(driver)}</strong></span>
         <span><small>Categoria</small><strong class="fleet-secondary-value${category === "Non indicata" ? " is-missing" : ""}">${escapeHtml(category)}</strong></span>
@@ -251,6 +255,15 @@ export function renderAssetList(
   cards.innerHTML = assets.map(assetCard).join("");
 }
 
+function operationalStatusDetail(asset) {
+  const presentation = availabilityPresentation(asset.availability);
+  if (presentation.tone === "available" || !asset.operational_status_reason) return "";
+  const detail = `${asset.operational_status_reason} · ${dossierTimestamp(
+    asset.operational_status_updated_at,
+  )}`;
+  return `<span class="fleet-operational-reason" title="${escapeHtml(detail)}">${escapeHtml(detail)}</span>`;
+}
+
 
 export function renderFleetTree(assets, selectedAssetId = null) {
   byId("fleetTreeCount").textContent = assets.length;
@@ -301,21 +314,22 @@ export function renderVehicleDossier(payload, assetDetail, linkedCases = []) {
   byId("fleetDossierLastUse").textContent = dossierTimestamp(kpis.last_use_at);
   byId("fleetDossierOpenDamageCases").textContent = String(openDamageCases.length);
   byId("fleetDossierLastDamageCase").textContent = damageCases[0]?.damage_case_number || "Nessuna";
-  byId("fleetDossierOperationalStatus").textContent = availabilityPresentation(asset.availability).label;
-  const latestOperationalCase = [...linkedCases]
-    .sort((left, right) => new Date(right.updated_at) - new Date(left.updated_at))
-    .find((item) => item.events?.some(
-      (event) => event.event_type === "stato_operativo_mezzo_modificato",
-    ));
-  const operationalEvent = latestOperationalCase?.events?.filter(
-    (event) => event.event_type === "stato_operativo_mezzo_modificato",
-  ).at(-1);
+  byId("fleetDossierOperationalStatus").textContent = availabilityPresentation(
+    assetDetail.operational_status || asset.availability,
+  ).label;
+  byId("fleetDossierOperationalReason").textContent =
+    assetDetail.operational_status_reason || "Non registrato";
   byId("fleetDossierOperationalOrigin").textContent =
-    latestOperationalCase
-      ? `Pratica ${latestOperationalCase.case_number}`
-      : "Aggiornamento Fleet";
+    assetDetail.operational_status_origin || "Non registrata";
+  byId("fleetDossierOperationalActor").textContent =
+    assetDetail.operational_status_actor || "Non registrato";
   byId("fleetDossierOperationalUpdated").textContent =
-    dossierTimestamp(operationalEvent?.created_at || asset.updated_at);
+    dossierTimestamp(assetDetail.operational_status_updated_at);
+  byId("fleetDossierOperationalCase").textContent =
+    assetDetail.operational_status_damage_case_number ||
+    (assetDetail.operational_status_damage_case_id
+      ? `Pratica #${assetDetail.operational_status_damage_case_id}`
+      : "Nessuna");
   byId("fleetDossierDamageCases").innerHTML = damageCases.length
     ? damageCases.map((movement) => `
         <button type="button" class="fleet-document-item" data-damage-case-link="${movement.damage_case_id}">

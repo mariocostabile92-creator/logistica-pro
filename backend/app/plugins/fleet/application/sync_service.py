@@ -57,8 +57,15 @@ def core_availability() -> list[ResourceAvailability]:
         ResourceAvailability(
             resource_identifier=asset.external_identifier,
             resource_kind=ResourceKind.ASSET,
-            available=asset.availability in {"available", "reserve"},
+            available=asset.availability in {
+                "available",
+                "reserve",
+                "disponibile",
+                "disponibile_con_limitazioni",
+            },
             observed_state=asset.availability,
+            reason=asset.operational_status_reason,
+            origin=asset.operational_status_origin,
         )
         for asset in list_assets()
     ]

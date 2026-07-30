@@ -38,6 +38,13 @@ class Asset(BaseModel):
     category: str | None = None
     status: str
     availability: str
+    operational_status: str | None = None
+    operational_status_reason: str | None = None
+    operational_status_origin: str | None = None
+    operational_status_actor: str | None = None
+    operational_status_updated_at: str | None = None
+    operational_status_damage_case_id: int | None = None
+    operational_status_damage_case_number: str | None = None
     notes: str | None = None
     capabilities: list[str] = Field(default_factory=list)
     documents: list[AssetDocument] = Field(default_factory=list)

@@ -282,6 +282,45 @@ def test_manual_operational_status_without_damage_updates_asset_audit_and_planni
     )
     assert observed["available"] is False
     assert observed["observed_state"] == "in_manutenzione"
+    assert observed["reason"] == "Tagliando programmato"
+    assert observed["origin"] == "parco_mezzi"
+    detail = client.get(
+        f"/api/plugins/fleet/v1/assets/{created['id']}"
+    ).json()
+    assert detail["operational_status"] == "in_manutenzione"
+    assert detail["operational_status_reason"] == "Tagliando programmato"
+    assert detail["operational_status_origin"] == "parco_mezzi"
+    assert detail["operational_status_actor"] == "fleet_manager"
+    assert detail["operational_status_updated_at"]
+    assert detail["operational_status_damage_case_id"] is None
+
+    second = client.patch(
+        f"{DAMAGE}/vehicles/{created['id']}/operational-status",
+        json={
+            "status": "in_officina",
+            "reason": "Trasferimento officina convenzionata",
+            "origin": "vehicle_library",
+        },
+    )
+    assert second.status_code == 200
+    latest = client.get(
+        f"/api/plugins/fleet/v1/assets/{created['id']}"
+    ).json()
+    assert latest["operational_status_reason"] == (
+        "Trasferimento officina convenzionata"
+    )
+    assert latest["operational_status_origin"] == "vehicle_library"
+    history = client.get(
+        f"/api/plugins/fleet/v1/assets/{created['id']}/events"
+    ).json()["items"]
+    status_events = [
+        item for item in history
+        if item["event_type"] == "stato_operativo_mezzo_modificato"
+    ]
+    assert [item["details"]["reason"] for item in status_events] == [
+        "Tagliando programmato",
+        "Trasferimento officina convenzionata",
+    ]
 
 
 def test_manual_operational_status_requires_reason_and_valid_state():

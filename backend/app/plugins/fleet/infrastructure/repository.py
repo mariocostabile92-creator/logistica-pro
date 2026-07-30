@@ -127,10 +127,47 @@ def _documents_by_asset(
     return grouped
 
 
+def _operational_status_by_asset(
+    conn: sqlite3.Connection,
+    asset_ids: list[int],
+) -> dict[int, dict[str, object]]:
+    if not asset_ids:
+        return {}
+    placeholders = ",".join("?" for _ in asset_ids)
+    rows = conn.execute(
+        f"""
+        SELECT event.asset_id, event.occurred_at, event.actor, event.details
+        FROM fleet_asset_events AS event
+        INNER JOIN (
+            SELECT asset_id, MAX(id) AS event_id
+            FROM fleet_asset_events
+            WHERE asset_id IN ({placeholders})
+              AND event_type = ?
+            GROUP BY asset_id
+        ) AS latest ON latest.event_id = event.id
+        """,
+        [*asset_ids, AssetEventType.OPERATIONAL_STATUS_CHANGED.value],
+    ).fetchall()
+    result: dict[int, dict[str, object]] = {}
+    for row in rows:
+        details = json.loads(row["details"])
+        result[row["asset_id"]] = {
+            "reason": details.get("reason") or details.get("note"),
+            "origin": details.get("origin"),
+            "actor": row["actor"],
+            "updated_at": row["occurred_at"],
+            "damage_case_id": details.get("linked_damage_case_id"),
+            "damage_case_number": details.get("linked_damage_case_number"),
+        }
+    return result
+
+
 def _asset_from_row(
     row: sqlite3.Row,
     documents: list[AssetDocument],
+    operational_status: dict[str, object] | None = None,
 ) -> Asset:
+    operational_status = operational_status or {}
     return Asset(
         id=row["id"],
         external_identifier=row["external_identifier"],
@@ -138,6 +175,13 @@ def _asset_from_row(
         category=row["category"],
         status=row["status"],
         availability=row["availability"],
+        operational_status=row["availability"],
+        operational_status_reason=operational_status.get("reason"),
+        operational_status_origin=operational_status.get("origin"),
+        operational_status_actor=operational_status.get("actor"),
+        operational_status_updated_at=operational_status.get("updated_at"),
+        operational_status_damage_case_id=operational_status.get("damage_case_id"),
+        operational_status_damage_case_number=operational_status.get("damage_case_number"),
         notes=row["notes"],
         capabilities=json.loads(row["capabilities"]),
         documents=documents,
@@ -157,7 +201,8 @@ def _get_asset_in_session(
     if not row:
         return None
     documents = _documents_by_asset(conn, [asset_id]).get(asset_id, [])
-    return _asset_from_row(row, documents)
+    operational = _operational_status_by_asset(conn, [asset_id]).get(asset_id)
+    return _asset_from_row(row, documents, operational)
 
 
 def list_assets() -> list[Asset]:
@@ -167,8 +212,13 @@ def list_assets() -> list[Asset]:
         ).fetchall()
         asset_ids = [row["id"] for row in rows]
         documents = _documents_by_asset(conn, asset_ids)
+        operational = _operational_status_by_asset(conn, asset_ids)
         return [
-            _asset_from_row(row, documents.get(row["id"], []))
+            _asset_from_row(
+                row,
+                documents.get(row["id"], []),
+                operational.get(row["id"]),
+            )
             for row in rows
         ]
 

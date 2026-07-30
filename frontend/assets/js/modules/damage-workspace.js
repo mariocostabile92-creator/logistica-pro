@@ -204,6 +204,12 @@ async function renderDetail(caseId) {
         <div><dt>Data evento</dt><dd>${escapeHtml(date(item.occurred_at))}</dd></div>
       </dl></section>
       <section><h4>Descrizione</h4><p>${escapeHtml(item.description)}</p></section>
+      <section><h4>Stato operativo corrente</h4><dl>
+        <div><dt>Motivo stato operativo</dt><dd>${escapeHtml(item.operational_status_reason || "Non registrato")}</dd></div>
+        <div><dt>Origine</dt><dd>${escapeHtml(item.operational_status_origin || "Non registrata")}</dd></div>
+        <div><dt>Autore</dt><dd>${escapeHtml(item.operational_status_actor || "Non registrato")}</dd></div>
+        <div><dt>Aggiornato</dt><dd>${escapeHtml(date(item.operational_status_updated_at))}</dd></div>
+      </dl></section>
       <section><h4>Stato, gravità, valutazione economica e officina</h4>
         <form id="damageAssessmentForm" class="damage-form">
           <label>Gravità<select name="severity">${Object.entries(SEVERITY).map(([key,label]) => `<option value="${key}" ${key === item.severity ? "selected" : ""}>${label}</option>`).join("")}</select></label>

@@ -50,3 +50,18 @@ test("shared control exposes only canonical operational states", async () => {
     assert.match(component, new RegExp(`"${status}"`));
   }
 });
+
+
+test("operational reason is displayed across Fleet surfaces", async () => {
+  const [fleet, vehicle, damage, shell] = await Promise.all([
+    file("assets/js/modules/fleet-view.js"),
+    file("assets/js/modules/vehicle-library/index.js"),
+    file("assets/js/modules/damage-workspace.js"),
+    file("index.html"),
+  ]);
+  assert.match(fleet, /operational_status_reason/);
+  assert.match(fleet, /fleet-operational-reason/);
+  assert.match(vehicle, /vehicleOperationalReason[\s\S]*?operational_status_reason/);
+  assert.match(damage, /Motivo stato operativo[\s\S]*?operational_status_reason/);
+  assert.match(shell, /Motivo stato operativo/);
+});

@@ -49,6 +49,15 @@ def _serialize(item):
         if result.get("final_cost") else None
     )
     result["events"] = repository.list_events(int(result["id"]))
+    asset = get_asset(int(result["vehicle_id"]))
+    result.update({
+        "operational_status": asset.operational_status,
+        "operational_status_reason": asset.operational_status_reason,
+        "operational_status_origin": asset.operational_status_origin,
+        "operational_status_actor": asset.operational_status_actor,
+        "operational_status_updated_at": asset.operational_status_updated_at,
+        "operational_status_damage_case_id": asset.operational_status_damage_case_id,
+    })
     if result.get("source_movement_id"):
         history = journal_repository.asset_history(int(result["vehicle_id"]))
         movement = next(

@@ -1,4 +1,4 @@
-import { getFleetVehicleHistory, getHealth } from "../../api.js";
+import { getFleetAsset, getFleetVehicleHistory, getHealth } from "../../api.js";
 import { escapeHtml } from "../../utils/dom.js";
 import { mountOperationalDocumentHistory } from "./operational-documents.js";
 import { openOperationalStatusControl } from "../operational-status-control.js";
@@ -51,7 +51,7 @@ function operation(value) {
   return label(value, { check_out: "Ritiro", check_in: "Rientro" });
 }
 
-function render(payload) {
+function render(payload, assetDetail) {
   const { asset, kpis, movements } = payload;
   currentAsset = asset;
   byId("vehiclePlate").textContent = asset.plate || asset.external_identifier;
@@ -65,6 +65,19 @@ function render(payload) {
   byId("vehicleAvailability").className =
     `fleet-status-badge fleet-status-${operationalStatus.tone}`;
   byId("vehicleTerm").textContent = asset.term || "Non classificato";
+  byId("vehicleOperationalReason").textContent =
+    assetDetail.operational_status_reason || "Non registrato";
+  byId("vehicleOperationalOrigin").textContent =
+    assetDetail.operational_status_origin || "Non registrata";
+  byId("vehicleOperationalActor").textContent =
+    assetDetail.operational_status_actor || "Non registrato";
+  byId("vehicleOperationalUpdated").textContent =
+    fullDate(assetDetail.operational_status_updated_at);
+  byId("vehicleOperationalCase").textContent =
+    assetDetail.operational_status_damage_case_number ||
+    (assetDetail.operational_status_damage_case_id
+      ? `Pratica #${assetDetail.operational_status_damage_case_id}`
+      : "Nessuna");
   byId("currentKm").textContent = kpis.current_odometer_km == null
     ? "Non registrati"
     : `${Number(kpis.current_odometer_km).toLocaleString("it-IT")} km`;
@@ -102,7 +115,11 @@ async function loadVehicle() {
   if (!Number.isInteger(assetId) || assetId < 1) {
     throw new Error("Seleziona un mezzo dal Fleet Registry.");
   }
-  render(await getFleetVehicleHistory(assetId));
+  const [history, asset] = await Promise.all([
+    getFleetVehicleHistory(assetId),
+    getFleetAsset(assetId),
+  ]);
+  render(history, asset);
 }
 
 if (typeof document !== "undefined") {
