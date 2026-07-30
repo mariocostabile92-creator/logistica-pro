@@ -10,6 +10,8 @@ import {
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js";
+import { createAttachmentDraft } from "./attachments/draft-uploader.js";
+import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 
 const STATUS = {
@@ -35,6 +37,7 @@ let activeFilter = "all";
 let query = "";
 let initialized = false;
 let selectedCaseId = null;
+let damageDraft = null;
 
 function date(value) {
   return value ? new Date(value).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" }) : "—";
@@ -364,8 +367,18 @@ function renderManual() {
       <label>Descrizione<textarea name="description" required></textarea></label>
       <label>Motivazione inserimento manuale<textarea name="manual_reason" required></textarea></label>
       <label>Gravità<select name="severity"><option value="bassa">Bassa</option><option value="media" selected>Media</option><option value="alta">Alta</option><option value="critica">Critica</option></select></label>
+      <div data-damage-attachment-draft></div>
+      <p data-damage-create-status role="status"></p>
       <button type="submit">Crea pratica manuale</button>
     </form></section>`;
+  damageDraft = createAttachmentDraft(
+    root.querySelector("[data-damage-attachment-draft]"),
+    { title: "Foto e video del danno", accept: ".jpg,.jpeg,.png,.webp,.mp4,.mov" },
+  );
+  root.querySelector("[data-damage-attachment-draft]").addEventListener(
+    "attachments:retry",
+    () => root.querySelector("#damageManualForm").requestSubmit(),
+  );
 }
 
 async function createFromCandidate(movementId) {
@@ -427,11 +440,24 @@ export async function showDamageWorkspace(options = {}) {
   root.addEventListener("submit", async (event) => {
     if (event.target.id !== "damageManualForm") return;
     event.preventDefault();
+    const submit = event.target.querySelector("[type='submit']");
+    if (submit.disabled) return;
+    submit.disabled = true;
     const values = formValues(event.target);
     values.vehicle_id = Number(values.vehicle_id);
     values.origin = "manual";
     values.vehicle_operational_status = "disponibile";
-    const created = await createDamageCase(values);
-    await refresh(); renderShell(); await renderDetail(created.id);
+    try {
+      const created = await saveEntityWithAttachments({
+        draft: damageDraft,
+        entityType: "damage",
+        saveRecord: () => createDamageCase(values),
+      });
+      await refresh(); renderShell(); await renderDetail(created.id);
+    } catch (error) {
+      root.querySelector("[data-damage-create-status]").textContent = error.message;
+    } finally {
+      submit.disabled = false;
+    }
   });
 }

@@ -193,7 +193,12 @@ def fleet_summary(total_assets: int) -> dict[str, int]:
             SELECT COUNT(*) AS total,
                    SUM(CASE WHEN status = 'scaduto' THEN 1 ELSE 0 END) AS expired,
                    SUM(CASE WHEN status = 'in_scadenza' THEN 1 ELSE 0 END) AS expiring,
-                   SUM(CASE WHEN file_reference IS NULL OR file_reference = ''
+                   SUM(CASE WHEN (file_reference IS NULL OR file_reference = '')
+                                  AND NOT EXISTS (
+                                    SELECT 1 FROM attachments a
+                                    WHERE a.entity_type = 'document'
+                                      AND a.entity_id = fleet_vehicle_documents.id
+                                  )
                             THEN 1 ELSE 0 END) AS missing_files,
                    COUNT(DISTINCT vehicle_id) AS documented_assets
             FROM fleet_vehicle_documents

@@ -61,6 +61,7 @@ def test_vehicle_aggregation_reads_shared_records_without_copying():
     document = create_document(vehicle["id"])
     before = client.get("/api/fleet/vision", params={"vehicle_id": vehicle["id"]}).json()
     assert before["items"][0]["missing_documents"] == 1
+    assert client.get(DOCUMENTS, params={"vehicle_id": vehicle["id"]}).json()["summary"]["missing_files"] == 1
     direct = upload("vehicle", vehicle["id"], "mezzo.png", PNG, "image/png").json()
     linked = upload("document", document["id"], "documento.pdf", PDF, "application/pdf").json()
     assert client.get(f"{DOCUMENTS}/{document['id']}").json()["has_file"] is True
@@ -72,6 +73,7 @@ def test_vehicle_aggregation_reads_shared_records_without_copying():
     }).json()["items"][0]["id"] == linked["id"]
     after = client.get("/api/fleet/vision", params={"vehicle_id": vehicle["id"]}).json()
     assert after["items"][0]["missing_documents"] == 0
+    assert client.get(DOCUMENTS, params={"vehicle_id": vehicle["id"]}).json()["summary"]["missing_files"] == 0
     client.delete(f"{BASE}/{direct['id']}")
     client.delete(f"{BASE}/{linked['id']}")
 

@@ -28,7 +28,9 @@ export function renderAttachments(container, state, options = {}) {
     </header>
     <div class="attachment-grid">${state.items.length ? state.items.map(item => `
       <article class="attachment-card">${preview(item)}
-        <div><strong>${escapeHtml(item.original_filename)}</strong><small>${escapeHtml(size(item.size))} · ${escapeHtml(new Date(item.created_at).toLocaleString("it-IT"))}</small></div>
+        <div><strong>${escapeHtml(item.original_filename)}</strong>
+          ${options.aggregateVehicle ? `<small>Origine: ${escapeHtml(item.entity_type)}</small>` : ""}
+          <small>${escapeHtml(size(item.size))} · ${escapeHtml(new Date(item.created_at).toLocaleString("it-IT"))}</small></div>
         <div class="attachment-actions">
           ${item.preview_url ? `<a href="${escapeHtml(item.preview_url)}" target="_blank" rel="noopener">Preview</a>` : ""}
           <a href="${escapeHtml(item.download_url)}">Download</a>

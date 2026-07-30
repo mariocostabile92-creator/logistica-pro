@@ -7,6 +7,8 @@ import {
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js";
+import { createAttachmentDraft } from "./attachments/draft-uploader.js";
+import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 
 const COVERAGE = {
   rca: "RCA",
@@ -27,6 +29,7 @@ let policies = [];
 let assets = [];
 let selectedId = null;
 let vehicleFilter = null;
+let insuranceDraft = null;
 
 const root = () => document.getElementById("insuranceWorkspace");
 const date = (value) => value
@@ -86,6 +89,7 @@ function openEditor(item = {}) {
   dialog.querySelector("form").dataset.policyId = item.id || "";
   dialog.querySelector("[data-insurance-fields]").innerHTML = fields(item);
   dialog.querySelector("[data-insurance-form-status]").textContent = "";
+  insuranceDraft.reset();
   dialog.showModal();
 }
 
@@ -160,6 +164,7 @@ function shell() {
       <div class="editor-heading"><div><p class="eyebrow">Copertura mezzo</p><h3>Nuova polizza</h3></div>
       <button type="button" class="icon-button" data-close-insurance aria-label="Chiudi">&times;</button></div>
       <div class="insurance-form" data-insurance-fields></div>
+      <div data-insurance-attachment-draft></div>
       <p data-insurance-form-status role="status"></p>
       <div class="editor-actions"><button type="button" class="secondary" data-close-insurance>Annulla</button><button type="submit">Salva polizza</button></div>
     </form></dialog>`;
@@ -176,6 +181,10 @@ export async function showInsuranceWorkspace({ policyId = null, vehicleId = null
   if (!workspace.dataset.ready) {
     workspace.innerHTML = shell();
     workspace.dataset.ready = "true";
+    insuranceDraft = createAttachmentDraft(
+      workspace.querySelector("[data-insurance-attachment-draft]"),
+      { title: "Allegati polizza", accept: ".pdf,.jpg,.jpeg,.png,.webp" },
+    );
     workspace.querySelector("#insuranceList").addEventListener("click", (event) => {
       const target = event.target.closest("[data-insurance-id]");
       if (target) renderDetail(Number(target.dataset.insuranceId));
@@ -186,21 +195,34 @@ export async function showInsuranceWorkspace({ policyId = null, vehicleId = null
     });
     workspace.querySelector("#insuranceEditor form").addEventListener("submit", async (event) => {
       event.preventDefault();
+      const submit = event.currentTarget.querySelector("[type='submit']");
+      if (submit.disabled) return;
+      submit.disabled = true;
       const id = Number(event.currentTarget.dataset.policyId || 0);
       const values = Object.fromEntries(new FormData(event.currentTarget).entries());
       for (const field of ["coverage_limit", "insurance_deductible", "notes"]) values[field] ||= null;
       if (id) delete values.vehicle_id;
       else values.vehicle_id = Number(values.vehicle_id);
       try {
-        const saved = id
-          ? await updateInsurancePolicy(id, values)
-          : await createInsurancePolicy(values);
+        const saved = await saveEntityWithAttachments({
+          draft: insuranceDraft,
+          entityType: "insurance",
+          saveRecord: () => id
+            ? updateInsurancePolicy(id, values)
+            : createInsurancePolicy(values),
+        });
         workspace.querySelector("#insuranceEditor").close();
         await refresh(saved.id);
       } catch (error) {
         workspace.querySelector("[data-insurance-form-status]").textContent = error.message;
+      } finally {
+        submit.disabled = false;
       }
     });
+    workspace.querySelector("[data-insurance-attachment-draft]").addEventListener(
+      "attachments:retry",
+      () => workspace.querySelector("#insuranceEditor form").requestSubmit(),
+    );
   }
   assets = (await listFleetAssets()).items;
   await refresh(policyId);

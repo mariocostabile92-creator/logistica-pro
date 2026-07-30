@@ -13,3 +13,4 @@ Planning driver_*.xlsx
 stato parco auto_*.xlsx
 qa-local/
 *.qa.sqlite3
+backend/data/

@@ -7,6 +7,8 @@ import {
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js";
+import { createAttachmentDraft } from "./attachments/draft-uploader.js";
+import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 
 const TYPES = {
   carta_circolazione: "Carta di circolazione",
@@ -30,6 +32,7 @@ let records = [];
 let selectedId = null;
 let assetFilter = null;
 let assets = [];
+let documentDraft = null;
 
 const root = () => document.getElementById("documentsWorkspace");
 const date = (value) => value
@@ -164,6 +167,7 @@ function openEditor(item = {}) {
   dialog.querySelector("form").dataset.documentId = item.id || "";
   dialog.querySelector("[data-document-fields]").innerHTML = formFields(item);
   dialog.querySelector("[data-document-form-status]").textContent = "";
+  documentDraft.reset();
   dialog.showModal();
 }
 
@@ -194,6 +198,7 @@ function shell() {
       <form><div class="editor-heading"><div><p class="eyebrow">Archivio mezzo</p><h3>Nuovo documento</h3></div>
       <button type="button" class="icon-button" data-close-documents aria-label="Chiudi">&times;</button></div>
       <div class="document-form" data-document-fields></div>
+      <div data-document-attachment-draft></div>
       <p data-document-form-status role="status"></p>
       <div class="editor-actions"><button type="button" class="secondary" data-close-documents>Annulla</button><button type="submit">Salva documento</button></div>
       </form>
@@ -212,6 +217,10 @@ export async function showDocumentsWorkspace({ vehicleId = null, documentId = nu
   if (!workspace.dataset.ready) {
     workspace.innerHTML = shell();
     workspace.dataset.ready = "true";
+    documentDraft = createAttachmentDraft(
+      workspace.querySelector("[data-document-attachment-draft]"),
+      { title: "Allegati", accept: ".pdf,.jpg,.jpeg,.png,.webp" },
+    );
     workspace.querySelector("#documentsList").addEventListener("click", (event) => {
       const target = event.target.closest("[data-document-id]");
       if (target) renderDetail(Number(target.dataset.documentId));
@@ -227,6 +236,9 @@ export async function showDocumentsWorkspace({ vehicleId = null, documentId = nu
     });
     workspace.querySelector("#documentMetadataEditor form").addEventListener("submit", async (event) => {
       event.preventDefault();
+      const submit = event.currentTarget.querySelector("[type='submit']");
+      if (submit.disabled) return;
+      submit.disabled = true;
       const id = Number(event.currentTarget.dataset.documentId || 0);
       const payload = values(event.currentTarget);
       if (id) {
@@ -235,15 +247,25 @@ export async function showDocumentsWorkspace({ vehicleId = null, documentId = nu
         delete payload.file_reference;
       }
       try {
-        const saved = id
-          ? await updateVehicleDocument(id, payload)
-          : await createVehicleDocument(payload);
+        const saved = await saveEntityWithAttachments({
+          draft: documentDraft,
+          entityType: "document",
+          saveRecord: () => id
+            ? updateVehicleDocument(id, payload)
+            : createVehicleDocument(payload),
+        });
         workspace.querySelector("#documentMetadataEditor").close();
         await refresh(saved.id);
       } catch (error) {
         workspace.querySelector("[data-document-form-status]").textContent = error.message;
+      } finally {
+        submit.disabled = false;
       }
     });
+    workspace.querySelector("[data-document-attachment-draft]").addEventListener(
+      "attachments:retry",
+      () => workspace.querySelector("#documentMetadataEditor form").requestSubmit(),
+    );
   }
   const assetResponse = await listFleetAssets();
   assets = assetResponse.items;

@@ -3,6 +3,8 @@ import {
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js";
+import { createAttachmentDraft } from "./attachments/draft-uploader.js";
+import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 
 const STATUS = {
   programmato: "Programmato", attivo: "Attivo", prorogato: "Prorogato",
@@ -17,6 +19,7 @@ let assets = [];
 let selectedId = null;
 let vehicleFilter = null;
 let originPreset = null;
+let rentalDraft = null;
 const root = () => document.getElementById("rentalWorkspace");
 const date = (value) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString("it-IT") : "Non indicata";
 
@@ -69,6 +72,7 @@ function openEditor(item = {}, preset = originPreset || {}) {
   dialog.querySelector("form").dataset.rentalId = item.id || "";
   dialog.querySelector("[data-rental-fields]").innerHTML = fields(item, preset);
   dialog.querySelector("[data-rental-form-status]").textContent = "";
+  rentalDraft.reset();
   dialog.showModal();
 }
 
@@ -125,7 +129,8 @@ function shell() {
     <div id="rentalDetail" class="rental-detail-pane"><div class="rental-empty"><strong>Seleziona un noleggio</strong><p>Apri un noleggio per consultarne il periodo.</p></div></div></div>
     <dialog id="rentalEditor" class="assignment-editor fleet-dialog"><form><div class="editor-heading">
       <div><p class="eyebrow">Veicolo sostitutivo</p><h3>Nuovo noleggio</h3></div><button type="button" class="icon-button" data-close-rental aria-label="Chiudi">&times;</button></div>
-      <div class="rental-form" data-rental-fields></div><p data-rental-form-status role="status"></p>
+      <div class="rental-form" data-rental-fields></div>
+      <div data-rental-attachment-draft></div><p data-rental-form-status role="status"></p>
       <div class="editor-actions"><button type="button" class="secondary" data-close-rental>Annulla</button><button type="submit">Salva noleggio</button></div></form></dialog>`;
 }
 
@@ -141,6 +146,10 @@ export async function showRentalWorkspace({ rentalId = null, vehicleId = null, p
   if (!workspace.dataset.ready) {
     workspace.innerHTML = shell();
     workspace.dataset.ready = "true";
+    rentalDraft = createAttachmentDraft(
+      workspace.querySelector("[data-rental-attachment-draft]"),
+      { title: "Contratto e allegati", accept: ".pdf,.jpg,.jpeg,.png,.webp" },
+    );
     workspace.querySelector("#rentalList").addEventListener("click", (event) => {
       const target = event.target.closest("[data-rental-id]");
       if (target) detail(Number(target.dataset.rentalId));
@@ -150,6 +159,9 @@ export async function showRentalWorkspace({ rentalId = null, vehicleId = null, p
       button.addEventListener("click", () => workspace.querySelector("#rentalEditor").close()));
     workspace.querySelector("#rentalEditor form").addEventListener("submit", async (event) => {
       event.preventDefault();
+      const submit = event.currentTarget.querySelector("[type='submit']");
+      if (submit.disabled) return;
+      submit.disabled = true;
       const id = Number(event.currentTarget.dataset.rentalId || 0);
       const values = Object.fromEntries(new FormData(event.currentTarget).entries());
       for (const field of ["vehicle_id","contract_number","end_date","notes"]) values[field] ||= null;
@@ -160,14 +172,24 @@ export async function showRentalWorkspace({ rentalId = null, vehicleId = null, p
       });
       if (id) delete values.vehicle_id;
       try {
-        const saved = id ? await updateRental(id, values) : await createRental(values);
+        const saved = await saveEntityWithAttachments({
+          draft: rentalDraft,
+          entityType: "rental",
+          saveRecord: () => id ? updateRental(id, values) : createRental(values),
+        });
         workspace.querySelector("#rentalEditor").close();
         originPreset = null;
         await refresh(saved.id);
       } catch (error) {
         workspace.querySelector("[data-rental-form-status]").textContent = error.message;
+      } finally {
+        submit.disabled = false;
       }
     });
+    workspace.querySelector("[data-rental-attachment-draft]").addEventListener(
+      "attachments:retry",
+      () => workspace.querySelector("#rentalEditor form").requestSubmit(),
+    );
   }
   assets = (await listFleetAssets()).items;
   await refresh(rentalId);

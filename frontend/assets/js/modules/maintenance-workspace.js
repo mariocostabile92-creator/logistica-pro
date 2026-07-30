@@ -7,6 +7,8 @@ import {
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js";
+import { createAttachmentDraft } from "./attachments/draft-uploader.js";
+import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 
 
 const STATUS = Object.freeze({
@@ -35,6 +37,7 @@ const PRIORITY = Object.freeze({
 
 const root = () => document.getElementById("maintenanceWorkspace");
 let records = [];
+let maintenanceDraft = null;
 let selectedId = null;
 
 const date = (value) => {
@@ -238,6 +241,7 @@ function shell() {
         <label>Data prevista<input name="expected_at" type="datetime-local"></label>
         <label>Descrizione<textarea name="description" required></textarea></label>
         <label>Note<textarea name="notes"></textarea></label>
+        <div data-maintenance-attachment-draft></div>
         <p data-maintenance-create-status class="section-note" role="status"></p>
         <div class="editor-actions"><button type="button" class="secondary" data-close-maintenance>Annulla</button><button type="submit">Apri manutenzione</button></div>
       </form>
@@ -257,6 +261,10 @@ export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
   if (!workspace.dataset.ready) {
     workspace.innerHTML = shell();
     workspace.dataset.ready = "true";
+    maintenanceDraft = createAttachmentDraft(
+      workspace.querySelector("[data-maintenance-attachment-draft]"),
+      { title: "Preventivi, fatture e foto", accept: ".pdf,.jpg,.jpeg,.png,.webp" },
+    );
     workspace.querySelector("#maintenanceList").addEventListener("click", (event) => {
       const target = event.target.closest("[data-maintenance-id]");
       if (target) renderDetail(Number(target.dataset.maintenanceId));
@@ -268,6 +276,7 @@ export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
         <option value="${asset.id}">${escapeHtml(asset.plate || asset.external_identifier)}</option>
       `).join("");
       workspace.querySelector("#maintenanceCreateForm").reset();
+      maintenanceDraft.reset();
       workspace.querySelector("#maintenanceEditor").showModal();
     });
     workspace.querySelectorAll("[data-close-maintenance]").forEach((button) => {
@@ -275,6 +284,9 @@ export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
     });
     workspace.querySelector("#maintenanceCreateForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      const submit = event.currentTarget.querySelector("[type='submit']");
+      if (submit.disabled) return;
+      submit.disabled = true;
       const values = Object.fromEntries(new FormData(event.currentTarget).entries());
       values.vehicle_id = Number(values.vehicle_id);
       values.status = values.expected_at ? "programmata" : "aperta";
@@ -282,14 +294,24 @@ export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
       values.repair_shop ||= null;
       values.notes ||= null;
       try {
-        const created = await createMaintenance(values);
+        const created = await saveEntityWithAttachments({
+          draft: maintenanceDraft,
+          entityType: "maintenance",
+          saveRecord: () => createMaintenance(values),
+        });
         workspace.querySelector("#maintenanceEditor").close();
         await refresh(created.id);
       } catch (error) {
         workspace.querySelector("[data-maintenance-create-status]").textContent =
           error.message;
+      } finally {
+        submit.disabled = false;
       }
     });
+    workspace.querySelector("[data-maintenance-attachment-draft]").addEventListener(
+      "attachments:retry",
+      () => workspace.querySelector("#maintenanceCreateForm").requestSubmit(),
+    );
   }
   await refresh(maintenanceId);
 }
