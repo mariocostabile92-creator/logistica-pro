@@ -1,5 +1,6 @@
 import sqlite3
 
+from app.core.config import SETTINGS
 from app.core.database import db_session
 from app.utils.text_normalizer import normalize_plate
 
@@ -75,6 +76,30 @@ def init_schema() -> None:
                 ON movement_media(session_id, display_order);
             """
         )
+        _ensure_session_columns(conn)
+
+
+def _ensure_session_columns(conn) -> None:
+    columns = {
+        "source": "TEXT NOT NULL DEFAULT 'driver'",
+        "lifecycle_status": "TEXT NOT NULL DEFAULT 'in_progress'",
+        "scheduled_at": "TEXT",
+        "opened_at": "TEXT",
+        "in_progress_at": "TEXT",
+    }
+    if SETTINGS.database_backend == "postgresql":
+        for name, definition in columns.items():
+            conn.execute(
+                f"ALTER TABLE journal_sessions ADD COLUMN IF NOT EXISTS {name} {definition}"
+            )
+        return
+    existing = {
+        row["name"]
+        for row in conn.execute("PRAGMA table_info(journal_sessions)").fetchall()
+    }
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE journal_sessions ADD COLUMN {name} {definition}")
 
 
 def _dict(row) -> dict[str, object] | None:
@@ -104,8 +129,9 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
             INSERT INTO journal_sessions (
                 id, token_hash, operation_type, asset_id, plate_snapshot,
                 declared_driver_identifier, operational_shift, status,
-                created_at, expires_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+                created_at, expires_at, source, lifecycle_status,
+                scheduled_at, opened_at, in_progress_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["id"],
@@ -117,6 +143,11 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
                 values.get("operational_shift"),
                 values["created_at"],
                 values["expires_at"],
+                values.get("source", "driver"),
+                values.get("lifecycle_status", "in_progress"),
+                values.get("scheduled_at"),
+                values.get("opened_at"),
+                values.get("in_progress_at"),
             ),
         )
     return get_session(str(values["id"]))  # type: ignore[return-value]
@@ -129,6 +160,29 @@ def get_session(session_id: str) -> dict[str, object] | None:
             (session_id,),
         ).fetchone()
     return _dict(row)
+
+
+def transition_session(
+    session_id: str,
+    from_statuses: tuple[str, ...],
+    to_status: str,
+    timestamp_column: str,
+    occurred_at: str,
+) -> dict[str, object] | None:
+    allowed_columns = {"opened_at", "in_progress_at"}
+    if timestamp_column not in allowed_columns:
+        raise ValueError("Colonna evento sessione non valida.")
+    placeholders = ",".join("?" for _ in from_statuses)
+    with db_session() as conn:
+        conn.execute(
+            f"""
+            UPDATE journal_sessions
+            SET lifecycle_status = ?, {timestamp_column} = COALESCE({timestamp_column}, ?)
+            WHERE id = ? AND lifecycle_status IN ({placeholders})
+            """,
+            (to_status, occurred_at, session_id, *from_statuses),
+        )
+    return get_session(session_id)
 
 
 def create_media(values: dict[str, object]) -> dict[str, object]:
@@ -224,7 +278,7 @@ def complete_session_atomic(
         cursor = conn.execute(
             """
             UPDATE journal_sessions
-            SET status = 'completed', completed_at = ?
+            SET status = 'completed', lifecycle_status = 'completed', completed_at = ?
             WHERE id = ? AND status = 'open'
             """,
             (movement["created_at"], session["id"]),

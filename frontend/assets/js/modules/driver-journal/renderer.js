@@ -1,4 +1,4 @@
-import { state } from "./state.js";
+import { state } from "./state.js?v=dj3";
 const $ = id => document.getElementById(id);
 export function render() {
   document.querySelectorAll(".step").forEach((node, index) => node.classList.toggle("active", index === state.step));

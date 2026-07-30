@@ -1,6 +1,6 @@
-import { completeSession, createSession, findAsset } from "./api.js";
-import { state } from "./state.js";
-import { render, renderSummary, setLoading, showError, showReceipt } from "./renderer.js";
+import { completeSession, createSession, findAsset, markSessionInProgress } from "./api.js?v=dj3";
+import { state } from "./state.js?v=dj3";
+import { render, renderSummary, setLoading, showError, showReceipt } from "./renderer.js?v=dj3";
 const $ = id => document.getElementById(id);
 function validateStep() {
   if (state.step === 1 && (!$("driverIdentifier").value.trim() || !$("plate").value.trim())) throw new Error("Compila identificativo e targa.");
@@ -12,6 +12,7 @@ function validateStep() {
   if (state.step === 5 && !$("confirmSummary").checked) throw new Error("Conferma che il riepilogo è corretto.");
 }
 async function establishSession() {
+  if (state.sharedSession) return;
   state.asset = await findAsset($("plate").value);
   $("assetResult").hidden = false; $("assetResult").textContent = `Mezzo verificato: ${state.asset.plate}`;
   const session = await createSession({operation_type: state.operationType, plate: $("plate").value, declared_driver_identifier: $("driverIdentifier").value, operational_shift: state.operationType === "check_out" ? $("shift").value : null});
@@ -30,7 +31,18 @@ export function initFlow() {
   document.querySelectorAll("[data-operation]").forEach(button => button.addEventListener("click", () => { state.operationType = button.dataset.operation; state.step = 1; render(); }));
   $("nextButton").addEventListener("click", async () => {
     showError("");
-    try { validateStep(); if (state.step === 1) await establishSession(); if (state.step === 4) renderSummary(); if (state.step === 5) return await finish(); state.step += 1; render(); }
+    try {
+      validateStep();
+      if (state.step === 1) await establishSession();
+      if (state.sharedSession && !state.progressMarked) {
+        await markSessionInProgress(state.sessionId, state.token);
+        state.progressMarked = true;
+      }
+      if (state.step === 4) renderSummary();
+      if (state.step === 5) return await finish();
+      state.step += 1;
+      render();
+    }
     catch (error) { showError(error.message); }
   });
   $("backButton").addEventListener("click", () => { showError(""); state.step = Math.max(0, state.step - 1); render(); });

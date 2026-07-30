@@ -6,9 +6,12 @@ def list_procedures() -> list[dict]:
         movements = conn.execute(
             """
             SELECT m.*, a.category AS vehicle_model,
+                   s.source, s.lifecycle_status, s.scheduled_at,
+                   s.opened_at, s.in_progress_at,
                    d.id AS damage_case_id, d.case_number AS damage_case_number,
                    d.status AS damage_case_status
             FROM asset_movements m
+            JOIN journal_sessions s ON s.id = m.session_id
             JOIN fleet_assets a ON a.id = m.asset_id
             LEFT JOIN damage_cases d ON d.source_movement_id = m.id
             ORDER BY m.occurred_at DESC, m.created_at DESC
@@ -19,6 +22,8 @@ def list_procedures() -> list[dict]:
             SELECT s.id, s.asset_id, s.plate_snapshot,
                    s.declared_driver_identifier, s.operation_type,
                    s.operational_shift, s.created_at, s.expires_at,
+                   s.source, s.lifecycle_status, s.scheduled_at,
+                   s.opened_at, s.in_progress_at,
                    a.category AS vehicle_model
             FROM journal_sessions s
             JOIN fleet_assets a ON a.id = s.asset_id

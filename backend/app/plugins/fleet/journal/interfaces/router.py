@@ -44,6 +44,23 @@ def create_session(request: SessionCreateRequest):
     return guarded(service.create_session, request.model_dump())
 
 
+@router.get("/sessions/{session_id}")
+def open_shared_session(session_id: str):
+    return guarded(service.open_managed_session, session_id)
+
+
+@router.post("/sessions/{session_id}/progress")
+def session_progress(
+    session_id: str,
+    x_journal_token: str | None = Header(default=None),
+):
+    return guarded(
+        service.mark_managed_session_in_progress,
+        session_id,
+        x_journal_token,
+    )
+
+
 @router.post("/sessions/{session_id}/media", status_code=status.HTTP_201_CREATED)
 async def upload_media(
     session_id: str,

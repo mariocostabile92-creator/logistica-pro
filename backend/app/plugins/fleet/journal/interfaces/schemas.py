@@ -18,6 +18,22 @@ class SessionCreateRequest(BaseModel):
         return value
 
 
+class ManagedSessionCreateRequest(BaseModel):
+    operation_type: Literal["check_out", "check_in"]
+    plate: str = Field(min_length=1, max_length=40)
+    declared_driver_identifier: str = Field(min_length=1, max_length=120)
+    scheduled_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    scheduled_time: str = Field(pattern=r"^\d{2}:\d{2}$")
+
+    @field_validator("plate", "declared_driver_identifier")
+    @classmethod
+    def strip_managed_required(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Il valore è obbligatorio.")
+        return value
+
+
 class EquipmentInput(BaseModel):
     code: Literal["telepass", "phone", "keys", "fuel_card"]
     status: Literal["present", "missing", "damaged"]

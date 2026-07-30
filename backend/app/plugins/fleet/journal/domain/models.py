@@ -13,6 +13,13 @@ class SessionStatus(str, Enum):
     COMPLETED = "completed"
 
 
+class SessionLifecycleStatus(str, Enum):
+    GENERATED = "generated"
+    OPENED = "opened"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
 class JournalSession(BaseModel):
     id: str
     token_hash: str = Field(exclude=True)
@@ -25,6 +32,11 @@ class JournalSession(BaseModel):
     created_at: str
     expires_at: str
     completed_at: str | None = None
+    source: str = "driver"
+    lifecycle_status: SessionLifecycleStatus = SessionLifecycleStatus.IN_PROGRESS
+    scheduled_at: str | None = None
+    opened_at: str | None = None
+    in_progress_at: str | None = None
 
 
 class AssetMovement(BaseModel):

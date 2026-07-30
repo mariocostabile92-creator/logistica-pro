@@ -339,6 +339,14 @@ export async function getJournalControlRoomProcedure(procedureId) {
   ));
 }
 
+export async function createJournalDriverSession(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/journal-control-room/sessions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
 export async function getFleetVision(params = {}) {
   const query = new URLSearchParams(
     Object.entries(params).filter(([, value]) => value != null && value !== ""),

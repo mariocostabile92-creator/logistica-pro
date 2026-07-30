@@ -170,6 +170,82 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
     } | {"token": token}
 
 
+def _managed_token(session_id: str) -> str:
+    return hashlib.sha256(f"journal-managed:{session_id}".encode()).hexdigest()
+
+
+def create_managed_session(values: dict[str, object]) -> dict[str, object]:
+    operation_type = str(values["operation_type"])
+    try:
+        scheduled = datetime.fromisoformat(
+            f"{values['scheduled_date']}T{values['scheduled_time']}:00"
+        )
+    except ValueError as exc:
+        raise JournalError("Data o ora della procedura non valida.") from exc
+    asset = find_asset(str(values["plate"]))
+    session_id = str(uuid.uuid4())
+    token = _managed_token(session_id)
+    now = datetime.now(timezone.utc)
+    shift = "morning" if scheduled.hour < 14 else "evening"
+    session = repository.create_session({
+        "id": session_id,
+        "token_hash": hashlib.sha256(token.encode()).hexdigest(),
+        "operation_type": operation_type,
+        "asset_id": asset["id"],
+        "plate_snapshot": asset["plate"],
+        "declared_driver_identifier": str(
+            values["declared_driver_identifier"]
+        ).strip(),
+        "operational_shift": shift if operation_type == "check_out" else None,
+        "created_at": now.isoformat(),
+        # Retained only for compatibility with the original schema. Managed
+        # sessions do not apply expiry in authorize().
+        "expires_at": (now + timedelta(days=3650)).isoformat(),
+        "source": "fleet_manager",
+        "lifecycle_status": "generated",
+        "scheduled_at": scheduled.isoformat(),
+    })
+    return {
+        key: value for key, value in session.items() if key != "token_hash"
+    } | {"link_path": f"/app/journal/?session={session_id}"}
+
+
+def open_managed_session(session_id: str) -> dict[str, object]:
+    session = repository.get_session(session_id)
+    if not session or session.get("source") != "fleet_manager":
+        raise JournalNotFound("Sessione Driver non trovata.")
+    now = datetime.now(timezone.utc).isoformat()
+    session = repository.transition_session(
+        session_id, ("generated",), "opened", "opened_at", now
+    ) or session
+    return {
+        key: value for key, value in session.items() if key != "token_hash"
+    } | {"token": _managed_token(session_id)}
+
+
+def mark_managed_session_in_progress(
+    session_id: str,
+    token: str | None,
+) -> dict[str, object]:
+    session = authorize(session_id, token, allow_completed=True)
+    if session.get("source") != "fleet_manager":
+        raise JournalNotFound("Sessione Driver non trovata.")
+    if session["status"] == "completed":
+        return {
+            key: value for key, value in session.items() if key != "token_hash"
+        }
+    updated = repository.transition_session(
+        session_id,
+        ("generated", "opened"),
+        "in_progress",
+        "in_progress_at",
+        datetime.now(timezone.utc).isoformat(),
+    ) or session
+    return {
+        key: value for key, value in updated.items() if key != "token_hash"
+    }
+
+
 def authorize(
     session_id: str,
     token: str | None,
@@ -181,7 +257,7 @@ def authorize(
     supplied_hash = hashlib.sha256((token or "").encode()).hexdigest()
     if not hmac.compare_digest(supplied_hash, str(session["token_hash"])):
         raise JournalUnauthorized("Token di sessione non valido.")
-    if datetime.fromisoformat(str(session["expires_at"])) < datetime.now(
+    if session.get("source") != "fleet_manager" and datetime.fromisoformat(str(session["expires_at"])) < datetime.now(
         timezone.utc
     ):
         raise JournalExpired("La sessione è scaduta.")

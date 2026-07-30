@@ -10,7 +10,12 @@ def _iso_date(value: str) -> date:
 def _present(item: dict) -> dict:
     incomplete = bool(item.get("incomplete"))
     anomaly = bool(item.get("anomaly_present"))
-    status = "incompleta" if incomplete else "con_anomalia" if anomaly else "completata"
+    lifecycle = item.get("lifecycle_status")
+    status = (
+        lifecycle
+        if incomplete and lifecycle in {"generated", "opened", "in_progress"}
+        else "con_anomalia" if anomaly else "completed"
+    )
     occurred_at = item.get("occurred_at") or item["created_at"]
     movement_id = None if incomplete else item["id"]
     return {
@@ -69,13 +74,17 @@ def list_procedures(filters: dict) -> dict:
         "total": len(items),
         "summary": {
             "completed_today": sum(
-                item["status"] != "incompleta" and _iso_date(item["occurred_at"]) == today
+                item["status"] in {"completed", "con_anomalia"}
+                and _iso_date(item["occurred_at"]) == today
                 for item in items
             ),
             "check_outs": sum(item["operation_type"] == "check_out" for item in items),
             "check_ins": sum(item["operation_type"] == "check_in" for item in items),
             "with_anomalies": sum(item["anomaly_present"] for item in items),
-            "incomplete": sum(item["status"] == "incompleta" for item in items),
+            "incomplete": sum(
+                item["status"] in {"generated", "opened", "in_progress"}
+                for item in items
+            ),
         },
     }
 
