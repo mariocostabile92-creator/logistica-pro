@@ -21,16 +21,14 @@ test("Control Room exposes real KPI filters list and inline detail", async () =>
   for (const text of ["Journal Control Room", "Completate oggi", "Prese in carico",
     "Rientri", "Con anomalie", "Incomplete", "Ultimi 7 giorni", "Ultimi 30 giorni",
     "Apri documento operativo", "Apri dossier mezzo", "Torna alla lista",
-    "Genera procedura Driver", "Genera link", "Link Driver", "Copia link",
-    "Generata", "Aperta", "In compilazione", "Completata"]) {
+    "Generata", "Aperta", "In compilazione", "Completata",
+    "link condiviso", "Origine", "Avvisi smart"]) {
     assert.match(module, new RegExp(text));
   }
   assert.match(module, /listJournalControlRoom/);
   assert.match(module, /data-jcr-search/);
   assert.match(module, /data-jcr-detail/);
-  assert.match(module, /createJournalDriverSession/);
-  assert.match(module, /navigator\.clipboard\.writeText/);
-  assert.match(module, /new URL\(result\.link_path, location\.origin\)/);
+  assert.doesNotMatch(module, /Genera procedura Driver|createJournalDriverSession|journalSessionGenerator/);
 });
 
 test("Control Room links Vehicle Library operational documents and Damage", async () => {
@@ -52,24 +50,34 @@ test("Control Room responsive CSS supports desktop tablet and mobile", async () 
   assert.match(css, /@media\(max-width:900px\)/);
   assert.match(css, /@media\(max-width:600px\)/);
   assert.match(css, /\.jcr-back/);
-  assert.match(css, /\.jcr-session-datetime/);
-  assert.match(css, /\.jcr-session-result/);
+  assert.match(css, /\.jcr-warnings/);
   assert.doesNotMatch(css, /width:(?:1440|768|390)px/);
 });
 
-test("shared Driver Session preloads immutable assignment and lifecycle", async () => {
-  const [page, index, flow, api] = await Promise.all([
+test("shared link is primary and DJ-003 query sessions remain compatible", async () => {
+  const [page, index, access, flow, api] = await Promise.all([
     file("journal/index.html"),
     file("assets/js/modules/driver-journal/index.js"),
+    file("assets/js/modules/driver-journal/session-access.js"),
     file("assets/js/modules/driver-journal/flow.js"),
     file("assets/js/modules/driver-journal/api.js"),
   ]);
   assert.match(page, /id="sessionContext"/);
-  assert.match(index, /URLSearchParams\(location\.search\)\.get\("session"\)/);
-  assert.match(index, /getSharedSession/);
-  assert.match(index, /readOnly = true/);
-  assert.match(index, /state\.step = 2/);
+  assert.match(page, /id="startButton"[^>]*>Inizia/);
+  assert.match(page, /id="driverName"/);
+  assert.match(page, /id="driverSurname"/);
+  assert.doesNotMatch(page, /workspace-tabs|Configurazione|Planning/);
+  assert.match(access, /URLSearchParams\(location\.search\)\.get\("session"\)/);
+  assert.match(access, /getSharedSession/);
+  assert.match(access, /createSharedSession/);
+  assert.match(access, /readOnly = true/);
+  assert.match(access, /state\.step = 4/);
   assert.match(flow, /markSessionInProgress/);
+  assert.match(flow, /checkSessionWarnings/);
+  assert.match(flow, /createSpontaneousSession/);
   assert.match(api, /sessions\/\$\{encodeURIComponent\(sessionId\)\}/);
+  assert.match(api, /sessions\/shared/);
+  assert.match(api, /\/warnings/);
   assert.doesNotMatch(index, /localStorage|sessionStorage/);
+  assert.match(index, /history\.replaceState\(\{\}, "", "\/app\/journal\/"\)/);
 });

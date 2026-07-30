@@ -37,6 +37,10 @@ class JournalSession(BaseModel):
     scheduled_at: str | None = None
     opened_at: str | None = None
     in_progress_at: str | None = None
+    driver_name: str | None = None
+    driver_surname: str | None = None
+    warnings_json: str = "[]"
+    operational_date: str | None = None
 
 
 class AssetMovement(BaseModel):

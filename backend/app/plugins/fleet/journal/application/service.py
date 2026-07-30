@@ -4,7 +4,7 @@ import json
 import secrets
 import sqlite3
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from app.plugins.fleet.journal.infrastructure import repository
 from app.plugins.fleet.journal.infrastructure.storage import media_storage
@@ -174,6 +174,130 @@ def _managed_token(session_id: str) -> str:
     return hashlib.sha256(f"journal-managed:{session_id}".encode()).hexdigest()
 
 
+def _normalize_person_name(value: object) -> str:
+    normalized = " ".join(str(value).strip().split())
+    if len(normalized) < 2:
+        raise JournalError("Inserisci almeno due caratteri.")
+    return normalized.casefold().title()
+
+
+def _smart_warnings(
+    session: dict[str, object],
+    odometer_km: int | None = None,
+) -> list[dict[str, str]]:
+    history = repository.movement_history(int(session["asset_id"]))
+    today = date.fromisoformat(
+        str(session.get("operational_date") or date.today().isoformat())
+    )
+    same_day = [
+        row for row in history
+        if datetime.fromisoformat(
+            str(row["occurred_at"]).replace("Z", "+00:00")
+        ).date() == today
+    ]
+    latest = history[0] if history else None
+    warnings: list[dict[str, str]] = []
+    if session["operation_type"] == "check_out":
+        if any(row["operation_type"] == "check_out" for row in same_day):
+            warnings.append({
+                "code": "duplicate_checkout_today",
+                "message": "Risulta già una presa in carico per questo mezzo oggi. Verifica la targa prima di continuare.",
+            })
+        if latest and latest["operation_type"] == "check_out":
+            warnings.append({
+                "code": "consecutive_checkout",
+                "message": "L'ultima registrazione del mezzo è già una presa in carico senza un rientro successivo.",
+            })
+    if session["operation_type"] == "check_in" and not any(
+        row["operation_type"] == "check_out" for row in same_day
+    ):
+        warnings.append({
+            "code": "return_without_checkout",
+            "message": "Non risulta una presa in carico per questo mezzo oggi. Verifica la targa prima di continuare.",
+        })
+    yesterday = today - timedelta(days=1)
+    if latest and latest["operation_type"] == "check_out":
+        latest_date = datetime.fromisoformat(
+            str(latest["occurred_at"]).replace("Z", "+00:00")
+        ).date()
+        if latest_date == yesterday:
+            warnings.append({
+                "code": "missing_previous_return",
+                "message": "Risulta una presa in carico del giorno precedente senza rientro.",
+            })
+    if (
+        odometer_km is not None
+        and latest
+        and int(odometer_km) < int(latest["odometer_km"])
+    ):
+        warnings.append({
+            "code": "odometer_decreased",
+            "message": "Il chilometraggio inserito è inferiore all'ultima registrazione nota del mezzo.",
+        })
+    return list({warning["code"]: warning for warning in warnings}.values())
+
+
+def create_shared_session(values: dict[str, object]) -> dict[str, object]:
+    driver_name = _normalize_person_name(values["driver_name"])
+    driver_surname = _normalize_person_name(values["driver_surname"])
+    asset = find_asset(str(values["vehicle_plate"]))
+    operation_type = str(values["procedure_type"])
+    session_id = str(uuid.uuid4())
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    session = repository.create_session({
+        "id": session_id,
+        "token_hash": hashlib.sha256(token.encode()).hexdigest(),
+        "operation_type": operation_type,
+        "asset_id": asset["id"],
+        "plate_snapshot": asset["plate"],
+        "declared_driver_identifier": f"{driver_name} {driver_surname}",
+        "operational_shift": (
+            "morning" if now.hour < 14 else "evening"
+        ) if operation_type == "check_out" else None,
+        "created_at": now.isoformat(),
+        "expires_at": (now + timedelta(days=3650)).isoformat(),
+        "source": "shared_link",
+        "lifecycle_status": "opened",
+        "opened_at": now.isoformat(),
+        "driver_name": driver_name,
+        "driver_surname": driver_surname,
+        "operational_date": date.today().isoformat(),
+    })
+    warnings = _smart_warnings(session)
+    session = repository.update_session_warnings(
+        session_id, json.dumps(warnings, ensure_ascii=False)
+    ) or session
+    return {
+        "session_id": session_id,
+        "token": token,
+        "lifecycle_status": session["lifecycle_status"],
+        "created_at": session["created_at"],
+        "warnings": warnings,
+        "asset": {
+            "id": asset["id"],
+            "plate": asset["plate"],
+            "vehicle_model": asset.get("category"),
+        },
+        "driver_name": driver_name,
+        "driver_surname": driver_surname,
+        "procedure_type": operation_type,
+    }
+
+
+def check_session_warnings(
+    session_id: str,
+    token: str | None,
+    odometer_km: int,
+) -> dict[str, object]:
+    session = authorize(session_id, token, allow_completed=True)
+    warnings = _smart_warnings(session, odometer_km)
+    repository.update_session_warnings(
+        session_id, json.dumps(warnings, ensure_ascii=False)
+    )
+    return {"warnings": warnings}
+
+
 def create_managed_session(values: dict[str, object]) -> dict[str, object]:
     operation_type = str(values["operation_type"])
     try:
@@ -228,7 +352,7 @@ def mark_managed_session_in_progress(
     token: str | None,
 ) -> dict[str, object]:
     session = authorize(session_id, token, allow_completed=True)
-    if session.get("source") != "fleet_manager":
+    if session.get("source") not in {"fleet_manager", "shared_link"}:
         raise JournalNotFound("Sessione Driver non trovata.")
     if session["status"] == "completed":
         return {
@@ -257,7 +381,7 @@ def authorize(
     supplied_hash = hashlib.sha256((token or "").encode()).hexdigest()
     if not hmac.compare_digest(supplied_hash, str(session["token_hash"])):
         raise JournalUnauthorized("Token di sessione non valido.")
-    if session.get("source") != "fleet_manager" and datetime.fromisoformat(str(session["expires_at"])) < datetime.now(
+    if session.get("source") not in {"fleet_manager", "shared_link"} and datetime.fromisoformat(str(session["expires_at"])) < datetime.now(
         timezone.utc
     ):
         raise JournalExpired("La sessione è scaduta.")
@@ -336,7 +460,7 @@ def complete(
     if existing:
         if existing["session_id"] != session_id:
             raise JournalConflict("Identificativo invio già utilizzato.")
-        return repository.receipt(str(existing["id"]))  # type: ignore[return-value]
+        return receipt(str(existing["id"]))
     if session["status"] == "completed":
         raise JournalConflict("La sessione è già stata completata.")
     odometer = int(values["odometer_km"])
@@ -345,6 +469,10 @@ def complete(
         raise JournalError("I chilometri non possono essere negativi.")
     if fuel < 0 or fuel > 100:
         raise JournalError("Il carburante deve essere compreso tra 0 e 100.")
+    warnings = _smart_warnings(session, odometer)
+    repository.update_session_warnings(
+        session_id, json.dumps(warnings, ensure_ascii=False)
+    )
     if (
         session["operation_type"] == "check_in"
         and values.get("cleanliness_status") not in ALLOWED_CLEANLINESS
@@ -384,13 +512,14 @@ def complete(
     except sqlite3.IntegrityError:
         concurrent = repository.get_movement_by_submission(submission_id)
         if concurrent and concurrent["session_id"] == session_id:
-            return repository.receipt(str(concurrent["id"]))  # type: ignore[return-value]
+            return receipt(str(concurrent["id"]))
         raise JournalConflict("La sessione è già stata completata.")
-    return repository.receipt(movement_id)  # type: ignore[return-value]
+    return receipt(movement_id)
 
 
 def receipt(movement_id: str) -> dict[str, object]:
     result = repository.receipt(movement_id)
     if not result:
         raise JournalNotFound("Movimentazione non trovata.")
+    result["warnings"] = json.loads(str(result.pop("warnings_json", "[]")))
     return result

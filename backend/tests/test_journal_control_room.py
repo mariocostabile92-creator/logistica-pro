@@ -167,3 +167,100 @@ def test_existing_completed_movement_overrides_migrated_lifecycle_default():
     procedure = client.get(CONTROL).json()["items"][0]
     assert procedure["status"] == "con_anomalia"
     assert procedure["operational_document_id"]
+
+
+def create_shared(vehicle, operation="check_out", name="  mARIO ", surname=" rOSSI  "):
+    response = client.post(f"{JOURNAL}/sessions/shared", json={
+        "driver_name": name,
+        "driver_surname": surname,
+        "vehicle_plate": f" {vehicle['plate'].lower()} ",
+        "procedure_type": operation,
+    })
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_shared_link_session_normalization_lifecycle_completion_and_histories():
+    vehicle = asset()
+    opened = create_shared(vehicle)
+    assert opened["driver_name"] == "Mario"
+    assert opened["driver_surname"] == "Rossi"
+    assert opened["asset"]["plate"] == vehicle["plate"]
+    assert opened["lifecycle_status"] == "opened"
+    with db_session() as conn:
+        stored = conn.execute(
+            "SELECT * FROM journal_sessions WHERE id = ?",
+            (opened["session_id"],),
+        ).fetchone()
+    assert stored["source"] == "shared_link"
+    assert stored["driver_name"] == "Mario"
+    assert stored["driver_surname"] == "Rossi"
+    assert stored["opened_at"]
+    assert stored["operational_date"]
+
+    progress = client.post(
+        f"{JOURNAL}/sessions/{opened['session_id']}/progress",
+        headers={"X-Journal-Token": opened["token"]},
+    )
+    assert progress.status_code == 200
+    assert progress.json()["lifecycle_status"] == "in_progress"
+
+    compatible = {"id": opened["session_id"], "token": opened["token"]}
+    movement = complete(compatible)
+    assert movement["operation_type"] == "check_out"
+    room = client.get(CONTROL).json()
+    item = next(entry for entry in room["items"] if entry["id"] == movement["id"])
+    assert item["origin"] == "Shared link"
+    assert item["declared_driver_identifier"] == "Mario Rossi"
+    assert item["status"] == "completed"
+    assert client.get(CONTROL, params={"search": "mario rossi"}).json()["total"] == 1
+    history = client.get(f"{JOURNAL}/vehicles/{vehicle['id']}/history").json()
+    assert history["movements"][0]["declared_driver_identifier"] == "Mario Rossi"
+
+
+def test_shared_link_smart_warnings_are_non_blocking_and_persisted():
+    vehicle = asset()
+    first = create_shared(vehicle)
+    complete({"id": first["session_id"], "token": first["token"]})
+
+    duplicate = create_shared(vehicle, "check_out", "Luigi", "Bianchi")
+    codes = {warning["code"] for warning in duplicate["warnings"]}
+    assert {"duplicate_checkout_today", "consecutive_checkout"} <= codes
+    warning_check = client.post(
+        f"{JOURNAL}/sessions/{duplicate['session_id']}/warnings",
+        headers={"X-Journal-Token": duplicate["token"]},
+        json={"odometer_km": 100},
+    )
+    assert warning_check.status_code == 200
+    assert "odometer_decreased" in {
+        warning["code"] for warning in warning_check.json()["warnings"]
+    }
+    completed = complete(
+        {"id": duplicate["session_id"], "token": duplicate["token"]}
+    )
+    assert completed["id"]
+    room_item = next(
+        item for item in client.get(CONTROL).json()["items"]
+        if item["id"] == completed["id"]
+    )
+    assert room_item["warnings"]
+
+
+def test_shared_return_without_checkout_warning_and_schema_migration_idempotency():
+    vehicle = asset()
+    returned = create_shared(vehicle, "check_in", "Anna", "Verdi")
+    assert "return_without_checkout" in {
+        warning["code"] for warning in returned["warnings"]
+    }
+    from app.plugins.fleet.journal.infrastructure.repository import init_schema
+    init_schema()
+    init_schema()
+    with db_session() as conn:
+        columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(journal_sessions)").fetchall()
+        }
+    assert {
+        "source", "lifecycle_status", "driver_name", "driver_surname",
+        "warnings_json", "operational_date",
+    } <= columns

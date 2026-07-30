@@ -3,6 +3,23 @@
   background: var(--bg);
 }
 
+.journal-driver-header {
+  width: 100%;
+  min-height: 64px;
+  padding: 14px clamp(16px, 4vw, 40px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #17211f;
+  color: #f7faf8;
+}
+
+.journal-workspace {
+  width: min(920px, calc(100% - 32px));
+  margin: 28px auto;
+}
+
 .journal-product-brand {
   color: inherit;
   text-decoration: none;
@@ -51,6 +68,21 @@
   border-radius: 12px;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+}
+
+.journal-start {
+  min-height: 340px;
+  align-content: center;
+  text-align: center;
+}
+
+.journal-start.active {
+  display: grid;
+}
+
+.journal-start p {
+  margin: 4px auto 24px;
+  color: var(--text-muted);
 }
 
 .journal-progress-header {

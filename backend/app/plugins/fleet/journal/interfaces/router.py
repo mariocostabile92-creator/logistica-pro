@@ -13,6 +13,8 @@ from app.plugins.fleet.journal.application import service
 from app.plugins.fleet.journal.interfaces.schemas import (
     CompleteRequest,
     SessionCreateRequest,
+    SharedSessionCreateRequest,
+    WarningCheckRequest,
 )
 
 
@@ -44,6 +46,11 @@ def create_session(request: SessionCreateRequest):
     return guarded(service.create_session, request.model_dump())
 
 
+@router.post("/sessions/shared", status_code=status.HTTP_201_CREATED)
+def create_shared_session(request: SharedSessionCreateRequest):
+    return guarded(service.create_shared_session, request.model_dump())
+
+
 @router.get("/sessions/{session_id}")
 def open_shared_session(session_id: str):
     return guarded(service.open_managed_session, session_id)
@@ -58,6 +65,20 @@ def session_progress(
         service.mark_managed_session_in_progress,
         session_id,
         x_journal_token,
+    )
+
+
+@router.post("/sessions/{session_id}/warnings")
+def session_warnings(
+    session_id: str,
+    request: WarningCheckRequest,
+    x_journal_token: str | None = Header(default=None),
+):
+    return guarded(
+        service.check_session_warnings,
+        session_id,
+        x_journal_token,
+        request.odometer_km,
     )
 
 

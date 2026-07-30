@@ -34,6 +34,25 @@ class ManagedSessionCreateRequest(BaseModel):
         return value
 
 
+class SharedSessionCreateRequest(BaseModel):
+    driver_name: str = Field(min_length=2, max_length=80)
+    driver_surname: str = Field(min_length=2, max_length=80)
+    vehicle_plate: str = Field(min_length=1, max_length=40)
+    procedure_type: Literal["check_out", "check_in"]
+
+    @field_validator("driver_name", "driver_surname", "vehicle_plate")
+    @classmethod
+    def strip_shared_required(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Il valore è obbligatorio.")
+        return value
+
+
+class WarningCheckRequest(BaseModel):
+    odometer_km: int = Field(ge=0)
+
+
 class EquipmentInput(BaseModel):
     code: Literal["telepass", "phone", "keys", "fuel_card"]
     status: Literal["present", "missing", "damaged"]

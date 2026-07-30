@@ -1,5 +1,5 @@
-import { deleteMedia, uploadMedia } from "./api.js?v=dj3";
-import { state } from "./state.js?v=dj3";
+import { deleteMedia, uploadMedia } from "./api.js?v=dj4";
+import { state } from "./state.js?v=dj4";
 const input = () => document.getElementById("mediaInput");
 const preview = () => document.getElementById("mediaPreview");
 function render() {

@@ -7,7 +7,8 @@ def list_procedures() -> list[dict]:
             """
             SELECT m.*, a.category AS vehicle_model,
                    s.source, s.lifecycle_status, s.scheduled_at,
-                   s.opened_at, s.in_progress_at,
+                   s.opened_at, s.in_progress_at, s.driver_name,
+                   s.driver_surname, s.warnings_json, s.operational_date,
                    d.id AS damage_case_id, d.case_number AS damage_case_number,
                    d.status AS damage_case_status
             FROM asset_movements m
@@ -23,7 +24,8 @@ def list_procedures() -> list[dict]:
                    s.declared_driver_identifier, s.operation_type,
                    s.operational_shift, s.created_at, s.expires_at,
                    s.source, s.lifecycle_status, s.scheduled_at,
-                   s.opened_at, s.in_progress_at,
+                   s.opened_at, s.in_progress_at, s.driver_name,
+                   s.driver_surname, s.warnings_json, s.operational_date,
                    a.category AS vehicle_model
             FROM journal_sessions s
             JOIN fleet_assets a ON a.id = s.asset_id

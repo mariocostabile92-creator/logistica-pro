@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, timedelta
 
 from app.plugins.fleet.journal.control_room import repository
@@ -23,6 +24,12 @@ def _present(item: dict) -> dict:
         "occurred_at": occurred_at,
         "anomaly_present": anomaly,
         "status": status,
+        "warnings": json.loads(str(item.get("warnings_json") or "[]")),
+        "origin": {
+            "shared_link": "Shared link",
+            "fleet_manager": "Sessione preconfigurata",
+            "driver": "Movimentazione storica",
+        }.get(str(item.get("source") or "driver"), "Movimentazione storica"),
         "photo_count": sum(not media["media_type"].startswith("video") for media in item["media"]),
         "video_count": sum(media["media_type"].startswith("video") for media in item["media"]),
         "operational_document_id": (

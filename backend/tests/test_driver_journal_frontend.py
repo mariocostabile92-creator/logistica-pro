@@ -22,14 +22,12 @@ def test_journal_has_both_paths_progress_summary_and_accessibility():
     assert 'id="summary"' in HTML
     assert 'aria-live="assertive"' in HTML
     assert 'name="viewport"' in HTML
-    assert "<h1>Operations Engine</h1>" in HTML
-    assert "Fleet Operations" in HTML
-    assert "<h2>Giornale di bordo</h2>" in HTML
-    navigation = HTML.split('<nav class="workspace-tabs"', 1)[1].split(
-        "</nav>", 1
-    )[0]
-    assert 'href="/app/journal/"' not in navigation
-    assert "Giornale di bordo" not in navigation
+    assert 'id="startButton"' in HTML
+    assert 'id="driverName"' in HTML
+    assert 'id="driverSurname"' in HTML
+    assert "<h1" in HTML and "Giornale di bordo</h1>" in HTML
+    assert 'class="workspace-tabs"' not in HTML
+    assert "Planning" not in HTML
 
 
 def test_frontend_prevents_double_tap_and_handles_api_errors():
@@ -52,23 +50,16 @@ def test_390px_layout_has_no_horizontal_overflow_contract():
     assert ".journal-mobile-context" in CSS
 
 
-def test_journal_reuses_operations_engine_design_system_and_shell():
+def test_journal_reuses_core_design_tokens_in_a_standalone_driver_shell():
     for stylesheet in (
         "../assets/css/base.css",
-        "../assets/css/layout.css",
         "../assets/css/components.css",
-        "../assets/css/responsive.css?v=3",
-        "../assets/css/workspace-lifecycle.css?v=5",
     ):
         assert f'href="{stylesheet}"' in HTML
-    for item in (
-        "Home",
-        "Planning",
-        "Workforce",
-        "Fleet",
-        "Learn",
-    ):
-        assert item in HTML
+    assert 'class="journal-driver-header"' in HTML
+    assert 'class="journal-workspace"' in HTML
+    for office_item in ("Planning", "Workforce", "Fleet", "Learn"):
+        assert office_item not in HTML
 
 
 def test_sensitive_data_is_not_persisted_client_side():

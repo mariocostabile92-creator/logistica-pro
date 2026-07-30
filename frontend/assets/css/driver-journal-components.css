@@ -64,6 +64,19 @@
   color: #1d2624;
 }
 
+.choice.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--stable-bg);
+}
+
+.journal-primary-action {
+  width: min(100%, 360px);
+  min-height: 56px;
+  margin: 0 auto;
+  font-size: 18px;
+}
+
 .choice-icon {
   grid-row: 1 / span 2;
   width: 32px;
@@ -199,6 +212,21 @@
   min-height: 24px;
   color: var(--danger);
   font-weight: 700;
+}
+
+.journal-warnings {
+  max-width: 760px;
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid #e7b66f;
+  border-radius: var(--radius);
+  background: #fff8e8;
+  color: #704900;
+}
+
+.journal-warnings ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
 }
 
 .loading {

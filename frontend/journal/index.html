@@ -6,181 +6,95 @@
   <title>Giornale di bordo · Operations Engine</title>
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="../assets/css/base.css" />
-  <link rel="stylesheet" href="../assets/css/layout.css" />
   <link rel="stylesheet" href="../assets/css/components.css" />
-  <link rel="stylesheet" href="../assets/css/workspace-lifecycle.css?v=5" />
-  <link rel="stylesheet" href="../assets/css/responsive.css?v=3" />
-  <link rel="stylesheet" href="../assets/css/driver-journal-layout.css?v=shell-v1" />
-  <link rel="stylesheet" href="../assets/css/driver-journal-components.css?v=dj3" />
-  <link rel="stylesheet" href="../assets/css/driver-journal-responsive.css?v=shell-v1" />
+  <link rel="stylesheet" href="../assets/css/driver-journal-layout.css?v=dj4" />
+  <link rel="stylesheet" href="../assets/css/driver-journal-components.css?v=dj4" />
+  <link rel="stylesheet" href="../assets/css/driver-journal-responsive.css?v=dj4" />
 </head>
 <body class="journal-page">
-  <header class="app-header journal-app-header">
-    <div class="app-header-inner">
-      <a class="product-brand journal-product-brand" href="/app/">
-        <p class="eyebrow">Private Beta</p>
-        <h1>Operations Engine</h1>
-      </a>
-
-      <nav class="workspace-tabs" aria-label="Navigazione principale">
-        <a class="workspace-tab workspace-tab-link" href="/app/">Home</a>
-        <a class="workspace-tab workspace-tab-link" href="/app/?view=operations">Planning</a>
-        <a class="workspace-tab workspace-tab-link" href="/app/?view=workforce">Workforce</a>
-        <a class="workspace-tab workspace-tab-link" href="/app/?view=fleet">Fleet</a>
-        <a class="workspace-tab workspace-tab-link" href="/app/?view=learn">Learn</a>
-      </nav>
-
-      <div class="app-header-actions journal-header-actions">
-        <span class="workspace-status-badge production">
-          <span aria-hidden="true"></span>
-          Workspace produzione
-        </span>
-        <span id="healthStatus" class="status-pill">Backend non verificato</span>
-        <a class="header-config-button journal-config-link" href="/app/?view=settings">
-          Configurazione
-        </a>
-      </div>
-
-      <div class="journal-mobile-context">
-        <a href="/app/" aria-label="Torna alla Home">← Home</a>
-        <strong>Giornale di bordo</strong>
-      </div>
-    </div>
+  <header class="journal-driver-header">
+    <strong>Giornale di bordo</strong>
+    <span id="healthStatus" class="status-pill">Connessione in verifica</span>
   </header>
 
-  <main class="app-shell journal-workspace">
-    <header class="journal-module-header">
-      <div>
-        <p class="eyebrow">Fleet Operations</p>
-        <h2>Giornale di bordo</h2>
-        <p>
-          Registra il ritiro o il rientro del mezzo e certificane lo stato
-          operativo.
-        </p>
-      </div>
-      <a class="journal-home-link" href="/app/">Torna alla Home</a>
-    </header>
-
+  <main class="journal-workspace">
     <section class="journal-panel" aria-labelledby="journalFlowTitle">
       <header class="journal-progress-header">
         <div>
-          <p class="journal-progress-kicker">Movimentazione mezzo</p>
-          <h3 id="journalFlowTitle">Nuova registrazione</h3>
+          <p class="journal-progress-kicker">Procedura guidata</p>
+          <h1 id="journalFlowTitle">Giornale di bordo</h1>
         </div>
-        <p id="stepLabel" class="step-label">Passaggio 1 di 6</p>
+        <p id="stepLabel" class="step-label">Pronto per iniziare</p>
       </header>
-      <div
-        class="progress"
-        role="progressbar"
-        aria-label="Avanzamento registrazione"
-        aria-valuemin="1"
-        aria-valuemax="6"
-      >
+      <div class="progress" role="progressbar" aria-label="Avanzamento registrazione" aria-valuemin="1" aria-valuemax="8">
         <span id="progressBar"></span>
       </div>
       <section id="sessionContext" class="journal-session-context" aria-live="polite" hidden></section>
 
       <form id="journalForm" novalidate>
-        <section class="step active" data-step="0">
-          <div class="journal-step-heading">
-            <h3>Cosa devi registrare?</h3>
-            <p>Seleziona l’operazione relativa al mezzo.</p>
-          </div>
-          <div class="choice-grid">
-            <button type="button" class="choice" data-operation="check_out">
-              <span class="choice-icon" aria-hidden="true">→</span>
-              <strong>Ritiro mezzo</strong>
-              <span>Registra dotazioni e condizioni all’inizio dell’utilizzo.</span>
-            </button>
-            <button type="button" class="choice" data-operation="check_in">
-              <span class="choice-icon" aria-hidden="true">←</span>
-              <strong>Rientro mezzo</strong>
-              <span>Certifica chilometri, dotazioni e stato alla riconsegna.</span>
-            </button>
-          </div>
+        <section class="step active journal-start" data-step="0">
+          <h2>Giornale di bordo</h2>
+          <p>Registra la presa in carico o il rientro del mezzo.</p>
+          <button id="startButton" type="button" class="journal-primary-action">Inizia</button>
         </section>
 
         <section class="step" data-step="1">
-          <h3>Identificazione e mezzo</h3>
-          <label>Identificativo aziendale
-            <input id="driverIdentifier" autocomplete="off" maxlength="120" required />
-          </label>
-          <label>Targa
-            <input id="plate" autocomplete="off" autocapitalize="characters" maxlength="40" required />
-          </label>
-          <label id="shiftField">Fascia operativa
-            <select id="shift">
-              <option value="">Seleziona</option>
-              <option value="morning">Mattino</option>
-              <option value="evening">Sera</option>
-            </select>
-          </label>
-          <div id="assetResult" class="asset-result" hidden></div>
+          <h2>Chi sta compilando?</h2>
+          <label>Nome<input id="driverName" autocomplete="given-name" maxlength="80" required /></label>
+          <label>Cognome<input id="driverSurname" autocomplete="family-name" maxlength="80" required /></label>
+          <input id="driverIdentifier" type="hidden" />
         </section>
 
         <section class="step" data-step="2">
-          <h3>Dati operativi</h3>
-          <label>Chilometri
-            <input id="odometer" type="number" min="0" step="1" inputmode="numeric" required />
-          </label>
-          <label>Carburante <span id="fuelValue">50%</span>
-            <input id="fuel" type="range" min="0" max="100" value="50" />
-          </label>
-          <label id="cleanlinessField">Stato pulizia
-            <select id="cleanliness">
-              <option value="">Seleziona</option>
-              <option value="compliant">Conforme</option>
-              <option value="non_compliant">Non conforme</option>
-              <option value="verify">Da verificare</option>
-            </select>
-          </label>
-          <label>Nota operativa (facoltativa)
-            <textarea id="operationalNote" maxlength="2000"></textarea>
-          </label>
+          <h2>Quale mezzo?</h2>
+          <label>Targa<input id="plate" list="journalAssetSuggestions" autocomplete="off" autocapitalize="characters" maxlength="40" required /></label>
+          <datalist id="journalAssetSuggestions"></datalist>
+          <div id="assetResult" class="asset-result" hidden></div>
         </section>
 
         <section class="step" data-step="3">
-          <h3>Dotazioni e stato</h3>
-          <div id="equipmentList" class="equipment-list"></div>
-          <label class="check-line">
-            <input id="anomaly" type="checkbox" />
-            Sono presenti anomalie o danni
-          </label>
-          <label id="anomalyDescriptionField" hidden>Descrizione anomalia
-            <textarea id="anomalyDescription" maxlength="2000"></textarea>
-          </label>
+          <h2>Tipo di procedura</h2>
+          <div class="choice-grid">
+            <button type="button" class="choice" data-operation="check_out"><span class="choice-icon" aria-hidden="true">→</span><strong>Presa in carico</strong><span>Registra lo stato iniziale del mezzo.</span></button>
+            <button type="button" class="choice" data-operation="check_in"><span class="choice-icon" aria-hidden="true">←</span><strong>Rientro mezzo</strong><span>Registra lo stato alla riconsegna.</span></button>
+          </div>
         </section>
 
         <section class="step" data-step="4">
-          <h3>Foto</h3>
-          <p>Aggiungi foto utili a documentare lo stato del mezzo (facoltativo).</p>
-          <label class="upload-button">Aggiungi foto
-            <input
-              id="mediaInput"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              hidden
-            />
-          </label>
-          <div id="mediaPreview" class="media-grid"></div>
+          <h2>Dati operativi</h2>
+          <label>Chilometri<input id="odometer" type="number" min="0" step="1" inputmode="numeric" required /></label>
+          <label>Carburante <span id="fuelValue">50%</span><input id="fuel" type="range" min="0" max="100" value="50" /></label>
+          <label id="cleanlinessField">Stato pulizia<select id="cleanliness"><option value="">Seleziona</option><option value="compliant">Conforme</option><option value="non_compliant">Non conforme</option><option value="verify">Da verificare</option></select></label>
+          <label>Nota operativa (facoltativa)<textarea id="operationalNote" maxlength="2000"></textarea></label>
         </section>
 
         <section class="step" data-step="5">
-          <h3>Controlla e conferma</h3>
-          <dl id="summary" class="summary"></dl>
-          <label class="check-line">
-            <input id="confirmSummary" type="checkbox" />
-            Confermo che il riepilogo è corretto
-          </label>
+          <h2>Dotazioni e stato</h2>
+          <div id="equipmentList" class="equipment-list"></div>
+          <label class="check-line"><input id="anomaly" type="checkbox" />Sono presenti anomalie o danni</label>
+          <label id="anomalyDescriptionField" hidden>Descrizione anomalia<textarea id="anomalyDescription" maxlength="2000"></textarea></label>
         </section>
 
-        <section class="step receipt-step" data-step="6">
+        <section class="step" data-step="6">
+          <h2>Foto</h2>
+          <p>Aggiungi foto reali utili a documentare lo stato del mezzo.</p>
+          <label class="upload-button">Aggiungi foto<input id="mediaInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden /></label>
+          <div id="mediaPreview" class="media-grid"></div>
+        </section>
+
+        <section class="step" data-step="7">
+          <h2>Controlla e conferma</h2>
+          <div id="journalWarnings" class="journal-warnings" hidden></div>
+          <dl id="summary" class="summary"></dl>
+          <label class="check-line"><input id="confirmSummary" type="checkbox" />Confermo che il riepilogo è corretto</label>
+        </section>
+
+        <section class="step receipt-step" data-step="8">
           <div class="success-mark" aria-hidden="true">✓</div>
-          <h3>Movimentazione salvata</h3>
-          <p id="receiptMessage"></p>
+          <h2>Procedura completata</h2>
+          <p id="receiptMessage">Il giornale di bordo è stato registrato correttamente.</p>
           <dl id="receipt" class="summary"></dl>
-          <button id="restartButton" type="button">Nuova movimentazione</button>
+          <button id="restartButton" type="button">Nuova registrazione</button>
         </section>
 
         <p id="journalError" class="error" role="alert" aria-live="assertive"></p>
@@ -188,14 +102,12 @@
           <button id="backButton" type="button" class="secondary">Indietro</button>
           <button id="nextButton" type="button">Continua</button>
         </div>
-        <div id="loading" class="loading" aria-live="polite" hidden>
-          Salvataggio in corso…
-        </div>
+        <div id="loading" class="loading" aria-live="polite" hidden>Salvataggio in corso…</div>
       </form>
     </section>
   </main>
 
-  <script type="module" src="../assets/js/modules/driver-journal/shell.js?v=shell-v1"></script>
-  <script type="module" src="../assets/js/modules/driver-journal/index.js?v=dj3a"></script>
+  <script type="module" src="../assets/js/modules/driver-journal/shell.js?v=dj4"></script>
+  <script type="module" src="../assets/js/modules/driver-journal/index.js?v=dj4"></script>
 </body>
 </html>

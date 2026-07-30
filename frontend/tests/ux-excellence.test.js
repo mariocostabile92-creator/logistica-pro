@@ -50,7 +50,7 @@ test("visible branding uses Operations Engine", async () => {
 });
 
 
-test("Journal reuses the Operations Engine shell without entering primary navigation", async () => {
+test("Journal uses Operations Engine tokens in a standalone driver shell", async () => {
   const [journal, layout, components, responsive] = await Promise.all([
     frontendFile("journal/index.html"),
     frontendFile("assets/css/driver-journal-layout.css"),
@@ -58,16 +58,13 @@ test("Journal reuses the Operations Engine shell without entering primary naviga
     frontendFile("assets/css/driver-journal-responsive.css"),
   ]);
 
-  assert.match(journal, /<h1>Operations Engine<\/h1>/);
-  assert.match(journal, /<h2>Giornale di bordo<\/h2>/);
-  assert.match(journal, /Fleet Operations/);
-  const navigation = journal.match(
-    /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
-  )?.[0] || "";
-  assert.doesNotMatch(navigation, /Giornale di bordo|\/app\/journal\//);
-  assert.match(journal, /Workspace produzione/);
+  assert.match(journal, /<h1[^>]*>Giornale di bordo<\/h1>/);
+  assert.match(journal, /id="startButton"[^>]*>Inizia/);
+  assert.doesNotMatch(journal, /class="workspace-tabs"/);
+  assert.doesNotMatch(journal, /Planning|Workforce|Configurazione/);
   assert.match(journal, /id="healthStatus"/);
-  assert.match(journal, /Configurazione/);
+  assert.match(journal, /assets\/css\/base\.css/);
+  assert.match(journal, /assets\/css\/components\.css/);
   assert.match(layout, /\.journal-workspace/);
   assert.match(components, /var\(--surface\)/);
   assert.match(responsive, /@media \(max-width: 768px\)/);

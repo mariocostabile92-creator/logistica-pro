@@ -86,6 +86,10 @@ def _ensure_session_columns(conn) -> None:
         "scheduled_at": "TEXT",
         "opened_at": "TEXT",
         "in_progress_at": "TEXT",
+        "driver_name": "TEXT",
+        "driver_surname": "TEXT",
+        "warnings_json": "TEXT NOT NULL DEFAULT '[]'",
+        "operational_date": "TEXT",
     }
     if SETTINGS.database_backend == "postgresql":
         for name, definition in columns.items():
@@ -130,8 +134,9 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
                 id, token_hash, operation_type, asset_id, plate_snapshot,
                 declared_driver_identifier, operational_shift, status,
                 created_at, expires_at, source, lifecycle_status,
-                scheduled_at, opened_at, in_progress_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?)
+                scheduled_at, opened_at, in_progress_at, driver_name,
+                driver_surname, warnings_json, operational_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["id"],
@@ -148,6 +153,10 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
                 values.get("scheduled_at"),
                 values.get("opened_at"),
                 values.get("in_progress_at"),
+                values.get("driver_name"),
+                values.get("driver_surname"),
+                values.get("warnings_json", "[]"),
+                values.get("operational_date"),
             ),
         )
     return get_session(str(values["id"]))  # type: ignore[return-value]
@@ -183,6 +192,33 @@ def transition_session(
             (to_status, occurred_at, session_id, *from_statuses),
         )
     return get_session(session_id)
+
+
+def update_session_warnings(
+    session_id: str,
+    warnings_json: str,
+) -> dict[str, object] | None:
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE journal_sessions SET warnings_json = ? WHERE id = ?",
+            (warnings_json, session_id),
+        )
+    return get_session(session_id)
+
+
+def movement_history(asset_id: int) -> list[dict[str, object]]:
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, operation_type, occurred_at, odometer_km,
+                   declared_driver_identifier
+            FROM asset_movements
+            WHERE asset_id = ?
+            ORDER BY occurred_at DESC, created_at DESC
+            """,
+            (asset_id,),
+        ).fetchall()
+    return [_dict(row) for row in rows]  # type: ignore[misc]
 
 
 def create_media(values: dict[str, object]) -> dict[str, object]:
@@ -348,11 +384,13 @@ def receipt(movement_id: str) -> dict[str, object] | None:
     with db_session() as conn:
         row = conn.execute(
             """
-            SELECT id, schema_version, plate_snapshot, operation_type,
+            SELECT m.id, m.schema_version, m.plate_snapshot, m.operation_type,
                    occurred_at, odometer_km, fuel_percentage,
-                   cleanliness_status, anomaly_present, created_at
-            FROM asset_movements
-            WHERE id = ?
+                   cleanliness_status, anomaly_present, m.created_at,
+                   s.warnings_json, s.source
+            FROM asset_movements m
+            JOIN journal_sessions s ON s.id = m.session_id
+            WHERE m.id = ?
             """,
             (movement_id,),
         ).fetchone()
