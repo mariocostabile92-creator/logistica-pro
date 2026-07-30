@@ -86,6 +86,7 @@ document.addEventListener("click", (event) => {
   if (entry) { state.selected = state.items.find((item) => item.id === entry.dataset.deadlineId); render(); }
   if (event.target.closest("[data-deadline-back]")) root().classList.remove("detail-open");
   if (event.target.closest("[data-open-deadline-source]") && state.selected) {
+    root().hidden = true;
     document.dispatchEvent(new CustomEvent("deadline:open-source", { detail: state.selected }));
   }
 });
