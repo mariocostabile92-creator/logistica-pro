@@ -1,0 +1,1 @@
+"""Vehicle documents infrastructure layer."""

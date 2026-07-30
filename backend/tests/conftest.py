@@ -31,6 +31,9 @@ from app.plugins.fleet.damage.infrastructure.repository import (
 from app.plugins.fleet.maintenance.infrastructure.repository import (
     init_schema as init_maintenance_schema,
 )
+from app.plugins.fleet.documents.infrastructure.repository import (
+    init_schema as init_vehicle_documents_schema,
+)
 from app.plugins.workforce.infrastructure.schema import init_schema as init_workforce_schema
 from app.repositories.authority_repository import init_schema as init_authority_schema
 from app.repositories.execution_intent_repository import init_schema as init_execution_intent_schema
@@ -50,6 +53,7 @@ def reset_database():
     init_journal_schema()
     init_damage_schema()
     init_maintenance_schema()
+    init_vehicle_documents_schema()
     init_workforce_schema()
     init_briefing_schema()
     init_demo_schema()
@@ -61,6 +65,7 @@ def reset_database():
     init_execution_intent_schema()
     init_execution_attempt_schema()
     with db_session() as conn:
+        conn.execute("DELETE FROM fleet_vehicle_documents")
         conn.execute("DELETE FROM fleet_maintenance_events")
         conn.execute("DELETE FROM fleet_maintenances")
         conn.execute("DELETE FROM damage_case_events")

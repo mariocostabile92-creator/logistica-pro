@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./assets/css/mission-control.css?v=2" />
   <link rel="stylesheet" href="./assets/css/workspace-lifecycle.css?v=5" />
   <link rel="stylesheet" href="./assets/css/responsive.css?v=3" />
+  <link rel="stylesheet" href="./assets/css/documents-workspace.css?v=1" />
 </head>
 <body data-home-state="loading" data-planning-state="loading">
   <header class="app-header">
@@ -1491,9 +1492,9 @@
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
             Giornale di bordo
           </button>
-          <button class="fleet-tree-node" type="button" disabled>
+          <button class="fleet-tree-node" type="button" data-fleet-module="documents" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
-            Documenti <span class="tag">Prossimamente</span>
+            Documenti
           </button>
           <button class="fleet-tree-node" type="button" disabled>
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
@@ -1666,6 +1667,7 @@
 
       <section id="damageWorkspace" class="damage-workspace" aria-labelledby="damageWorkspaceTitle" hidden></section>
       <section id="maintenanceWorkspace" class="maintenance-workspace" aria-labelledby="maintenanceWorkspaceTitle" hidden></section>
+      <section id="documentsWorkspace" class="documents-workspace" aria-labelledby="documentsWorkspaceTitle" hidden></section>
       <section
         id="fleetVehicleDossier"
         class="fleet-vehicle-dossier"
@@ -1740,7 +1742,8 @@
               <div id="fleetDossierMaintenances" class="fleet-document-list"></div>
             </section>
             <section>
-              <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div></div>
+              <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div>
+                <button id="fleetDossierManageDocuments" type="button" class="quiet">Gestisci documenti</button></div>
               <div id="fleetDossierDocuments" class="fleet-document-list"></div>
             </section>
           </div>

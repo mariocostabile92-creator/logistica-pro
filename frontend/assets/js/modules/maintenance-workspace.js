@@ -233,6 +233,7 @@ function shell() {
 export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
   const workspace = root();
   document.getElementById("damageWorkspace").hidden = true;
+  document.getElementById("documentsWorkspace").hidden = true;
   document.getElementById("fleetWorkspaceHome").hidden = true;
   document.getElementById("fleetVehicleDossier").hidden = true;
   workspace.hidden = false;

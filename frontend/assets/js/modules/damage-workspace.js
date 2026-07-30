@@ -337,6 +337,7 @@ async function createFromCandidate(movementId) {
 export async function showDamageWorkspace(options = {}) {
   root = document.getElementById("damageWorkspace");
   document.getElementById("maintenanceWorkspace").hidden = true;
+  document.getElementById("documentsWorkspace").hidden = true;
   await refresh();
   renderShell();
   root.hidden = false;

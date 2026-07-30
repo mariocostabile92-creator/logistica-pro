@@ -1,0 +1,1 @@
+"""Vehicle documents application layer."""

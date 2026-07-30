@@ -392,6 +392,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
                 if not path.startswith("/api/imports/")
                 and not path.startswith("/api/fleet/damage")
                 and not path.startswith("/api/fleet/maintenances")
+                and not path.startswith("/api/fleet/documents")
                 and not path.startswith("/api/fleet/vehicles/")
             and not path.startswith("/api/plugins/fleet/v1/journal/")
             and not path.endswith("/profile")

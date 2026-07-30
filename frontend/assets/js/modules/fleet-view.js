@@ -389,6 +389,7 @@ export function renderVehicleDossier(
   assetDetail,
   linkedCases = [],
   maintenances = [],
+  vehicleDocuments = [],
 ) {
   const { asset, kpis, movements } = payload;
   const damageCases = movements.filter((movement) => movement.damage_case_id);
@@ -444,12 +445,14 @@ export function renderVehicleDossier(
     filters: byId("fleetOperationalDocumentFilters"),
     count: byId("fleetDossierMovementCount"),
   });
-  byId("fleetDossierDocuments").innerHTML = (assetDetail.documents || []).length
-    ? assetDetail.documents.map((document) => `
+  const expiredDocuments = vehicleDocuments.filter((document) => document.status === "scaduto").length;
+  const expiringDocuments = vehicleDocuments.filter((document) => document.status === "in_scadenza").length;
+  byId("fleetDossierDocuments").innerHTML = vehicleDocuments.length
+    ? `<div class="fleet-document-summary"><strong>${vehicleDocuments.length} documenti</strong><span>${expiredDocuments} scaduti · ${expiringDocuments} in scadenza</span></div>` + vehicleDocuments.map((document) => `
         <article class="fleet-document-item">
-          <strong>${escapeHtml(document.name)}</strong>
-          <span>${escapeHtml(documentLabel(document))}</span>
-          ${document.reference ? `<span>${escapeHtml(document.reference)}</span>` : ""}
+          <strong>${escapeHtml(document.title)}</strong>
+          <span>${escapeHtml(document.document_type.replaceAll("_", " "))} · ${escapeHtml(document.status.replaceAll("_", " "))}</span>
+          <span>${escapeHtml(document.expires_at || "Senza scadenza")} · ${document.has_file ? "File presente" : "File mancante"}</span>
         </article>
       `).join("")
     : '<div class="empty-state">Nessun documento registrato.</div>';

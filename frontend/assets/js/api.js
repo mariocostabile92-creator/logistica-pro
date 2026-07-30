@@ -231,6 +231,33 @@ export async function updateMaintenance(maintenanceId, payload) {
   ));
 }
 
+export async function listVehicleDocuments(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  );
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/documents?${query}`));
+}
+
+export async function getVehicleDocument(documentId) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/documents/${documentId}`));
+}
+
+export async function createVehicleDocument(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/documents`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+export async function updateVehicleDocument(documentId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/documents/${documentId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
 
 export async function getWorkforceStatus() {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/status`));
