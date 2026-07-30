@@ -16,6 +16,7 @@ export const listAssets = async () => {
 };
 export const createSession = body => request("/sessions", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body) });
 export const createSharedSession = body => request("/sessions/shared", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body) });
+export const validateSharedAccess = token => request(`/shared-access/${encodeURIComponent(token)}`);
 export const getSharedSession = sessionId => request(`/sessions/${encodeURIComponent(sessionId)}`);
 export const markSessionInProgress = (sessionId, token) => request(`/sessions/${encodeURIComponent(sessionId)}/progress`, { method: "POST", headers: {"X-Journal-Token": token} });
 export const checkSessionWarnings = (sessionId, token, odometerKm) => request(`/sessions/${encodeURIComponent(sessionId)}/warnings`, { method: "POST", headers: {"Content-Type": "application/json", "X-Journal-Token": token}, body: JSON.stringify({odometer_km: odometerKm}) });

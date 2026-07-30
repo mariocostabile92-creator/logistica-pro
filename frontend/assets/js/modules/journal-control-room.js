@@ -1,5 +1,6 @@
 import { listJournalControlRoom } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
+import { mountJournalSharedAccess } from "./journal-shared-access.js";
 
 let state = { items: [], selected: null, vehicle_id: null };
 const root = () => document.getElementById("journalControlRoom");
@@ -83,6 +84,7 @@ export async function showJournalControlRoom(options = {}) {
   state = { items: [], selected: null, vehicle_id: options.vehicle_id || null };
   root().hidden = false;
   root().innerHTML = `<header class="jcr-header"><div><p class="eyebrow">Fleet Operations</p><h2 id="journalControlRoomTitle">Journal Control Room</h2><p>Controllo delle procedure avviate autonomamente dai driver tramite il link condiviso</p></div></header>
+    <section class="jcr-shared-access" data-jcr-shared-access aria-label="Accesso condiviso Driver Journal"></section>
     <section class="jcr-kpis" aria-label="Riepilogo procedure">
       <article><span>Completate oggi</span><strong data-jcr-kpi="completed_today">0</strong></article>
       <article><span>Prese in carico</span><strong data-jcr-kpi="check_outs">0</strong></article>
@@ -96,6 +98,7 @@ export async function showJournalControlRoom(options = {}) {
       <label>Periodo<select data-jcr-period><option value="">Tutto</option><option value="today">Oggi</option><option value="7d">Ultimi 7 giorni</option><option value="30d">Ultimi 30 giorni</option></select></label>
     </div>
     <div class="jcr-master-detail"><aside data-jcr-list aria-label="Lista procedure"></aside><article data-jcr-detail></article></div>`;
+  await mountJournalSharedAccess(root().querySelector("[data-jcr-shared-access]"));
   await load();
 }
 

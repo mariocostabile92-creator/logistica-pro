@@ -1,6 +1,7 @@
 import { createSharedSession, getSharedSession, listAssets } from "./api.js?v=dj4";
 import { state } from "./state.js?v=dj4";
 import { escapeHtml } from "../../utils/dom.js?v=dj4";
+import { preparePublicAccess } from "./public-access.js?v=dj4";
 
 const $ = id => document.getElementById(id);
 
@@ -15,6 +16,7 @@ function showContext({ driver, plate, operation, scheduledAt = null }) {
 }
 
 export async function prepareJournalAccess() {
+  await preparePublicAccess();
   const assets = await listAssets();
   $("journalAssetSuggestions").innerHTML = (assets.items || []).map((asset) =>
     `<option value="${escapeHtml(asset.plate || "")}">${escapeHtml(asset.vehicle_model || asset.category || "Mezzo")}</option>`
@@ -52,6 +54,7 @@ export async function createSpontaneousSession() {
     driver_surname: $("driverSurname").value,
     vehicle_plate: $("plate").value,
     procedure_type: state.operationType,
+    access_token: state.accessToken,
   });
   state.sessionId = response.session_id;
   state.token = response.token;

@@ -25,6 +25,9 @@ from app.plugins.fleet.infrastructure.sync_schema import init_sync_schema as ini
 from app.plugins.fleet.journal.infrastructure.repository import (
     init_schema as init_journal_schema,
 )
+from app.plugins.fleet.journal.infrastructure.shared_access_repository import (
+    init_schema as init_journal_shared_access_schema,
+)
 from app.plugins.fleet.damage.infrastructure.repository import (
     init_schema as init_damage_schema,
 )
@@ -58,6 +61,7 @@ def reset_database():
     init_fleet_schema()
     init_fleet_sync_schema()
     init_journal_schema()
+    init_journal_shared_access_schema()
     init_damage_schema()
     init_maintenance_schema()
     init_vehicle_documents_schema()
@@ -87,6 +91,7 @@ def reset_database():
         conn.execute("DELETE FROM movement_equipment")
         conn.execute("DELETE FROM asset_movements")
         conn.execute("DELETE FROM journal_sessions")
+        conn.execute("DELETE FROM journal_shared_access")
         conn.execute("DELETE FROM workspace_reset_audits")
         conn.execute("DELETE FROM demo_workspaces")
         conn.execute("DELETE FROM configuration_versions")

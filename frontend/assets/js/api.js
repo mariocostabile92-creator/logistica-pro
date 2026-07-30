@@ -347,6 +347,30 @@ export async function createJournalDriverSession(payload) {
   }));
 }
 
+export async function getActiveJournalSharedAccess() {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/journal-control-room/shared-access/active`,
+  ));
+}
+
+export async function createJournalSharedAccess(regenerate = false) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/journal-control-room/shared-access`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regenerate }),
+    },
+  ));
+}
+
+export async function revokeJournalSharedAccess(accessId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/journal-control-room/shared-access/${encodeURIComponent(accessId)}/revoke`,
+    { method: "POST" },
+  ));
+}
+
 export async function getFleetVision(params = {}) {
   const query = new URLSearchParams(
     Object.entries(params).filter(([, value]) => value != null && value !== ""),

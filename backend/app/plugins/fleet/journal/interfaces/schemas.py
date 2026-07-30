@@ -39,6 +39,7 @@ class SharedSessionCreateRequest(BaseModel):
     driver_surname: str = Field(min_length=2, max_length=80)
     vehicle_plate: str = Field(min_length=1, max_length=40)
     procedure_type: Literal["check_out", "check_in"]
+    access_token: str | None = Field(default=None, min_length=20, max_length=200)
 
     @field_validator("driver_name", "driver_surname", "vehicle_plate")
     @classmethod

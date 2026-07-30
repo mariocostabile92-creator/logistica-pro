@@ -6,6 +6,7 @@ import sqlite3
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
+from app.plugins.fleet.journal.application import shared_access_service
 from app.plugins.fleet.journal.infrastructure import repository
 from app.plugins.fleet.journal.infrastructure.storage import media_storage
 from app.utils.text_normalizer import normalize_plate
@@ -238,6 +239,13 @@ def _smart_warnings(
 
 
 def create_shared_session(values: dict[str, object]) -> dict[str, object]:
+    access_token = values.get("access_token")
+    if access_token:
+        try:
+            shared_access_service.validate(str(access_token))
+        except shared_access_service.SharedAccessError as exc:
+            error_type = JournalNotFound if exc.status_code == 404 else JournalError
+            raise error_type(str(exc)) from exc
     driver_name = _normalize_person_name(values["driver_name"])
     driver_surname = _normalize_person_name(values["driver_surname"])
     asset = find_asset(str(values["vehicle_plate"]))
