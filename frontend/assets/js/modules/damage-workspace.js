@@ -196,6 +196,10 @@ async function renderDetail(caseId) {
       <div><p class="eyebrow">Pratica danno</p><h3>${escapeHtml(item.case_number)}</h3><p>${escapeHtml(item.plate || item.external_identifier)} · aperta ${escapeHtml(date(item.created_at))}</p></div>
       <div class="damage-detail-badges"><span>${STATUS[item.status]}</span><span>${SEVERITY[item.severity]}</span><span>${VEHICLE[item.asset_availability] || VEHICLE[item.vehicle_operational_status]}</span></div>
     </header>
+    <div class="damage-actions">
+      <button type="button" class="secondary" data-create-maintenance>Crea manutenzione</button>
+      <p id="damageMaintenanceStatus" class="section-note" role="status"></p>
+    </div>
     <div class="damage-detail-grid">
       <section><h4>Identità pratica ed evento di origine</h4><dl>
         <div><dt>Origine</dt><dd>${escapeHtml(item.origin)}</dd></div>
@@ -232,6 +236,14 @@ async function renderDetail(caseId) {
 }
 
 function bindDetail(caseId) {
+  root.querySelector("[data-create-maintenance]").addEventListener("click", async () => {
+    const item = await getDamageCase(caseId);
+    root.querySelector("#damageMaintenanceStatus").textContent =
+      "Creazione manutenzione in corso…";
+    document.dispatchEvent(new CustomEvent("maintenance:create-from-damage", {
+      detail: item,
+    }));
+  });
   root.querySelector("[data-manual-operational-status]").addEventListener("click", async () => {
     const item = await getDamageCase(caseId);
     openOperationalStatusControl({
@@ -313,6 +325,7 @@ async function createFromCandidate(movementId) {
 
 export async function showDamageWorkspace(options = {}) {
   root = document.getElementById("damageWorkspace");
+  document.getElementById("maintenanceWorkspace").hidden = true;
   await refresh();
   renderShell();
   root.hidden = false;

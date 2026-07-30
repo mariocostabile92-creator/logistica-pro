@@ -300,7 +300,12 @@ function dossierTimestamp(value) {
 }
 
 
-export function renderVehicleDossier(payload, assetDetail, linkedCases = []) {
+export function renderVehicleDossier(
+  payload,
+  assetDetail,
+  linkedCases = [],
+  maintenances = [],
+) {
   const { asset, kpis, movements } = payload;
   const damageCases = movements.filter((movement) => movement.damage_case_id);
   const openDamageCases = damageCases.filter(
@@ -338,6 +343,15 @@ export function renderVehicleDossier(payload, assetDetail, linkedCases = []) {
         </button>
       `).join("")
     : '<div class="empty-state">Nessuna pratica collegata.</div>';
+  byId("fleetDossierMaintenances").innerHTML = maintenances.length
+    ? maintenances.map((item) => `
+        <button type="button" class="fleet-document-item" data-maintenance-link="${item.id}">
+          <strong>${escapeHtml(item.maintenance_number)}</strong>
+          <span>${escapeHtml(item.maintenance_type.replaceAll("_", " "))} · ${escapeHtml(item.status.replaceAll("_", " "))}</span>
+          <span>${escapeHtml(dossierTimestamp(item.opened_at))}</span>
+        </button>
+      `).join("")
+    : '<div class="empty-state">Nessuna manutenzione registrata.</div>';
   mountOperationalDocumentHistory({
     movements,
     list: byId("fleetDossierTimeline"),

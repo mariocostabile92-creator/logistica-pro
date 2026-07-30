@@ -6,6 +6,7 @@ import {
   getLatestFleetSync,
   listFleetAssets,
   listDamageCases,
+  listMaintenances,
   updateFleetAsset,
 } from "../api.js";
 import { state } from "../state.js";
@@ -27,6 +28,7 @@ import {
   setFleetMetricPriority,
 } from "./fleet-view.js?v=3";
 import { showDamageWorkspace } from "./damage-workspace.js?v=4";
+import { showMaintenanceWorkspace } from "./maintenance-workspace.js?v=1";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 
 
@@ -102,16 +104,18 @@ function closeDialog(id) {
 
 async function showAsset(assetId) {
   byId("damageWorkspace").hidden = true;
+  byId("maintenanceWorkspace").hidden = true;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
   byId("fleetDossierState").hidden = false;
   byId("fleetDossierState").className = "view-state loading";
   byId("fleetDossierState").textContent = "Caricamento scheda mezzo";
   byId("fleetDossierContent").hidden = true;
-  const [asset, history, damageCases] = await Promise.all([
+  const [asset, history, damageCases, maintenances] = await Promise.all([
     getFleetAsset(assetId),
     getFleetVehicleHistory(assetId),
     listDamageCases().then((response) => response.items),
+    listMaintenances({ vehicle_id: assetId }).then((response) => response.items),
   ]);
   state.fleetPlugin.selectedAssetId = assetId;
   renderFleetTree(state.fleetPlugin.assets, assetId);
@@ -121,6 +125,7 @@ async function showAsset(assetId) {
     history,
     asset,
     damageCases.filter((item) => Number(item.vehicle_id) === Number(assetId)),
+    maintenances,
   );
   byId("fleetAssetTree").open = false;
   closeFleetSidebar();
@@ -129,6 +134,7 @@ async function showAsset(assetId) {
 
 function showFleetLibrary() {
   byId("damageWorkspace").hidden = true;
+  byId("maintenanceWorkspace").hidden = true;
   state.fleetPlugin.selectedAssetId = null;
   byId("fleetVehicleDossier").hidden = true;
   byId("fleetWorkspaceHome").hidden = false;
@@ -142,6 +148,7 @@ function showFleetLibrary() {
 
 function showJournalGateway() {
   byId("damageWorkspace").hidden = true;
+  byId("maintenanceWorkspace").hidden = true;
   state.fleetPlugin.selectedAssetId = null;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
@@ -434,6 +441,12 @@ export function initFleetPage() {
       showDamageWorkspace().catch((error) => showFleetActionError("fleet.damage", error));
       closeFleetSidebar();
     }
+    if (module === "maintenance") {
+      showMaintenanceWorkspace().catch(
+        (error) => showFleetActionError("fleet.maintenance", error),
+      );
+      closeFleetSidebar();
+    }
   });
   document.addEventListener("damage:open", (event) => {
     document.querySelectorAll("[data-fleet-module]").forEach(
@@ -443,6 +456,20 @@ export function initFleetPage() {
       (error) => showFleetActionError("fleet.damage", error),
     );
   });
+  document.addEventListener("maintenance:open", (event) => {
+    document.querySelectorAll("[data-fleet-module]").forEach(
+      (node) => node.classList.toggle(
+        "active",
+        node.dataset.fleetModule === "maintenance",
+      ),
+    );
+    showMaintenanceWorkspace(event.detail || {}).catch(
+      (error) => showFleetActionError("fleet.maintenance", error),
+    );
+  });
+  document.addEventListener("maintenance:error", (event) => {
+    setMessage(event.detail.message, "error");
+  });
   document.addEventListener("fleet:operational-status-changed", async () => {
     await refreshFleet(state.fleetPlugin.selectedAssetId);
   });
@@ -450,6 +477,15 @@ export function initFleetPage() {
     const caseId = event.target.closest("[data-damage-case-link]")?.dataset.damageCaseLink;
     if (caseId) {
       document.dispatchEvent(new CustomEvent("damage:open", { detail: { caseId } }));
+    }
+  });
+  byId("fleetDossierMaintenances").addEventListener("click", (event) => {
+    const maintenanceId = event.target.closest("[data-maintenance-link]")
+      ?.dataset.maintenanceLink;
+    if (maintenanceId) {
+      document.dispatchEvent(new CustomEvent("maintenance:open", {
+        detail: { maintenanceId: Number(maintenanceId) },
+      }));
     }
   });
   byId("fleetDossierBack").addEventListener("click", showFleetLibrary);

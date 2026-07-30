@@ -188,6 +188,38 @@ export async function addDamageCaseNote(caseId, payload) {
   }));
 }
 
+export async function listMaintenances(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  );
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/maintenances?${query}`));
+}
+
+export async function getMaintenance(maintenanceId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/maintenances/${maintenanceId}`,
+  ));
+}
+
+export async function createMaintenance(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/maintenances`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+export async function updateMaintenance(maintenanceId, payload) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/maintenances/${maintenanceId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  ));
+}
+
 
 export async function getWorkforceStatus() {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/status`));

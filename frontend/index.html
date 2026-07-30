@@ -1515,9 +1515,9 @@
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
             Assicurazioni <span class="tag">Prossimamente</span>
           </button>
-          <button class="fleet-tree-node" type="button" disabled>
+          <button class="fleet-tree-node" type="button" data-fleet-module="maintenance" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
-            Manutenzioni <span class="tag">Prossimamente</span>
+            Manutenzioni
           </button>
         </nav>
       </aside>
@@ -1662,6 +1662,7 @@
       </div>
 
       <section id="damageWorkspace" class="damage-workspace" aria-labelledby="damageWorkspaceTitle" hidden></section>
+      <section id="maintenanceWorkspace" class="maintenance-workspace" aria-labelledby="maintenanceWorkspaceTitle" hidden></section>
       <section
         id="fleetVehicleDossier"
         class="fleet-vehicle-dossier"
@@ -1723,6 +1724,10 @@
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Danni</p><h3>Pratiche collegate</h3></div></div>
               <div id="fleetDossierDamageCases" class="fleet-document-list"></div>
+            </section>
+            <section>
+              <div class="fleet-registry-heading"><div><p class="eyebrow">Interventi</p><h3>Manutenzioni</h3></div></div>
+              <div id="fleetDossierMaintenances" class="fleet-document-list"></div>
             </section>
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div></div>
