@@ -109,7 +109,7 @@ function contractContext(profile) {
     ["Società", profile.company || profile.owner_company || "Non registrata"],
     ["Contratto", profile.contract_number || "Non registrato"],
   ];
-  if (profile.contract_type === "lungo_termine") {
+  if (["lungo_termine", "breve_termine", "leasing"].includes(profile.contract_type)) {
     fields.push(["Franchigia prevista", money(profile.deductible)]);
   }
   if (profile.contract_type === "breve_termine") {
@@ -234,6 +234,7 @@ export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
   const workspace = root();
   document.getElementById("damageWorkspace").hidden = true;
   document.getElementById("documentsWorkspace").hidden = true;
+  document.getElementById("franchiseWorkspace").hidden = true;
   document.getElementById("fleetWorkspaceHome").hidden = true;
   document.getElementById("fleetVehicleDossier").hidden = true;
   workspace.hidden = false;

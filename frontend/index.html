@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="./assets/css/workspace-lifecycle.css?v=5" />
   <link rel="stylesheet" href="./assets/css/responsive.css?v=3" />
   <link rel="stylesheet" href="./assets/css/documents-workspace.css?v=1" />
+  <link rel="stylesheet" href="./assets/css/franchise-workspace.css?v=1" />
 </head>
 <body data-home-state="loading" data-planning-state="loading">
   <header class="app-header">
@@ -1496,9 +1497,9 @@
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
             Documenti
           </button>
-          <button class="fleet-tree-node" type="button" disabled>
+          <button class="fleet-tree-node" type="button" data-fleet-module="franchises" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
-            Franchigie <span class="tag">Prossimamente</span>
+            Franchigie
           </button>
           <button class="fleet-tree-node" type="button" disabled>
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
@@ -1668,6 +1669,7 @@
       <section id="damageWorkspace" class="damage-workspace" aria-labelledby="damageWorkspaceTitle" hidden></section>
       <section id="maintenanceWorkspace" class="maintenance-workspace" aria-labelledby="maintenanceWorkspaceTitle" hidden></section>
       <section id="documentsWorkspace" class="documents-workspace" aria-labelledby="documentsWorkspaceTitle" hidden></section>
+      <section id="franchiseWorkspace" class="franchise-workspace" aria-labelledby="franchiseWorkspaceTitle" hidden></section>
       <section
         id="fleetVehicleDossier"
         class="fleet-vehicle-dossier"
@@ -1740,6 +1742,11 @@
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Interventi</p><h3>Manutenzioni</h3></div></div>
               <div id="fleetDossierMaintenances" class="fleet-document-list"></div>
+            </section>
+            <section>
+              <div class="fleet-registry-heading"><div><p class="eyebrow">Impatto economico</p><h3>Franchigie</h3></div>
+                <button id="fleetDossierManageFranchises" type="button" class="quiet">Apri Franchigie</button></div>
+              <div id="fleetDossierFranchises" class="fleet-document-list"></div>
             </section>
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div>

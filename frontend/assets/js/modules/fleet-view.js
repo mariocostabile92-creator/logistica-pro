@@ -390,6 +390,7 @@ export function renderVehicleDossier(
   linkedCases = [],
   maintenances = [],
   vehicleDocuments = [],
+  franchises = [],
 ) {
   const { asset, kpis, movements } = payload;
   const damageCases = movements.filter((movement) => movement.damage_case_id);
@@ -438,6 +439,15 @@ export function renderVehicleDossier(
         </button>
       `).join("")
     : '<div class="empty-state">Nessuna manutenzione registrata.</div>';
+  byId("fleetDossierFranchises").innerHTML = franchises.length
+    ? franchises.map((item) => `
+        <button type="button" class="fleet-document-item" data-franchise-link="${item.id}">
+          <strong>${escapeHtml(item.damage_case_number)}</strong>
+          <span>${escapeHtml(item.status.replaceAll("_", " "))} · ${item.franchise_expected == null ? "Non prevista" : money(item.franchise_expected)}</span>
+          <span>${escapeHtml(item.contract_number || "Contratto non registrato")}</span>
+        </button>
+      `).join("")
+    : '<div class="empty-state">Nessuna valutazione franchigia registrata.</div>';
   mountOperationalDocumentHistory({
     movements,
     list: byId("fleetDossierTimeline"),

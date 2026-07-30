@@ -1,0 +1,1 @@
+"""Franchise application layer."""

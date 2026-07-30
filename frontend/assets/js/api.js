@@ -258,6 +258,33 @@ export async function updateVehicleDocument(documentId, payload) {
   }));
 }
 
+export async function listFranchiseCases(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  );
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/franchises?${query}`));
+}
+
+export async function getFranchiseCase(caseId) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/franchises/${caseId}`));
+}
+
+export async function ensureFranchiseCase(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/franchises`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+export async function updateFranchiseCase(caseId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/franchises/${caseId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
 
 export async function getWorkforceStatus() {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/status`));

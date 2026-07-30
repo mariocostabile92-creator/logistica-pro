@@ -22,6 +22,10 @@ from app.plugins.fleet.documents.infrastructure.repository import (
     init_schema as init_documents_schema,
 )
 from app.plugins.fleet.documents.interfaces.router import router as documents_router
+from app.plugins.fleet.franchises.infrastructure.repository import (
+    init_schema as init_franchise_schema,
+)
+from app.plugins.fleet.franchises.interfaces.router import router as franchise_router
 
 
 def fleet_plugin_enabled() -> bool:
@@ -37,6 +41,7 @@ def initialize_fleet_plugin() -> None:
         init_damage_schema()
         init_maintenance_schema()
         init_documents_schema()
+        init_franchise_schema()
 
 
 def register_fleet_plugin(app: FastAPI) -> None:
@@ -47,3 +52,4 @@ def register_fleet_plugin(app: FastAPI) -> None:
         app.include_router(damage_router)
         app.include_router(maintenance_router)
         app.include_router(documents_router)
+        app.include_router(franchise_router)

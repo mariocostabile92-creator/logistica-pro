@@ -3,6 +3,7 @@ import {
   changeDamageCaseStatus,
   createDamageCase,
   getDamageCase,
+  ensureFranchiseCase,
   listDamageCandidates,
   listDamageCases,
   updateDamageCase,
@@ -198,6 +199,7 @@ async function renderDetail(caseId) {
     </header>
     <div class="damage-actions">
       <button type="button" class="secondary" data-create-maintenance>Crea manutenzione</button>
+      <button type="button" class="secondary" data-open-franchise>Apri Franchigia</button>
       <p id="damageMaintenanceStatus" class="section-note" role="status"></p>
     </div>
     <div class="damage-detail-grid">
@@ -218,6 +220,9 @@ async function renderDetail(caseId) {
         }[item.asset_profile?.contract_type] || "Non configurato")}</dd></div>
         <div><dt>Società</dt><dd>${escapeHtml(item.asset_profile?.company || item.asset_profile?.owner_company || "Non registrata")}</dd></div>
         <div><dt>Numero contratto</dt><dd>${escapeHtml(item.asset_profile?.contract_number || "Non registrato")}</dd></div>
+        <div><dt>Franchigia prevista</dt><dd>${item.asset_profile?.deductible == null
+          ? "Non prevista"
+          : escapeHtml(new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(item.asset_profile.deductible)))}</dd></div>
       </dl></section>
       <section><h4>Stato operativo corrente</h4><dl>
         <div><dt>Motivo stato operativo</dt><dd>${escapeHtml(item.operational_status_reason || "Non registrato")}</dd></div>
@@ -235,7 +240,7 @@ async function renderDetail(caseId) {
           <label>Costo stimato EUR<input name="estimated_cost" type="number" min="0" step="0.01" value="${item.estimated_cost || ""}"></label>
           <label>Costo finale EUR<input name="final_cost" type="number" min="0" step="0.01" value="${item.final_cost || ""}"></label>
           <button type="submit">Salva valutazione</button>
-        </form><p class="section-note">Franchigia prevista e applicata: predisposte per il futuro modulo Franchigie.</p>
+        </form>
       </section>
       <section><h4>Foto</h4><div class="damage-media">${media.filter((entry) => entry.media_type === "image").map((entry) => `<a href="${escapeHtml(entry.url)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(entry.url)}" alt="Foto anomalia"></a>`).join("") || "<p>Nessuna foto allegata.</p>"}</div><h4>Video</h4><div class="damage-empty">Video non disponibile in questa versione.</div></section>
       <section><h4>Cambio stato</h4><form id="damageStatusForm" class="damage-form"><label>Nuovo stato<select name="status">${Object.entries(STATUS).map(([key,label]) => `<option value="${key}" ${key === item.status ? "selected" : ""}>${label}</option>`).join("")}</select></label><label>Stato mezzo alla chiusura<select name="restoration_status"><option value="">Seleziona alla chiusura</option>${Object.entries(VEHICLE).map(([key,label]) => `<option value="${key}">${label}</option>`).join("")}</select></label><label>Motivazione<textarea name="note" required></textarea></label><button type="submit">Registra cambio stato</button></form><p id="damageActionStatus" class="section-note" role="status" aria-live="polite"></p></section>
@@ -247,6 +252,18 @@ async function renderDetail(caseId) {
 }
 
 function bindDetail(caseId) {
+  root.querySelector("[data-open-franchise]").addEventListener("click", async () => {
+    const status = root.querySelector("#damageMaintenanceStatus");
+    status.textContent = "Apertura valutazione franchigia…";
+    try {
+      const franchise = await ensureFranchiseCase({ damage_case_id: caseId });
+      document.dispatchEvent(new CustomEvent("franchise:open", {
+        detail: { franchiseId: franchise.id },
+      }));
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  });
   root.querySelector("[data-create-maintenance]").addEventListener("click", async () => {
     const item = await getDamageCase(caseId);
     root.querySelector("#damageMaintenanceStatus").textContent =
@@ -338,6 +355,7 @@ export async function showDamageWorkspace(options = {}) {
   root = document.getElementById("damageWorkspace");
   document.getElementById("maintenanceWorkspace").hidden = true;
   document.getElementById("documentsWorkspace").hidden = true;
+  document.getElementById("franchiseWorkspace").hidden = true;
   await refresh();
   renderShell();
   root.hidden = false;

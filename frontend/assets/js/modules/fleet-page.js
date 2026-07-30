@@ -8,6 +8,7 @@ import {
   listDamageCases,
   listMaintenances,
   listVehicleDocuments,
+  listFranchiseCases,
   saveFleetAssetProfile,
   updateFleetAsset,
 } from "../api.js";
@@ -32,6 +33,7 @@ import {
 import { showDamageWorkspace } from "./damage-workspace.js?v=4";
 import { showMaintenanceWorkspace } from "./maintenance-workspace.js?v=1";
 import { showDocumentsWorkspace } from "./documents-workspace.js?v=1";
+import { showFranchiseWorkspace } from "./franchise-workspace.js?v=1";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 
 
@@ -109,18 +111,20 @@ async function showAsset(assetId) {
   byId("damageWorkspace").hidden = true;
   byId("maintenanceWorkspace").hidden = true;
   byId("documentsWorkspace").hidden = true;
+  byId("franchiseWorkspace").hidden = true;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
   byId("fleetDossierState").hidden = false;
   byId("fleetDossierState").className = "view-state loading";
   byId("fleetDossierState").textContent = "Caricamento scheda mezzo";
   byId("fleetDossierContent").hidden = true;
-  const [asset, history, damageCases, maintenances, documents] = await Promise.all([
+  const [asset, history, damageCases, maintenances, documents, franchises] = await Promise.all([
     getFleetAsset(assetId),
     getFleetVehicleHistory(assetId),
     listDamageCases().then((response) => response.items),
     listMaintenances({ vehicle_id: assetId }).then((response) => response.items),
     listVehicleDocuments({ vehicle_id: assetId }).then((response) => response.items),
+    listFranchiseCases({ vehicle_id: assetId }).then((response) => response.items),
   ]);
   state.fleetPlugin.selectedAssetId = assetId;
   renderFleetTree(state.fleetPlugin.assets, assetId);
@@ -132,6 +136,7 @@ async function showAsset(assetId) {
     damageCases.filter((item) => Number(item.vehicle_id) === Number(assetId)),
     maintenances,
     documents,
+    franchises,
   );
   byId("fleetAssetTree").open = false;
   closeFleetSidebar();
@@ -142,6 +147,7 @@ function showFleetLibrary() {
   byId("damageWorkspace").hidden = true;
   byId("maintenanceWorkspace").hidden = true;
   byId("documentsWorkspace").hidden = true;
+  byId("franchiseWorkspace").hidden = true;
   state.fleetPlugin.selectedAssetId = null;
   byId("fleetVehicleDossier").hidden = true;
   byId("fleetWorkspaceHome").hidden = false;
@@ -157,6 +163,7 @@ function showJournalGateway() {
   byId("damageWorkspace").hidden = true;
   byId("maintenanceWorkspace").hidden = true;
   byId("documentsWorkspace").hidden = true;
+  byId("franchiseWorkspace").hidden = true;
   state.fleetPlugin.selectedAssetId = null;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
@@ -525,6 +532,12 @@ export function initFleetPage() {
       );
       closeFleetSidebar();
     }
+    if (module === "franchises") {
+      showFranchiseWorkspace().catch(
+        (error) => showFleetActionError("fleet.franchises", error),
+      );
+      closeFleetSidebar();
+    }
   });
   document.addEventListener("damage:open", (event) => {
     document.querySelectorAll("[data-fleet-module]").forEach(
@@ -559,6 +572,17 @@ export function initFleetPage() {
       (error) => showFleetActionError("fleet.documents", error),
     );
   });
+  document.addEventListener("franchise:open", (event) => {
+    document.querySelectorAll("[data-fleet-module]").forEach(
+      (node) => node.classList.toggle(
+        "active",
+        node.dataset.fleetModule === "franchises",
+      ),
+    );
+    showFranchiseWorkspace(event.detail || {}).catch(
+      (error) => showFleetActionError("fleet.franchises", error),
+    );
+  });
   document.addEventListener("fleet:vehicle-open", (event) => {
     showAsset(Number(event.detail.assetId)).catch(
       (error) => showFleetActionError("fleet.asset-detail", error),
@@ -582,8 +606,22 @@ export function initFleetPage() {
       }));
     }
   });
+  byId("fleetDossierFranchises").addEventListener("click", (event) => {
+    const franchiseId = event.target.closest("[data-franchise-link]")
+      ?.dataset.franchiseLink;
+    if (franchiseId) {
+      document.dispatchEvent(new CustomEvent("franchise:open", {
+        detail: { franchiseId: Number(franchiseId) },
+      }));
+    }
+  });
   byId("fleetDossierManageDocuments").addEventListener("click", () => {
     document.dispatchEvent(new CustomEvent("documents:open", {
+      detail: { vehicleId: state.fleetPlugin.selectedAssetId },
+    }));
+  });
+  byId("fleetDossierManageFranchises").addEventListener("click", () => {
+    document.dispatchEvent(new CustomEvent("franchise:open", {
       detail: { vehicleId: state.fleetPlugin.selectedAssetId },
     }));
   });
