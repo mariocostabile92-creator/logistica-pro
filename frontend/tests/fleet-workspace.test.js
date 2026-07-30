@@ -199,8 +199,9 @@ test("Fleet tree navigation follows the Fleet Manager workflow", async () => {
   for (const item of ["Parco Mezzi", "Vehicle Library", "Giornale di bordo"]) {
     assert.match(fleet, new RegExp(item));
   }
-  for (const item of ["Documenti", "Franchigie", "Noleggi"]) {
-    assert.match(fleet, new RegExp(`${item}[\\s\\S]*?Prossimamente`));
+  for (const module of ["documents", "franchises", "rentals", "deadlines", "vision"]) {
+    const node = fleet.match(new RegExp(`data-fleet-module="${module}"[\\s\\S]*?<\\/button>`))?.[0] || "";
+    assert.doesNotMatch(node, /Prossimamente|disabled/);
   }
   assert.match(fleet, /data-fleet-module="damage"[\s\S]*?Danni/);
   assert.doesNotMatch(

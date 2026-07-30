@@ -384,6 +384,7 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
                         and not path.startswith("/api/fleet/rentals")
                         and not path.startswith("/api/fleet/deadlines")
                         and not path.startswith("/api/fleet/journal-control-room")
+                        and not path.startswith("/api/fleet/vision")
                         and not path.startswith("/api/fleet/vehicles/")
                     and not path.startswith("/api/plugins/fleet/v1/journal/")
                     and not path.endswith("/profile")

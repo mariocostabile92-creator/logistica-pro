@@ -41,6 +41,7 @@ import { showInsuranceWorkspace } from "./insurance-workspace.js?v=1";
 import { showRentalWorkspace } from "./rental-workspace.js?v=1";
 import { showDeadlinesWorkspace } from "./deadlines-workspace.js?v=1";
 import { showJournalControlRoom } from "./journal-control-room.js?v=1";
+import { showFleetVisionWorkspace } from "./fleet-vision-workspace.js?v=1";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 
 
@@ -123,6 +124,7 @@ async function showAsset(assetId) {
   byId("rentalWorkspace").hidden = true;
   byId("deadlinesWorkspace").hidden = true;
   byId("journalControlRoom").hidden = true;
+  byId("fleetVisionWorkspace").hidden = true;
   byId("fleetWorkspaceHome").hidden = true;
   byId("fleetVehicleDossier").hidden = false;
   byId("fleetDossierState").hidden = false;
@@ -514,6 +516,7 @@ export function initFleetPage() {
     );
     if (module !== "deadlines") byId("deadlinesWorkspace").hidden = true;
     if (module !== "journal") byId("journalControlRoom").hidden = true;
+    if (module !== "vision") byId("fleetVisionWorkspace").hidden = true;
     if (module === "library") showFleetLibrary();
     if (module === "journal") {
       showJournalControlRoom().catch(
@@ -558,6 +561,12 @@ export function initFleetPage() {
     if (module === "deadlines") {
       showDeadlinesWorkspace().catch(
         (error) => showFleetActionError("fleet.deadlines", error),
+      );
+      closeFleetSidebar();
+    }
+    if (module === "vision") {
+      showFleetVisionWorkspace().catch(
+        (error) => showFleetActionError("fleet.vision", error),
       );
       closeFleetSidebar();
     }
@@ -715,6 +724,11 @@ export function initFleetPage() {
   byId("fleetDossierOpenControlRoom").addEventListener("click", () => {
     showJournalControlRoom({ vehicle_id: state.fleetPlugin.selectedAssetId }).catch(
       (error) => showFleetActionError("fleet.journal-control-room", error),
+    );
+  });
+  byId("fleetDossierOpenVision").addEventListener("click", () => {
+    showFleetVisionWorkspace({ vehicle_id: state.fleetPlugin.selectedAssetId }).catch(
+      (error) => showFleetActionError("fleet.vision", error),
     );
   });
   byId("fleetDossierBack").addEventListener("click", showFleetLibrary);
