@@ -15,8 +15,12 @@ function rerender() {
 export async function showFleetVisionWorkspace(options = {}) {
   document.querySelectorAll(hiddenWorkspaces).forEach(element => { element.hidden = true; });
   root().hidden = false;
-  root().innerHTML = `<div class="view-state"><strong>Fleet Vision in caricamento</strong>
-    <p>Correlazione dei dati operativi in corso.</p></div>`;
+  root().innerHTML = `<section class="fve2-loading" aria-live="polite" aria-busy="true">
+    <strong>Fleet Vision in caricamento</strong>
+    <p>Correlazione dei dati operativi in corso.</p>
+    <div aria-hidden="true">${Array.from({ length: 4 }, () =>
+      `<span class="fve2-skeleton"></span>`).join("")}</div>
+  </section>`;
   resetFleetVisionState(await loadFleetVisionExcellence(options));
   rerender();
 }

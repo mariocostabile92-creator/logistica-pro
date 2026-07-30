@@ -24,8 +24,9 @@ export function snapshotSection(summary) {
   ];
   return `<section class="fve2-section fve2-snapshot" aria-labelledby="fveSnapshotTitle">
     <header><p class="eyebrow">Fleet Snapshot</p><h3 id="fveSnapshotTitle">Stato della flotta</h3></header>
-    <div>${kpis.map(([key, label, filter]) => `<button type="button" data-fve-filter="${filter}">
-      <span>${escapeHtml(label)}</span><strong>${summary[key] ?? 0}</strong></button>`).join("")}</div>
+    <div>${kpis.map(([key, label, filter]) => `<button type="button" class="fve2-kpi" data-fve-filter="${filter}">
+      <strong>${summary[key] ?? 0}</strong><span>${escapeHtml(label)}</span>
+      <small>Apri dettaglio</small></button>`).join("")}</div>
   </section>`;
 }
 
@@ -45,10 +46,12 @@ function criticalityCard(item) {
 
 function vehicleGroup(group, items) {
   const open = fleetVisionState.expandedVehicles.has(group.vehicle_id);
+  const level = priorityLabel[items[0]?.priority] || "Informative";
   return `<article class="fve2-vehicle-group">
     <button type="button" class="fve2-vehicle-toggle" data-fve-vehicle-toggle="${group.vehicle_id}"
       aria-expanded="${open}"><span><strong>${escapeHtml(group.vehicle)}</strong>
-      <small>${items.length} ${items.length === 1 ? "criticità" : "criticità"}</small></span><span>${open ? "−" : "+"}</span></button>
+      <small>${items.length} criticità · livello ${escapeHtml(level)}</small></span>
+      <span class="fve2-expand-label"><b aria-hidden="true">${open ? "−" : "+"}</b>${open ? "Riduci" : "Espandi"}</span></button>
     ${open ? `<div class="fve2-vehicle-criticalities">${items.map(criticalityCard).join("")}</div>` : ""}
   </article>`;
 }
@@ -76,8 +79,8 @@ export function criticalitiesSection() {
         acc[item.vehicle_id] ||= { vehicle_id: item.vehicle_id, vehicle: item.vehicle, items: [] };
         acc[item.vehicle_id].items.push(item); return acc;
       }, {}));
-      return `<section class="fve2-priority-group"><button type="button" data-fve-group="${group.priority}"
-        aria-expanded="${open}"><span>${priorityLabel[group.priority]}</span><strong>${group.items.length}</strong></button>
+      return `<section class="fve2-priority-group priority-${group.priority}"><button type="button" data-fve-group="${group.priority}"
+        aria-expanded="${open}"><span><b aria-hidden="true">${open ? "▾" : "▸"}</b>${priorityLabel[group.priority]}</span><strong>${group.items.length}</strong></button>
         ${open ? `<div>${group.items.length ? byVehicle.map(v => vehicleGroup(v, v.items)).join("")
           : `<div class="view-state">Nessuna criticità in questo gruppo.</div>`}
           ${group.items.length > 5 && !fleetVisionState.showAll.has(group.priority)
@@ -101,8 +104,8 @@ export function operationsSection(data) {
   return `<section class="fve2-section fve2-operations" aria-labelledby="fveOperationsTitle">
     <header><p class="eyebrow">Operatività</p><h3 id="fveOperationsTitle">Indicatori sintetici</h3></header>
     <div>${rows.map(([label, status, updated, module]) => `<article><div><h4>${label}</h4>
-      <span>${status}</span><small>Ultimo aggiornamento · ${dateLabel(updated)}</small></div>
-      <button type="button" class="quiet" data-fve-source="${module}">Apri</button></article>`).join("")}</div>
+      <span class="fve2-operation-status">${status}</span><small>Ultimo aggiornamento · ${dateLabel(updated)}</small></div>
+      <button type="button" class="fve2-open-action" data-fve-source="${module}">Apri</button></article>`).join("")}</div>
   </section>`;
 }
 
@@ -115,7 +118,7 @@ export function quickAccessSection() {
   ];
   return `<section class="fve2-section fve2-quick" aria-labelledby="fveQuickTitle">
     <header><p class="eyebrow">Accessi rapidi</p><h3 id="fveQuickTitle">Apri il workspace sorgente</h3></header>
-    <div>${links.map(([module, label]) => `<button type="button" class="quiet"
+    <div>${links.map(([module, label]) => `<button type="button" class="fve2-quick-action"
       data-fve-source="${module}">${label}</button>`).join("")}</div>
   </section>`;
 }
