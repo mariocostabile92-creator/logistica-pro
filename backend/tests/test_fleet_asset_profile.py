@@ -33,6 +33,7 @@ def save(asset_id: int, **changes):
         "excess_km_cost": "0.12",
         "starts_on": "2026-01-01",
         "expires_on": "2029-12-31",
+        "purchased_on": None,
         "contract_status": "attivo",
         **changes,
     }
@@ -66,9 +67,39 @@ def test_profile_creation_visibility_update_and_contract_rules():
         vehicle["id"],
         contract_type="proprieta",
         owner_company="Operations Srl",
+        purchased_on="2025-05-10",
     ).json()
     assert owned["monthly_fee"] is None
     assert owned["daily_cost"] is None
+    assert owned["purchased_on"] == "2025-05-10"
+
+
+def test_profile_contract_specific_validation():
+    vehicle = asset()
+    missing_company = save(
+        vehicle["id"],
+        contract_type="leasing",
+        company="",
+    )
+    assert missing_company.status_code == 422
+    missing_monthly = save(
+        vehicle["id"],
+        contract_type="lungo_termine",
+        monthly_fee=None,
+    )
+    assert missing_monthly.status_code == 422
+    missing_daily = save(
+        vehicle["id"],
+        contract_type="breve_termine",
+        daily_cost=None,
+    )
+    assert missing_daily.status_code == 422
+    invalid_dates = save(
+        vehicle["id"],
+        starts_on="2028-01-01",
+        expires_on="2027-12-31",
+    )
+    assert invalid_dates.status_code == 422
 
 
 def test_profile_is_exposed_to_damage_and_maintenance():

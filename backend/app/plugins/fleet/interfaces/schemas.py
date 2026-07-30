@@ -2,7 +2,7 @@ import re
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.plugins.fleet.domain.models import Asset, AssetEvent
 
@@ -158,6 +158,7 @@ class FleetAssetProfileRequest(BaseModel):
     excess_km_cost: Decimal | None = Field(default=None, ge=0)
     starts_on: date | None = None
     expires_on: date | None = None
+    purchased_on: date | None = None
     contract_status: str
     actor: str = "fleet_manager"
 
@@ -174,3 +175,16 @@ class FleetAssetProfileRequest(BaseModel):
         if value not in {"attivo", "in_scadenza", "scaduto"}:
             raise ValueError("Stato contratto non valido.")
         return value
+
+    @model_validator(mode="after")
+    def validate_contract_rules(self):
+        if self.contract_type in {"lungo_termine", "breve_termine", "leasing"}:
+            if not (self.company or "").strip():
+                raise ValueError("La società è obbligatoria per il tipo di contratto.")
+        if self.contract_type == "lungo_termine" and self.monthly_fee is None:
+            raise ValueError("Il canone mensile è obbligatorio per il lungo termine.")
+        if self.contract_type == "breve_termine" and self.daily_cost is None:
+            raise ValueError("Il costo giornaliero è obbligatorio per il breve termine.")
+        if self.starts_on and self.expires_on and self.expires_on < self.starts_on:
+            raise ValueError("La data fine non può precedere la data inizio.")
+        return self

@@ -23,8 +23,10 @@ test("Vehicle Library exposes one editable contractual profile", async () => {
 test("contract type controls only the applicable economic fields", async () => {
   const fleet = await file("assets/js/modules/fleet-page.js");
   assert.match(fleet, /\["breve_termine", "proprieta"\]\.includes\(type\)/);
-  assert.match(fleet, /type !== "breve_termine"/);
-  assert.match(fleet, /!\["lungo_termine", "leasing"\]\.includes\(type\)/);
+  assert.match(fleet, /\["breve_termine", "altro"\]\.includes\(type\)/);
+  assert.match(fleet, /data-profile-purchase/);
+  assert.match(fleet, /monthly_fee\.required = type === "lungo_termine"/);
+  assert.match(fleet, /daily_cost\.required = type === "breve_termine"/);
   assert.doesNotMatch(fleet, /location\.reload|history\.pushState/);
 });
 

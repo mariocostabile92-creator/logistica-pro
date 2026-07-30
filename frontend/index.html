@@ -1762,16 +1762,17 @@
               <option value="altro">Altro</option>
             </select></label>
             <label data-profile-company>Società<input name="company"></label>
-            <label>Società proprietaria<input name="owner_company"></label>
-            <label>Numero contratto<input name="contract_number"></label>
+            <label data-profile-owner>Società proprietaria<input name="owner_company"></label>
+            <label data-profile-contract-number>Numero contratto<input name="contract_number"></label>
             <label data-profile-monthly>Canone mensile<input name="monthly_fee" type="number" min="0" step="0.01"></label>
             <label data-profile-daily>Costo giornaliero<input name="daily_cost" type="number" min="0" step="0.01"></label>
             <label data-profile-deductible>Franchigia<input name="deductible" type="number" min="0" step="0.01"></label>
             <label data-profile-km>Km inclusi<input name="included_km" type="number" min="0"></label>
             <label data-profile-km>Costo km eccedente<input name="excess_km_cost" type="number" min="0" step="0.0001"></label>
-            <label>Data inizio<input name="starts_on" type="date"></label>
-            <label>Data scadenza<input name="expires_on" type="date"></label>
-            <label>Stato contratto<select name="contract_status">
+            <label data-profile-start>Data inizio<input name="starts_on" type="date"></label>
+            <label data-profile-end>Data fine<input name="expires_on" type="date"></label>
+            <label data-profile-purchase>Data acquisto <span class="section-note">(facoltativa)</span><input name="purchased_on" type="date"></label>
+            <label data-profile-status>Stato contratto<select name="contract_status">
               <option value="attivo">Attivo</option>
               <option value="in_scadenza">In scadenza</option>
               <option value="scaduto">Scaduto</option>

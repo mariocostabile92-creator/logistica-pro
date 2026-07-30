@@ -62,6 +62,12 @@ def asset_profile(
     elif contract_type == "proprieta":
         values["monthly_fee"] = None
         values["daily_cost"] = None
+        values["deductible"] = None
+        values["included_km"] = None
+        values["excess_km_cost"] = None
+        values["contract_number"] = None
+        values["starts_on"] = None
+        values["expires_on"] = None
     try:
         return save_profile(asset_id, values, actor)
     except AssetNotFoundError as exc:

@@ -335,28 +335,50 @@ function renderContractProfile(profile) {
     target.innerHTML = '<div><dt>Profilo</dt><dd>Non ancora configurato</dd></div>';
     return;
   }
+  if (profile.contract_type === "proprieta") {
+    target.innerHTML = [
+      ["Tipo contratto", CONTRACT_TYPE[profile.contract_type]],
+      ["Società proprietaria", profile.owner_company || "Non registrata"],
+      ["Data acquisto", profile.purchased_on || "Non registrata"],
+    ].map(([term, value]) => `
+      <div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd></div>
+    `).join("");
+    return;
+  }
   const common = [
     ["Tipo contratto", CONTRACT_TYPE[profile.contract_type]],
-    ["Società", profile.company || "Non registrata"],
-    ["Società proprietaria", profile.owner_company || "Non registrata"],
-    ["Numero contratto", profile.contract_number || "Non registrato"],
+    ["Società", profile.company],
+    ["Numero contratto", profile.contract_number],
   ];
   const economic = profile.contract_type === "lungo_termine"
     ? [
-        ["Canone mensile", money(profile.monthly_fee)],
+        ["Canone", `${money(profile.monthly_fee)}/mese`],
         ["Franchigia", money(profile.deductible)],
-        ["Km inclusi", profile.included_km?.toLocaleString("it-IT") || "Non registrati"],
+        ["Km inclusi", profile.included_km?.toLocaleString("it-IT")],
         ["Costo km eccedente", money(profile.excess_km_cost)],
       ]
     : profile.contract_type === "breve_termine"
-      ? [["Costo giornaliero", money(profile.daily_cost)]]
-      : [];
+      ? [["Costo giornaliero", `${money(profile.daily_cost)}/giorno`]]
+      : profile.contract_type === "leasing"
+        ? [
+            ["Canone", profile.monthly_fee == null ? null : `${money(profile.monthly_fee)}/mese`],
+            ["Franchigia", profile.deductible == null ? null : money(profile.deductible)],
+          ]
+        : [
+            ["Canone", profile.monthly_fee == null ? null : `${money(profile.monthly_fee)}/mese`],
+            ["Costo giornaliero", profile.daily_cost == null ? null : `${money(profile.daily_cost)}/giorno`],
+            ["Franchigia", profile.deductible == null ? null : money(profile.deductible)],
+            ["Km inclusi", profile.included_km?.toLocaleString("it-IT")],
+          ];
   const dates = [
-    ["Data inizio", profile.starts_on || "Non registrata"],
-    ["Data scadenza", profile.expires_on || "Non registrata"],
+    ["Data inizio", profile.starts_on],
+    ["Scadenza", profile.expires_on],
     ["Stato contratto", CONTRACT_STATUS[profile.contract_status]],
   ];
-  target.innerHTML = [...common, ...economic, ...dates].map(([term, value]) => `
+  const fields = [...common, ...economic, ...dates].filter(
+    ([, value]) => value != null && value !== "",
+  );
+  target.innerHTML = fields.map(([term, value]) => `
     <div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd></div>
   `).join("");
 }

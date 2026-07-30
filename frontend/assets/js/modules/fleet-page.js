@@ -234,12 +234,30 @@ function selectedAsset() {
 function syncProfileFields() {
   const form = byId("fleetProfileForm");
   const type = form.elements.contract_type.value;
-  form.querySelector("[data-profile-monthly]").hidden = ["breve_termine", "proprieta"].includes(type);
-  form.querySelector("[data-profile-daily]").hidden = type !== "breve_termine";
-  form.querySelector("[data-profile-deductible]").hidden = type === "proprieta";
+  const property = type === "proprieta";
+  const other = type === "altro";
+  form.querySelector("[data-profile-company]").hidden = property;
+  form.querySelector("[data-profile-owner]").hidden = !property;
+  form.querySelector("[data-profile-contract-number]").hidden = property;
+  form.querySelector("[data-profile-start]").hidden = property;
+  form.querySelector("[data-profile-end]").hidden = property;
+  form.querySelector("[data-profile-status]").hidden = property;
+  form.querySelector("[data-profile-purchase]").hidden = !property;
+  form.querySelector("[data-profile-monthly]").hidden =
+    ["breve_termine", "proprieta"].includes(type);
+  form.querySelector("[data-profile-daily]").hidden =
+    !["breve_termine", "altro"].includes(type);
+  form.querySelector("[data-profile-deductible]").hidden =
+    !["lungo_termine", "leasing", "altro"].includes(type);
   form.querySelectorAll("[data-profile-km]").forEach((field) => {
-    field.hidden = !["lungo_termine", "leasing"].includes(type);
+    field.hidden = !["lungo_termine", "altro"].includes(type);
   });
+  form.elements.company.required = [
+    "lungo_termine", "breve_termine", "leasing",
+  ].includes(type);
+  form.elements.monthly_fee.required = type === "lungo_termine";
+  form.elements.daily_cost.required = type === "breve_termine";
+  if (property) form.elements.contract_status.value = "attivo";
 }
 
 function openProfileEditor() {
@@ -264,6 +282,7 @@ async function submitProfile(event) {
   for (const field of [
     "monthly_fee", "daily_cost", "deductible", "included_km",
     "excess_km_cost", "starts_on", "expires_on",
+    "purchased_on",
   ]) {
     if (values[field] === "") values[field] = null;
   }

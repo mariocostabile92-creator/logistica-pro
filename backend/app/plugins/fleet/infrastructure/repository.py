@@ -69,6 +69,7 @@ def init_schema() -> None:
                 excess_km_cost TEXT,
                 starts_on TEXT,
                 expires_on TEXT,
+                purchased_on TEXT,
                 contract_status TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
@@ -82,6 +83,16 @@ def init_schema() -> None:
                 ON fleet_asset_events(asset_id, id);
             """
         )
+        profile_columns = {
+            row["name"]
+            for row in conn.execute(
+                "PRAGMA table_info(fleet_asset_profiles)"
+            ).fetchall()
+        }
+        if "purchased_on" not in profile_columns:
+            conn.execute(
+                "ALTER TABLE fleet_asset_profiles ADD COLUMN purchased_on TEXT"
+            )
 
 
 def _append_event(
@@ -294,8 +305,8 @@ def upsert_profile(
                 asset_id, contract_type, company, owner_company,
                 contract_number, monthly_fee, daily_cost, deductible,
                 included_km, excess_km_cost, starts_on, expires_on,
-                contract_status, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                purchased_on, contract_status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(asset_id) DO UPDATE SET
                 contract_type = excluded.contract_type,
                 company = excluded.company,
@@ -308,6 +319,7 @@ def upsert_profile(
                 excess_km_cost = excluded.excess_km_cost,
                 starts_on = excluded.starts_on,
                 expires_on = excluded.expires_on,
+                purchased_on = excluded.purchased_on,
                 contract_status = excluded.contract_status,
                 updated_at = excluded.updated_at
             """,
@@ -317,7 +329,8 @@ def upsert_profile(
                 values.get("monthly_fee"), values.get("daily_cost"),
                 values.get("deductible"), values.get("included_km"),
                 values.get("excess_km_cost"), values.get("starts_on"),
-                values.get("expires_on"), values["contract_status"],
+                values.get("expires_on"), values.get("purchased_on"),
+                values["contract_status"],
                 created_at, now,
             ),
         )

@@ -44,6 +44,7 @@ class FleetAssetProfile(BaseModel):
     excess_km_cost: str | None = None
     starts_on: str | None = None
     expires_on: str | None = None
+    purchased_on: str | None = None
     contract_status: str
     created_at: str
     updated_at: str
