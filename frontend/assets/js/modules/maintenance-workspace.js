@@ -136,6 +136,7 @@ async function renderDetail(maintenanceId) {
       </div>
       <span class="maintenance-status status-${escapeHtml(item.status)}">${escapeHtml(STATUS[item.status])}</span>
     </header>
+    <div class="maintenance-actions"><button type="button" class="secondary" data-create-rental>Crea noleggio</button></div>
     <div class="maintenance-detail-grid">
       <section><h4>Intervento</h4><dl>
         <div><dt>Mezzo</dt><dd>${escapeHtml(item.vehicle_model || "Non indicato")}</dd></div>
@@ -167,6 +168,15 @@ async function renderDetail(maintenanceId) {
     workspace.querySelector("#maintenanceNavigator").classList.remove("detail-open");
     selectedId = null;
     renderList();
+  });
+  workspace.querySelector("[data-create-rental]").addEventListener("click", () => {
+    document.dispatchEvent(new CustomEvent("rental:open", {
+      detail: { preset: {
+        vehicle_id: item.vehicle_id, maintenance_id: item.id,
+        reason: "manutenzione",
+        notes: `Generato dalla manutenzione ${item.maintenance_number}`,
+      } },
+    }));
   });
   workspace.querySelector("#maintenanceUpdateForm").addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -236,6 +246,7 @@ export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
   document.getElementById("documentsWorkspace").hidden = true;
   document.getElementById("franchiseWorkspace").hidden = true;
   document.getElementById("insuranceWorkspace").hidden = true;
+  document.getElementById("rentalWorkspace").hidden = true;
   document.getElementById("fleetWorkspaceHome").hidden = true;
   document.getElementById("fleetVehicleDossier").hidden = true;
   workspace.hidden = false;

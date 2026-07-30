@@ -30,6 +30,8 @@ from app.plugins.fleet.insurance.infrastructure.repository import (
     init_schema as init_insurance_schema,
 )
 from app.plugins.fleet.insurance.interfaces.router import router as insurance_router
+from app.plugins.fleet.rentals.infrastructure.repository import init_schema as init_rental_schema
+from app.plugins.fleet.rentals.interfaces.router import router as rental_router
 
 
 def fleet_plugin_enabled() -> bool:
@@ -47,6 +49,7 @@ def initialize_fleet_plugin() -> None:
         init_documents_schema()
         init_franchise_schema()
         init_insurance_schema()
+        init_rental_schema()
 
 
 def register_fleet_plugin(app: FastAPI) -> None:
@@ -59,3 +62,4 @@ def register_fleet_plugin(app: FastAPI) -> None:
         app.include_router(documents_router)
         app.include_router(franchise_router)
         app.include_router(insurance_router)
+        app.include_router(rental_router)

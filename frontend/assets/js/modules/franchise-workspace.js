@@ -149,7 +149,7 @@ function shell() {
 export async function showFranchiseWorkspace({ franchiseId = null, vehicleId = null } = {}) {
   const workspace = root();
   ["damageWorkspace", "maintenanceWorkspace", "documentsWorkspace",
-    "insuranceWorkspace", "fleetWorkspaceHome", "fleetVehicleDossier"].forEach((id) => {
+    "insuranceWorkspace", "rentalWorkspace", "fleetWorkspaceHome", "fleetVehicleDossier"].forEach((id) => {
     document.getElementById(id).hidden = true;
   });
   workspace.hidden = false;

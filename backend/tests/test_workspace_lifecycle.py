@@ -502,6 +502,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
                             or path.startswith("/api/fleet/documents")
                             or path.startswith("/api/fleet/franchises")
                             or path.startswith("/api/fleet/insurance-policies")
+                            or path.startswith("/api/fleet/rentals")
                         or path.startswith("/api/fleet/vehicles/")
                 or path.startswith("/api/plugins/fleet/v1/journal/")
                 or path.endswith("/profile")

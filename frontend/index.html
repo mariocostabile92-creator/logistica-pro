@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="./assets/css/documents-workspace.css?v=1" />
   <link rel="stylesheet" href="./assets/css/franchise-workspace.css?v=1" />
   <link rel="stylesheet" href="./assets/css/insurance-workspace.css?v=1" />
+  <link rel="stylesheet" href="./assets/css/rental-workspace.css?v=1" />
 </head>
 <body data-home-state="loading" data-planning-state="loading">
   <header class="app-header">
@@ -1502,9 +1503,9 @@
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
             Franchigie
           </button>
-          <button class="fleet-tree-node" type="button" disabled>
+          <button class="fleet-tree-node" type="button" data-fleet-module="rentals" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
-            Noleggi <span class="tag">Prossimamente</span>
+            Noleggi
           </button>
           <button class="fleet-tree-node" type="button" data-fleet-module="damage" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
@@ -1672,6 +1673,7 @@
       <section id="documentsWorkspace" class="documents-workspace" aria-labelledby="documentsWorkspaceTitle" hidden></section>
       <section id="franchiseWorkspace" class="franchise-workspace" aria-labelledby="franchiseWorkspaceTitle" hidden></section>
       <section id="insuranceWorkspace" class="insurance-workspace" aria-labelledby="insuranceWorkspaceTitle" hidden></section>
+      <section id="rentalWorkspace" class="rental-workspace" aria-labelledby="rentalWorkspaceTitle" hidden></section>
       <section
         id="fleetVehicleDossier"
         class="fleet-vehicle-dossier"
@@ -1754,6 +1756,11 @@
               <div class="fleet-registry-heading"><div><p class="eyebrow">Copertura</p><h3>Assicurazioni</h3></div>
                 <button id="fleetDossierManageInsurance" type="button" class="quiet">Gestisci assicurazione</button></div>
               <div id="fleetDossierInsurance" class="fleet-document-list"></div>
+            </section>
+            <section>
+              <div class="fleet-registry-heading"><div><p class="eyebrow">Sostituzioni</p><h3>Noleggi</h3></div>
+                <button id="fleetDossierManageRentals" type="button" class="quiet">Gestisci noleggi</button></div>
+              <div id="fleetDossierRentals" class="fleet-document-list"></div>
             </section>
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div>

@@ -1,0 +1,1 @@
+"""Rental persistence layer."""

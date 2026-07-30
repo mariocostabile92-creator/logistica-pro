@@ -392,6 +392,7 @@ export function renderVehicleDossier(
   vehicleDocuments = [],
   franchises = [],
   insurance = [],
+  rentals = [],
 ) {
   const { asset, kpis, movements } = payload;
   const damageCases = movements.filter((movement) => movement.damage_case_id);
@@ -458,6 +459,14 @@ export function renderVehicleDossier(
         </button>
       `).join("")
     : '<div class="empty-state">Nessuna polizza assicurativa registrata.</div>';
+  byId("fleetDossierRentals").innerHTML = rentals.length
+    ? rentals.map((item) => `
+        <button type="button" class="fleet-document-item" data-rental-link="${item.id}">
+          <strong>${escapeHtml(item.replacement_vehicle)}</strong>
+          <span>${escapeHtml(item.rental_company)} · ${escapeHtml(item.status)}</span>
+          <span>${escapeHtml(item.start_date)} → ${escapeHtml(item.end_date || item.expected_end_date)}</span>
+        </button>`).join("")
+    : '<div class="empty-state">Nessun noleggio registrato.</div>';
   mountOperationalDocumentHistory({
     movements,
     list: byId("fleetDossierTimeline"),

@@ -40,6 +40,7 @@ from app.plugins.fleet.franchises.infrastructure.repository import (
 from app.plugins.fleet.insurance.infrastructure.repository import (
     init_schema as init_insurance_schema,
 )
+from app.plugins.fleet.rentals.infrastructure.repository import init_schema as init_rental_schema
 from app.plugins.workforce.infrastructure.schema import init_schema as init_workforce_schema
 from app.repositories.authority_repository import init_schema as init_authority_schema
 from app.repositories.execution_intent_repository import init_schema as init_execution_intent_schema
@@ -62,6 +63,7 @@ def reset_database():
     init_vehicle_documents_schema()
     init_franchise_schema()
     init_insurance_schema()
+    init_rental_schema()
     init_workforce_schema()
     init_briefing_schema()
     init_demo_schema()
@@ -73,6 +75,7 @@ def reset_database():
     init_execution_intent_schema()
     init_execution_attempt_schema()
     with db_session() as conn:
+        conn.execute("DELETE FROM fleet_rentals")
         conn.execute("DELETE FROM fleet_insurance_policies")
         conn.execute("DELETE FROM fleet_franchise_cases")
         conn.execute("DELETE FROM fleet_vehicle_documents")

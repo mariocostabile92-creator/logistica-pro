@@ -204,6 +204,7 @@ export async function showDocumentsWorkspace({ vehicleId = null, documentId = nu
     .forEach((id) => { document.getElementById(id).hidden = true; });
   document.getElementById("franchiseWorkspace").hidden = true;
   document.getElementById("insuranceWorkspace").hidden = true;
+  document.getElementById("rentalWorkspace").hidden = true;
   workspace.hidden = false;
   assetFilter = vehicleId ? Number(vehicleId) : null;
   if (!workspace.dataset.ready) {

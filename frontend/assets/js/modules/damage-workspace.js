@@ -201,6 +201,7 @@ async function renderDetail(caseId) {
       <button type="button" class="secondary" data-create-maintenance>Crea manutenzione</button>
       <button type="button" class="secondary" data-open-franchise>Apri Franchigia</button>
       <button type="button" class="secondary" data-open-insurance>Apri Assicurazione</button>
+      <button type="button" class="secondary" data-create-rental>Crea noleggio</button>
       <p id="damageMaintenanceStatus" class="section-note" role="status"></p>
     </div>
     <div class="damage-detail-grid">
@@ -259,6 +260,15 @@ async function renderDetail(caseId) {
 }
 
 function bindDetail(caseId) {
+  root.querySelector("[data-create-rental]").addEventListener("click", async () => {
+    const item = await getDamageCase(caseId);
+    document.dispatchEvent(new CustomEvent("rental:open", {
+      detail: { preset: {
+        vehicle_id: item.vehicle_id, damage_case_id: item.id,
+        reason: "danno", notes: `Generato dalla pratica ${item.case_number}`,
+      } },
+    }));
+  });
   root.querySelector("[data-open-insurance]").addEventListener("click", async () => {
     const item = await getDamageCase(caseId);
     document.dispatchEvent(new CustomEvent("insurance:open", {
@@ -372,6 +382,7 @@ export async function showDamageWorkspace(options = {}) {
   document.getElementById("documentsWorkspace").hidden = true;
   document.getElementById("franchiseWorkspace").hidden = true;
   document.getElementById("insuranceWorkspace").hidden = true;
+  document.getElementById("rentalWorkspace").hidden = true;
   await refresh();
   renderShell();
   root.hidden = false;

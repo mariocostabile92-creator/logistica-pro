@@ -312,6 +312,31 @@ export async function updateInsurancePolicy(policyId, payload) {
   }));
 }
 
+export async function listRentals(params = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null && value !== ""),
+  );
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/rentals?${query}`));
+}
+
+export async function getRental(rentalId) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/rentals/${rentalId}`));
+}
+
+export async function createRental(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/rentals`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+export async function updateRental(rentalId, payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/rentals/${rentalId}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
 
 export async function getWorkforceStatus() {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/status`));
