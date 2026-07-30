@@ -20,7 +20,8 @@ function presentation(item) {
   const url = absoluteUrl(item.link_path);
   return `<div class="jcr-shared-card">
     <div><span class="status-pill">Attivo</span><strong>Link condiviso GDB</strong>
-      <small>Creato il ${escapeHtml(createdAt(item.created_at))}</small></div>
+      <small>Creato il ${escapeHtml(createdAt(item.created_at))}</small>
+      <small>Ultimo utilizzo: ${item.last_used_at ? escapeHtml(createdAt(item.last_used_at)) : "non ancora utilizzato"}</small></div>
     <label>URL pubblico<input data-shared-url value="${escapeHtml(url)}" readonly /></label>
     <div class="jcr-shared-actions">
       <button type="button" data-shared-copy>Copia link</button>
@@ -63,4 +64,3 @@ export async function mountJournalSharedAccess(container) {
     }
   });
 }
-
