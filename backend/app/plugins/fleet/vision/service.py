@@ -91,6 +91,129 @@ def _timeline(
     return sorted(unique.values(), key=lambda item: item["occurred_at"], reverse=True)
 
 
+def _decision(
+    rule: str,
+    asset_id: int,
+    title: str,
+    description: str,
+    priority: str,
+    origin: str,
+    module: str,
+    evidence: dict,
+) -> dict:
+    return {
+        "id": f"{rule}:{asset_id}",
+        "rule": rule,
+        "title": title,
+        "description": description,
+        "priority": priority,
+        "origin": origin,
+        "module": module,
+        "evidence": evidence,
+        "why": " · ".join(
+            f"{key}: {value}" for key, value in evidence.items() if value is not None
+        ),
+    }
+
+
+def _decisions(
+    asset: dict,
+    damages: list[dict],
+    maintenances: list[dict],
+    documents: list[dict],
+    policy: dict | None,
+    franchises: list[dict],
+    rentals: list[dict],
+    imminent_deadlines: list[dict],
+) -> list[dict]:
+    asset_id = int(asset["id"])
+    plate = asset["plate"] or asset["external_identifier"]
+    result = []
+    contract = next(
+        (item for item in imminent_deadlines if item["source_module"] == "contract"),
+        None,
+    )
+    if contract:
+        result.append(_decision(
+            "contract_expiring", asset_id, "Contratto in scadenza",
+            f"Il contratto del mezzo {plate} scade entro 30 giorni.", "media",
+            "Fleet Asset Profile", "library",
+            {
+                "tipo contratto": asset.get("contract_type"),
+                "scadenza": contract["due_date"],
+                "giorni": contract["days_remaining"],
+            },
+        ))
+    if policy and policy["status"] == "scaduta":
+        result.append(_decision(
+            "insurance_expired", asset_id, "Assicurazione scaduta",
+            f"La polizza associata al mezzo {plate} risulta scaduta.", "alta",
+            "Assicurazioni", "insurance",
+            {"polizza": policy["policy_number"], "scadenza": policy["expires_on"]},
+        ))
+    missing = sum(row["status"] == "mancante" for row in documents)
+    if missing:
+        result.append(_decision(
+            "documents_missing", asset_id, "Documentazione incompleta",
+            f"Il mezzo {plate} presenta documenti con stato mancante.", "media",
+            "Documenti", "documents", {"documenti mancanti": missing},
+        ))
+    if asset["availability"] in UNAVAILABLE | MAINTENANCE:
+        result.append(_decision(
+            "vehicle_not_operational", asset_id, "Mezzo non operativo",
+            f"Lo stato operativo corrente del mezzo {plate} non è disponibile.", "alta",
+            "Stato operativo", "library", {"stato": asset["availability"]},
+        ))
+    open_damages = [row for row in damages if row["status"] in OPEN_DAMAGE]
+    if open_damages:
+        result.append(_decision(
+            "damage_open", asset_id, "Pratica danno aperta",
+            f"Il mezzo {plate} presenta almeno una pratica Danni aperta.", "alta",
+            "Danni", "damage",
+            {"pratiche aperte": len(open_damages), "ultima pratica": open_damages[-1]["case_number"]},
+        ))
+    open_maintenance = [row for row in maintenances if row["status"] in OPEN_MAINTENANCE]
+    if open_maintenance:
+        result.append(_decision(
+            "maintenance_open", asset_id, "Intervento manutenzione in corso",
+            f"Il mezzo {plate} presenta una manutenzione non conclusa.", "media",
+            "Manutenzioni", "maintenance",
+            {"interventi aperti": len(open_maintenance), "stato": open_maintenance[-1]["status"]},
+        ))
+    open_franchises = [row for row in franchises if row["status"] in OPEN_FRANCHISE]
+    if open_franchises:
+        result.append(_decision(
+            "franchise_open", asset_id, "Franchigia da verificare",
+            f"Il mezzo {plate} presenta una franchigia ancora aperta.", "media",
+            "Franchigie", "franchises", {"franchigie aperte": len(open_franchises)},
+        ))
+    active_rentals = [row for row in rentals if row["status"] in ACTIVE_RENTAL]
+    if active_rentals:
+        result.append(_decision(
+            "rental_active", asset_id, "Mezzo sostitutivo attivo",
+            f"Per il mezzo {plate} risulta attivo un veicolo sostitutivo.", "bassa",
+            "Noleggi", "rentals",
+            {"mezzo sostitutivo": active_rentals[-1]["replacement_vehicle"], "stato": active_rentals[-1]["status"]},
+        ))
+    other_deadlines = [
+        item for item in imminent_deadlines if item["source_module"] != "contract"
+    ]
+    if other_deadlines:
+        nearest = min(other_deadlines, key=lambda item: item["days_remaining"])
+        result.append(_decision(
+            "deadline_soon", asset_id, "Scadenza entro 30 giorni",
+            f"Il mezzo {plate} presenta una scadenza operativa imminente.", "bassa",
+            "Scadenziario", "deadlines",
+            {
+                "tipo": nearest["deadline_type"],
+                "scadenza": nearest["due_date"],
+                "giorni": nearest["days_remaining"],
+            },
+        ))
+    order = {"alta": 0, "media": 1, "bassa": 2}
+    return sorted(result, key=lambda item: (order[item["priority"]], item["rule"]))
+
+
 def fleet_vision(vehicle_id: int | None = None) -> dict:
     data = repository.snapshot()
     deadlines = _group(list_deadlines()["items"])
@@ -121,6 +244,10 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
         imminent = [item for item in deadlines[asset_id] if 0 <= item["days_remaining"] <= 30]
         policy = insurance.get(asset_id)
         asset_movements = movements[asset_id]
+        decisions = _decisions(
+            asset, asset_damages, asset_maintenance, documents[asset_id],
+            policy, asset_franchises, asset_rentals, imminent,
+        )
         timeline = _timeline(
             asset_id, asset_movements, asset_damages, asset_maintenance,
             asset_rentals, documents[asset_id], asset_franchises, event,
@@ -215,6 +342,7 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
             "contracts_expiring": contract_expiring,
             "timeline": timeline,
             "insights": insights,
+            "decisions": decisions,
             "latest": {
                 "use": last_movement,
                 "damage": last_damage,
@@ -235,5 +363,11 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
             "missing_documents": sum(item["missing_documents"] for item in items),
             "expired_insurance": sum(item["insurance_expired"] for item in items),
             "expiring_contracts": sum(item["contracts_expiring"] for item in items),
+            "decisions": sum(len(item["decisions"]) for item in items),
+            "high_priority_decisions": sum(
+                decision["priority"] == "alta"
+                for item in items
+                for decision in item["decisions"]
+            ),
         },
     }

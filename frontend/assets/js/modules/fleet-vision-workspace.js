@@ -42,6 +42,18 @@ function detail(item) {
         <strong>${escapeHtml(entry.label)}</strong><small>Fonte: ${escapeHtml(entry.module)}</small>
         <button type="button" class="quiet" data-fve-action="${escapeHtml(entry.module)}">Apri modulo origine</button></li>`).join("")
     : `<li class="view-state">Nessun evento operativo disponibile.</li>`;
+  const decisions = item.decisions?.length
+    ? item.decisions.map((decision) => `<article class="fde-decision priority-${escapeHtml(decision.priority)}">
+        <header><span class="fde-priority">${escapeHtml(decision.priority)}</span><h5>${escapeHtml(decision.title)}</h5></header>
+        <p>${escapeHtml(decision.description)}</p>
+        <dl>
+          <div><dt>Origine</dt><dd>${escapeHtml(decision.origin)}</dd></div>
+          <div><dt>Modulo</dt><dd>${escapeHtml(decision.module)}</dd></div>
+          <div><dt>Perché</dt><dd>${escapeHtml(decision.why)}</dd></div>
+        </dl>
+        <button type="button" class="quiet" data-fve-action="${escapeHtml(decision.module)}">Apri</button>
+      </article>`).join("")
+    : `<div class="view-state"><strong>Nessuna attenzione operativa</strong><p>Le regole non rilevano condizioni da evidenziare per questo mezzo.</p></div>`;
   return `<button type="button" class="quiet fve-back" data-fve-back>← Torna alla lista</button>
     <p class="eyebrow">Fleet Insight</p><h3>${escapeHtml(item.plate || item.external_identifier)}</h3>
     <dl class="fve-identity">
@@ -63,6 +75,11 @@ function detail(item) {
       ${metric("Movimentazioni Journal", item.movement_count)}
     </section>
     <section class="fve-correlation"><h4>Insight correlati</h4><div class="fve-insights">${insights}</div></section>
+    <section class="fde-center" aria-labelledby="fdeDecisionCenterTitle">
+      <h4 id="fdeDecisionCenterTitle">Decision Center</h4>
+      <p>Attenzioni generate da regole operative verificabili.</p>
+      <div class="fde-decisions">${decisions}</div>
+    </section>
     <section class="fve-timeline"><h4>Cronologia unificata</h4><ol>${timeline}</ol></section>
     <div class="fve-actions"><button type="button" class="primary" data-fve-action="library">Apri dossier mezzo</button></div>`;
 }

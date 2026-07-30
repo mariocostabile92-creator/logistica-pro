@@ -62,6 +62,7 @@ def test_vision_aggregates_existing_modules_without_new_table():
         "open_damages": 1, "open_maintenances": 1, "active_rentals": 1,
         "missing_documents": 1, "expired_insurance": 1,
         "expiring_contracts": 1,
+        "decisions": 9, "high_priority_decisions": 3,
     }
     insight = payload["items"][0]
     assert insight["contract_type"] == "lungo_termine"
@@ -84,6 +85,23 @@ def test_vision_aggregates_existing_modules_without_new_table():
         "active_rental", "open_franchise",
     }
     assert all({"source", "module", "value"} <= item.keys() for item in insight["insights"])
+    expected_decisions = {
+        "contract_expiring": "media",
+        "insurance_expired": "alta",
+        "documents_missing": "media",
+        "vehicle_not_operational": "alta",
+        "damage_open": "alta",
+        "maintenance_open": "media",
+        "franchise_open": "media",
+        "rental_active": "bassa",
+        "deadline_soon": "bassa",
+    }
+    assert {item["rule"]: item["priority"] for item in insight["decisions"]} == expected_decisions
+    assert all(
+        item["origin"] and item["module"] and item["why"] and item["evidence"]
+        for item in insight["decisions"]
+    )
+    assert len({item["id"] for item in insight["decisions"]}) == len(insight["decisions"])
     assert "risk_score" not in insight
     with db_session() as conn:
         tables = conn.execute(
