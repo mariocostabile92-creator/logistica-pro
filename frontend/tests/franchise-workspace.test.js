@@ -38,15 +38,14 @@ test("Damage opens franchise and shows expected deductible", async () => {
 });
 
 test("Maintenance and Vehicle Library expose franchise context", async () => {
-  const [maintenance, page, fleet, view] = await Promise.all([
-    file("assets/js/modules/maintenance-workspace.js"), file("index.html"),
-    file("assets/js/modules/fleet-page.js"), file("assets/js/modules/fleet-view.js"),
+  const [maintenance, loader, vision] = await Promise.all([
+    file("assets/js/modules/maintenance-workspace.js"),
+    file("assets/js/modules/vehicle-dossier/loader.js"),
+    file("assets/js/modules/vehicle-dossier/renderer.js"),
   ]);
   assert.match(maintenance, /Franchigia prevista/);
-  assert.match(page, /fleetDossierFranchises/);
-  assert.match(page, /fleetDossierManageFranchises/);
-  assert.match(fleet, /listFranchiseCases/);
-  assert.match(view, /franchise_expected/);
+  assert.match(loader, /listFranchiseCases/);
+  assert.match(vision, /Fleet Brain \/ Action Center/);
 });
 
 test("responsive franchise layout supports desktop tablet and 390 px", async () => {

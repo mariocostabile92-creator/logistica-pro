@@ -29,18 +29,18 @@ test("rental workspace provides workflow KPI master detail and editing", async (
 });
 
 test("Damage Maintenance and Vehicle Library expose rentals", async () => {
-  const [damage, maintenance, page, fleet, view] = await Promise.all([
+  const [damage, maintenance, loader, renderer] = await Promise.all([
     file("assets/js/modules/damage-workspace.js"),
-    file("assets/js/modules/maintenance-workspace.js"), file("index.html"),
-    file("assets/js/modules/fleet-page.js"), file("assets/js/modules/fleet-view.js"),
+    file("assets/js/modules/maintenance-workspace.js"),
+    file("assets/js/modules/vehicle-dossier/loader.js"),
+    file("assets/js/modules/vehicle-dossier/renderer.js"),
   ]);
   assert.match(damage, /Crea noleggio/);
   assert.match(damage, /damage_case_id/);
   assert.match(maintenance, /Crea noleggio/);
   assert.match(maintenance, /maintenance_id/);
-  assert.match(page, /fleetDossierRentals/);
-  assert.match(fleet, /listRentals/);
-  assert.match(view, /replacement_vehicle/);
+  assert.match(loader, /listRentals/);
+  assert.match(renderer, /replacement_vehicle/);
 });
 
 test("rental responsive layout supports desktop tablet and mobile", async () => {

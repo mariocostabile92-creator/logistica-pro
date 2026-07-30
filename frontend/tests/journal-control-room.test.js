@@ -32,12 +32,13 @@ test("Control Room exposes real KPI filters list and inline detail", async () =>
 });
 
 test("Control Room links Vehicle Library operational documents and Damage", async () => {
-  const [page, fleet, module] = await Promise.all([
-    file("index.html"), file("assets/js/modules/fleet-page.js"),
+  const [renderer, fleet, module] = await Promise.all([
+    file("assets/js/modules/vehicle-dossier/renderer.js"),
+    file("assets/js/modules/fleet-page.js"),
     file("assets/js/modules/journal-control-room.js"),
   ]);
-  assert.match(page, /fleetDossierOpenControlRoom/);
-  assert.match(fleet, /vehicle_id: state\.fleetPlugin\.selectedAssetId/);
+  assert.match(renderer, /Vai al Journal/);
+  assert.match(fleet, /showJournalControlRoom\(\{ vehicle_id: vehicleId\(\) \}\)/);
   assert.match(module, /fleet:vehicle-open/);
   assert.match(module, /damage:open/);
   assert.match(module, /damage_case_number/);

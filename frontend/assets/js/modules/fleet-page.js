@@ -1,17 +1,8 @@
 import {
   addFleetAssetDocument,
   createFleetAsset,
-  getFleetAsset,
-  getFleetVehicleHistory,
   getLatestFleetSync,
   listFleetAssets,
-  listDamageCases,
-  listMaintenances,
-  listVehicleDocuments,
-  listFranchiseCases,
-  listInsurancePolicies,
-  listRentals,
-  listFleetDeadlines,
   saveFleetAssetProfile,
   updateFleetAsset,
 } from "../api.js";
@@ -31,9 +22,13 @@ import {
   renderFleetFailure,
   renderFleetLoading,
   renderFleetTree,
-  renderVehicleDossier,
   setFleetMetricPriority,
 } from "./fleet-view.js?v=3";
+import { loadVehicleDossier } from "./vehicle-dossier/loader.js";
+import { vehicleDossierModel } from "./vehicle-dossier/model.js";
+import { renderVehicleDossierExcellence } from "./vehicle-dossier/renderer.js";
+import { mountDossierTimeline } from "./vehicle-dossier/timeline.js";
+import { bindDossierNavigation } from "./vehicle-dossier/navigation.js";
 import { showDamageWorkspace } from "./damage-workspace.js?v=4";
 import { showMaintenanceWorkspace } from "./maintenance-workspace.js?v=1";
 import { showDocumentsWorkspace } from "./documents-workspace.js?v=1";
@@ -132,36 +127,23 @@ async function showAsset(assetId) {
   byId("fleetDossierState").className = "view-state loading";
   byId("fleetDossierState").textContent = "Caricamento scheda mezzo";
   byId("fleetDossierContent").hidden = true;
-  const [asset, history, damageCases, maintenances, documents, franchises, insurance, rentals, deadlines] = await Promise.all([
-    getFleetAsset(assetId),
-    getFleetVehicleHistory(assetId),
-    listDamageCases().then((response) => response.items),
-    listMaintenances({ vehicle_id: assetId }).then((response) => response.items),
-    listVehicleDocuments({ vehicle_id: assetId }).then((response) => response.items),
-    listFranchiseCases({ vehicle_id: assetId }).then((response) => response.items),
-    listInsurancePolicies({ vehicle_id: assetId }).then((response) => response.items),
-    listRentals({ vehicle_id: assetId }).then((response) => response.items),
-    listFleetDeadlines({ vehicle_id: assetId }).then((response) => response.items),
-  ]);
+  const loadedDossier = await loadVehicleDossier(assetId);
+  const model = vehicleDossierModel(loadedDossier);
+  const asset = model.asset;
   state.fleetPlugin.selectedAssetId = assetId;
   renderFleetTree(state.fleetPlugin.assets, assetId);
   byId("fleetTreeSelection").textContent = asset.plate || asset.external_identifier;
   byId("fleetTreeSelection").hidden = false;
-  renderVehicleDossier(
-    history,
-    asset,
-    damageCases.filter((item) => Number(item.vehicle_id) === Number(assetId)),
-    maintenances,
-    documents,
-    franchises,
-    insurance,
-    rentals,
-    deadlines,
-  );
+  renderVehicleDossierExcellence(byId("fleetDossierContent"), model);
+  mountDossierTimeline(byId("fleetDossierUnifiedTimeline"), model.timeline);
   await mountAttachments(byId("fleetDossierAttachments"), {
     entityType: "vehicle", entityId: assetId, aggregateVehicle: true,
     title: "Allegati del mezzo",
+    initialItems: model.attachments,
   });
+  bindDossierNavigation(byId("fleetDossierContent"), dossierNavigationHandlers());
+  byId("fleetDossierState").hidden = true;
+  byId("fleetDossierContent").hidden = false;
   byId("fleetAssetTree").open = false;
   closeFleetSidebar();
 }
@@ -194,6 +176,46 @@ function setFleetSidebar(open) {
 
 function closeFleetSidebar() {
   setFleetSidebar(false);
+}
+
+function dossierNavigationHandlers() {
+  const vehicleId = () => state.fleetPlugin.selectedAssetId;
+  const dispatch = (name, detail) => document.dispatchEvent(
+    new CustomEvent(name, { detail }),
+  );
+  const openSource = (source, sourceId) => {
+    const id = Number(sourceId);
+    if (source === "document") dispatch("documents:open", { documentId: id, vehicleId: vehicleId() });
+    else if (source === "insurance") dispatch("insurance:open", { policyId: id, vehicleId: vehicleId() });
+    else if (source === "rental") dispatch("rental:open", { rentalId: id, vehicleId: vehicleId() });
+    else if (source === "maintenance") dispatch("maintenance:open", { maintenanceId: id });
+    else if (source === "damage") dispatch("damage:open", { caseId: id });
+    else if (source === "journal") showJournalControlRoom({ vehicle_id: vehicleId() });
+    else if (source === "operational_status") showAsset(vehicleId());
+    else if (source === "contract") openProfileEditor();
+    else if (source === "deadlines") showDeadlinesWorkspace({ vehicle_id: vehicleId() });
+  };
+  return {
+    back: showFleetLibrary,
+    profile: openProfileEditor,
+    status: () => openOperationalStatusControl({
+      asset: selectedAsset(), origin: "vehicle_library",
+    }),
+    document: data => openSource("document", data.recordId),
+    documents: () => dispatch("documents:open", { vehicleId: vehicleId() }),
+    insurance: data => openSource("insurance", data.recordId),
+    insurances: () => dispatch("insurance:open", { vehicleId: vehicleId() }),
+    rental: data => openSource("rental", data.recordId),
+    rentals: () => dispatch("rental:open", { vehicleId: vehicleId() }),
+    maintenance: data => openSource("maintenance", data.recordId),
+    maintenances: () => dispatch("maintenance:open", { vehicle_id: vehicleId() }),
+    damage: data => openSource("damage", data.recordId),
+    damages: () => dispatch("damage:open", { vehicle_id: vehicleId() }),
+    journal: () => showJournalControlRoom({ vehicle_id: vehicleId() }),
+    vision: () => showFleetVisionWorkspace({ vehicle_id: vehicleId() }),
+    "action-center": () => showFleetVisionWorkspace({ vehicle_id: vehicleId() }),
+    openSource,
+  };
 }
 
 
@@ -663,80 +685,6 @@ export function initFleetPage() {
   document.addEventListener("fleet:operational-status-changed", async () => {
     await refreshFleet(state.fleetPlugin.selectedAssetId);
   });
-  byId("fleetDossierDamageCases").addEventListener("click", (event) => {
-    const caseId = event.target.closest("[data-damage-case-link]")?.dataset.damageCaseLink;
-    if (caseId) {
-      document.dispatchEvent(new CustomEvent("damage:open", { detail: { caseId } }));
-    }
-  });
-  byId("fleetDossierMaintenances").addEventListener("click", (event) => {
-    const maintenanceId = event.target.closest("[data-maintenance-link]")
-      ?.dataset.maintenanceLink;
-    if (maintenanceId) {
-      document.dispatchEvent(new CustomEvent("maintenance:open", {
-        detail: { maintenanceId: Number(maintenanceId) },
-      }));
-    }
-  });
-  byId("fleetDossierFranchises").addEventListener("click", (event) => {
-    const franchiseId = event.target.closest("[data-franchise-link]")
-      ?.dataset.franchiseLink;
-    if (franchiseId) {
-      document.dispatchEvent(new CustomEvent("franchise:open", {
-        detail: { franchiseId: Number(franchiseId) },
-      }));
-    }
-  });
-  byId("fleetDossierInsurance").addEventListener("click", (event) => {
-    const policyId = event.target.closest("[data-insurance-link]")?.dataset.insuranceLink;
-    if (policyId) {
-      document.dispatchEvent(new CustomEvent("insurance:open", {
-        detail: { policyId: Number(policyId) },
-      }));
-    }
-  });
-  byId("fleetDossierRentals").addEventListener("click", (event) => {
-    const rentalId = event.target.closest("[data-rental-link]")?.dataset.rentalLink;
-    if (rentalId) document.dispatchEvent(new CustomEvent("rental:open", {
-      detail: { rentalId: Number(rentalId) },
-    }));
-  });
-  byId("fleetDossierManageDocuments").addEventListener("click", () => {
-    document.dispatchEvent(new CustomEvent("documents:open", {
-      detail: { vehicleId: state.fleetPlugin.selectedAssetId },
-    }));
-  });
-  byId("fleetDossierManageFranchises").addEventListener("click", () => {
-    document.dispatchEvent(new CustomEvent("franchise:open", {
-      detail: { vehicleId: state.fleetPlugin.selectedAssetId },
-    }));
-  });
-  byId("fleetDossierManageInsurance").addEventListener("click", () => {
-    document.dispatchEvent(new CustomEvent("insurance:open", {
-      detail: { vehicleId: state.fleetPlugin.selectedAssetId },
-    }));
-  });
-  byId("fleetDossierManageRentals").addEventListener("click", () => {
-    document.dispatchEvent(new CustomEvent("rental:open", {
-      detail: { vehicleId: state.fleetPlugin.selectedAssetId },
-    }));
-  });
-  byId("fleetDossierManageDeadlines").addEventListener("click", () => {
-    showDeadlinesWorkspace({ vehicle_id: state.fleetPlugin.selectedAssetId }).catch(
-      (error) => showFleetActionError("fleet.deadlines", error),
-    );
-  });
-  byId("fleetDossierOpenControlRoom").addEventListener("click", () => {
-    showJournalControlRoom({ vehicle_id: state.fleetPlugin.selectedAssetId }).catch(
-      (error) => showFleetActionError("fleet.journal-control-room", error),
-    );
-  });
-  byId("fleetDossierOpenVision").addEventListener("click", () => {
-    showFleetVisionWorkspace({ vehicle_id: state.fleetPlugin.selectedAssetId }).catch(
-      (error) => showFleetActionError("fleet.vision", error),
-    );
-  });
-  byId("fleetDossierBack").addEventListener("click", showFleetLibrary);
   byId("fleetSidebarToggle").addEventListener("click", () => {
     setFleetSidebar(!byId("fleetWorkspaceSidebar").classList.contains("open"));
   });
@@ -750,14 +698,6 @@ export function initFleetPage() {
       origin: "parco_mezzi",
     });
   });
-  byId("fleetDossierChangeStatus").addEventListener("click", () => {
-    const asset = selectedAsset();
-    openOperationalStatusControl({
-      asset,
-      origin: "vehicle_library",
-    });
-  });
-  byId("fleetProfileEdit").addEventListener("click", openProfileEditor);
   byId("fleetProfileForm").elements.contract_type.addEventListener(
     "change",
     syncProfileFields,

@@ -38,11 +38,12 @@ test("Fleet Vision exposes objective KPIs and correlated module data", async () 
 });
 
 test("Vehicle Library opens Fleet Vision filtered by vehicle", async () => {
-  const [page, fleet] = await Promise.all([
-    file("index.html"), file("assets/js/modules/fleet-page.js"),
+  const [fleet, renderer] = await Promise.all([
+    file("assets/js/modules/fleet-page.js"),
+    file("assets/js/modules/vehicle-dossier/renderer.js"),
   ]);
-  assert.match(page, /fleetDossierOpenVision/);
-  assert.match(fleet, /showFleetVisionWorkspace\(\{ vehicle_id: state\.fleetPlugin\.selectedAssetId \}\)/);
+  assert.match(renderer, /Apri Fleet Vision/);
+  assert.match(fleet, /showFleetVisionWorkspace\(\{ vehicle_id: vehicleId\(\) \}\)/);
 });
 
 test("Fleet Vision responsive layout has no fixed canvas", async () => {

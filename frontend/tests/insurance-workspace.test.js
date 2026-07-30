@@ -35,15 +35,15 @@ test("insurance workspace supports policy creation editing and master detail", a
 });
 
 test("Vehicle Library Damage and Franchigie read the shared policy", async () => {
-  const [page, fleet, view, damage, franchise] = await Promise.all([
-    file("index.html"), file("assets/js/modules/fleet-page.js"),
-    file("assets/js/modules/fleet-view.js"), file("assets/js/modules/damage-workspace.js"),
+  const [loader, renderer, damage, franchise] = await Promise.all([
+    file("assets/js/modules/vehicle-dossier/loader.js"),
+    file("assets/js/modules/vehicle-dossier/renderer.js"),
+    file("assets/js/modules/damage-workspace.js"),
     file("assets/js/modules/franchise-workspace.js"),
   ]);
-  assert.match(page, /fleetDossierInsurance/);
-  assert.match(page, /Gestisci assicurazione/);
-  assert.match(fleet, /listInsurancePolicies/);
-  assert.match(view, /policy_number/);
+  assert.match(loader, /listInsurancePolicies/);
+  assert.match(renderer, /policy_number/);
+  assert.match(renderer, /Apri polizza/);
   assert.match(damage, /Polizza associata/);
   assert.match(damage, /Apri Assicurazione/);
   assert.match(franchise, /Compagnia assicurativa/);

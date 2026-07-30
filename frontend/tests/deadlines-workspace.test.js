@@ -25,13 +25,14 @@ test("deadline workspace aggregates filters searches and opens sources", async (
 });
 
 test("Vehicle Library shows vehicle deadlines", async () => {
-  const [page, fleet, view] = await Promise.all([
-    file("index.html"), file("assets/js/modules/fleet-page.js"),
-    file("assets/js/modules/fleet-view.js"),
+  const [fleet, loader, model] = await Promise.all([
+    file("assets/js/modules/fleet-page.js"),
+    file("assets/js/modules/vehicle-dossier/loader.js"),
+    file("assets/js/modules/vehicle-dossier/model.js"),
   ]);
-  assert.match(page, /fleetDossierDeadlines/);
-  assert.match(fleet, /listFleetDeadlines\(\{ vehicle_id: assetId \}\)/);
-  assert.match(view, /fleetDossierDeadlines/);
+  assert.match(fleet, /loadVehicleDossier/);
+  assert.match(loader, /listFleetDeadlines\(\{ vehicle_id: assetId \}\)/);
+  assert.match(model, /data\.deadlines/);
 });
 
 test("deadline workspace is responsive without fixed canvas", async () => {

@@ -215,7 +215,7 @@ test("Fleet tree navigation follows the Fleet Manager workflow", async () => {
   assert.match(css, /\.fleet-workspace-layout/);
   assert.match(css, /grid-template-columns: 248px minmax\(0, 1fr\)/);
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*?transform: translateX\(-105%\)/);
-  assert.match(page, /getFleetVehicleHistory\(assetId\)/);
+  assert.match(page, /loadVehicleDossier\(assetId\)/);
   assert.match(page, /byId\("fleetAssetTree"\)\.open = false/);
   assert.doesNotMatch(
     page,

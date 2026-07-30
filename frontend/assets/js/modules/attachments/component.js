@@ -13,10 +13,14 @@ export async function mountAttachments(container, options) {
   });
   renderAttachments(container, state, options);
   try {
-    const response = options.aggregateVehicle
-      ? await listVehicleAttachments(state.entityId)
-      : await listAttachments(state.entityType, state.entityId);
-    state.items = response.items || [];
+    if (options.initialItems) {
+      state.items = options.initialItems;
+    } else {
+      const response = options.aggregateVehicle
+        ? await listVehicleAttachments(state.entityId)
+        : await listAttachments(state.entityType, state.entityId);
+      state.items = response.items || [];
+    }
   } catch (error) {
     state.error = error.message;
   } finally {

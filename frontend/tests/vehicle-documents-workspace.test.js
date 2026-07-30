@@ -41,15 +41,14 @@ test("search and filters are combinable", async () => {
 });
 
 test("Vehicle Library opens documents filtered by vehicle", async () => {
-  const [page, fleet, view] = await Promise.all([
-    file("index.html"), file("assets/js/modules/fleet-page.js"),
-    file("assets/js/modules/fleet-view.js"),
+  const [fleet, renderer] = await Promise.all([
+    file("assets/js/modules/fleet-page.js"),
+    file("assets/js/modules/vehicle-dossier/renderer.js"),
   ]);
-  assert.match(page, /fleetDossierManageDocuments/);
   assert.match(fleet, /documents:open/);
-  assert.match(fleet, /vehicleId:\s*state\.fleetPlugin\.selectedAssetId/);
-  assert.match(view, /vehicleDocuments/);
-  assert.match(view, /File presente|File mancante/);
+  assert.match(fleet, /vehicleId:\s*vehicleId\(\)/);
+  assert.match(renderer, /Apri documento/);
+  assert.match(renderer, /Disponibile|Assente/);
 });
 
 test("responsive layout covers desktop tablet and mobile", async () => {
