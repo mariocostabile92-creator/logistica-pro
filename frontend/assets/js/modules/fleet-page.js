@@ -7,6 +7,7 @@ import {
   listFleetAssets,
   listDamageCases,
   listMaintenances,
+  saveFleetAssetProfile,
   updateFleetAsset,
 } from "../api.js";
 import { state } from "../state.js";
@@ -228,6 +229,51 @@ function selectedAsset() {
   return state.fleetPlugin.assets.find(
     (item) => item.id === state.fleetPlugin.selectedAssetId,
   );
+}
+
+function syncProfileFields() {
+  const form = byId("fleetProfileForm");
+  const type = form.elements.contract_type.value;
+  form.querySelector("[data-profile-monthly]").hidden = ["breve_termine", "proprieta"].includes(type);
+  form.querySelector("[data-profile-daily]").hidden = type !== "breve_termine";
+  form.querySelector("[data-profile-deductible]").hidden = type === "proprieta";
+  form.querySelectorAll("[data-profile-km]").forEach((field) => {
+    field.hidden = !["lungo_termine", "leasing"].includes(type);
+  });
+}
+
+function openProfileEditor() {
+  const asset = selectedAsset();
+  const profile = asset?.profile || {};
+  const form = byId("fleetProfileForm");
+  form.reset();
+  for (const [key, value] of Object.entries(profile)) {
+    if (form.elements[key]) form.elements[key].value = value ?? "";
+  }
+  if (!profile.contract_type) form.elements.contract_type.value = "lungo_termine";
+  if (!profile.contract_status) form.elements.contract_status.value = "attivo";
+  byId("fleetProfileStatus").textContent = "";
+  syncProfileFields();
+  byId("fleetProfileEditor").showModal();
+}
+
+async function submitProfile(event) {
+  event.preventDefault();
+  const asset = selectedAsset();
+  const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+  for (const field of [
+    "monthly_fee", "daily_cost", "deductible", "included_km",
+    "excess_km_cost", "starts_on", "expires_on",
+  ]) {
+    if (values[field] === "") values[field] = null;
+  }
+  try {
+    await saveFleetAssetProfile(asset.id, values);
+    byId("fleetProfileEditor").close();
+    await refreshFleet(asset.id);
+  } catch (error) {
+    byId("fleetProfileStatus").textContent = error.message;
+  }
 }
 
 
@@ -509,6 +555,20 @@ export function initFleetPage() {
       origin: "vehicle_library",
     });
   });
+  byId("fleetProfileEdit").addEventListener("click", openProfileEditor);
+  byId("fleetProfileForm").elements.contract_type.addEventListener(
+    "change",
+    syncProfileFields,
+  );
+  byId("fleetProfileForm").addEventListener("submit", submitProfile);
+  byId("fleetProfileClose").addEventListener(
+    "click",
+    () => byId("fleetProfileEditor").close(),
+  );
+  byId("fleetProfileCancel").addEventListener(
+    "click",
+    () => byId("fleetProfileEditor").close(),
+  );
   byId("addAssetDocumentBtn").addEventListener("click", () => {
     openDocumentEditor(selectedAsset());
   });

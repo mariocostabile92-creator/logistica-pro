@@ -129,6 +129,15 @@ function renderFleetSummary(assets) {
   byId("fleetReserveAssets").textContent = summary.reserve;
   byId("fleetMaintenanceAssets").textContent = summary.maintenance;
   byId("fleetDocumentsAttention").textContent = summary.documentsAttention;
+  byId("fleetLongTermAssets").textContent = assets.filter(
+    (asset) => asset.profile?.contract_type === "lungo_termine",
+  ).length;
+  byId("fleetShortTermAssets").textContent = assets.filter(
+    (asset) => asset.profile?.contract_type === "breve_termine",
+  ).length;
+  byId("fleetOwnedAssets").textContent = assets.filter(
+    (asset) => asset.profile?.contract_type === "proprieta",
+  ).length;
   setFleetMetricPriority("fleetTotalAssets", 0);
   setFleetMetricPriority("fleetAvailableAssets", 0);
   setFleetMetricPriority("fleetMaintenanceAssets", summary.maintenance);
@@ -299,6 +308,59 @@ function dossierTimestamp(value) {
       });
 }
 
+const CONTRACT_TYPE = Object.freeze({
+  lungo_termine: "Lungo termine",
+  breve_termine: "Breve termine",
+  proprieta: "Proprietà",
+  leasing: "Leasing",
+  altro: "Altro",
+});
+const CONTRACT_STATUS = Object.freeze({
+  attivo: "Attivo",
+  in_scadenza: "In scadenza",
+  scaduto: "Scaduto",
+});
+
+function money(value) {
+  if (value == null || value === "") return "Non registrato";
+  return new Intl.NumberFormat("it-IT", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(value));
+}
+
+function renderContractProfile(profile) {
+  const target = byId("fleetProfileSummary");
+  if (!profile) {
+    target.innerHTML = '<div><dt>Profilo</dt><dd>Non ancora configurato</dd></div>';
+    return;
+  }
+  const common = [
+    ["Tipo contratto", CONTRACT_TYPE[profile.contract_type]],
+    ["Società", profile.company || "Non registrata"],
+    ["Società proprietaria", profile.owner_company || "Non registrata"],
+    ["Numero contratto", profile.contract_number || "Non registrato"],
+  ];
+  const economic = profile.contract_type === "lungo_termine"
+    ? [
+        ["Canone mensile", money(profile.monthly_fee)],
+        ["Franchigia", money(profile.deductible)],
+        ["Km inclusi", profile.included_km?.toLocaleString("it-IT") || "Non registrati"],
+        ["Costo km eccedente", money(profile.excess_km_cost)],
+      ]
+    : profile.contract_type === "breve_termine"
+      ? [["Costo giornaliero", money(profile.daily_cost)]]
+      : [];
+  const dates = [
+    ["Data inizio", profile.starts_on || "Non registrata"],
+    ["Data scadenza", profile.expires_on || "Non registrata"],
+    ["Stato contratto", CONTRACT_STATUS[profile.contract_status]],
+  ];
+  target.innerHTML = [...common, ...economic, ...dates].map(([term, value]) => `
+    <div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd></div>
+  `).join("");
+}
+
 
 export function renderVehicleDossier(
   payload,
@@ -335,6 +397,7 @@ export function renderVehicleDossier(
     (assetDetail.operational_status_damage_case_id
       ? `Pratica #${assetDetail.operational_status_damage_case_id}`
       : "Nessuna");
+  renderContractProfile(assetDetail.profile);
   byId("fleetDossierDamageCases").innerHTML = damageCases.length
     ? damageCases.map((movement) => `
         <button type="button" class="fleet-document-item" data-damage-case-link="${movement.damage_case_id}">

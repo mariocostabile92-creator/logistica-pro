@@ -57,6 +57,7 @@ def _serialize(item):
         "operational_status_actor": asset.operational_status_actor,
         "operational_status_updated_at": asset.operational_status_updated_at,
         "operational_status_damage_case_id": asset.operational_status_damage_case_id,
+        "asset_profile": asset.profile.model_dump() if asset.profile else None,
     })
     if result.get("source_movement_id"):
         history = journal_repository.asset_history(int(result["vehicle_id"]))

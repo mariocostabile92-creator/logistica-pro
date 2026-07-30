@@ -500,7 +500,8 @@ def test_preexisting_openapi_paths_are_byte_compatible():
                         or path.startswith("/api/fleet/damage")
                         or path.startswith("/api/fleet/maintenances")
                         or path.startswith("/api/fleet/vehicles/")
-            or path.startswith("/api/plugins/fleet/v1/journal/")
+                or path.startswith("/api/plugins/fleet/v1/journal/")
+                or path.endswith("/profile")
         or path == "/api/runtime/authority"
         or path == "/api/runtime/execution-intent"
         or path == "/api/runtime/execution-attempt"

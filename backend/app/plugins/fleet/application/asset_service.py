@@ -2,6 +2,7 @@ from app.plugins.fleet.domain.models import (
     Asset,
     AssetDocument,
     AssetEvent,
+    FleetAssetProfile,
     availability_event_type,
 )
 from app.plugins.fleet.infrastructure import repository
@@ -24,6 +25,17 @@ def get_asset(asset_id: int) -> Asset:
     if not asset:
         raise AssetNotFoundError("Asset non trovato.")
     return asset
+
+
+def save_profile(
+    asset_id: int,
+    values: dict[str, object],
+    actor: str,
+) -> FleetAssetProfile:
+    profile = repository.upsert_profile(asset_id, values, actor)
+    if not profile:
+        raise AssetNotFoundError("Asset non trovato.")
+    return profile
 
 
 def create_asset(

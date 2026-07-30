@@ -208,6 +208,17 @@ async function renderDetail(caseId) {
         <div><dt>Data evento</dt><dd>${escapeHtml(date(item.occurred_at))}</dd></div>
       </dl></section>
       <section><h4>Descrizione</h4><p>${escapeHtml(item.description)}</p></section>
+      <section><h4>Profilo contrattuale del mezzo</h4><dl>
+        <div><dt>Tipo contratto</dt><dd>${escapeHtml({
+          lungo_termine: "Lungo termine",
+          breve_termine: "Breve termine",
+          proprieta: "Proprietà",
+          leasing: "Leasing",
+          altro: "Altro",
+        }[item.asset_profile?.contract_type] || "Non configurato")}</dd></div>
+        <div><dt>Società</dt><dd>${escapeHtml(item.asset_profile?.company || item.asset_profile?.owner_company || "Non registrata")}</dd></div>
+        <div><dt>Numero contratto</dt><dd>${escapeHtml(item.asset_profile?.contract_number || "Non registrato")}</dd></div>
+      </dl></section>
       <section><h4>Stato operativo corrente</h4><dl>
         <div><dt>Motivo stato operativo</dt><dd>${escapeHtml(item.operational_status_reason || "Non registrato")}</dd></div>
         <div><dt>Origine</dt><dd>${escapeHtml(item.operational_status_origin || "Non registrata")}</dd></div>

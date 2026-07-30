@@ -31,6 +31,24 @@ class AssetDocument(BaseModel):
     created_at: str
 
 
+class FleetAssetProfile(BaseModel):
+    asset_id: int
+    contract_type: str
+    company: str | None = None
+    owner_company: str | None = None
+    contract_number: str | None = None
+    monthly_fee: str | None = None
+    daily_cost: str | None = None
+    deductible: str | None = None
+    included_km: int | None = None
+    excess_km_cost: str | None = None
+    starts_on: str | None = None
+    expires_on: str | None = None
+    contract_status: str
+    created_at: str
+    updated_at: str
+
+
 class Asset(BaseModel):
     id: int
     external_identifier: str
@@ -48,6 +66,7 @@ class Asset(BaseModel):
     notes: str | None = None
     capabilities: list[str] = Field(default_factory=list)
     documents: list[AssetDocument] = Field(default_factory=list)
+    profile: FleetAssetProfile | None = None
     created_at: str
     updated_at: str
 

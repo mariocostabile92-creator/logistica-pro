@@ -92,6 +92,33 @@ function timeline(events) {
   `).join("");
 }
 
+function contractContext(profile) {
+  if (!profile) return '<p>Profilo contrattuale non configurato.</p>';
+  const types = {
+    lungo_termine: "Lungo termine",
+    breve_termine: "Breve termine",
+    proprieta: "Proprietà",
+    leasing: "Leasing",
+    altro: "Altro",
+  };
+  const money = (value) => value == null
+    ? "Non registrato"
+    : new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(Number(value));
+  const fields = [
+    ["Tipo contratto", types[profile.contract_type]],
+    ["Società", profile.company || profile.owner_company || "Non registrata"],
+    ["Contratto", profile.contract_number || "Non registrato"],
+  ];
+  if (profile.contract_type === "lungo_termine") {
+    fields.push(["Franchigia prevista", money(profile.deductible)]);
+  }
+  if (profile.contract_type === "breve_termine") {
+    fields.push(["Costo giornaliero", money(profile.daily_cost)]);
+    fields.push(["Costo fermo mezzo", "Non calcolato"]);
+  }
+  return `<dl>${fields.map(([key, value]) => `<div><dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>`;
+}
+
 async function renderDetail(maintenanceId) {
   const item = await getMaintenance(maintenanceId);
   selectedId = Number(maintenanceId);
@@ -121,6 +148,7 @@ async function renderDetail(maintenanceId) {
         <div><dt>Data prevista</dt><dd>${escapeHtml(date(item.expected_at))}</dd></div>
       </dl></section>
       <section><h4>Descrizione</h4><p>${escapeHtml(item.description)}</p><h4>Note</h4><p>${escapeHtml(item.notes || "Nessuna nota")}</p></section>
+      <section><h4>Profilo contrattuale del mezzo</h4>${contractContext(item.asset_profile)}</section>
       <section class="maintenance-update-section"><h4>Avanzamento</h4>
         <form id="maintenanceUpdateForm" class="maintenance-form">
           <label>Stato<select name="status">${Object.entries(STATUS).map(([key, label]) => `<option value="${key}" ${key === item.status ? "selected" : ""}>${label}</option>`).join("")}</select></label>

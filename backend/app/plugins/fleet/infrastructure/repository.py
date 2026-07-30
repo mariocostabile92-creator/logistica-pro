@@ -9,6 +9,7 @@ from app.plugins.fleet.domain.models import (
     AssetDocument,
     AssetEvent,
     AssetEventType,
+    FleetAssetProfile,
 )
 from app.utils.date_utils import utc_now_iso
 
@@ -52,6 +53,25 @@ def init_schema() -> None:
                 actor TEXT NOT NULL,
                 details TEXT NOT NULL,
                 contract_version TEXT NOT NULL,
+                FOREIGN KEY (asset_id) REFERENCES fleet_assets(id)
+                    ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS fleet_asset_profiles (
+                asset_id INTEGER PRIMARY KEY,
+                contract_type TEXT NOT NULL,
+                company TEXT,
+                owner_company TEXT,
+                contract_number TEXT,
+                monthly_fee TEXT,
+                daily_cost TEXT,
+                deductible TEXT,
+                included_km INTEGER,
+                excess_km_cost TEXT,
+                starts_on TEXT,
+                expires_on TEXT,
+                contract_status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
                 FOREIGN KEY (asset_id) REFERENCES fleet_assets(id)
                     ON DELETE CASCADE
             );
@@ -127,6 +147,24 @@ def _documents_by_asset(
     return grouped
 
 
+def _profile_from_row(row: sqlite3.Row) -> FleetAssetProfile:
+    return FleetAssetProfile(**{key: row[key] for key in row.keys()})
+
+
+def _profiles_by_asset(
+    conn: sqlite3.Connection,
+    asset_ids: list[int],
+) -> dict[int, FleetAssetProfile]:
+    if not asset_ids:
+        return {}
+    placeholders = ",".join("?" for _ in asset_ids)
+    rows = conn.execute(
+        f"SELECT * FROM fleet_asset_profiles WHERE asset_id IN ({placeholders})",
+        asset_ids,
+    ).fetchall()
+    return {row["asset_id"]: _profile_from_row(row) for row in rows}
+
+
 def _operational_status_by_asset(
     conn: sqlite3.Connection,
     asset_ids: list[int],
@@ -166,6 +204,7 @@ def _asset_from_row(
     row: sqlite3.Row,
     documents: list[AssetDocument],
     operational_status: dict[str, object] | None = None,
+    profile: FleetAssetProfile | None = None,
 ) -> Asset:
     operational_status = operational_status or {}
     return Asset(
@@ -185,6 +224,7 @@ def _asset_from_row(
         notes=row["notes"],
         capabilities=json.loads(row["capabilities"]),
         documents=documents,
+        profile=profile,
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -202,7 +242,8 @@ def _get_asset_in_session(
         return None
     documents = _documents_by_asset(conn, [asset_id]).get(asset_id, [])
     operational = _operational_status_by_asset(conn, [asset_id]).get(asset_id)
-    return _asset_from_row(row, documents, operational)
+    profile = _profiles_by_asset(conn, [asset_id]).get(asset_id)
+    return _asset_from_row(row, documents, operational, profile)
 
 
 def list_assets() -> list[Asset]:
@@ -213,11 +254,13 @@ def list_assets() -> list[Asset]:
         asset_ids = [row["id"] for row in rows]
         documents = _documents_by_asset(conn, asset_ids)
         operational = _operational_status_by_asset(conn, asset_ids)
+        profiles = _profiles_by_asset(conn, asset_ids)
         return [
             _asset_from_row(
                 row,
                 documents.get(row["id"], []),
                 operational.get(row["id"]),
+                profiles.get(row["id"]),
             )
             for row in rows
         ]
@@ -226,6 +269,71 @@ def list_assets() -> list[Asset]:
 def get_asset(asset_id: int) -> Asset | None:
     with db_session() as conn:
         return _get_asset_in_session(conn, asset_id)
+
+
+def upsert_profile(
+    asset_id: int,
+    values: dict[str, object],
+    actor: str,
+) -> FleetAssetProfile | None:
+    now = utc_now_iso()
+    with db_session() as conn:
+        if not conn.execute(
+            "SELECT 1 FROM fleet_assets WHERE id = ?",
+            (asset_id,),
+        ).fetchone():
+            return None
+        existing = conn.execute(
+            "SELECT created_at FROM fleet_asset_profiles WHERE asset_id = ?",
+            (asset_id,),
+        ).fetchone()
+        created_at = existing["created_at"] if existing else now
+        conn.execute(
+            """
+            INSERT INTO fleet_asset_profiles (
+                asset_id, contract_type, company, owner_company,
+                contract_number, monthly_fee, daily_cost, deductible,
+                included_km, excess_km_cost, starts_on, expires_on,
+                contract_status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(asset_id) DO UPDATE SET
+                contract_type = excluded.contract_type,
+                company = excluded.company,
+                owner_company = excluded.owner_company,
+                contract_number = excluded.contract_number,
+                monthly_fee = excluded.monthly_fee,
+                daily_cost = excluded.daily_cost,
+                deductible = excluded.deductible,
+                included_km = excluded.included_km,
+                excess_km_cost = excluded.excess_km_cost,
+                starts_on = excluded.starts_on,
+                expires_on = excluded.expires_on,
+                contract_status = excluded.contract_status,
+                updated_at = excluded.updated_at
+            """,
+            (
+                asset_id, values["contract_type"], values.get("company"),
+                values.get("owner_company"), values.get("contract_number"),
+                values.get("monthly_fee"), values.get("daily_cost"),
+                values.get("deductible"), values.get("included_km"),
+                values.get("excess_km_cost"), values.get("starts_on"),
+                values.get("expires_on"), values["contract_status"],
+                created_at, now,
+            ),
+        )
+        _append_event(
+            conn,
+            asset_id,
+            AssetEventType.ASSET_UPDATED,
+            actor,
+            {"profile": {"contract_type": values["contract_type"]}},
+            now,
+        )
+        row = conn.execute(
+            "SELECT * FROM fleet_asset_profiles WHERE asset_id = ?",
+            (asset_id,),
+        ).fetchone()
+    return _profile_from_row(row)
 
 
 def create_asset(values: dict[str, object], actor: str) -> Asset:

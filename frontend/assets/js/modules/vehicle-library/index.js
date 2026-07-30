@@ -51,6 +51,34 @@ function operation(value) {
   return label(value, { check_out: "Ritiro", check_in: "Rientro" });
 }
 
+function renderContractProfile(profile) {
+  const target = byId("vehicleContractProfile");
+  if (!profile) {
+    target.innerHTML = "<div><dt>Profilo</dt><dd>Non ancora configurato</dd></div>";
+    return;
+  }
+  const type = {
+    lungo_termine: "Lungo termine",
+    breve_termine: "Breve termine",
+    proprieta: "Proprietà",
+    leasing: "Leasing",
+    altro: "Altro",
+  }[profile.contract_type];
+  const values = [
+    ["Tipo contratto", type],
+    ["Società", profile.company || profile.owner_company || "Non registrata"],
+    ["Numero contratto", profile.contract_number || "Non registrato"],
+    ["Stato contratto", {
+      attivo: "Attivo",
+      in_scadenza: "In scadenza",
+      scaduto: "Scaduto",
+    }[profile.contract_status]],
+  ];
+  target.innerHTML = values.map(([term, value]) => `
+    <div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(value)}</dd></div>
+  `).join("");
+}
+
 function render(payload, assetDetail) {
   const { asset, kpis, movements } = payload;
   currentAsset = asset;
@@ -78,6 +106,7 @@ function render(payload, assetDetail) {
     (assetDetail.operational_status_damage_case_id
       ? `Pratica #${assetDetail.operational_status_damage_case_id}`
       : "Nessuna");
+  renderContractProfile(assetDetail.profile);
   byId("currentKm").textContent = kpis.current_odometer_km == null
     ? "Non registrati"
     : `${Number(kpis.current_odometer_km).toLocaleString("it-IT")} km`;

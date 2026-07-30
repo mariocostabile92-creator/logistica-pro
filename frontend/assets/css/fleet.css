@@ -477,6 +477,28 @@
   -webkit-box-orient: vertical;
 }
 
+.fleet-contract-profile {
+  grid-column: 1 / -1;
+}
+
+.fleet-profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fleet-profile-form-grid label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+@media (max-width: 620px) {
+  .fleet-profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .fleet-timestamp {
   white-space: nowrap;
 }

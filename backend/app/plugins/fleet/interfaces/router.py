@@ -9,10 +9,11 @@ from app.plugins.fleet.application.asset_service import (
     list_assets,
     list_events,
     observe_availability,
+    save_profile,
     update_asset,
 )
 from app.plugins.fleet.domain.errors import AssetIdentifierConflictError
-from app.plugins.fleet.domain.models import Asset, AssetDocument
+from app.plugins.fleet.domain.models import Asset, AssetDocument, FleetAssetProfile
 from app.plugins.fleet.interfaces.schemas import (
     AssetCreateRequest,
     AssetDocumentCreateRequest,
@@ -20,6 +21,7 @@ from app.plugins.fleet.interfaces.schemas import (
     AssetListResponse,
     AssetUpdateRequest,
     AvailabilityObservationRequest,
+    FleetAssetProfileRequest,
 )
 from app.workspace.status_service import (
     DemoWorkspaceResetRequiredError,
@@ -40,6 +42,30 @@ def _not_found(exc: AssetNotFoundError) -> HTTPException:
 @router.get("/assets", response_model=AssetListResponse)
 def assets() -> AssetListResponse:
     return AssetListResponse(items=list_assets())
+
+
+@router.put(
+    "/assets/{asset_id}/profile",
+    response_model=FleetAssetProfile,
+)
+def asset_profile(
+    asset_id: int,
+    request: FleetAssetProfileRequest,
+) -> FleetAssetProfile:
+    values = request.model_dump(mode="json")
+    actor = str(values.pop("actor"))
+    contract_type = values["contract_type"]
+    if contract_type == "lungo_termine":
+        values["daily_cost"] = None
+    elif contract_type == "breve_termine":
+        values["monthly_fee"] = None
+    elif contract_type == "proprieta":
+        values["monthly_fee"] = None
+        values["daily_cost"] = None
+    try:
+        return save_profile(asset_id, values, actor)
+    except AssetNotFoundError as exc:
+        raise _not_found(exc) from exc
 
 
 @router.post(

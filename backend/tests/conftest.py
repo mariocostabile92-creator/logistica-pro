@@ -79,6 +79,7 @@ def reset_database():
         conn.execute("DELETE FROM workforce_imports")
         conn.execute("DELETE FROM fleet_sync_event_fingerprints")
         conn.execute("DELETE FROM fleet_asset_events")
+        conn.execute("DELETE FROM fleet_asset_profiles")
         conn.execute("DELETE FROM fleet_sync_runs")
         conn.execute("DELETE FROM fleet_asset_metadata")
         conn.execute("DELETE FROM fleet_asset_documents")

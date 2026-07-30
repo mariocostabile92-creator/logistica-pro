@@ -135,6 +135,17 @@ export async function getFleetAssetEvents(assetId) {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/fleet/v1/assets/${assetId}/events`));
 }
 
+export async function saveFleetAssetProfile(assetId, payload) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/fleet/v1/assets/${assetId}/profile`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  ));
+}
+
 
 export async function changeVehicleOperationalStatus(vehicleId, payload) {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/vehicles/${vehicleId}/operational-status`, {

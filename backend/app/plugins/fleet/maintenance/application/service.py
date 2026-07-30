@@ -30,6 +30,8 @@ def _serialize(item):
         return item
     result = dict(item)
     result["events"] = repository.list_events(int(result["id"]))
+    asset = get_asset(int(result["vehicle_id"]))
+    result["asset_profile"] = asset.profile.model_dump() if asset.profile else None
     return result
 
 

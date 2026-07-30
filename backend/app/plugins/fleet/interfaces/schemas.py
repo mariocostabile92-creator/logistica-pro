@@ -1,5 +1,6 @@
 import re
 from datetime import date
+from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -143,3 +144,33 @@ class AssetListResponse(BaseModel):
 class AssetEventsResponse(BaseModel):
     contract_version: str = "1.0"
     items: list[AssetEvent]
+
+
+class FleetAssetProfileRequest(BaseModel):
+    contract_type: str
+    company: str | None = Field(default=None, max_length=300)
+    owner_company: str | None = Field(default=None, max_length=300)
+    contract_number: str | None = Field(default=None, max_length=200)
+    monthly_fee: Decimal | None = Field(default=None, ge=0)
+    daily_cost: Decimal | None = Field(default=None, ge=0)
+    deductible: Decimal | None = Field(default=None, ge=0)
+    included_km: int | None = Field(default=None, ge=0)
+    excess_km_cost: Decimal | None = Field(default=None, ge=0)
+    starts_on: date | None = None
+    expires_on: date | None = None
+    contract_status: str
+    actor: str = "fleet_manager"
+
+    @field_validator("contract_type")
+    @classmethod
+    def valid_contract_type(cls, value: str) -> str:
+        if value not in {"lungo_termine", "breve_termine", "proprieta", "leasing", "altro"}:
+            raise ValueError("Tipo contratto non valido.")
+        return value
+
+    @field_validator("contract_status")
+    @classmethod
+    def valid_contract_status(cls, value: str) -> str:
+        if value not in {"attivo", "in_scadenza", "scaduto"}:
+            raise ValueError("Stato contratto non valido.")
+        return value
