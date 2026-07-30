@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from app.attachments.repository import init_schema as init_attachment_schema
+from app.attachments.router import router as attachment_router
 
 from app.api.routers import (
     configuration,
@@ -83,6 +85,7 @@ async def lifespan(app: FastAPI):
     )
     try:
         init_db()
+        init_attachment_schema()
         init_configuration_schema()
         initialize_fleet_plugin()
         initialize_workforce_plugin()
@@ -106,6 +109,7 @@ app = FastAPI(
     debug=SETTINGS.debug,
     lifespan=lifespan,
 )
+app.include_router(attachment_router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -42,7 +42,13 @@ def _select() -> str:
     return """
         SELECT d.*, a.plate, a.external_identifier,
                a.category AS vehicle_model,
-               p.contract_type, p.contract_number
+               p.contract_type, p.contract_number,
+               (SELECT COUNT(*) FROM attachments att
+                WHERE att.entity_type = 'document' AND att.entity_id = d.id)
+                    AS attachment_count,
+               (SELECT MAX(att.created_at) FROM attachments att
+                WHERE att.entity_type = 'document' AND att.entity_id = d.id)
+                    AS attachment_uploaded_at
         FROM fleet_vehicle_documents d
         JOIN fleet_assets a ON a.id = d.vehicle_id
         LEFT JOIN fleet_asset_profiles p ON p.asset_id = d.vehicle_id
@@ -90,9 +96,15 @@ def list_all(
         params.append(document_type)
     if has_file is not None:
         clauses.append(
-            "(d.file_reference IS NOT NULL AND d.file_reference <> '')"
+            """((d.file_reference IS NOT NULL AND d.file_reference <> '')
+                OR EXISTS (SELECT 1 FROM attachments att
+                           WHERE att.entity_type = 'document'
+                             AND att.entity_id = d.id))"""
             if has_file else
-            "(d.file_reference IS NULL OR d.file_reference = '')"
+            """((d.file_reference IS NULL OR d.file_reference = '')
+                AND NOT EXISTS (SELECT 1 FROM attachments att
+                                WHERE att.entity_type = 'document'
+                                  AND att.entity_id = d.id))"""
         )
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     with db_session() as conn:

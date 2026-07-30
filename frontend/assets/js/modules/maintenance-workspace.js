@@ -6,6 +6,7 @@ import {
   updateMaintenance,
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
+import { mountAttachments } from "./attachments/component.js";
 
 
 const STATUS = Object.freeze({
@@ -162,7 +163,10 @@ async function renderDetail(maintenanceId) {
         </form>
       </section>
       <section><h4>Timeline</h4><ol class="maintenance-timeline">${timeline(item.events)}</ol></section>
-    </div>`;
+    </div><div data-attachments></div>`;
+  await mountAttachments(workspace.querySelector("[data-attachments]"), {
+    entityType: "maintenance", entityId: item.id,
+  });
   workspace.querySelector("[data-maintenance-back]").addEventListener("click", () => {
     workspace.classList.remove("maintenance-detail-mode");
     workspace.querySelector("#maintenanceNavigator").classList.remove("detail-open");

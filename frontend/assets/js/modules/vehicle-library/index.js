@@ -2,6 +2,7 @@ import { getFleetAsset, getFleetVehicleHistory, getHealth } from "../../api.js";
 import { escapeHtml } from "../../utils/dom.js";
 import { mountOperationalDocumentHistory } from "./operational-documents.js";
 import { openOperationalStatusControl } from "../operational-status-control.js";
+import { mountAttachments } from "../attachments/component.js";
 
 const byId = (id) => document.getElementById(id);
 let currentAsset = null;
@@ -79,7 +80,7 @@ function renderContractProfile(profile) {
   `).join("");
 }
 
-function render(payload, assetDetail) {
+async function render(payload, assetDetail) {
   const { asset, kpis, movements } = payload;
   currentAsset = asset;
   byId("vehiclePlate").textContent = asset.plate || asset.external_identifier;
@@ -126,6 +127,10 @@ function render(payload, assetDetail) {
   document.title = `${asset.plate || asset.external_identifier} · Vehicle Library`;
   byId("vehicleState").hidden = true;
   byId("vehicleContent").hidden = false;
+  await mountAttachments(byId("vehicleAttachments"), {
+    entityType: "vehicle", entityId: asset.id, aggregateVehicle: true,
+    title: "Allegati del mezzo",
+  });
 }
 
 async function checkHealth() {
@@ -148,7 +153,7 @@ async function loadVehicle() {
     getFleetVehicleHistory(assetId),
     getFleetAsset(assetId),
   ]);
-  render(history, asset);
+  await render(history, asset);
 }
 
 if (typeof document !== "undefined") {

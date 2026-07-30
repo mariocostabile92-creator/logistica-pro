@@ -2,6 +2,7 @@ import {
   createRental, getRental, listFleetAssets, listRentals, updateRental,
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
+import { mountAttachments } from "./attachments/component.js";
 
 const STATUS = {
   programmato: "Programmato", attivo: "Attivo", prorogato: "Prorogato",
@@ -92,7 +93,11 @@ async function detail(id) {
       <div><dt>Pratica danno</dt><dd>${escapeHtml(item.damage_case_number || "Non collegata")}</dd></div>
       <div><dt>Manutenzione</dt><dd>${escapeHtml(item.maintenance_number || "Non collegata")}</dd></div>
       <div class="rental-detail-wide"><dt>Note</dt><dd>${escapeHtml(item.notes || "Nessuna nota")}</dd></div>
-    </dl><button type="button" data-edit-rental>Modifica noleggio</button>`;
+    </dl><button type="button" data-edit-rental>Modifica noleggio</button>
+    <div data-attachments></div>`;
+  await mountAttachments(workspace.querySelector("[data-attachments]"), {
+    entityType: "rental", entityId: item.id,
+  });
   workspace.querySelector("[data-rental-back]").addEventListener("click", () =>
     workspace.querySelector("#rentalNavigator").classList.remove("detail-open"));
   workspace.querySelector("[data-edit-rental]").addEventListener("click", () => openEditor(item));

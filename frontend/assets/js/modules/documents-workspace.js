@@ -6,6 +6,7 @@ import {
   updateVehicleDocument,
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
+import { mountAttachments } from "./attachments/component.js";
 
 const TYPES = {
   carta_circolazione: "Carta di circolazione",
@@ -112,8 +113,7 @@ function formFields(item = {}) {
     <label>Stato<select name="status">${
       Object.entries(STATUSES).map(([key, label]) => `<option value="${key}" ${item.status === key ? "selected" : ""}>${label}</option>`).join("")
     }</select></label>
-    <label class="document-form-wide">Note<textarea name="notes">${escapeHtml(item.notes || "")}</textarea></label>
-    <div class="document-file-note document-form-wide"><strong>File facoltativo</strong><p>File non ancora caricato. L’upload persistente non è disponibile in questa fase.</p></div>`;
+    <label class="document-form-wide">Note<textarea name="notes">${escapeHtml(item.notes || "")}</textarea></label>`;
 }
 
 async function renderDetail(documentId) {
@@ -137,13 +137,15 @@ async function renderDetail(documentId) {
       <div><dt>Società o ente</dt><dd>${escapeHtml(item.issuer || "Non indicato")}</dd></div>
       <div><dt>Emissione</dt><dd>${escapeHtml(date(item.issued_at))}</dd></div>
       <div><dt>Scadenza</dt><dd>${escapeHtml(date(item.expires_at))}</dd></div>
-      <div><dt>File</dt><dd>${item.has_file ? escapeHtml(item.file_name || "File collegato") : "Documento senza file allegato"}</dd></div>
-      <div><dt>Caricato il</dt><dd>${escapeHtml(item.uploaded_at || "File non ancora caricato")}</dd></div>
       <div class="document-detail-wide"><dt>Note</dt><dd>${escapeHtml(item.notes || "Nessuna nota")}</dd></div>
       ${item.contract_link ? `<div class="document-detail-wide"><dt>Profilo contrattuale collegato</dt><dd>${escapeHtml(item.contract_link.contract_type.replaceAll("_", " "))} · ${escapeHtml(item.contract_link.contract_number || "Numero non indicato")}</dd></div>` : ""}
     </dl>
     <div class="documents-actions"><button type="button" data-edit-document>Modifica metadati</button>
-      <button type="button" class="secondary" data-open-vehicle="${item.vehicle_id}">Apri dossier mezzo</button></div>`;
+      <button type="button" class="secondary" data-open-vehicle="${item.vehicle_id}">Apri dossier mezzo</button></div>
+    <div data-attachments></div>`;
+  await mountAttachments(workspace.querySelector("[data-attachments]"), {
+    entityType: "document", entityId: item.id,
+  });
   workspace.querySelector("[data-documents-back]").addEventListener("click", () => {
     workspace.classList.remove("documents-detail-mode");
     workspace.querySelector("#documentsNavigator").classList.remove("detail-open");

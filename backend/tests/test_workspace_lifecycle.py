@@ -496,7 +496,8 @@ def test_preexisting_openapi_paths_are_byte_compatible():
     added_paths = {
         path
         for path in paths
-                    if path.startswith("/api/workspace/")
+                        if path.startswith("/api/workspace/")
+                        or path.startswith("/api/attachments")
                         or path.startswith("/api/fleet/damage")
                             or path.startswith("/api/fleet/maintenances")
                             or path.startswith("/api/fleet/documents")

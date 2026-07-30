@@ -9,6 +9,7 @@ import {
   updateDamageCase,
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
+import { mountAttachments } from "./attachments/component.js";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 
 const STATUS = {
@@ -250,12 +251,15 @@ async function renderDetail(caseId) {
           <button type="submit">Salva valutazione</button>
         </form>
       </section>
-      <section><h4>Foto</h4><div class="damage-media">${media.filter((entry) => entry.media_type === "image").map((entry) => `<a href="${escapeHtml(entry.url)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(entry.url)}" alt="Foto anomalia"></a>`).join("") || "<p>Nessuna foto allegata.</p>"}</div><h4>Video</h4><div class="damage-empty">Video non disponibile in questa versione.</div></section>
+      <section><h4>Media Journal di origine</h4><div class="damage-media">${media.filter((entry) => entry.media_type === "image").map((entry) => `<a href="${escapeHtml(entry.url)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(entry.url)}" alt="Foto anomalia"></a>`).join("") || "<p>Nessun media Journal collegato.</p>"}</div></section>
       <section><h4>Cambio stato</h4><form id="damageStatusForm" class="damage-form"><label>Nuovo stato<select name="status">${Object.entries(STATUS).map(([key,label]) => `<option value="${key}" ${key === item.status ? "selected" : ""}>${label}</option>`).join("")}</select></label><label>Stato mezzo alla chiusura<select name="restoration_status"><option value="">Seleziona alla chiusura</option>${Object.entries(VEHICLE).map(([key,label]) => `<option value="${key}">${label}</option>`).join("")}</select></label><label>Motivazione<textarea name="note" required></textarea></label><button type="submit">Registra cambio stato</button></form><p id="damageActionStatus" class="section-note" role="status" aria-live="polite"></p></section>
       <section><h4>Note Fleet Manager</h4><form id="damageNoteForm" class="damage-form"><label>Nuova nota<textarea name="note" required></textarea></label><button type="submit">Aggiungi nota</button></form></section>
       <section class="damage-timeline-section"><h4>Timeline</h4><ol class="damage-timeline">${timeline(item.events)}</ol></section>
       <section><h4>Collegamenti futuri</h4><div class="operational-document-future"><span>Franchigia</span><span>Assicurazione</span><span>Fleet Vision Engine</span><span>PDF</span><span>Firma</span></div></section>
-    </div>`;
+    </div><div data-attachments></div>`;
+  await mountAttachments(root.querySelector("[data-attachments]"), {
+    entityType: "damage", entityId: item.id,
+  });
   bindDetail(item.id);
 }
 

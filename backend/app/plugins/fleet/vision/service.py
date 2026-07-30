@@ -24,6 +24,13 @@ def _group(rows: list[dict]) -> dict[int, list[dict]]:
     return grouped
 
 
+def _missing_documents(rows: list[dict]) -> int:
+    return sum(
+        row["status"] == "mancante" or not int(row.get("attachment_count") or 0)
+        for row in rows
+    )
+
+
 def _event(
     source: str,
     source_id: object,
@@ -151,7 +158,7 @@ def _decisions(
             "Assicurazioni", "insurance",
             {"polizza": policy["policy_number"], "scadenza": policy["expires_on"]},
         ))
-    missing = sum(row["status"] == "mancante" for row in documents)
+    missing = _missing_documents(documents)
     if missing:
         result.append(_decision(
             "documents_missing", asset_id, "Documentazione incompleta",
@@ -349,7 +356,7 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
             },
             {
                 "key": "missing_documents", "label": "Documenti mancanti",
-                "value": sum(row["status"] == "mancante" for row in documents[asset_id]),
+                "value": _missing_documents(documents[asset_id]),
                 "source": "Documenti", "module": "documents", "source_id": None,
             },
             {
@@ -388,7 +395,7 @@ def fleet_vision(vehicle_id: int | None = None) -> dict:
             "damage_closed": sum(row["status"] in {"chiusa", "annullata"} for row in asset_damages),
             "maintenance_open": sum(row["status"] in OPEN_MAINTENANCE for row in asset_maintenance),
             "maintenance_completed": sum(row["status"] == "completata" for row in asset_maintenance),
-            "missing_documents": sum(row["status"] == "mancante" for row in documents[asset_id]),
+            "missing_documents": _missing_documents(documents[asset_id]),
             "insurance": policy,
             "franchises_open": sum(row["status"] in OPEN_FRANCHISE for row in asset_franchises),
             "rentals_active": sum(row["status"] in ACTIVE_RENTAL for row in asset_rentals),

@@ -11,7 +11,10 @@ class VehicleDocumentNotFound(VehicleDocumentError):
 
 
 def _response(item: dict[str, object]) -> dict[str, object]:
-    item["has_file"] = bool(item.get("file_reference"))
+    item["has_file"] = bool(
+        item.get("file_reference") or int(item.get("attachment_count") or 0)
+    )
+    item["uploaded_at"] = item.get("attachment_uploaded_at") or item.get("uploaded_at")
     item["contract_link"] = (
         {
             "contract_type": item["contract_type"],

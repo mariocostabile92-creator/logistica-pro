@@ -16,6 +16,7 @@ import {
   updateFleetAsset,
 } from "../api.js";
 import { state } from "../state.js";
+import { mountAttachments } from "./attachments/component.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import {
   isExpectedApiError,
@@ -157,6 +158,10 @@ async function showAsset(assetId) {
     rentals,
     deadlines,
   );
+  await mountAttachments(byId("fleetDossierAttachments"), {
+    entityType: "vehicle", entityId: assetId, aggregateVehicle: true,
+    title: "Allegati del mezzo",
+  });
   byId("fleetAssetTree").open = false;
   closeFleetSidebar();
 }

@@ -6,6 +6,7 @@ import {
   updateInsurancePolicy,
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
+import { mountAttachments } from "./attachments/component.js";
 
 const COVERAGE = {
   rca: "RCA",
@@ -114,7 +115,11 @@ async function renderDetail(policyId) {
       <div><dt>Franchigia assicurativa</dt><dd>${escapeHtml(money(item.insurance_deductible))}</dd></div>
       <div class="insurance-detail-wide"><dt>Note</dt><dd>${escapeHtml(item.notes || "Nessuna nota")}</dd></div>
     </dl>
-    <button type="button" data-edit-insurance>Modifica polizza</button>`;
+    <button type="button" data-edit-insurance>Modifica polizza</button>
+    <div data-attachments></div>`;
+  await mountAttachments(workspace.querySelector("[data-attachments]"), {
+    entityType: "insurance", entityId: item.id,
+  });
   workspace.querySelector("[data-insurance-back]").addEventListener("click", () => {
     workspace.classList.remove("insurance-detail-mode");
     workspace.querySelector("#insuranceNavigator").classList.remove("detail-open");

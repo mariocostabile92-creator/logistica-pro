@@ -15,6 +15,7 @@ os.environ.setdefault("DEMO_WORKSPACE_ENABLED", "true")
 os.environ.setdefault("WORKFORCE_PLUGIN_ENABLED", "true")
 
 from app.core.database import db_session, init_db
+from app.attachments.repository import init_schema as init_attachment_schema
 from app.briefing.repository import init_schema as init_briefing_schema
 from app.core.configuration.repository import (
     init_schema as init_configuration_schema,
@@ -57,6 +58,7 @@ from app.workspace.repository import init_schema as init_workspace_schema
 @pytest.fixture(autouse=True)
 def reset_database():
     init_db()
+    init_attachment_schema()
     init_configuration_schema()
     init_fleet_schema()
     init_fleet_sync_schema()
@@ -79,6 +81,7 @@ def reset_database():
     init_execution_intent_schema()
     init_execution_attempt_schema()
     with db_session() as conn:
+        conn.execute("DELETE FROM attachments")
         conn.execute("DELETE FROM fleet_rentals")
         conn.execute("DELETE FROM fleet_insurance_policies")
         conn.execute("DELETE FROM fleet_franchise_cases")

@@ -23,11 +23,12 @@ test("workspace exposes KPIs master detail creation editing and empty states", a
     "Documenti scaduti", "In scadenza", "Mezzi senza documentazione",
     "File mancanti", "Nuovo documento", "Modifica metadati",
     "Torna alla lista", "Nessun documento per il mezzo selezionato",
-    "Documento senza file allegato", "File non ancora caricato",
   ]) assert.match(module, new RegExp(label));
   assert.match(module, /documents-navigator/);
   assert.match(module, /createVehicleDocument/);
   assert.match(module, /updateVehicleDocument/);
+  assert.match(module, /mountAttachments/);
+  assert.doesNotMatch(module, /upload persistente non è disponibile/);
 });
 
 test("search and filters are combinable", async () => {
