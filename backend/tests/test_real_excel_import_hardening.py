@@ -390,6 +390,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
         path: value
         for path, value in app.openapi()["paths"].items()
                     if not path.startswith("/api/imports/")
+                    and not path.startswith("/api/auth/")
                     and not path.startswith("/api/attachments")
                 and not path.startswith("/api/fleet/damage")
                 and not path.startswith("/api/fleet/maintenances")

@@ -15,6 +15,7 @@ import {
   refreshWorkspaceStatus,
 } from "./modules/workspace-lifecycle.js";
 import { byId } from "./utils/dom.js";
+import { requireAdministrativeSession } from "./auth/session.js?v=1";
 
 
 async function checkHealth() {
@@ -38,12 +39,17 @@ async function refreshMissionControlData() {
 }
 
 
-initMissionControl({
-  onRefresh: refreshMissionControlData,
-  onOperationalUnitChange: abortBriefingRequest,
-});
-initBriefing();
-initWorkspaceLifecycle();
-initWorkspaceLoader();
-initViewNavigation({ loadWorkspace: ensureWorkspaceInitialized });
-checkHealth();
+async function bootstrapAdministrativeApp() {
+  await requireAdministrativeSession();
+  initMissionControl({
+    onRefresh: refreshMissionControlData,
+    onOperationalUnitChange: abortBriefingRequest,
+  });
+  initBriefing();
+  initWorkspaceLifecycle();
+  initWorkspaceLoader();
+  initViewNavigation({ loadWorkspace: ensureWorkspaceInitialized });
+  checkHealth();
+}
+
+bootstrapAdministrativeApp();

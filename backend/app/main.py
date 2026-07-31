@@ -8,6 +8,10 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from app.attachments.repository import init_schema as init_attachment_schema
 from app.attachments.router import router as attachment_router
+from app.auth.middleware import enforce_authentication
+from app.auth.repository import init_schema as init_auth_schema
+from app.auth.router import router as auth_router
+from app.auth.service import bootstrap_user
 
 from app.api.routers import (
     configuration,
@@ -85,6 +89,8 @@ async def lifespan(app: FastAPI):
     )
     try:
         init_db()
+        init_auth_schema()
+        bootstrap_user()
         init_attachment_schema()
         init_configuration_schema()
         initialize_fleet_plugin()
@@ -109,6 +115,8 @@ app = FastAPI(
     debug=SETTINGS.debug,
     lifespan=lifespan,
 )
+app.middleware("http")(enforce_authentication)
+app.include_router(auth_router)
 app.include_router(attachment_router)
 
 app.add_middleware(

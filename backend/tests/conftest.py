@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 
 import pytest
+from starlette.testclient import TestClient
 
 
 TEST_DATABASE_PATH = (
@@ -11,10 +12,26 @@ TEST_DATABASE_PATH = (
     / f"logistica-mvp-tests-{uuid.uuid4().hex}.sqlite3"
 )
 os.environ["OPERATIONS_DB_PATH"] = str(TEST_DATABASE_PATH)
+os.environ["APP_ENV"] = "test"
 os.environ.setdefault("DEMO_WORKSPACE_ENABLED", "true")
 os.environ.setdefault("WORKFORCE_PLUGIN_ENABLED", "true")
 
+
+TEST_AUTH_HARNESS_TOKEN = uuid.uuid4().hex
+_test_client_init = TestClient.__init__
+
+
+def _authenticated_test_client_init(self, app, *args, **kwargs):
+    app.state.test_auth_harness_token = TEST_AUTH_HARNESS_TOKEN
+    headers = dict(kwargs.pop("headers", {}) or {})
+    headers.setdefault("X-Test-Auth-Harness", TEST_AUTH_HARNESS_TOKEN)
+    _test_client_init(self, app, *args, headers=headers, **kwargs)
+
+
+TestClient.__init__ = _authenticated_test_client_init
+
 from app.core.database import db_session, init_db
+from app.auth.repository import init_schema as init_auth_schema
 from app.attachments.repository import init_schema as init_attachment_schema
 from app.briefing.repository import init_schema as init_briefing_schema
 from app.core.configuration.repository import (
@@ -55,6 +72,10 @@ from app.repositories.planning_publication_repository import init_schema as init
 from app.workspace.repository import init_schema as init_workspace_schema
 
 
+init_db()
+init_auth_schema()
+
+
 @pytest.fixture(autouse=True)
 def reset_database():
     init_db()
@@ -81,6 +102,10 @@ def reset_database():
     init_execution_intent_schema()
     init_execution_attempt_schema()
     with db_session() as conn:
+        conn.execute("DELETE FROM admin_audit_events")
+        conn.execute("DELETE FROM auth_sessions")
+        conn.execute("DELETE FROM auth_users")
+        conn.execute("DELETE FROM organizations")
         conn.execute("DELETE FROM attachments")
         conn.execute("DELETE FROM fleet_rentals")
         conn.execute("DELETE FROM fleet_insurance_policies")
