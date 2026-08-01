@@ -1,5 +1,6 @@
-from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse
+from app.auth.permission_service import has_permission
 
 from app.attachments import service
 from app.attachments.storage import attachment_storage
@@ -17,20 +18,24 @@ def guarded(call, *args):
 
 @router.post("", status_code=201)
 async def upload_attachment(
+    request: Request,
     entity_type: str = Form(...), entity_id: int = Form(..., gt=0),
     file: UploadFile = File(...), notes: str | None = Form(default=None),
     created_by: str = Form(default="fleet_manager"),
 ):
+    user = request.state.user
+    if not has_permission(user.role, "attachments:write"):
+        raise HTTPException(status_code=403, detail="Permesso upload allegati insufficiente.")
     content = await file.read()
     return guarded(
         service.upload, entity_type, entity_id, file.filename or "allegato",
-        file.content_type or "", content, created_by, notes,
+        file.content_type or "", content, user.id, notes, user.organization_id,
     )
 
 
 @router.get("")
-def list_attachments(entity_type: str, entity_id: int):
-    return guarded(service.list_items, entity_type, entity_id)
+def list_attachments(entity_type: str, entity_id: int, request: Request):
+    return guarded(service.list_items, entity_type, entity_id, request.state.user.organization_id)
 
 
 @router.get("/vehicle/{vehicle_id}")
@@ -39,8 +44,8 @@ def vehicle_attachments(vehicle_id: int):
 
 
 @router.get("/{attachment_id}/download")
-def download_attachment(attachment_id: str):
-    item = guarded(service.get, attachment_id)
+def download_attachment(attachment_id: str, request: Request):
+    item = guarded(service.get, attachment_id, request.state.user.organization_id)
     return FileResponse(
         attachment_storage.resolve(item["storage_path"]),
         media_type=item["mime_type"], filename=item["original_filename"],
@@ -48,8 +53,8 @@ def download_attachment(attachment_id: str):
 
 
 @router.get("/{attachment_id}/preview")
-def preview_attachment(attachment_id: str):
-    item = guarded(service.get, attachment_id)
+def preview_attachment(attachment_id: str, request: Request):
+    item = guarded(service.get, attachment_id, request.state.user.organization_id)
     return FileResponse(
         attachment_storage.resolve(item["storage_path"]),
         media_type=item["mime_type"],
@@ -58,6 +63,8 @@ def preview_attachment(attachment_id: str):
 
 
 @router.delete("/{attachment_id}", status_code=204)
-def delete_attachment(attachment_id: str):
-    guarded(service.delete, attachment_id)
+def delete_attachment(attachment_id: str, request: Request):
+    if not has_permission(request.state.user.role, "attachments:write"):
+        raise HTTPException(status_code=403, detail="Permesso eliminazione allegati insufficiente.")
+    guarded(service.delete, attachment_id, request.state.user.organization_id, request.state.user.id)
     return Response(status_code=204)

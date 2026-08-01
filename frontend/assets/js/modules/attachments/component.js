@@ -37,6 +37,7 @@ export async function mountAttachments(container, options) {
       for (const file of files) {
         state.items.unshift(await uploadAttachment(state.entityType, state.entityId, file));
       }
+      await options.onChange?.();
     } catch (error) {
       state.error = error.message;
     } finally {
@@ -50,5 +51,6 @@ export async function mountAttachments(container, options) {
     await deleteAttachment(attachmentId);
     state.items = state.items.filter(item => item.id !== attachmentId);
     renderAttachments(container, state, options);
+    await options.onChange?.();
   };
 }

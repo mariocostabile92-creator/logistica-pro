@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from app.auth.permission_service import has_permission
 
 from app.plugins.fleet.documents.application import service
 from app.plugins.fleet.documents.interfaces.schemas import (
@@ -18,8 +19,16 @@ def guarded(call, *args, **kwargs):
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
+def permitted(request: Request, permission: str):
+    user = request.state.user
+    if not has_permission(user.role, permission):
+        raise HTTPException(status_code=403, detail="Permesso insufficiente per il workspace Documenti.")
+    return user
+
+
 @router.get("")
 def documents(
+    request: Request,
     vehicle_id: int | None = Query(default=None, gt=0),
     search: str | None = Query(default=None, max_length=240),
     status_filter: str | None = Query(default=None, alias="status"),
@@ -32,6 +41,7 @@ def documents(
         raise HTTPException(status_code=422, detail="Tipologia documento non supportata.")
     return guarded(
         service.list_documents,
+        permitted(request, "documents:read"),
         vehicle_id=vehicle_id,
         search=search,
         status=status_filter,
@@ -41,19 +51,20 @@ def documents(
 
 
 @router.get("/{document_id}")
-def document(document_id: int):
-    return guarded(service.get_document, document_id)
+def document(document_id: int, request: Request):
+    return guarded(service.get_document, document_id, permitted(request, "documents:read"))
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_document(request: VehicleDocumentRequest):
-    values = request.model_dump(mode="json")
-    actor = str(values.pop("actor"))
-    return guarded(service.create_document, values, actor)
+def create_document(payload: VehicleDocumentRequest, request: Request):
+    return guarded(service.create_document, payload.model_dump(mode="json"), permitted(request, "documents:write"))
 
 
 @router.patch("/{document_id}")
-def update_document(document_id: int, request: VehicleDocumentUpdateRequest):
-    values = request.model_dump(exclude_unset=True, mode="json")
-    actor = str(values.pop("actor", "fleet_manager"))
-    return guarded(service.update_document, document_id, values, actor)
+def update_document(document_id: int, payload: VehicleDocumentUpdateRequest, request: Request):
+    return guarded(service.update_document, document_id, payload.model_dump(exclude_unset=True, mode="json"), permitted(request, "documents:write"))
+
+
+@router.post("/{document_id}/archive")
+def archive_document(document_id: int, request: Request):
+    return guarded(service.archive_document, document_id, permitted(request, "documents:archive"))

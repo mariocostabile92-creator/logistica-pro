@@ -31,7 +31,7 @@ def snapshot() -> dict[str, list[dict]]:
         """,
         "documents": """
             SELECT vehicle_id, id, document_type, title, status,
-                   expires_at, created_at,
+                   expires_at, created_at, archived_at,
                    (SELECT COUNT(*) FROM attachments a
                     WHERE a.entity_type = 'document'
                       AND a.entity_id = fleet_vehicle_documents.id) AS attachment_count

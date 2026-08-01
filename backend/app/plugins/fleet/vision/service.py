@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import date, datetime
 
 from app.plugins.fleet.deadlines.application.service import list_deadlines
+from app.plugins.fleet.documents.domain.status_evaluator import evaluate_document
 from app.plugins.fleet.vision import repository
 
 
@@ -25,10 +26,15 @@ def _group(rows: list[dict]) -> dict[int, list[dict]]:
 
 
 def _missing_documents(rows: list[dict]) -> int:
-    return sum(
-        row["status"] == "mancante" or not int(row.get("attachment_count") or 0)
-        for row in rows
-    )
+    return sum(row.get("derived_status") == "file_mancante" for row in rows)
+
+
+def _document_issues(rows: list[dict]) -> dict[str, int]:
+    return {
+        "file mancanti": sum(row.get("derived_status") == "file_mancante" for row in rows),
+        "scaduti": sum(row.get("derived_status") == "scaduto" for row in rows),
+        "in scadenza": sum(row.get("derived_status") == "in_scadenza" for row in rows),
+    }
 
 
 def _event(
@@ -158,12 +164,12 @@ def _decisions(
             "Assicurazioni", "insurance",
             {"polizza": policy["policy_number"], "scadenza": policy["expires_on"]},
         ))
-    missing = _missing_documents(documents)
-    if missing:
+    document_issues = _document_issues(documents)
+    if document_issues["file mancanti"] or document_issues["scaduti"]:
         result.append(_decision(
             "documents_missing", asset_id, "Documentazione incompleta",
-            f"Il mezzo {plate} presenta documenti con stato mancante.", "media",
-            "Documenti", "documents", {"documenti mancanti": missing},
+            f"Il mezzo {plate} presenta documenti senza file o scaduti.", "media",
+            "Documenti", "documents", document_issues,
         ))
     if asset["availability"] in UNAVAILABLE | MAINTENANCE:
         result.append(_decision(
@@ -282,6 +288,10 @@ def _actions(decisions: list[dict], asset_id: int) -> list[dict]:
 
 def fleet_vision(vehicle_id: int | None = None) -> dict:
     data = repository.snapshot()
+    data["documents"] = [
+        {**row, "derived_status": evaluate_document(row, "Europe/Rome")["status"]}
+        for row in data["documents"]
+    ]
     deadlines = _group(list_deadlines()["items"])
     damages, maintenances = _group(data["damages"]), _group(data["maintenances"])
     documents, franchises = _group(data["documents"]), _group(data["franchises"])

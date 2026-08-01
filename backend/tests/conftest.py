@@ -111,6 +111,7 @@ def reset_database():
         conn.execute("DELETE FROM fleet_rentals")
         conn.execute("DELETE FROM fleet_insurance_policies")
         conn.execute("DELETE FROM fleet_franchise_cases")
+        conn.execute("DELETE FROM fleet_document_events")
         conn.execute("DELETE FROM fleet_vehicle_documents")
         conn.execute("DELETE FROM fleet_maintenance_events")
         conn.execute("DELETE FROM fleet_maintenances")

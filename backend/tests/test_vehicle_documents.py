@@ -60,11 +60,11 @@ def test_create_list_detail_update_search_and_combined_filters():
         "issuer": "Assicurazioni Italia",
     })
     assert updated.status_code == 200
-    assert updated.json()["status"] == "in_scadenza"
+    assert updated.json()["status"] == "file_mancante"
 
     listing = client.get(DOCUMENTS, params={
         "search": "dc123",
-        "status": "in_scadenza",
+        "status": "file_mancante",
         "document_type": "assicurazione",
         "has_file": False,
     }).json()
@@ -128,4 +128,5 @@ def test_schema_is_idempotent_and_contains_no_sqlite_only_migration():
     repository.init_schema()
     repository.init_schema()
     source = Path(repository.__file__).read_text(encoding="utf-8")
-    assert "PRAGMA" not in source
+    assert "SETTINGS.database_backend" in source
+    assert "information_schema.columns" in source

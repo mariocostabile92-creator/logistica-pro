@@ -1,4 +1,5 @@
 from app.core.database import db_session
+from app.core.config import SETTINGS
 from app.utils.date_utils import utc_now_iso
 
 
@@ -30,8 +31,32 @@ def init_schema() -> None:
                 ON fleet_vehicle_documents(status, expires_at);
             CREATE INDEX IF NOT EXISTS idx_vehicle_documents_type
                 ON fleet_vehicle_documents(document_type);
+            CREATE TABLE IF NOT EXISTS fleet_document_events (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                document_id INTEGER NOT NULL,
+                actor_user_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                details TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (document_id) REFERENCES fleet_vehicle_documents(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_document_events_document
+                ON fleet_document_events(document_id, created_at);
             """
         )
+        _ensure_column(conn, "fleet_vehicle_documents", "organization_id", "TEXT")
+        _ensure_column(conn, "fleet_vehicle_documents", "archived_at", "TEXT")
+
+
+def _ensure_column(conn, table: str, column: str, definition: str) -> None:
+    if SETTINGS.database_backend == "postgresql":
+        rows = conn.execute("SELECT column_name FROM information_schema.columns WHERE table_name=?", (table,)).fetchall()
+    else:
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    columns = {row[0] if SETTINGS.database_backend == "postgresql" else row[1] for row in rows}
+    if column not in columns:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 def _dict(row):
@@ -55,16 +80,20 @@ def _select() -> str:
     """
 
 
-def get(document_id: int):
+def get(document_id: int, organization_id: str | None = None):
+    clause, params = "", [document_id]
+    if organization_id:
+        clause = " AND d.organization_id = ?"
+        params.append(organization_id)
     with db_session() as conn:
         row = conn.execute(
-            f"{_select()} WHERE d.id = ?",
-            (document_id,),
+            f"{_select()} WHERE d.id = ?{clause}", params,
         ).fetchone()
     return _dict(row)
 
 
 def list_all(
+    organization_id: str | None = None,
     vehicle_id: int | None = None,
     search: str | None = None,
     status: str | None = None,
@@ -73,6 +102,9 @@ def list_all(
 ):
     clauses: list[str] = []
     params: list[object] = []
+    if organization_id:
+        clauses.append("d.organization_id = ?")
+        params.append(organization_id)
     if vehicle_id:
         clauses.append("d.vehicle_id = ?")
         params.append(vehicle_id)
@@ -88,9 +120,6 @@ def list_all(
         )
         needle = f"%{search.casefold()}%"
         params.extend([needle] * 5)
-    if status:
-        clauses.append("d.status = ?")
-        params.append(status)
     if document_type:
         clauses.append("d.document_type = ?")
         params.append(document_type)
@@ -145,8 +174,8 @@ def create(values: dict[str, object]):
             INSERT INTO fleet_vehicle_documents (
                 vehicle_id, document_type, title, document_number, issuer,
                 issued_at, expires_at, uploaded_at, notes, status,
-                file_name, file_reference, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                file_name, file_reference, created_at, updated_at, organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["vehicle_id"], values["document_type"], values["title"],
@@ -154,14 +183,15 @@ def create(values: dict[str, object]):
                 values.get("issued_at"), values.get("expires_at"), uploaded_at,
                 values.get("notes"), values["status"], values.get("file_name"),
                 values.get("file_reference"), now, now,
+                values["organization_id"],
             ),
         )
         document_id = int(cursor.lastrowid)
-    return get(document_id)
+    return get(document_id, str(values["organization_id"]))
 
 
-def update(document_id: int, values: dict[str, object]):
-    current = get(document_id)
+def update(document_id: int, organization_id: str, values: dict[str, object]):
+    current = get(document_id, organization_id)
     if not current:
         return None
     allowed = {
@@ -180,10 +210,47 @@ def update(document_id: int, values: dict[str, object]):
     with db_session() as conn:
         assignments = ", ".join(f"{key} = ?" for key in changes)
         conn.execute(
-            f"UPDATE fleet_vehicle_documents SET {assignments} WHERE id = ?",
-            [*changes.values(), document_id],
+            f"UPDATE fleet_vehicle_documents SET {assignments} WHERE id = ? AND organization_id = ?",
+            [*changes.values(), document_id, organization_id],
         )
-    return get(document_id)
+    return get(document_id, organization_id)
+
+
+def claim_legacy(organization_id: str) -> None:
+    with db_session() as conn:
+        organizations = conn.execute("SELECT COUNT(*) total FROM organizations").fetchone()
+        if organizations and int(organizations["total"]) == 1:
+            conn.execute("UPDATE fleet_vehicle_documents SET organization_id=? WHERE organization_id IS NULL", (organization_id,))
+
+
+def duplicate_exists(organization_id: str, values: dict, exclude_id: int | None = None) -> bool:
+    params = [organization_id, values["vehicle_id"], values["document_type"], values["title"].strip().casefold(), values.get("document_number") or ""]
+    excluded = ""
+    if exclude_id:
+        excluded, params = " AND id <> ?", [*params, exclude_id]
+    with db_session() as conn:
+        row = conn.execute("""SELECT 1 FROM fleet_vehicle_documents WHERE organization_id=? AND vehicle_id=?
+          AND document_type=? AND LOWER(title)=? AND COALESCE(document_number,'')=? AND archived_at IS NULL""" + excluded, params).fetchone()
+    return bool(row)
+
+
+def archive(document_id: int, organization_id: str):
+    with db_session() as conn:
+        conn.execute("UPDATE fleet_vehicle_documents SET archived_at=?,updated_at=? WHERE id=? AND organization_id=?",
+                     (utc_now_iso(), utc_now_iso(), document_id, organization_id))
+    return get(document_id, organization_id)
+
+
+def add_event(event_id: str, organization_id: str, document_id: int, actor_user_id: str, action: str, details: str | None = None):
+    with db_session() as conn:
+        conn.execute("INSERT INTO fleet_document_events (id,organization_id,document_id,actor_user_id,action,details,created_at) VALUES (?,?,?,?,?,?,?)",
+                     (event_id, organization_id, document_id, actor_user_id, action, details, utc_now_iso()))
+
+
+def events(document_id: int, organization_id: str):
+    with db_session() as conn:
+        rows = conn.execute("SELECT * FROM fleet_document_events WHERE document_id=? AND organization_id=? ORDER BY created_at DESC", (document_id, organization_id)).fetchall()
+    return [_dict(row) for row in rows]
 
 
 def fleet_summary(total_assets: int) -> dict[str, int]:
@@ -213,3 +280,6 @@ def fleet_summary(total_assets: int) -> dict[str, int]:
         ),
         "missing_files": int(row["missing_files"] or 0),
     }
+    if organization_id:
+        clauses.append("d.organization_id = ?")
+        params.append(organization_id)

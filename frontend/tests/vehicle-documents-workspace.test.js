@@ -19,10 +19,10 @@ test("Documenti is an active inline Fleet workspace node", async () => {
 test("workspace exposes KPIs master detail creation editing and empty states", async () => {
   const module = await file("assets/js/modules/documents-workspace.js");
   for (const label of [
-    "Archivio documentale del parco mezzi", "Documenti totali",
-    "Documenti scaduti", "In scadenza", "Mezzi senza documentazione",
+    "Controllo operativo della conformità documentale della flotta", "Totale documenti",
+    "Scaduti", "In scadenza", "Mezzi incompleti",
     "File mancanti", "Nuovo documento", "Modifica metadati",
-    "Torna alla lista", "Nessun documento per il mezzo selezionato",
+    "Torna alla lista", "Nessun documento registrato",
   ]) assert.match(module, new RegExp(label));
   assert.match(module, /documents-navigator/);
   assert.match(module, /createVehicleDocument/);
@@ -32,12 +32,17 @@ test("workspace exposes KPIs master detail creation editing and empty states", a
 });
 
 test("search and filters are combinable", async () => {
-  const module = await file("assets/js/modules/documents-workspace.js");
+  const [module, presenter] = await Promise.all([
+    file("assets/js/modules/documents-workspace.js"),
+    file("assets/js/modules/documents/status-presenter.js"),
+  ]);
   for (const token of [
-    "documentsSearch", "documentsStatus", "documentsType", "documentsFile",
-    "vehicle_id", "document_type", "has_file", "carta_circolazione",
-    "contratto_noleggio", "contratto_leasing", "senza_scadenza",
+    "documentsSearch", "documentsVehicle", "documentsStatus", "documentsType", "documentsFile",
+    "documentsExpiry", "documentsSort", "vehicle_id", "document_type", "has_file",
   ]) assert.match(module, new RegExp(token));
+  for (const token of ["carta_circolazione", "contratto_noleggio", "contratto_leasing", "senza_scadenza"]) {
+    assert.match(presenter, new RegExp(token));
+  }
 });
 
 test("Vehicle Library opens documents filtered by vehicle", async () => {
@@ -53,8 +58,8 @@ test("Vehicle Library opens documents filtered by vehicle", async () => {
 
 test("responsive layout covers desktop tablet and mobile", async () => {
   const css = await file("assets/css/documents-workspace.css");
-  assert.match(css, /grid-template-columns:\s*minmax\(340px,\s*\.9fr\)\s+minmax\(0,\s*1\.35fr\)/);
-  assert.match(css, /@media \(max-width:\s*900px\)/);
+  assert.match(css, /grid-template-columns:\s*minmax\(390px,\s*\.95fr\)\s+minmax\(0,\s*1\.3fr\)/);
+  assert.match(css, /@media \(max-width:\s*800px\)/);
   assert.match(css, /@media \(max-width:\s*600px\)/);
   assert.match(css, /\.documents-mobile-back/);
   assert.match(css, /min-width:\s*0/);

@@ -4,6 +4,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.auth import repository
+from app.auth.domain import AuthenticatedUser, Role
 from app.auth.permission_service import has_permission
 from app.auth.router import COOKIE_NAME
 from app.core.config import SETTINGS
@@ -51,6 +52,12 @@ async def enforce_authentication(request: Request, call_next):
         and hmac.compare_digest(supplied_token, harness_token)
         and request.headers.get("X-Auth-Enforce") != "1"
     ):
+        request.state.user = AuthenticatedUser(
+            id="test-harness-administrator", email="harness@example.test",
+            role=Role.ADMINISTRATOR, organization_id="test-organization",
+            organization_name="Test Organization",
+        )
+        request.state.organization_id = "test-organization"
         return await call_next(request)
     resolved = None
     token = request.cookies.get(COOKIE_NAME)

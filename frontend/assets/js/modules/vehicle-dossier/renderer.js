@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../utils/dom.js";
+import { documentStatusLabel, documentTypeLabel } from "../documents/status-presenter.js";
 
 const STATUS = {
   disponibile: "Disponibile", disponibile_con_limitazioni: "Disponibile con limitazioni",
@@ -65,8 +66,8 @@ function documentsSection(model) {
   if (!model.documents.length) return empty("Nessun documento registrato.");
   return `<div class="vehicle-record-list">${model.documents.map(item => `
     <article class="vehicle-record">
-      <header><div><span class="vehicle-origin">${escapeHtml(label(item.document_type))}</span>
-        <h4>${escapeHtml(item.title)}</h4></div><span class="record-status">${escapeHtml(label(item.status))}</span></header>
+      <header><div><span class="vehicle-origin">${escapeHtml(documentTypeLabel(item.document_type))}</span>
+        <h4>${escapeHtml(item.title)}</h4></div><span class="record-status">${escapeHtml(documentStatusLabel(item.status))}</span></header>
       <dl>${row("Scadenza", item.expires_at ? `${formatDate(item.expires_at)} · ${expiry(item.daysRemaining)}` : "Senza scadenza")}
         ${row("Allegato", item.files.length || item.has_file ? "Disponibile" : "Assente")}
         ${row("Ultimo caricamento", formatDate(item.files[0]?.created_at || item.attachment_uploaded_at, true))}</dl>
@@ -253,4 +254,3 @@ export function renderVehicleDossierExcellence(container, model) {
       </section>
     </div>`;
 }
-

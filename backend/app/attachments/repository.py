@@ -76,6 +76,12 @@ def get(attachment_id: str) -> dict | None:
     return _dict(row)
 
 
+def document_organization_id(document_id: int) -> str | None:
+    with db_session() as conn:
+        row = conn.execute("SELECT organization_id FROM fleet_vehicle_documents WHERE id=?", (document_id,)).fetchone()
+    return row["organization_id"] if row else None
+
+
 def list_for_entity(entity_type: str, entity_id: int) -> list[dict]:
     with db_session() as conn:
         rows = conn.execute(

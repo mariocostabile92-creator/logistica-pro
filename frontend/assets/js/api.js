@@ -258,6 +258,12 @@ export async function updateVehicleDocument(documentId, payload) {
   }));
 }
 
+export async function archiveVehicleDocument(documentId) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/documents/${documentId}/archive`, {
+    method: "POST",
+  }));
+}
+
 export async function listFranchiseCases(params = {}) {
   const query = new URLSearchParams(
     Object.entries(params).filter(([, value]) => value != null && value !== ""),

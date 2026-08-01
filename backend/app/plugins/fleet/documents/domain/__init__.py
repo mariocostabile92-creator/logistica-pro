@@ -1,0 +1,1 @@
+"""Vehicle document domain rules."""

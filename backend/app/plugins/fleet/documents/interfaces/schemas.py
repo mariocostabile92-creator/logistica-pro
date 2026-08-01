@@ -1,15 +1,13 @@
 from datetime import date
 
 from pydantic import BaseModel, Field, field_validator
+from app.plugins.fleet.documents.domain.status_evaluator import DOCUMENT_STATUSES
 
 
 DOCUMENT_TYPES = {
     "carta_circolazione", "assicurazione", "revisione", "bollo",
     "contratto_noleggio", "contratto_leasing", "manuale",
-    "manutenzione", "altro",
-}
-DOCUMENT_STATUSES = {
-    "valido", "in_scadenza", "scaduto", "senza_scadenza", "mancante",
+    "manutenzione", "autorizzazione", "certificazione", "altro",
 }
 
 
@@ -22,10 +20,9 @@ class VehicleDocumentRequest(BaseModel):
     issued_at: date | None = None
     expires_at: date | None = None
     notes: str | None = Field(default=None, max_length=4000)
-    status: str
+    status: str | None = None
     file_name: str | None = Field(default=None, max_length=255)
     file_reference: str | None = Field(default=None, max_length=1000)
-    actor: str = Field(default="fleet_manager", min_length=1, max_length=120)
 
     @field_validator("document_type")
     @classmethod
@@ -36,8 +33,8 @@ class VehicleDocumentRequest(BaseModel):
 
     @field_validator("status")
     @classmethod
-    def valid_status(cls, value: str) -> str:
-        if value not in DOCUMENT_STATUSES:
+    def valid_status(cls, value: str | None) -> str | None:
+        if value is not None and value not in DOCUMENT_STATUSES | {"valido", "mancante"}:
             raise ValueError("Stato documento non supportato.")
         return value
 
@@ -53,7 +50,6 @@ class VehicleDocumentUpdateRequest(BaseModel):
     status: str | None = None
     file_name: str | None = Field(default=None, max_length=255)
     file_reference: str | None = Field(default=None, max_length=1000)
-    actor: str = Field(default="fleet_manager", min_length=1, max_length=120)
 
     @field_validator("document_type")
     @classmethod
@@ -65,6 +61,6 @@ class VehicleDocumentUpdateRequest(BaseModel):
     @field_validator("status")
     @classmethod
     def valid_status(cls, value: str | None) -> str | None:
-        if value is not None and value not in DOCUMENT_STATUSES:
+        if value is not None and value not in DOCUMENT_STATUSES | {"valido", "mancante"}:
             raise ValueError("Stato documento non supportato.")
         return value

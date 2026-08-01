@@ -21,10 +21,10 @@ export function renderAttachments(container, state, options = {}) {
     ? '<p class="attachment-status">Caricamento allegati…</p>'
     : state.error
       ? `<p class="attachment-error" role="alert">${escapeHtml(state.error)}</p>`
-      : '<p class="attachment-empty">Nessun allegato. PDF, foto e video saranno raccolti qui.</p>';
+      : `<p class="attachment-empty">${escapeHtml(options.emptyMessage || "Nessun allegato disponibile.")}</p>`;
   container.innerHTML = `<section class="attachment-panel" aria-label="${escapeHtml(title)}">
     <header><div><h4>${escapeHtml(title)}</h4><p>${state.items.length} allegati</p></div>
-      ${options.readOnly ? "" : `<label class="attachment-upload">Aggiungi allegato<input data-attachment-input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.mp4,.mov" hidden></label>`}
+      ${options.readOnly ? "" : `<label class="attachment-upload">Aggiungi allegato<input data-attachment-input type="file" multiple accept="${escapeHtml(options.accept || ".pdf,.jpg,.jpeg,.png,.webp,.mp4,.mov")}" hidden></label>`}
     </header>
     <div class="attachment-grid">${state.items.length ? state.items.map(item => `
       <article class="attachment-card">${preview(item)}

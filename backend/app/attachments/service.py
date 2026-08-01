@@ -32,6 +32,8 @@ def _validate(entity_type: str, filename: str, mime_type: str, content: bytes) -
     if entity_type not in SUPPORTED_ENTITY_TYPES:
         raise AttachmentError("Tipo entità allegato non supportato.")
     suffix = Path(filename).suffix.lower()
+    if entity_type == "document" and suffix in {".mp4", ".mov"}:
+        raise AttachmentError("Il modulo Documenti accetta PDF e immagini, non video.")
     if suffix not in SUPPORTED_EXTENSIONS:
         raise AttachmentError("Formato file non supportato.")
     if not content:
@@ -58,11 +60,13 @@ def _validate(entity_type: str, filename: str, mime_type: str, content: bytes) -
 def upload(
     entity_type: str, entity_id: int, filename: str, mime_type: str,
     content: bytes, created_by: str, notes: str | None,
+    organization_id: str | None = None,
 ) -> dict:
     if entity_type not in SUPPORTED_ENTITY_TYPES:
         raise AttachmentError("Tipo entità allegato non supportato.")
     if not repository.entity_exists(entity_type, entity_id):
         raise AttachmentError("Entità collegata non trovata.", 404)
+    _authorize_document(entity_type, entity_id, organization_id)
     safe_name = Path(filename or "allegato").name
     verified_mime = _validate(entity_type, safe_name, mime_type, content)
     attachment_id = str(uuid.uuid4())
@@ -81,19 +85,32 @@ def upload(
     except Exception:
         attachment_storage.delete(storage_path)
         raise
+    if entity_type == "document" and organization_id:
+        from app.plugins.fleet.documents.infrastructure import repository as document_repository
+        document_repository.add_event(
+            str(uuid.uuid4()), organization_id, entity_id, created_by,
+            "attachment.added", safe_name,
+        )
     return _present(item)
 
 
-def get(attachment_id: str) -> dict:
+def _authorize_document(entity_type: str, entity_id: int, organization_id: str | None) -> None:
+    if entity_type == "document" and repository.document_organization_id(entity_id) != organization_id:
+        raise AttachmentError("Allegato non trovato.", 404)
+
+
+def get(attachment_id: str, organization_id: str | None = None) -> dict:
     item = repository.get(attachment_id)
     if not item:
         raise AttachmentError("Allegato non trovato.", 404)
+    _authorize_document(item["entity_type"], int(item["entity_id"]), organization_id)
     return item
 
 
-def list_items(entity_type: str, entity_id: int) -> dict:
+def list_items(entity_type: str, entity_id: int, organization_id: str | None = None) -> dict:
     if entity_type not in SUPPORTED_ENTITY_TYPES:
         raise AttachmentError("Tipo entità allegato non supportato.")
+    _authorize_document(entity_type, entity_id, organization_id)
     items = [_present(item) for item in repository.list_for_entity(entity_type, entity_id)]
     return {"items": items, "count": len(items)}
 
@@ -103,7 +120,13 @@ def list_vehicle(vehicle_id: int) -> dict:
     return {"items": items, "count": len(items)}
 
 
-def delete(attachment_id: str) -> None:
-    item = get(attachment_id)
+def delete(attachment_id: str, organization_id: str | None = None, actor_user_id: str = "system") -> None:
+    item = get(attachment_id, organization_id)
     attachment_storage.delete(item["storage_path"])
     repository.delete(attachment_id)
+    if item["entity_type"] == "document" and organization_id:
+        from app.plugins.fleet.documents.infrastructure import repository as document_repository
+        document_repository.add_event(
+            str(uuid.uuid4()), organization_id, int(item["entity_id"]), actor_user_id,
+            "attachment.removed", item["original_filename"],
+        )
