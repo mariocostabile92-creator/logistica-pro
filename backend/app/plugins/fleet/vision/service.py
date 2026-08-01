@@ -286,8 +286,8 @@ def _actions(decisions: list[dict], asset_id: int) -> list[dict]:
     return sorted(actions, key=lambda item: (order[item["priority"]], item["title"]))
 
 
-def fleet_vision(vehicle_id: int | None = None) -> dict:
-    data = repository.snapshot()
+def fleet_vision(vehicle_id: int | None = None, organization_id: str | None = None) -> dict:
+    data = repository.snapshot(organization_id)
     data["documents"] = [
         {**row, "derived_status": evaluate_document(row, "Europe/Rome")["status"]}
         for row in data["documents"]

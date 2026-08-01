@@ -58,6 +58,7 @@ def init_schema() -> None:
         """)
         _ensure_column(conn, "organizations", "primary_station", "TEXT")
         _ensure_column(conn, "organizations", "timezone", "TEXT NOT NULL DEFAULT 'Europe/Rome'")
+        _ensure_column(conn, "organizations", "operational_day_start_hour", "INTEGER NOT NULL DEFAULT 4")
         _ensure_column(conn, "organizations", "language", "TEXT NOT NULL DEFAULT 'it'")
         _ensure_column(conn, "organizations", "updated_at", "TEXT")
         _ensure_column(conn, "auth_users", "first_name", "TEXT NOT NULL DEFAULT ''")

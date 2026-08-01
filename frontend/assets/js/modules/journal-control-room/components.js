@@ -68,7 +68,8 @@ function mediaSection(media = []) {
         : `<img src="${escapeHtml(entry.url)}" alt="Foto allegata alla procedura">`}
         <strong>${video ? "Video" : "Foto"} ${entry.display_order + 1}</strong>
         <div><a href="${escapeHtml(entry.url)}" target="_blank" rel="noopener">Apri</a>
-          <a href="${escapeHtml(entry.url)}" download>Download</a></div></article>`;
+          <a href="${escapeHtml(entry.download_url || `${entry.url}?download=1`)}" download>Download</a></div>
+        ${entry.id ? `<button type="button" class="jcr-media-delete" data-jcr-media-delete="${escapeHtml(entry.id)}">Elimina</button>` : ""}</article>`;
     }).join("")}</div>`);
 }
 
@@ -104,7 +105,7 @@ export function journalDetail(item) {
       ])}${equipment}`)}
       ${infoSection("Anomalie", "jcr-anomalies", `${facts([["Descrizione", item.anomaly_description || "Nessuna"]])}${damage}`)}
       ${warningsSection(item.warnings)}
-      ${mediaSection(item.media)}
+      ${mediaSection(item.permissions?.delete_media ? item.media : item.media.map(entry => ({ ...entry, id: null })))}
       ${infoSection("Azioni", "jcr-actions-section", `<div class="jcr-actions">
         ${item.receipt_url ? `<a class="header-config-button" href="${escapeHtml(item.receipt_url)}" target="_blank" rel="noopener">Apri documento operativo</a>` : ""}
         <button type="button" class="secondary" data-jcr-vehicle="${item.asset_id}">Apri dossier mezzo</button>

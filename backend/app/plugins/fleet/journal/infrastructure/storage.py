@@ -1,39 +1,44 @@
 from pathlib import Path
 from typing import Protocol
 
-from app.core.config import DATA_DIR
+from app.core.runtime_storage import (
+    atomic_write,
+    resolve_storage_key,
+    safe_relative_key,
+)
+
+
+NAMESPACE = "journal_media"
 
 
 class MediaStorage(Protocol):
-    def save(self, session_id: str, media_id: str, data: bytes) -> str: ...
+    def save(self, storage_key: str, data: bytes) -> str: ...
     def delete(self, storage_key: str) -> None: ...
     def path(self, storage_key: str) -> Path: ...
+    def keys(self) -> set[str]: ...
 
 
 class PrivateLocalMediaStorage:
-    def __init__(self, root: Path) -> None:
-        self.root = root
-
-    def save(self, session_id: str, media_id: str, data: bytes) -> str:
-        folder = self.root / session_id
-        folder.mkdir(parents=True, exist_ok=True)
-        key = f"{session_id}/{media_id}.bin"
-        (self.root / key).write_bytes(data)
+    def save(self, storage_key: str, data: bytes) -> str:
+        key = safe_relative_key(storage_key)
+        atomic_write(NAMESPACE, key, data)
         return key
 
     def delete(self, storage_key: str) -> None:
-        target = self.path(storage_key)
-        if self.root.resolve() not in target.parents:
-            return
-        target.unlink(missing_ok=True)
+        self.path(storage_key).unlink(missing_ok=True)
 
     def path(self, storage_key: str) -> Path:
-        target = (self.root / storage_key).resolve()
-        if self.root.resolve() not in target.parents:
-            return self.root / "__invalid__"
-        return target
+        return resolve_storage_key(NAMESPACE, storage_key)
+
+    def keys(self) -> set[str]:
+        root = resolve_storage_key(NAMESPACE, "__probe__").parent
+        if not root.exists():
+            return set()
+        return {
+            item.relative_to(root).as_posix()
+            for item in root.rglob("*")
+            if item.is_file() and not item.name.endswith(".tmp")
+        }
 
 
-media_storage: MediaStorage = PrivateLocalMediaStorage(
-    DATA_DIR / "journal_media"
-)
+media_storage: MediaStorage = PrivateLocalMediaStorage()

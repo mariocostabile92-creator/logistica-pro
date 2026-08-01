@@ -27,6 +27,7 @@ def organization(user: AuthenticatedUser) -> dict:
     return {
         "id": row["id"], "name": row["name"],
         "primary_station": row["primary_station"], "timezone": row["timezone"],
+        "operational_day_start_hour": row["operational_day_start_hour"],
         "language": row["language"], "created_at": row["created_at"],
     }
 

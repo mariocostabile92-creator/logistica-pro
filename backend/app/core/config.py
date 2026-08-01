@@ -56,6 +56,8 @@ class Settings:
     database_path: Path
     log_level: str
     max_upload_size_bytes: int
+    runtime_storage_root: Path
+    require_persistent_storage: bool
 
     @property
     def production(self) -> bool:
@@ -152,6 +154,12 @@ def load_settings(environ: dict[str, str] | None = None) -> Settings:
         database_path=database_path,
         log_level=values.get("LOG_LEVEL", "INFO").strip().upper(),
         max_upload_size_bytes=max_upload_mb * 1024 * 1024,
+        runtime_storage_root=Path(
+            values.get("RUNTIME_STORAGE_ROOT", str(DATA_DIR))
+        ).expanduser().resolve(),
+        require_persistent_storage=_as_bool(
+            values.get("REQUIRE_PERSISTENT_STORAGE"), default=False
+        ),
     )
 
 

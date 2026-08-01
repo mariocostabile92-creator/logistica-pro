@@ -1,7 +1,9 @@
-import { listJournalControlRoom } from "../api.js";
+import { deleteJournalMedia, listJournalControlRoom } from "../api.js";
+import { escapeHtml } from "../utils/dom.js";
 import { mountJournalSharedAccess } from "./journal-shared-access.js?v=2";
 import { journalCard, journalDetail } from "./journal-control-room/components.js";
 import { journalControlRoomShell } from "./journal-control-room/renderer.js";
+import { mountJournalArchive } from "./journal-archive/index.js";
 import {
   journalControlRoomState as state, resetJournalControlRoomState,
 } from "./journal-control-room/state.js";
@@ -9,12 +11,21 @@ import {
 const root = () => document.getElementById("journalControlRoom");
 
 async function load(preferredId = state.selected?.id) {
+  root().setAttribute("aria-busy", "true");
   const params = { vehicle_id: state.vehicle_id };
   for (const [selector, key] of [["[data-jcr-search]", "search"], ["[data-jcr-operation]", "operation_type"], ["[data-jcr-anomaly]", "anomaly"], ["[data-jcr-period]", "period"]]) {
     const value = root().querySelector(selector)?.value;
     if (value) params[key] = value;
   }
-  const response = await listJournalControlRoom(params);
+  let response;
+  try {
+    response = await listJournalControlRoom(params);
+  } catch (error) {
+    root().querySelector("[data-jcr-list]").innerHTML = `<div class="jcr-empty"><strong>Control Room non disponibile</strong><p>${escapeHtml(error.message)}</p><button type="button" data-jcr-retry>Riprova</button></div>`;
+    root().querySelector("[data-jcr-detail]").innerHTML = `<div class="jcr-empty"><strong>Dettaglio non disponibile</strong><p>Riprova il caricamento della Control Room.</p></div>`;
+    root().setAttribute("aria-busy", "false");
+    return;
+  }
   state.items = response.items;
   state.selected = state.items.find(item => item.id === preferredId) || state.items[0] || null;
   root().querySelector("[data-jcr-list]").innerHTML = state.items.length
@@ -25,6 +36,7 @@ async function load(preferredId = state.selected?.id) {
   for (const [key, value] of Object.entries(response.summary)) {
     root().querySelector(`[data-jcr-kpi="${key}"]`).textContent = value;
   }
+  root().setAttribute("aria-busy", "false");
 }
 
 export async function showJournalControlRoom(options = {}) {
@@ -32,7 +44,10 @@ export async function showJournalControlRoom(options = {}) {
     .forEach(element => { element.hidden = true; });
   resetJournalControlRoomState(options.vehicle_id || null);
   root().hidden = false;
-  root().innerHTML = journalControlRoomShell();
+  root().innerHTML = `<nav class="jcr-workspace-nav" aria-label="Viste Giornale di bordo">
+    <button type="button" class="active" data-jcr-view="control" aria-pressed="true">Control Room</button>
+    <button type="button" data-jcr-view="archive" aria-pressed="false">Archivio GDB</button>
+  </nav><div data-jcr-live>${journalControlRoomShell()}</div><div data-jcr-archive hidden></div>`;
   await mountJournalSharedAccess(root().querySelector("[data-jcr-shared-access]"));
   await load();
 }
@@ -43,10 +58,36 @@ document.addEventListener("input", event => {
 document.addEventListener("change", event => {
   if (event.target.matches("[data-jcr-operation],[data-jcr-anomaly],[data-jcr-period]")) load();
 });
-document.addEventListener("click", event => {
+document.addEventListener("click", async event => {
   const entry = event.target.closest("[data-jcr-id]");
-  if (entry) load(entry.dataset.jcrId);
+  if (entry && !entry.closest("[data-jcr-archive]")) load(entry.dataset.jcrId);
+  const view = event.target.closest("[data-jcr-view]")?.dataset.jcrView;
+  if (view && root() && !root().hidden) {
+    const archive = root().querySelector("[data-jcr-archive]");
+    const live = root().querySelector("[data-jcr-live]");
+    const showArchive = view === "archive";
+    live.hidden = showArchive;
+    archive.hidden = !showArchive;
+    root().querySelectorAll("[data-jcr-view]").forEach(button => {
+      const active = button.dataset.jcrView === view;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    if (showArchive && !archive.dataset.mounted) {
+      archive.dataset.mounted = "true";
+      mountJournalArchive(archive);
+    }
+  }
   if (event.target.closest("[data-jcr-back]")) root().classList.remove("detail-open");
+  if (event.target.closest("[data-jcr-retry]")) load();
+  const mediaDelete = event.target.closest("[data-jcr-media-delete]");
+  if (mediaDelete && window.confirm("Eliminare definitivamente questo media Journal?")) {
+    mediaDelete.disabled = true;
+    await deleteJournalMedia(mediaDelete.dataset.jcrMediaDelete);
+    const archive = mediaDelete.closest("[data-jcr-archive]");
+    if (archive) archive.dispatchEvent(new CustomEvent("journal:media-deleted"));
+    else await load();
+  }
   const vehicle = event.target.closest("[data-jcr-vehicle]")?.dataset.jcrVehicle;
   if (vehicle) {
     root().hidden = true;

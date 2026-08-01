@@ -171,6 +171,26 @@
   border-radius: var(--radius);
 }
 
+.media-card video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: #101817;
+}
+
+.media-card-failed {
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: #fff3f3;
+  color: #652323;
+}
+
+.media-card-failed p { margin: 0; overflow-wrap: anywhere; }
+
 .media-card button {
   position: absolute;
   top: 6px;

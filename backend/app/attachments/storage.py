@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Protocol
 
-from app.core.config import DATA_DIR
+from app.core.config import SETTINGS
 
 
 class AttachmentStorageProvider(Protocol):
@@ -13,7 +13,7 @@ class AttachmentStorageProvider(Protocol):
 
 class LocalAttachmentStorage:
     def __init__(self, root: Path | None = None):
-        self.root = (root or DATA_DIR / "attachments").resolve()
+        self.root = (root or SETTINGS.runtime_storage_root / "attachments").resolve()
 
     def save(self, stored_filename: str, content: bytes) -> str:
         self.root.mkdir(parents=True, exist_ok=True)

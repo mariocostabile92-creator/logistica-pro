@@ -5,10 +5,14 @@ import secrets
 import sqlite3
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
+from app.auth import repository as auth_repository
+from app.core.config import SETTINGS
 from app.plugins.fleet.journal.application import shared_access_service
 from app.plugins.fleet.journal.infrastructure import repository
 from app.plugins.fleet.journal.infrastructure.storage import media_storage
+from app.plugins.fleet.journal.domain.operational_day import operational_date
 from app.utils.text_normalizer import normalize_plate
 
 
@@ -21,6 +25,19 @@ EQUIPMENT = (
 ALLOWED_SHIFTS = {"morning", "evening"}
 ALLOWED_CLEANLINESS = {"compliant", "non_compliant", "verify"}
 MAX_MEDIA_BYTES = 8 * 1024 * 1024
+MEDIA_EXTENSIONS = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "video/mp4": ".mp4",
+    "video/quicktime": ".mov",
+}
+
+
+def _safe_filename(value: str) -> str:
+    name = Path(value.replace("\\", "/")).name[:160]
+    cleaned = "".join(character if character.isalnum() or character in "._- " else "_" for character in name).strip(" .")
+    return cleaned or "media-journal"
 
 
 class JournalError(ValueError):
@@ -61,11 +78,32 @@ def configuration() -> dict[str, object]:
         ],
         "media": {
             "images_enabled": True,
-            "video_enabled": False,
-            "accepted_mime_types": ["image/jpeg", "image/png", "image/webp"],
+            "video_enabled": True,
+            "accepted_mime_types": list(MEDIA_EXTENSIONS),
             "max_size_bytes": MAX_MEDIA_BYTES,
         },
     }
+
+
+def _organization(organization_id: str | None) -> dict[str, object]:
+    row = auth_repository.organization_by_id(organization_id) if organization_id else None
+    if row is None:
+        from app.core.database import db_session
+        with db_session() as conn:
+            rows = conn.execute("SELECT * FROM organizations ORDER BY created_at LIMIT 2").fetchall()
+        if len(rows) == 1:
+            row = rows[0]
+    if row is None:
+        fallback = "test-organization" if SETTINGS.environment == "test" else "default"
+        return {"id": organization_id or fallback, "timezone": "Europe/Rome", "operational_day_start_hour": 4}
+    return {key: row[key] for key in row.keys()}
+
+
+def _session_clock(organization_id: str | None, now: datetime) -> tuple[str, str]:
+    organization = _organization(organization_id)
+    timezone_name = str(organization.get("timezone") or "Europe/Rome")
+    day = operational_date(now, timezone_name, organization.get("operational_day_start_hour", 4))
+    return timezone_name, day.isoformat()
 
 
 def find_asset(plate: str) -> dict[str, object]:
@@ -78,8 +116,8 @@ def find_asset(plate: str) -> dict[str, object]:
     return asset
 
 
-def vehicle_history(asset_id: int) -> dict[str, object]:
-    payload = repository.asset_history(asset_id)
+def vehicle_history(asset_id: int, organization_id: str | None = None) -> dict[str, object]:
+    payload = repository.asset_history(asset_id, organization_id)
     if not payload:
         raise JournalNotFound("Mezzo non trovato.")
     asset = payload["asset"]
@@ -132,14 +170,28 @@ def vehicle_history(asset_id: int) -> dict[str, object]:
     }
 
 
-def get_movement_media(media_id: str) -> tuple[str, str]:
+def get_movement_media(media_id: str, token: str | None = None) -> tuple[str, str]:
     media = repository.movement_media(media_id)
     if not media:
         raise JournalNotFound("Media non trovato.")
+    authorize(str(media["session_id"]), token, allow_completed=True)
     path = media_storage.path(str(media["storage_key"]))
     if not path.is_file():
         raise JournalNotFound("Media non disponibile.")
     return str(path), str(media["verified_mime_type"])
+
+
+def get_admin_media(media_id: str, organization_id: str) -> tuple[str, str, str]:
+    media = repository.movement_media(media_id, organization_id)
+    if not media:
+        raise JournalNotFound("Media non trovato.")
+    try:
+        path = media_storage.path(str(media["storage_key"]))
+    except RuntimeError as exc:
+        raise JournalNotFound("Media non disponibile.") from exc
+    if not path.is_file():
+        raise JournalNotFound("Media non disponibile.")
+    return str(path), str(media["verified_mime_type"]), str(media.get("original_filename") or path.name)
 
 
 def create_session(values: dict[str, object]) -> dict[str, object]:
@@ -150,6 +202,8 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
     asset = find_asset(str(values["plate"]))
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
+    organization_id = str(values.get("organization_id") or _organization(None)["id"])
+    _, day = _session_clock(organization_id, now)
     session_id = str(uuid.uuid4())
     session = repository.create_session(
         {
@@ -164,6 +218,8 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
             "operational_shift": shift,
             "created_at": now.isoformat(),
             "expires_at": (now + timedelta(hours=4)).isoformat(),
+            "organization_id": organization_id,
+            "operational_date": day,
         }
     )
     return {
@@ -240,9 +296,11 @@ def _smart_warnings(
 
 def create_shared_session(values: dict[str, object]) -> dict[str, object]:
     access_token = values.get("access_token")
+    organization_id = None
     if access_token:
         try:
-            shared_access_service.validate(str(access_token))
+            access = shared_access_service.validate(str(access_token))
+            organization_id = str(access["organization_id"])
         except shared_access_service.SharedAccessError as exc:
             error_type = JournalNotFound if exc.status_code == 404 else JournalError
             raise error_type(str(exc)) from exc
@@ -253,6 +311,8 @@ def create_shared_session(values: dict[str, object]) -> dict[str, object]:
     session_id = str(uuid.uuid4())
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
+    organization_id = organization_id or str(_organization(None)["id"])
+    _, day = _session_clock(organization_id, now)
     session = repository.create_session({
         "id": session_id,
         "token_hash": hashlib.sha256(token.encode()).hexdigest(),
@@ -270,7 +330,8 @@ def create_shared_session(values: dict[str, object]) -> dict[str, object]:
         "opened_at": now.isoformat(),
         "driver_name": driver_name,
         "driver_surname": driver_surname,
-        "operational_date": date.today().isoformat(),
+        "operational_date": day,
+        "organization_id": organization_id,
     })
     warnings = _smart_warnings(session)
     session = repository.update_session_warnings(
@@ -306,7 +367,7 @@ def check_session_warnings(
     return {"warnings": warnings}
 
 
-def create_managed_session(values: dict[str, object]) -> dict[str, object]:
+def create_managed_session(values: dict[str, object], organization_id: str | None = None) -> dict[str, object]:
     operation_type = str(values["operation_type"])
     try:
         scheduled = datetime.fromisoformat(
@@ -318,6 +379,8 @@ def create_managed_session(values: dict[str, object]) -> dict[str, object]:
     session_id = str(uuid.uuid4())
     token = _managed_token(session_id)
     now = datetime.now(timezone.utc)
+    organization_id = organization_id or str(_organization(None)["id"])
+    _, day = _session_clock(organization_id, scheduled.replace(tzinfo=timezone.utc))
     shift = "morning" if scheduled.hour < 14 else "evening"
     session = repository.create_session({
         "id": session_id,
@@ -336,6 +399,8 @@ def create_managed_session(values: dict[str, object]) -> dict[str, object]:
         "source": "fleet_manager",
         "lifecycle_status": "generated",
         "scheduled_at": scheduled.isoformat(),
+        "operational_date": day,
+        "organization_id": organization_id,
     })
     return {
         key: value for key, value in session.items() if key != "token_hash"
@@ -398,7 +463,7 @@ def authorize(
     return session
 
 
-def _verified_image(data: bytes, content_type: str | None) -> str:
+def _verified_media(data: bytes, content_type: str | None, filename: str) -> tuple[str, str]:
     detected = None
     if data.startswith(b"\xff\xd8\xff") and data.endswith(b"\xff\xd9"):
         detected = "image/jpeg"
@@ -410,11 +475,17 @@ def _verified_image(data: bytes, content_type: str | None) -> str:
         detected = "image/png"
     elif len(data) >= 16 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         detected = "image/webp"
+    elif len(data) >= 12 and data[4:8] == b"ftyp":
+        detected = "video/quicktime" if content_type == "video/quicktime" else "video/mp4"
     if not detected:
         raise JournalError("Il file immagine è corrotto o non supportato.")
     if content_type != detected:
         raise JournalError("Il tipo MIME dichiarato non corrisponde al file.")
-    return detected
+    extension = Path(filename).suffix.casefold()
+    allowed_extensions = {".jpg", ".jpeg"} if detected == "image/jpeg" else {MEDIA_EXTENSIONS[detected]}
+    if extension not in allowed_extensions:
+        raise JournalError("L'estensione non corrisponde al contenuto del file.")
+    return detected, "video" if detected.startswith("video/") else "image"
 
 
 def add_media(
@@ -424,23 +495,31 @@ def add_media(
     content_type: str | None,
     data: bytes,
 ) -> dict[str, object]:
-    authorize(session_id, token)
+    session = authorize(session_id, token)
     if len(data) > MAX_MEDIA_BYTES:
         raise JournalError("La foto supera il limite di 8 MB.")
-    verified = _verified_image(data, content_type)
+    safe_name = _safe_filename(filename)
+    verified, media_type = _verified_media(data, content_type, safe_name)
     media_id = str(uuid.uuid4())
-    storage_key = media_storage.save(session_id, media_id, data)
+    now = datetime.now(timezone.utc)
+    storage_key = media_storage.save(
+        f"{now:%Y/%m}/{media_id}{MEDIA_EXTENSIONS[verified]}", data
+    )
     try:
         return repository.create_media(
             {
                 "id": media_id,
                 "session_id": session_id,
-                "media_type": "image",
+                "media_type": media_type,
                 "phase": "evidence",
                 "storage_key": storage_key,
                 "verified_mime_type": verified,
                 "size_bytes": len(data),
                 "sha256": hashlib.sha256(data).hexdigest(),
+                "organization_id": session.get("organization_id"),
+                "vehicle_id": session["asset_id"],
+                "original_filename": safe_name,
+                "uploaded_at": now.isoformat(),
             }
         )
     except Exception:
@@ -454,6 +533,13 @@ def delete_media(session_id: str, media_id: str, token: str | None) -> None:
     if not media:
         raise JournalNotFound("Foto non trovata in questa sessione.")
     repository.delete_media(session_id, media_id)
+    media_storage.delete(str(media["storage_key"]))
+
+
+def delete_admin_media(media_id: str, organization_id: str) -> None:
+    media = repository.delete_media_admin(media_id, organization_id)
+    if not media:
+        raise JournalNotFound("Media non trovato.")
     media_storage.delete(str(media["storage_key"]))
 
 
@@ -502,7 +588,7 @@ def complete(
             movement={
                 "id": movement_id,
                 "schema_version": "1.0",
-                "organization_id": "default",
+                "organization_id": session.get("organization_id") or "default",
                 "operational_unit_id": "default",
                 "odometer_km": odometer,
                 "fuel_percentage": fuel,
@@ -512,7 +598,10 @@ def complete(
                 "operational_note": values.get("operational_note"),
                 "client_submission_id": submission_id,
                 "occurred_at": now,
-                "timezone": str(values.get("timezone") or "Europe/Rome"),
+                "timezone": _session_clock(
+                    str(session.get("organization_id") or "default"),
+                    datetime.now(timezone.utc),
+                )[0],
                 "created_at": now,
             },
             equipment=equipment,

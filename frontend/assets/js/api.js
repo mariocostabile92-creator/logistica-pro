@@ -345,6 +345,27 @@ export async function getJournalControlRoomProcedure(procedureId) {
   ));
 }
 
+export async function getJournalArchiveMonth(month) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/journal-archive/month?month=${encodeURIComponent(month)}`,
+  ));
+}
+
+export async function getJournalArchiveDay(date, params = {}) {
+  const query = new URLSearchParams({ date });
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") query.set(key, value);
+  });
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/journal-archive/day?${query}`));
+}
+
+export async function deleteJournalMedia(mediaId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/journal-control-room/media/${encodeURIComponent(mediaId)}`,
+    { method: "DELETE" },
+  ));
+}
+
 export async function createJournalDriverSession(payload) {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/journal-control-room/sessions`, {
     method: "POST",

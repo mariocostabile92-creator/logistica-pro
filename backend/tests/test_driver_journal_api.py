@@ -83,7 +83,8 @@ def test_configuration_is_public_and_checklist_configurable():
         "keys",
         "fuel_card",
     ]
-    assert config["media"]["video_enabled"] is False
+    assert config["media"]["video_enabled"] is True
+    assert {"video/mp4", "video/quicktime"} <= set(config["media"]["accepted_mime_types"])
 
 
 def test_plate_is_normalized_and_asset_registry_is_not_listed():

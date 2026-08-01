@@ -102,7 +102,7 @@ def test_vehicle_library_is_read_only_and_serves_existing_photos():
     asset = create_asset()
     _, media = create_movement(asset, "check_out", "vl-photo-001", 100)
 
-    photo = client.get(f"{JOURNAL}/media/{media['id']}")
+    photo = client.get(f"/api/fleet/journal-control-room/media/{media['id']}")
 
     assert photo.status_code == 200
     assert photo.headers["content-type"] == "image/png"

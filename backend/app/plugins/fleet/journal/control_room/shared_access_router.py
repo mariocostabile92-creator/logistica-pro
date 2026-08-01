@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from app.plugins.fleet.journal.application import shared_access_service
@@ -21,18 +21,18 @@ def _guard(function, *args, **kwargs):
 
 
 @router.post("/api/fleet/journal-control-room/shared-access", status_code=201)
-def create_shared_access(request: SharedAccessCreateRequest):
-    return _guard(shared_access_service.create, request.regenerate)
+def create_shared_access(payload: SharedAccessCreateRequest, request: Request):
+    return _guard(shared_access_service.create, request.state.user.organization_id, payload.regenerate)
 
 
 @router.get("/api/fleet/journal-control-room/shared-access/active")
-def active_shared_access():
-    return {"item": shared_access_service.get_active()}
+def active_shared_access(request: Request):
+    return {"item": shared_access_service.get_active(request.state.user.organization_id)}
 
 
 @router.post("/api/fleet/journal-control-room/shared-access/{access_id}/revoke")
-def revoke_shared_access(access_id: str):
-    return _guard(shared_access_service.revoke, access_id)
+def revoke_shared_access(access_id: str, request: Request):
+    return _guard(shared_access_service.revoke, access_id, request.state.user.organization_id)
 
 
 @router.get("/api/plugins/fleet/v1/journal/shared-access/{token}")
@@ -43,4 +43,3 @@ def validate_shared_access(token: str):
 @router.get("/app/journal/access/{token}", include_in_schema=False)
 def shared_access_page(token: str):
     return FileResponse(JOURNAL_PAGE)
-

@@ -21,6 +21,7 @@ def init_schema() -> None:
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
                 completed_at TEXT,
+                organization_id TEXT,
                 FOREIGN KEY (asset_id) REFERENCES fleet_assets(id)
             );
             CREATE TABLE IF NOT EXISTS asset_movements (
@@ -67,6 +68,10 @@ def init_schema() -> None:
                 size_bytes INTEGER NOT NULL,
                 sha256 TEXT NOT NULL,
                 display_order INTEGER NOT NULL,
+                organization_id TEXT,
+                vehicle_id INTEGER,
+                original_filename TEXT,
+                uploaded_at TEXT,
                 FOREIGN KEY (session_id) REFERENCES journal_sessions(id),
                 FOREIGN KEY (movement_id) REFERENCES asset_movements(id)
             );
@@ -77,6 +82,17 @@ def init_schema() -> None:
             """
         )
         _ensure_session_columns(conn)
+        _ensure_media_columns(conn)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_session_org_date ON journal_sessions(organization_id, operational_date)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_movement_org_date ON asset_movements(organization_id, occurred_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_media_org ON movement_media(organization_id, vehicle_id)")
+        organizations = conn.execute("SELECT id FROM organizations ORDER BY created_at LIMIT 2").fetchall()
+        if len(organizations) == 1:
+            organization_id = organizations[0]["id"]
+            conn.execute("UPDATE journal_sessions SET organization_id=? WHERE organization_id IS NULL OR organization_id='default'", (organization_id,))
+            conn.execute("UPDATE asset_movements SET organization_id=? WHERE organization_id='default'", (organization_id,))
+            conn.execute("UPDATE movement_media SET organization_id=? WHERE organization_id IS NULL OR organization_id='default'", (organization_id,))
+            conn.execute("UPDATE movement_media SET vehicle_id=(SELECT asset_id FROM journal_sessions WHERE journal_sessions.id=movement_media.session_id) WHERE vehicle_id IS NULL")
 
 
 def _ensure_session_columns(conn) -> None:
@@ -90,6 +106,7 @@ def _ensure_session_columns(conn) -> None:
         "driver_surname": "TEXT",
         "warnings_json": "TEXT NOT NULL DEFAULT '[]'",
         "operational_date": "TEXT",
+        "organization_id": "TEXT",
     }
     if SETTINGS.database_backend == "postgresql":
         for name, definition in columns.items():
@@ -104,6 +121,23 @@ def _ensure_session_columns(conn) -> None:
     for name, definition in columns.items():
         if name not in existing:
             conn.execute(f"ALTER TABLE journal_sessions ADD COLUMN {name} {definition}")
+
+
+def _ensure_media_columns(conn) -> None:
+    columns = {
+        "organization_id": "TEXT",
+        "vehicle_id": "INTEGER",
+        "original_filename": "TEXT",
+        "uploaded_at": "TEXT",
+    }
+    if SETTINGS.database_backend == "postgresql":
+        for name, definition in columns.items():
+            conn.execute(f"ALTER TABLE movement_media ADD COLUMN IF NOT EXISTS {name} {definition}")
+        return
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(movement_media)").fetchall()}
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE movement_media ADD COLUMN {name} {definition}")
 
 
 def _dict(row) -> dict[str, object] | None:
@@ -136,7 +170,8 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
                 created_at, expires_at, source, lifecycle_status,
                 scheduled_at, opened_at, in_progress_at, driver_name,
                 driver_surname, warnings_json, operational_date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                , organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["id"],
@@ -157,6 +192,7 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
                 values.get("driver_surname"),
                 values.get("warnings_json", "[]"),
                 values.get("operational_date"),
+                values.get("organization_id"),
             ),
         )
     return get_session(str(values["id"]))  # type: ignore[return-value]
@@ -236,8 +272,9 @@ def create_media(values: dict[str, object]) -> dict[str, object]:
             """
             INSERT INTO movement_media (
                 id, session_id, movement_id, media_type, phase, storage_key,
-                verified_mime_type, size_bytes, sha256, display_order
-            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
+                verified_mime_type, size_bytes, sha256, display_order,
+                organization_id, vehicle_id, original_filename, uploaded_at
+            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["id"],
@@ -249,6 +286,10 @@ def create_media(values: dict[str, object]) -> dict[str, object]:
                 values["size_bytes"],
                 values["sha256"],
                 order,
+                values.get("organization_id"),
+                values.get("vehicle_id"),
+                values.get("original_filename"),
+                values.get("uploaded_at"),
             ),
         )
     return get_session_media(
@@ -282,6 +323,15 @@ def delete_media(session_id: str, media_id: str) -> None:
             """,
             (session_id, media_id),
         )
+
+
+def delete_media_admin(media_id: str, organization_id: str) -> dict[str, object] | None:
+    media = movement_media(media_id, organization_id)
+    if not media:
+        return None
+    with db_session() as conn:
+        conn.execute("DELETE FROM movement_media WHERE id=? AND organization_id=?", (media_id, organization_id))
+    return media
 
 
 def get_movement_by_submission(
@@ -416,7 +466,9 @@ def receipt(movement_id: str) -> dict[str, object] | None:
     return payload
 
 
-def asset_history(asset_id: int) -> dict[str, object] | None:
+def asset_history(asset_id: int, organization_id: str | None = None) -> dict[str, object] | None:
+    organization_clause = " AND organization_id = ?" if organization_id else ""
+    movement_params: tuple[object, ...] = (asset_id, organization_id) if organization_id else (asset_id,)
     with db_session() as conn:
         asset = conn.execute(
             """
@@ -433,7 +485,7 @@ def asset_history(asset_id: int) -> dict[str, object] | None:
         if not asset:
             return None
         movements = conn.execute(
-            """
+            f"""
             SELECT id, plate_snapshot, declared_driver_identifier,
                    operation_type, operational_shift, occurred_at, timezone,
                    odometer_km, fuel_percentage, cleanliness_status,
@@ -448,10 +500,10 @@ def asset_history(asset_id: int) -> dict[str, object] | None:
                    (SELECT severity FROM damage_cases dc
                     WHERE dc.source_movement_id = asset_movements.id) AS damage_case_severity
             FROM asset_movements
-            WHERE asset_id = ?
+            WHERE asset_id = ? {organization_clause}
             ORDER BY occurred_at DESC, created_at DESC
             """,
-            (asset_id,),
+            movement_params,
         ).fetchall()
         movement_ids = [row["id"] for row in movements]
         equipment_by_movement: dict[str, list[dict[str, object]]] = {
@@ -488,7 +540,7 @@ def asset_history(asset_id: int) -> dict[str, object] | None:
                 item = _dict(row)
                 assert item is not None
                 item["url"] = (
-                    f"/api/plugins/fleet/v1/journal/media/{row['id']}"
+                    f"/api/fleet/journal-control-room/media/{row['id']}"
                 )
                 media_by_movement[row["movement_id"]].append(item)
 
@@ -505,15 +557,24 @@ def asset_history(asset_id: int) -> dict[str, object] | None:
     return {"asset": asset_payload, "movements": history}
 
 
-def movement_media(media_id: str) -> dict[str, object] | None:
+def movement_media(media_id: str, organization_id: str | None = None) -> dict[str, object] | None:
+    clause = " AND organization_id = ?" if organization_id else ""
+    params: tuple[object, ...] = (media_id, organization_id) if organization_id else (media_id,)
     with db_session() as conn:
         row = conn.execute(
-            """
+            f"""
             SELECT id, movement_id, media_type, storage_key,
-                   verified_mime_type, size_bytes
+                   verified_mime_type, size_bytes, original_filename,
+                   organization_id, vehicle_id, session_id
             FROM movement_media
-            WHERE id = ? AND movement_id IS NOT NULL
+            WHERE id = ? {clause}
             """,
-            (media_id,),
+            params,
         ).fetchone()
     return _dict(row)
+
+
+def all_media_records() -> list[dict[str, object]]:
+    with db_session() as conn:
+        rows = conn.execute("SELECT * FROM movement_media").fetchall()
+    return [_dict(row) for row in rows]  # type: ignore[misc]

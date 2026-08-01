@@ -3,7 +3,7 @@ import json
 from app.core.database import db_session
 
 
-def snapshot() -> dict[str, list[dict]]:
+def snapshot(organization_id: str | None = None) -> dict[str, list[dict]]:
     queries = {
         "assets": """
             SELECT a.id, a.external_identifier, a.plate, a.category AS vehicle_model,
@@ -17,6 +17,7 @@ def snapshot() -> dict[str, list[dict]]:
             SELECT asset_id, id, operation_type, occurred_at,
                    declared_driver_identifier, odometer_km
             FROM asset_movements
+            WHERE (? IS NULL OR organization_id = ?)
         """,
         "damages": """
             SELECT vehicle_id, id, case_number, status, severity,
@@ -58,10 +59,13 @@ def snapshot() -> dict[str, list[dict]]:
         """,
     }
     with db_session() as conn:
-        result = {
-            name: [{key: row[key] for key in row.keys()} for row in conn.execute(sql).fetchall()]
-            for name, sql in queries.items()
-        }
+        result = {}
+        for name, sql in queries.items():
+            params = (organization_id, organization_id) if name == "movements" else ()
+            result[name] = [
+                {key: row[key] for key in row.keys()}
+                for row in conn.execute(sql, params).fetchall()
+            ]
     seen: set[int] = set()
     latest = []
     for event in result["events"]:

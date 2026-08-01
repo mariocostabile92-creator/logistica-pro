@@ -21,6 +21,7 @@ function presentation(item) {
   return `<div class="jcr-shared-card">
     <div><span class="status-pill">Attivo</span><strong>Link condiviso GDB</strong>
       <small>Creato il ${escapeHtml(createdAt(item.created_at))}</small>
+      <small>Scadenza: ${item.expires_at ? escapeHtml(createdAt(item.expires_at)) : "link legacy senza scadenza"}</small>
       <small>Ultimo utilizzo: ${item.last_used_at ? escapeHtml(createdAt(item.last_used_at)) : "non ancora utilizzato"}</small></div>
     <label>URL pubblico<input data-shared-url value="${escapeHtml(url)}" readonly /></label>
     <div class="jcr-shared-actions">

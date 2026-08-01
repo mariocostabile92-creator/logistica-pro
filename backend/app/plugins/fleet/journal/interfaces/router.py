@@ -4,6 +4,7 @@ from fastapi import (
     Header,
     HTTPException,
     Response,
+    Request,
     UploadFile,
     status,
 )
@@ -129,11 +130,11 @@ def movement_receipt(movement_id: str):
 
 
 @router.get("/vehicles/{asset_id}/history")
-def vehicle_history(asset_id: int):
-    return guarded(service.vehicle_history, asset_id)
+def vehicle_history(asset_id: int, request: Request):
+    return guarded(service.vehicle_history, asset_id, request.state.user.organization_id)
 
 
 @router.get("/media/{media_id}")
-def movement_media(media_id: str):
-    path, media_type = guarded(service.get_movement_media, media_id)
+def movement_media(media_id: str, token: str | None = None, x_journal_token: str | None = Header(default=None)):
+    path, media_type = guarded(service.get_movement_media, media_id, token or x_journal_token)
     return FileResponse(path, media_type=media_type)

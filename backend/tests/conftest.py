@@ -11,7 +11,9 @@ TEST_DATABASE_PATH = (
     Path(tempfile.gettempdir())
     / f"logistica-mvp-tests-{uuid.uuid4().hex}.sqlite3"
 )
+TEST_STORAGE_ROOT = Path(tempfile.gettempdir()) / f"logistica-mvp-storage-{uuid.uuid4().hex}"
 os.environ["OPERATIONS_DB_PATH"] = str(TEST_DATABASE_PATH)
+os.environ["RUNTIME_STORAGE_ROOT"] = str(TEST_STORAGE_ROOT)
 os.environ["APP_ENV"] = "test"
 os.environ.setdefault("DEMO_WORKSPACE_ENABLED", "true")
 os.environ.setdefault("WORKFORCE_PLUGIN_ENABLED", "true")
@@ -160,3 +162,5 @@ def reset_database():
 def remove_test_database():
     yield
     TEST_DATABASE_PATH.unlink(missing_ok=True)
+    import shutil
+    shutil.rmtree(TEST_STORAGE_ROOT, ignore_errors=True)

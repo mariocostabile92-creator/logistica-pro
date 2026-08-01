@@ -1,6 +1,6 @@
 import { getConfiguration } from "./api.js?v=dj4";
 import { initFlow } from "./flow.js?v=dj4";
-import { initMedia } from "./media.js?v=dj4";
+import { initMedia } from "./media.js?v=dj5";
 import { render, renderEquipment, showError } from "./renderer.js?v=dj4";
 import { clearAccessPresentation, prepareJournalAccess } from "./session-access.js?v=dj4";
 import { resetState, state } from "./state.js?v=dj4";

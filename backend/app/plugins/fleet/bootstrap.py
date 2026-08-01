@@ -17,6 +17,8 @@ from app.plugins.fleet.journal.control_room.shared_access_router import (
 from app.plugins.fleet.journal.infrastructure.shared_access_repository import (
     init_schema as init_shared_access_schema,
 )
+from app.plugins.fleet.journal.archive.router import router as journal_archive_router
+from app.plugins.fleet.journal.interfaces.integrity_router import router as journal_integrity_router
 from app.plugins.fleet.damage.infrastructure.repository import init_schema as init_damage_schema
 from app.plugins.fleet.damage.interfaces.router import router as damage_router
 from app.plugins.fleet.maintenance.infrastructure.repository import (
@@ -69,6 +71,8 @@ def register_fleet_plugin(app: FastAPI) -> None:
         app.include_router(journal_router)
         app.include_router(control_room_router)
         app.include_router(shared_access_router)
+        app.include_router(journal_archive_router)
+        app.include_router(journal_integrity_router)
         app.include_router(damage_router)
         app.include_router(maintenance_router)
         app.include_router(documents_router)
