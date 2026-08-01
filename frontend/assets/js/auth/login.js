@@ -1,7 +1,13 @@
-import { login } from "./api.js";
+import { bootstrapStatus, login } from "./api.js";
 
 const form = document.getElementById("loginForm");
 const message = document.getElementById("loginMessage");
+
+bootstrapStatus().then(({ required }) => {
+  if (required) location.replace("/app/bootstrap.html");
+}).catch(() => {
+  message.textContent = "Impossibile verificare la configurazione iniziale.";
+});
 
 form.addEventListener("submit", async event => {
   event.preventDefault();

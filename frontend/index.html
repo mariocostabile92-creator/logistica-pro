@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="./assets/css/vehicle-dossier.css?v=1" />
   <link rel="stylesheet" href="./assets/css/fleet-vision-workspace.css?v=1" />
   <link rel="stylesheet" href="./assets/css/auth.css?v=1" />
+  <link rel="stylesheet" href="./assets/css/auth-header-responsive.css?v=1" />
 </head>
 <body data-home-state="loading" data-planning-state="loading">
   <header class="app-header">
@@ -133,7 +134,7 @@
           data-workspace-view="settings"
           aria-selected="false"
         >
-          Configurazione
+          Organizzazione
         </button>
         <div id="authSessionControl" class="auth-session-control" aria-label="Sessione utente"></div>
       </div>
@@ -1889,6 +1890,36 @@
       aria-labelledby="settingsTitle"
       hidden
     >
+      <div id="organizationSettings" class="organization-settings">
+        <header class="organization-settings-header">
+          <div><p class="eyebrow">Organization</p><h2>Organization Settings</h2><p id="organizationSettingsStatus" class="section-note">Caricamento organizzazione…</p></div>
+        </header>
+        <nav id="organizationSettingsTabs" class="organization-tabs" aria-label="Sezioni organizzazione">
+          <button type="button" class="active" data-organization-tab="general">Generale</button>
+          <button type="button" data-organization-tab="users">Utenti</button>
+          <button type="button" data-organization-tab="roles">Ruoli</button>
+        </nav>
+        <section class="organization-panel" data-organization-panel="general">
+          <div class="organization-general-grid">
+            <div><span>Nome organizzazione</span><strong id="organizationName">—</strong></div><div><span>Station principale</span><strong id="organizationStation">—</strong></div><div><span>Timezone</span><strong id="organizationTimezone">—</strong></div><div><span>Lingua</span><strong id="organizationLanguage">—</strong></div><div><span>Data creazione</span><strong id="organizationCreatedAt">—</strong></div>
+          </div>
+        </section>
+        <section class="organization-panel" data-organization-panel="users" hidden>
+          <div class="organization-users-toolbar"><div><h3>Utenti</h3><p class="section-note">Accessi amministrati dall'azienda.</p></div><button id="newOrganizationUser" type="button">Nuovo utente</button></div>
+          <div id="organizationUsersList" class="organization-users-list"><div class="empty-state">Caricamento utenti…</div></div>
+        </section>
+        <section class="organization-panel" data-organization-panel="roles" hidden>
+          <div class="roles-grid"><article><strong>Administrator</strong><p>Gestione completa e utenti.</p></article><article><strong>Operations Manager</strong><p>Lettura e operatività.</p></article><article><strong>Fleet Manager</strong><p>Gestione operativa Fleet.</p></article><article><strong>Dispatcher</strong><p>Gestione operativa.</p></article><article><strong>Viewer</strong><p>Consultazione in sola lettura.</p></article></div>
+        </section>
+      </div>
+      <dialog id="organizationUserDialog" class="organization-user-dialog" aria-labelledby="organizationUserDialogTitle">
+        <form id="organizationUserForm"><input name="userId" type="hidden"><div><p class="eyebrow">Organization</p><h3 id="organizationUserDialogTitle">Nuovo utente</h3></div>
+          <div class="organization-form-grid"><label>Nome<input name="firstName" required maxlength="100"></label><label>Cognome<input name="lastName" required maxlength="100"></label></div>
+          <label>Email<input name="email" type="email" required></label><label>Ruolo<select name="role"><option value="operations_manager">Operations Manager</option><option value="fleet_manager">Fleet Manager</option><option value="dispatcher">Dispatcher</option><option value="viewer">Viewer</option><option value="administrator">Administrator</option></select></label>
+          <label>Password temporanea<input name="temporaryPassword" type="password" minlength="10" autocomplete="new-password"><small>In modifica, lascia vuoto per non cambiarla.</small></label><label class="auth-remember"><input name="active" type="checkbox" checked> Utente attivo</label>
+          <p id="organizationUserMessage" class="auth-message" role="status"></p><div class="organization-user-dialog-actions"><button type="button" class="secondary" data-close-user-dialog>Annulla</button><button type="submit">Salva utente</button></div>
+        </form>
+      </dialog>
       <div class="section-heading settings-toolbar">
         <div>
           <p class="eyebrow">Configuration Engine</p>

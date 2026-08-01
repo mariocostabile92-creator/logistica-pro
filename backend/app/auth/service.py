@@ -32,9 +32,10 @@ def login(email: str, password: str, remember_me: bool) -> tuple[AuthenticatedUs
         timedelta(days=REMEMBER_DAYS) if remember_me else timedelta(hours=SESSION_HOURS)
     )
     _, token = repository.create_session(row["id"], expires_at.isoformat(), remember_me)
+    repository.mark_login(row["id"])
     user = AuthenticatedUser(
         id=row["id"], email=row["email"], role=Role(row["role"]),
         organization_id=row["organization_id"], organization_name=row["organization_name"],
+        first_name=row["first_name"], last_name=row["last_name"],
     )
     return user, token, expires_at
-

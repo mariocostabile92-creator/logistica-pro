@@ -11,6 +11,7 @@ import {
   renderSettingsFailure,
   renderSettingsLoading,
 } from "./settings-view.js";
+import { initOrganizationSettings } from "../organization/index.js";
 
 
 let loaded = false;
@@ -56,6 +57,7 @@ async function loadConfiguration() {
 
 
 export function initSettingsPage() {
+  initOrganizationSettings();
   byId("settingsScopeForm").addEventListener("submit", (event) => {
     event.preventDefault();
     loadConfiguration();

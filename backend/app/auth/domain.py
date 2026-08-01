@@ -17,4 +17,5 @@ class AuthenticatedUser:
     role: Role
     organization_id: str
     organization_name: str
-
+    first_name: str = ""
+    last_name: str = ""

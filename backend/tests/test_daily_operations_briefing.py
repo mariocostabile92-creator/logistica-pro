@@ -377,6 +377,7 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
         if (
                         not path.startswith("/api/briefing/")
                         and not path.startswith("/api/auth/")
+                        and not path.startswith("/api/organization")
                         and not path.startswith("/api/attachments")
                         and not path.startswith("/api/fleet/damage")
                         and not path.startswith("/api/fleet/maintenances")

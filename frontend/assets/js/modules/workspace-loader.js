@@ -20,7 +20,7 @@ const STYLES = {
     "workforce-responsive.css?v=5",
   ],
   fleet: ["fleet.css", "fleet-sync.css", "operational-documents.css?v=1", "damage-workspace.css?v=2", "maintenance-workspace.css?v=1"],
-  settings: ["settings.css"],
+  settings: ["settings.css", "organization-settings.css?v=1"],
   demo: ["demo-workspace.css"],
 };
 

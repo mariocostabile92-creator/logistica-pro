@@ -103,6 +103,7 @@ def reset_database():
     init_execution_attempt_schema()
     with db_session() as conn:
         conn.execute("DELETE FROM admin_audit_events")
+        conn.execute("DELETE FROM auth_bootstrap_state")
         conn.execute("DELETE FROM auth_sessions")
         conn.execute("DELETE FROM auth_users")
         conn.execute("DELETE FROM organizations")

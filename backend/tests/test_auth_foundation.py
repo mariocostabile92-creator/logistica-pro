@@ -27,7 +27,7 @@ def sign_in(email: str, password: str, remember: bool = False):
 def test_admin_area_redirects_and_api_returns_401_without_session():
     response = client.get("/app/", headers=ENFORCE, follow_redirects=False)
     assert response.status_code == 303
-    assert response.headers["location"] == "/app/login.html"
+    assert response.headers["location"] == "/app/bootstrap.html"
     assert client.get("/api/fleet/vision", headers=ENFORCE).status_code == 401
     assert client.get("/app/login.html", headers=ENFORCE).status_code == 200
 

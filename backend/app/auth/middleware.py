@@ -11,7 +11,8 @@ from app.core.config import SETTINGS
 
 PUBLIC_EXACT = {
     "/api/health", "/api/auth/login", "/api/auth/session", "/api/auth/logout",
-    "/app/login.html", "/app/journal", "/app/journal/",
+    "/api/auth/bootstrap/status", "/api/auth/bootstrap",
+    "/app/login.html", "/app/bootstrap.html", "/app/journal", "/app/journal/",
 }
 
 
@@ -33,6 +34,10 @@ def public_path(request: Request) -> bool:
 async def enforce_authentication(request: Request, call_next):
     path = request.url.path
     auth_optional = path in {"/api/auth/session", "/api/auth/logout"}
+    if path == "/app/login.html" and repository.bootstrap_required():
+        return RedirectResponse("/app/bootstrap.html", status_code=303)
+    if path == "/app/bootstrap.html" and not repository.bootstrap_required():
+        return RedirectResponse("/app/login.html", status_code=303)
     if public_path(request) and not auth_optional:
         return await call_next(request)
     # The legacy suite installs a random, process-local harness token. A normal
@@ -62,7 +67,8 @@ async def enforce_authentication(request: Request, call_next):
         if path.startswith("/api/"):
             return JSONResponse(status_code=401, content={"detail": "Autenticazione richiesta."})
         if path in {"/", "/app", "/app/"}:
-            return RedirectResponse("/app/login.html", status_code=303)
+            target = "/app/bootstrap.html" if repository.bootstrap_required() else "/app/login.html"
+            return RedirectResponse(target, status_code=303)
         return await call_next(request)
     user, session_id = resolved
     required = "admin:read" if request.method in {"GET", "HEAD", "OPTIONS"} else "admin:write"

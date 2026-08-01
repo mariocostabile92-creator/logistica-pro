@@ -18,3 +18,12 @@ export const session = () => fetch("/api/auth/session", {
 export const logout = () => fetch("/api/auth/logout", {
   method: "POST", credentials: "same-origin",
 }).then(response => response.ok ? null : parse(response));
+
+export const bootstrapStatus = () => fetch("/api/auth/bootstrap/status", {
+  credentials: "same-origin",
+}).then(parse);
+
+export const bootstrap = payload => fetch("/api/auth/bootstrap", {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  credentials: "same-origin", body: JSON.stringify(payload),
+}).then(parse);

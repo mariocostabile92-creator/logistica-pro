@@ -8,6 +8,8 @@ export async function requireAdministrativeSession() {
     setSession(payload.user);
     const control = document.getElementById("authSessionControl");
     if (control) renderSessionControl(control, payload.user);
+    const organizationSettings = document.getElementById("configurationNavBtn");
+    if (organizationSettings) organizationSettings.hidden = !payload.user.permissions.includes("users:manage");
     return payload.user;
   } catch (error) {
     setSession(null);
