@@ -1,11 +1,50 @@
+from contextlib import nullcontext
+import sqlite3
+
 from fastapi.testclient import TestClient
 
 from app.core.database import db_session
 from app.main import app
+from app.plugins.fleet.vision import repository as vision_repository
 
 client = TestClient(app)
 ASSETS = "/api/plugins/fleet/v1/assets"
 VISION = "/api/fleet/vision"
+
+
+def test_vision_uses_a_typed_postgres_organization_filter(monkeypatch):
+    executions = []
+
+    class EmptyCursor:
+        @staticmethod
+        def fetchall():
+            return []
+
+    class ProductionEquivalentConnection:
+        @staticmethod
+        def execute(sql, params=()):
+            executions.append((sql, params))
+            if "? IS NULL" in sql:
+                raise sqlite3.DatabaseError(
+                    "could not determine data type of parameter $1"
+                )
+            return EmptyCursor()
+
+    monkeypatch.setattr(
+        vision_repository,
+        "db_session",
+        lambda: nullcontext(ProductionEquivalentConnection()),
+    )
+
+    snapshot = vision_repository.snapshot("production-organization")
+
+    assert snapshot["movements"] == []
+    movement_sql, movement_params = next(
+        execution for execution in executions if "FROM asset_movements" in execution[0]
+    )
+    assert "WHERE m.organization_id = ?" in movement_sql
+    assert "? IS NULL" not in movement_sql
+    assert movement_params == ("production-organization",)
 
 
 def test_vision_aggregates_existing_modules_without_new_table():

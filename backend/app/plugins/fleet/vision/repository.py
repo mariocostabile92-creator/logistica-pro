@@ -4,6 +4,7 @@ from app.core.database import db_session
 
 
 def snapshot(organization_id: str | None = None) -> dict[str, list[dict]]:
+    movement_filter = "WHERE m.organization_id = ?" if organization_id is not None else ""
     queries = {
         "assets": """
             SELECT a.id, a.external_identifier, a.plate, a.category AS vehicle_model,
@@ -13,13 +14,13 @@ def snapshot(organization_id: str | None = None) -> dict[str, list[dict]]:
             LEFT JOIN fleet_asset_profiles p ON p.asset_id = a.id
             ORDER BY COALESCE(a.plate,a.external_identifier)
         """,
-        "movements": """
+        "movements": f"""
             SELECT m.asset_id, m.id, m.operation_type, m.occurred_at,
                    m.declared_driver_identifier, m.odometer_km, m.anomaly_present,
                    s.operational_date
             FROM asset_movements m
             JOIN journal_sessions s ON s.id = m.session_id
-            WHERE (? IS NULL OR m.organization_id = ?)
+            {movement_filter}
         """,
         "damages": """
             SELECT vehicle_id, id, case_number, status, severity,
@@ -63,7 +64,7 @@ def snapshot(organization_id: str | None = None) -> dict[str, list[dict]]:
     with db_session() as conn:
         result = {}
         for name, sql in queries.items():
-            params = (organization_id, organization_id) if name == "movements" else ()
+            params = (organization_id,) if name == "movements" and organization_id is not None else ()
             result[name] = [
                 {key: row[key] for key in row.keys()}
                 for row in conn.execute(sql, params).fetchall()

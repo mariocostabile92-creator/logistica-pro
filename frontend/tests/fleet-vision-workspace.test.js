@@ -77,8 +77,8 @@ test("Fleet Vision replaces the skeleton with a contextual retry state on API fa
   assert.match(css, /\.fve2-failure/);
   assert.match(sections, /Nessuna criticità operativa rilevata/);
   assert.match(page, /fleet-vision-workspace\.css\?v=2/);
-  assert.match(page, /app\.js\?v=18/);
-  assert.match(app, /workspace-loader\.js\?v=16/);
-  assert.match(loader, /fleet-page\.js\?v=16/);
+  assert.match(page, /app\.js\?v=19/);
+  assert.match(app, /workspace-loader\.js\?v=17/);
+  assert.match(loader, /fleet-page\.js\?v=17/);
   assert.match(fleet, /fleet-vision-workspace\.js\?v=2/);
 });

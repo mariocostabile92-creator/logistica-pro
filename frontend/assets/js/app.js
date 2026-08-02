@@ -9,7 +9,7 @@ import { initViewNavigation } from "./modules/view-navigation.js";
 import {
   ensureWorkspaceInitialized,
   initWorkspaceLoader,
-} from "./modules/workspace-loader.js?v=16";
+} from "./modules/workspace-loader.js?v=17";
 import {
   initWorkspaceLifecycle,
   refreshWorkspaceStatus,

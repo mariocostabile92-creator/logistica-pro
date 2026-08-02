@@ -7,7 +7,6 @@ import {
   updateFleetAsset,
 } from "../api.js";
 import { state } from "../state.js";
-import { mountAttachments } from "./attachments/component.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import {
   isExpectedApiError,
@@ -24,21 +23,6 @@ import {
   renderFleetTree,
   setFleetMetricPriority,
 } from "./fleet-view.js?v=3";
-import { loadVehicleDossier } from "./vehicle-dossier/loader.js";
-import { vehicleDossierModel } from "./vehicle-dossier/model.js";
-import { renderVehicleDossierExcellence } from "./vehicle-dossier/renderer.js";
-import { mountDossierTimeline } from "./vehicle-dossier/timeline.js";
-import { bindDossierNavigation } from "./vehicle-dossier/navigation.js";
-import { showDamageWorkspace } from "./damage-workspace.js?v=4";
-import { showMaintenanceWorkspace } from "./maintenance-workspace.js?v=1";
-import { showDocumentsWorkspace } from "./documents-workspace.js?v=1";
-import { showFranchiseWorkspace } from "./franchise-workspace.js?v=1";
-import { showInsuranceWorkspace } from "./insurance-workspace.js?v=1";
-import { showRentalWorkspace } from "./rental-workspace.js?v=1";
-import { showDeadlinesWorkspace } from "./deadlines-workspace.js?v=1";
-import { showJournalControlRoom } from "./journal-control-room.js?v=8";
-import { showFleetVisionWorkspace } from "./fleet-vision-workspace.js?v=2";
-import { openOperationalStatusControl } from "./operational-status-control.js";
 
 
 let loaded = false;
@@ -46,6 +30,76 @@ let demoEnabled = false;
 let searchTerm = "";
 let latestFleetImportAt = null;
 let firstPaintPromise = null;
+const lazyFleetModules = new Map();
+
+
+function loadFleetModule(name, loader) {
+  if (!lazyFleetModules.has(name)) lazyFleetModules.set(name, loader());
+  return lazyFleetModules.get(name);
+}
+
+
+async function showDamageWorkspace(options) {
+  const module = await loadFleetModule("damage", () => import("./damage-workspace.js?v=4"));
+  return module.showDamageWorkspace(options);
+}
+
+
+async function showMaintenanceWorkspace(options) {
+  const module = await loadFleetModule("maintenance", () => import("./maintenance-workspace.js?v=1"));
+  return module.showMaintenanceWorkspace(options);
+}
+
+
+async function showDocumentsWorkspace(options) {
+  const module = await loadFleetModule("documents", () => import("./documents-workspace.js?v=1"));
+  return module.showDocumentsWorkspace(options);
+}
+
+
+async function showFranchiseWorkspace(options) {
+  const module = await loadFleetModule("franchises", () => import("./franchise-workspace.js?v=1"));
+  return module.showFranchiseWorkspace(options);
+}
+
+
+async function showInsuranceWorkspace(options) {
+  const module = await loadFleetModule("insurance", () => import("./insurance-workspace.js?v=1"));
+  return module.showInsuranceWorkspace(options);
+}
+
+
+async function showRentalWorkspace(options) {
+  const module = await loadFleetModule("rentals", () => import("./rental-workspace.js?v=1"));
+  return module.showRentalWorkspace(options);
+}
+
+
+async function showDeadlinesWorkspace(options) {
+  const module = await loadFleetModule("deadlines", () => import("./deadlines-workspace.js?v=1"));
+  return module.showDeadlinesWorkspace(options);
+}
+
+
+async function showJournalControlRoom(options) {
+  const module = await loadFleetModule("journal", () => import("./journal-control-room.js?v=8"));
+  return module.showJournalControlRoom(options);
+}
+
+
+async function showFleetVisionWorkspace(options) {
+  const module = await loadFleetModule("vision", () => import("./fleet-vision-workspace.js?v=2"));
+  return module.showFleetVisionWorkspace(options);
+}
+
+
+async function openOperationalStatusControl(options) {
+  const module = await loadFleetModule(
+    "operational-status",
+    () => import("./operational-status-control.js"),
+  );
+  return module.openOperationalStatusControl(options);
+}
 
 
 async function refreshSyncSummary(hasAssets) {
@@ -128,21 +182,29 @@ async function showAsset(assetId) {
   byId("fleetDossierState").className = "view-state loading";
   byId("fleetDossierState").textContent = "Caricamento scheda mezzo";
   byId("fleetDossierContent").hidden = true;
-  const loadedDossier = await loadVehicleDossier(assetId);
-  const model = vehicleDossierModel(loadedDossier);
+  const [loader, modelBuilder, renderer, timeline, navigation, attachments] = await Promise.all([
+    loadFleetModule("dossier-loader", () => import("./vehicle-dossier/loader.js")),
+    loadFleetModule("dossier-model", () => import("./vehicle-dossier/model.js")),
+    loadFleetModule("dossier-renderer", () => import("./vehicle-dossier/renderer.js")),
+    loadFleetModule("dossier-timeline", () => import("./vehicle-dossier/timeline.js")),
+    loadFleetModule("dossier-navigation", () => import("./vehicle-dossier/navigation.js")),
+    loadFleetModule("attachments", () => import("./attachments/component.js")),
+  ]);
+  const loadedDossier = await loader.loadVehicleDossier(assetId);
+  const model = modelBuilder.vehicleDossierModel(loadedDossier);
   const asset = model.asset;
   state.fleetPlugin.selectedAssetId = assetId;
   renderFleetTree(state.fleetPlugin.assets, assetId);
   byId("fleetTreeSelection").textContent = asset.plate || asset.external_identifier;
   byId("fleetTreeSelection").hidden = false;
-  renderVehicleDossierExcellence(byId("fleetDossierContent"), model);
-  mountDossierTimeline(byId("fleetDossierUnifiedTimeline"), model.timeline);
-  await mountAttachments(byId("fleetDossierAttachments"), {
+  renderer.renderVehicleDossierExcellence(byId("fleetDossierContent"), model);
+  timeline.mountDossierTimeline(byId("fleetDossierUnifiedTimeline"), model.timeline);
+  await attachments.mountAttachments(byId("fleetDossierAttachments"), {
     entityType: "vehicle", entityId: assetId, aggregateVehicle: true,
     title: "Allegati del mezzo",
     initialItems: model.attachments,
   });
-  bindDossierNavigation(byId("fleetDossierContent"), dossierNavigationHandlers());
+  navigation.bindDossierNavigation(byId("fleetDossierContent"), dossierNavigationHandlers());
   byId("fleetDossierState").hidden = true;
   byId("fleetDossierContent").hidden = false;
   byId("fleetAssetTree").open = false;
@@ -469,7 +531,7 @@ function exportFleetRegistry() {
 
 export function initFleetPage() {
   document.addEventListener("workspace:view-changed", async (event) => {
-    if (event.detail.view !== "fleet" || loaded) return;
+    if (event.detail.view !== "fleet" || loaded || firstPaintPromise) return;
     try {
       await refreshFleet();
     } catch (error) {

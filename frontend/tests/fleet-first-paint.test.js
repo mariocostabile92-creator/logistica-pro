@@ -17,13 +17,27 @@ test("Fleet is prepared while hidden and revealed only after initialization", as
   assert.doesNotMatch(navigate, /showWorkspace\(view\)[\s\S]*await initializeWorkspace/);
 });
 
-test("Fleet first paint waits for one guarded registry render", async () => {
+test("Fleet reveals its definitive skeleton without waiting for registry data", async () => {
   const loader = await source("assets/js/modules/workspace-loader.js");
   const fleet = await source("assets/js/modules/fleet-page.js");
 
-  assert.match(loader, /return async \(\) => \{[\s\S]*module\.initFleetPage\(\);[\s\S]*await module\.prepareFleetFirstPaint\(\);/);
+  assert.match(loader, /return \(\) => \{[\s\S]*module\.initFleetPage\(\);[\s\S]*module\.prepareFleetFirstPaint\(\);/);
+  assert.doesNotMatch(loader, /await module\.prepareFleetFirstPaint\(\)/);
   assert.match(loader, /await initialize\(\);[\s\S]*initialized\.add\(view\);/);
   assert.match(fleet, /if \(loaded\) return Promise\.resolve\(\);/);
   assert.match(fleet, /if \(firstPaintPromise\) return firstPaintPromise;/);
   assert.match(fleet, /firstPaintPromise = refreshFleet\(\)/);
+  assert.match(fleet, /loaded \|\| firstPaintPromise/);
+});
+
+test("Fleet secondary workspaces are loaded only when requested", async () => {
+  const fleet = await source("assets/js/modules/fleet-page.js");
+
+  for (const module of [
+    "damage-workspace", "maintenance-workspace", "documents-workspace",
+    "journal-control-room", "fleet-vision-workspace", "vehicle-dossier/loader",
+  ]) {
+    assert.match(fleet, new RegExp(`import\\("\\./${module}\\.js(?:\\?v=\\d+)?"\\)`));
+    assert.doesNotMatch(fleet, new RegExp(`^import .* from "\\./${module}\\.js`, "m"));
+  }
 });
