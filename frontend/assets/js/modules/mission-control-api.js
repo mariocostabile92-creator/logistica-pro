@@ -5,7 +5,8 @@ import {
   listJournalControlRoom,
   listMaintenances,
   listVehicleDocuments,
-} from "../api.js";
+  getPlanningOperationsSummary,
+} from "../api.js?v=3";
 
 
 function value(result, fallback) {
@@ -54,6 +55,7 @@ export async function loadMissionControlSummary() {
     listVehicleDocuments(),
     listJournalControlRoom(),
     listFleetDeadlines(),
+    getPlanningOperationsSummary(),
   ]);
   const assets = value(settled[0], { items: [] }).items || [];
   const damage = value(settled[1], { items: [] }).items || [];
@@ -64,6 +66,7 @@ export async function loadMissionControlSummary() {
   const journalResponse = value(settled[4], { items: [], summary: {}, completion: {} });
   const journal = journalResponse.items || [];
   const deadlines = value(settled[5], { items: [], summary: {} });
+  const planningResponse = value(settled[6], null);
   const failedSources = settled.reduce((count, result) => (
     count + Number(result.status === "rejected")
   ), 0);
@@ -93,7 +96,12 @@ export async function loadMissionControlSummary() {
       )).length,
       open: Number(maintenanceResponse.summary?.open || 0),
     },
-    planning: null,
+    planning: planningResponse ? {
+      driversAssigned: planningResponse.summary?.drivers_assigned ?? null,
+      vehiclesAssigned: planningResponse.summary?.vehicles_assigned ?? null,
+      conflicts: planningResponse.summary?.blocking_conflicts ?? planningResponse.summary?.conflicts ?? null,
+      publication: planningResponse.lifecycle?.state || "Non disponibile",
+    } : null,
     recent: recentEvents({ damage, maintenance, documents, journal }),
   };
 }

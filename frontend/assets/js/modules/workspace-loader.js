@@ -7,7 +7,7 @@ let loaderInitialized = false;
 
 const STYLES = {
   operations: [
-    "planning-workspace.css?v=1",
+    "planning-workspace.css?v=4",
     "onboarding.css",
     "fleet-sync.css",
     "excel-import.css",

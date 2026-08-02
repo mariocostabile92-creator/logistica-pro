@@ -526,6 +526,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         or path.startswith("/api/planning/drafts")
         or path.startswith("/api/planning/confirmation")
         or path.startswith("/api/planning/publication")
+        or path.startswith("/api/planning/operations")
         or path
         in {
             "/api/planning/readiness",

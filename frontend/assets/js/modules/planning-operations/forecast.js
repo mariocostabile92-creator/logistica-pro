@@ -1,0 +1,5 @@
+export function renderForecast(forecast, definitiveDate, definitiveCount) {
+  if (!forecast) return `<section class="planning-ops-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon</h3></div></header><p class="planning-ops-empty">Nessun forecast disponibile.</p></section>`;
+  return `<section class="planning-ops-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon</h3></div><small>${forecast.source_filename} · ${new Date(forecast.updated_at).toLocaleString("it-IT")}</small></header>
+  <div class="planning-forecast-days">${forecast.days.map((day) => `<article><time>${new Date(`${day.operation_date}T12:00:00`).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" })}</time><strong>${day.routes_expected}</strong><span>${day.operation_date === definitiveDate ? `${definitiveCount - day.routes_expected >= 0 ? "+" : ""}${definitiveCount - day.routes_expected} vs definitivo` : "rotte previste"}</span></article>`).join("")}</div></section>`;
+}

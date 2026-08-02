@@ -11,10 +11,15 @@ import {
   createStatusCard,
 } from "./components.js";
 import { element } from "./utils.js";
+import { initPlanningOperations } from "../planning-operations/index.js";
 
 
 export function createPlanningWorkspaceLayout(root) {
   const shell = element("div", { className: "planning-workspace-shell" });
+  const operations = element("div", {
+    className: "planning-operations",
+    attributes: { "data-planning-operations": "", "aria-live": "polite" },
+  });
   const header = createPlanningHeader();
   const loading = createPlanningLoadingState();
   const content = element("div", {
@@ -31,8 +36,12 @@ export function createPlanningWorkspaceLayout(root) {
     createPlanningPublication(),
     createFooterActions(),
   );
-  shell.append(header, loading, content);
+  const diagnostics = element("details", { className: "planning-advanced-diagnostics" });
+  const diagnosticsSummary = element("summary", { text: "Diagnostica avanzata" });
+  diagnostics.append(diagnosticsSummary, header, loading, content);
+  shell.append(operations, diagnostics);
   root.replaceChildren(shell);
+  initPlanningOperations(operations);
 
   const role = (name) => root.querySelector(`[data-planning-role="${name}"]`);
   return Object.freeze({

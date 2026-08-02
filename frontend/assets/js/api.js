@@ -602,6 +602,40 @@ export async function getLatestPlanning() {
 }
 
 
+export async function getPlanningOperations({ signal } = {}) {
+  return parseResponse(await fetch(`${API_BASE}/api/planning/operations`, { signal }));
+}
+
+
+export async function getPlanningOperationsSummary({ signal } = {}) {
+  return parseResponse(await fetch(`${API_BASE}/api/planning/operations/summary`, { signal }));
+}
+
+
+export async function patchPlanningConvocation(planningId, assignmentId, payload) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/operations/${planningId}/convocations/${assignmentId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  ));
+}
+
+
+export async function transitionOperationalPlanning(planningId, action) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/planning/operations/${planningId}/${action}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actor: "web_operator" }),
+    },
+  ));
+}
+
+
 export async function getPlanningReadiness({
   organizationId = "default",
   operationalUnitId = "default",

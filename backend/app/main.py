@@ -23,6 +23,7 @@ from app.api.routers import (
     legacy_retirement,
     operations,
     planning,
+    planning_operations,
     planning_confirmation,
     planning_conflicts,
     planning_drafts,
@@ -202,6 +203,7 @@ app.include_router(planning_runtime_output.router)
 app.include_router(runtime_canary.router)
 app.include_router(runtime_primary.router)
 app.include_router(legacy_retirement.router)
+app.include_router(planning_operations.router)
 app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)

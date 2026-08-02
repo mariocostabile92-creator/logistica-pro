@@ -3,6 +3,84 @@
   min-width: 0;
 }
 
+/* Dispatcher operations surface */
+.planning-operations { display: grid; gap: 16px; min-height: 320px; }
+body[data-active-workspace="operations"] .app-header-inner { gap: 14px; }
+body[data-active-workspace="operations"] .app-header .workspace-tabs { grid-template-columns: repeat(6, minmax(74px, 1fr)); width: min(600px, 100%); }
+body[data-active-workspace="operations"] .app-header-actions { min-width: 0; flex-shrink: 1; flex-wrap: wrap; justify-content: flex-end; }
+body[data-active-workspace="operations"] .auth-session-user { display: none; }
+.planning-ops-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(460px, .9fr); gap: 28px; padding: 24px; color: #fff; background: linear-gradient(125deg, #173d35, #245d50); border-radius: 18px; box-shadow: var(--shadow-sm); }
+.planning-ops-hero h2 { margin: 3px 0 8px; font-size: clamp(28px, 4vw, 38px); }
+.planning-ops-hero p { margin: 0; max-width: 620px; color: #dbe9e5; }
+.planning-ops-hero dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.18); border-radius: 12px; background: rgba(255,255,255,.1); }
+.planning-ops-hero dl div { padding: 12px 14px; background: rgba(7,32,26,.22); }
+.planning-ops-hero dt { color: #b8d3cc; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.planning-ops-hero dd { margin: 4px 0 0; font-weight: 750; overflow-wrap: anywhere; }
+.planning-ops-status { display: inline-flex; padding: 3px 9px; border-radius: 999px; background: #d7f5e7; color: #174738; }
+.planning-ops-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.planning-ops-kpis button { display: grid; gap: 3px; justify-items: start; padding: 16px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); color: inherit; text-align: left; box-shadow: none; }
+.planning-ops-kpis button:hover { border-color: #5a8d80; background: #f7fbf9; }
+.planning-ops-kpis strong { font-size: 25px; }
+.planning-ops-kpis span { color: var(--text-muted); font-size: 13px; }
+.planning-ops-toolbar { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(190px, .45fr) auto minmax(120px, .45fr); align-items: end; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); }
+.planning-ops-toolbar label:not(.planning-import-trigger) { display: grid; gap: 5px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.planning-import-trigger { position: relative; display: inline-flex; justify-content: center; align-items: center; min-height: 42px; padding: 8px 14px; overflow: hidden; border-radius: 9px; background: #173d35; color: #fff; font-weight: 700; cursor: pointer; }
+.planning-import-trigger input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.planning-ops-panel { padding: 18px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); }
+.planning-ops-panel > header { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 14px; }
+.planning-ops-panel h3 { margin: 3px 0 0; }
+.planning-forecast-days { display: grid; grid-template-columns: repeat(7, minmax(105px, 1fr)); gap: 8px; overflow-x: auto; padding-bottom: 3px; }
+.planning-forecast-days article { display: grid; gap: 4px; padding: 12px; border-radius: 10px; background: #f4f8f6; }
+.planning-forecast-days time, .planning-forecast-days span { color: var(--text-muted); font-size: 12px; }
+.planning-forecast-days strong { font-size: 24px; }
+.planning-routes-board { display: grid; gap: 9px; }
+.planning-route-card { display: grid; grid-template-columns: minmax(145px,.55fr) minmax(320px,1.5fr) minmax(170px,.65fr) minmax(190px,.8fr); gap: 14px; align-items: center; padding: 14px; border: 1px solid var(--border); border-left: 4px solid #d9a93d; border-radius: 11px; }
+.planning-route-card.is-complete { border-left-color: #3c8c69; }
+.planning-route-card > header { display: flex; justify-content: space-between; gap: 8px; }
+.planning-route-card > header div { display: grid; gap: 3px; }
+.planning-route-card > header span, .planning-route-meta { color: var(--text-muted); font-size: 12px; }
+.planning-route-assignments { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.planning-route-assignments label, .planning-route-actions label { display: grid; gap: 3px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.planning-route-meta { display: grid; gap: 5px; }
+.planning-route-conflicts { display: grid; gap: 4px; }
+.planning-route-conflict { padding: 6px 8px; border: 0; border-radius: 7px; background: #fff0ed; color: #8a2e21; font-size: 12px; text-align: left; }
+.planning-route-ok { color: #327155; font-size: 12px; }
+.planning-route-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 7px; }
+.planning-publication dl { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin: 0 0 14px; }
+.planning-publication dl div { padding: 11px; border-radius: 9px; background: #f4f8f6; }
+.planning-publication dd { margin: 4px 0 0; font-size: 20px; font-weight: 800; }
+.planning-publication > div { display: flex; gap: 8px; justify-content: flex-end; }
+.planning-advanced-diagnostics { padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: #f7f9f8; }
+.planning-advanced-diagnostics > summary { cursor: pointer; font-weight: 750; }
+.planning-advanced-diagnostics[open] > summary { margin-bottom: 18px; }
+.planning-ops-empty, .planning-ops-error { padding: 28px; color: var(--text-muted); text-align: center; }
+.planning-ops-loading { display: grid; gap: 18px; padding: 24px; min-height: 250px; border-radius: 18px; background: linear-gradient(125deg, #173d35, #245d50); color: #fff; }
+.planning-ops-loading h2 { margin: 3px 0 8px; font-size: clamp(28px, 4vw, 38px); }
+.planning-ops-loading p { margin: 0; color: #dbe9e5; }
+.planning-ops-loading-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; align-self: end; }
+.planning-ops-loading-kpis span { min-height: 66px; border-radius: 10px; background: rgba(255,255,255,.13); animation: planning-ops-pulse 1.1s ease-in-out infinite alternate; }
+@keyframes planning-ops-pulse { to { opacity: .55; } }
+
+@media (max-width: 1000px) {
+  .planning-ops-hero { grid-template-columns: 1fr; }
+  .planning-ops-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .planning-route-card { grid-template-columns: minmax(130px,.55fr) minmax(280px,1.3fr) minmax(170px,.8fr); }
+  .planning-route-actions { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .planning-ops-hero { padding: 18px; }
+  .planning-ops-hero dl, .planning-publication dl { grid-template-columns: 1fr 1fr; }
+  .planning-ops-kpis { grid-template-columns: 1fr 1fr; }
+  .planning-ops-loading-kpis { grid-template-columns: 1fr 1fr; }
+  .planning-ops-toolbar { grid-template-columns: 1fr; }
+  .planning-ops-panel { padding: 14px; }
+  .planning-route-card { grid-template-columns: 1fr; gap: 10px; }
+  .planning-route-assignments, .planning-route-actions { grid-template-columns: 1fr; }
+  .planning-route-card > header, .planning-ops-panel > header { align-items: start; }
+  .planning-publication > div { display: grid; }
+}
+
 .planning-workspace {
   width: 100%;
 }

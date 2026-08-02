@@ -22,6 +22,7 @@ _IDENTITY_TABLES = {
     "operation_snapshots",
     "planning_events",
     "planning_versions",
+    "planning_convocations",
     "plannings",
     "workforce_changes",
     "workforce_day_statuses",
@@ -340,11 +341,26 @@ def init_db() -> None:
                 UNIQUE (planning_id, version)
             );
 
+            CREATE TABLE IF NOT EXISTS planning_convocations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                planning_id INTEGER NOT NULL,
+                assignment_id INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'da_preparare',
+                scheduled_time TEXT,
+                updated_at TEXT NOT NULL,
+                updated_by TEXT NOT NULL,
+                FOREIGN KEY (planning_id) REFERENCES plannings(id) ON DELETE CASCADE,
+                FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
+                UNIQUE (planning_id, assignment_id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_assignments_planning
                 ON assignments(planning_id);
             CREATE INDEX IF NOT EXISTS idx_events_planning
                 ON planning_events(planning_id);
             CREATE INDEX IF NOT EXISTS idx_versions_planning
                 ON planning_versions(planning_id);
+            CREATE INDEX IF NOT EXISTS idx_convocations_planning
+                ON planning_convocations(planning_id);
             """
         )

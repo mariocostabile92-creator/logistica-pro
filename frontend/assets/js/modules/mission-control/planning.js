@@ -1,7 +1,7 @@
 import { setText } from "./dom.js";
 
 
-const STATUS = { draft: "Bozza", confirmed: "Confermato", published: "Pubblicato" };
+const STATUS = { draft: "Bozza", generated: "Bozza", partially_assigned: "In completamento", critical: "In completamento", ready: "Pronto", confirmed: "Confermato", published: "Pubblicato" };
 
 
 export function renderPlanning(view) {

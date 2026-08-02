@@ -593,5 +593,11 @@ export function initPlanningWorkspace() {
     "keydown",
     handleLegacyKeydown,
   );
-  loadConflictReview();
+  const diagnostics = refs.root.querySelector(".planning-advanced-diagnostics");
+  diagnostics?.addEventListener("toggle", () => {
+    if (diagnostics.open && !diagnostics.dataset.loaded) {
+      diagnostics.dataset.loaded = "true";
+      loadConflictReview();
+    }
+  });
 }

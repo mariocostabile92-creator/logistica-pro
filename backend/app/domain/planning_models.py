@@ -12,6 +12,7 @@ class PlanningStatus(str, Enum):
     READY = "ready"
     CRITICAL = "critical"
     CONFIRMED = "confirmed"
+    PUBLISHED = "published"
     SUPERSEDED = "superseded"
 
 

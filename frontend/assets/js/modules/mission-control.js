@@ -1,5 +1,5 @@
-import { loadMissionControlSummary } from "./mission-control-api.js?v=2";
-import { renderMissionControl } from "./mission-control/renderer.js";
+import { loadMissionControlSummary } from "./mission-control-api.js?v=4";
+import { renderMissionControl } from "./mission-control/renderer.js?v=2";
 import {
   applyMissionControlEvent,
   createMissionControlState,
