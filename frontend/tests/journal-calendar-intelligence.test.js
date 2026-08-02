@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { archiveCalendar } from "../assets/js/modules/journal-archive/calendar.js";
-import { calendarDaySummary } from "../assets/js/modules/journal-archive/calendar-day-summary.js";
+import {
+  calendarDaySummary, calendarDensity,
+} from "../assets/js/modules/journal-archive/calendar-day-summary.js";
 import { dailyTimeline } from "../assets/js/modules/journal-archive/daily-timeline.js";
 import {
   liveCardPriority, liveKpiDefinitions, statusPresentation,
@@ -16,11 +18,14 @@ test("calendar day communicates total anomalies incomplete media and accessible 
     date: "2026-08-02", day: 2, selectedDate: "2026-08-02", today: "2026-08-02",
     metrics: { total: 12, anomalies: 2, incomplete: 3, with_media: 8 },
   });
-  for (const value of ["12", "GDB", "2 anomalie", "3 incomplete", "8 media",
-    "has-anomalies", "has-incomplete", "active", "is-today", "aria-current=\"date\""]) {
+  for (const value of ["12", "GDB", "9 complete", "2 anomalie", "3 incomplete", "8 media",
+    "density-high", "has-anomalies", "has-incomplete", "active", "is-today", "aria-current=\"date\""]) {
     assert.match(html, new RegExp(value));
   }
-  assert.match(html, /aria-label="2 agosto 2026: 12 GDB, 2 anomalie, 3 incomplete, 8 con allegati"/);
+  assert.match(html, /aria-label="2 agosto 2026: 12 GDB, 9 complete, 3 incomplete, 2 anomalie, 8 con allegati"/);
+  assert.equal(calendarDensity(1), "low");
+  assert.equal(calendarDensity(4), "medium");
+  assert.equal(calendarDensity(9), "high");
 });
 
 test("calendar renders a complete accessible grid including disabled outside days", () => {
@@ -54,7 +59,7 @@ test("daily timeline preserves backend chronological order and exposes complete 
   ], "B");
   assert.ok(html.indexOf("Driver A") < html.indexOf("Driver B"));
   for (const value of ["06:50", "18:15", "Presa in carico", "Rientro", "Van",
-    "Shared link", "0 allegati", "Apri GDB", "aria-pressed=\"true\""]) {
+    "Shared link", "0 allegati", "Apri GDB", "gdb-timeline-node", "aria-pressed=\"true\""]) {
     assert.match(html, new RegExp(value));
   }
 });
@@ -75,4 +80,8 @@ test("timeline mode remains SPA state and export has only a future action slot",
   assert.doesNotMatch(archive, /location\.href|location\.reload|history\.pushState/);
   assert.match(css, /@media\(max-width:1000px\)/);
   assert.match(css, /@media\(max-width:600px\)/);
+  assert.match(css, /min-height:96px/);
+  assert.match(css, /min-height:82px/);
+  assert.match(css, /min-height:62px/);
+  assert.match(css, /density-high/);
 });

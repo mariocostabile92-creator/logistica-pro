@@ -6,7 +6,7 @@ import { journalLiveDetail } from "./journal-control-room/live-detail.js";
 import { setJournalWorkspaceView } from "./journal-control-room/navigation.js";
 import { wireJournalMediaFallback } from "./journal-control-room/media-section.js";
 import { journalControlRoomShell } from "./journal-control-room/renderer.js";
-import { mountJournalArchive } from "./journal-archive/index.js?v=2";
+import { mountJournalArchive } from "./journal-archive/index.js?v=3";
 import {
   journalControlRoomState as state, resetJournalControlRoomState,
 } from "./journal-control-room/state.js";
