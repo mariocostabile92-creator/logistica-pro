@@ -91,7 +91,7 @@ const WORKSPACE_PREPARERS = {
   },
   fleet: async () => {
     const [module, fleetSync] = await Promise.all([
-      import("./fleet-page.js?v=14"),
+      import("./fleet-page.js?v=15"),
       import("./fleet-sync.js"),
       loadWorkspaceStyles("fleet"),
     ]);

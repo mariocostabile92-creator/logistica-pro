@@ -41,6 +41,18 @@ function normalizeDecision(item, decision) {
   };
 }
 
+function normalizeCompletionDecision(decision, operationalDate) {
+  return {
+    ...decision,
+    vehicle_id: Number(decision.vehicle_id) || -1,
+    vehicle: decision.vehicle || "Intera flotta",
+    record_id: null,
+    record_label: null,
+    date: operationalDate,
+    status: decision.priority === "alta" ? "Richiede attenzione" : "Da monitorare",
+  };
+}
+
 export async function loadFleetVisionExcellence(options = {}) {
   const [visionResult, journalResult] = await Promise.allSettled([
     getFleetVision(options.vehicle_id ? { vehicle_id: options.vehicle_id } : {}),
@@ -50,18 +62,27 @@ export async function loadFleetVisionExcellence(options = {}) {
   const vision = visionResult.value;
   const journalItems = journalResult.status === "fulfilled"
     ? (journalResult.value.items || []) : [];
+  const completion = journalResult.status === "fulfilled"
+    ? journalResult.value.completion : null;
+  const missing = completion?.missing || [];
   const attachments = await Promise.all(
     vision.items.map(item => listVehicleAttachments(item.id).catch(() => [])),
   );
   const items = vision.items.map((item, index) => ({
     ...item,
     attachments: attachments[index],
-    journal_incomplete: journalItems.filter(session =>
-      Number(session.vehicle_id || session.asset_id) === Number(item.id)
-      && incompleteJournal.has(session.status)).length,
+    journal_incomplete: missing.filter(entry =>
+      Number(entry.vehicle_id) === Number(item.id)).length
+      + journalItems.filter(session =>
+        Number(session.vehicle_id || session.asset_id) === Number(item.id)
+        && incompleteJournal.has(session.status)
+        && !missing.some(entry => entry.procedure_id === session.id)).length,
   }));
-  const criticalities = items.flatMap(item =>
-    (item.decisions || []).map(decision => normalizeDecision(item, decision)))
+  const completionCriticalities = (completion?.decisions || []).map(decision =>
+    normalizeCompletionDecision(decision, completion.operational_date));
+  const criticalities = [...items.flatMap(item =>
+    (item.decisions || []).map(decision => normalizeDecision(item, decision))),
+  ...completionCriticalities]
     .sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority]);
   const grouped = Object.values(criticalities.reduce((acc, decision) => {
     acc[decision.vehicle_id] ||= {
@@ -80,7 +101,7 @@ export async function loadFleetVisionExcellence(options = {}) {
       ...vision.summary,
       expiring_insurance: items.filter(item =>
         item.insurance?.status === "in_scadenza").length,
-      journal_incomplete: items.reduce((sum, item) => sum + item.journal_incomplete, 0),
+      journal_incomplete: missing.length,
     },
     partialErrors: journalResult.status === "rejected" ? ["Driver Journal"] : [],
   };

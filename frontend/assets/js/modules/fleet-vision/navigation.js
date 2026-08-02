@@ -6,7 +6,13 @@ const eventMap = {
   rentals: ["rental:open", "rentalId"],
 };
 
-export function openFleetVisionSource(module, vehicleId, recordId) {
+export function openFleetVisionSource(module, vehicleId, recordId, driverId = null) {
+  if (module === "workforce") {
+    document.dispatchEvent(new CustomEvent("workspace:navigate", {
+      detail: { view: "workforce", driverId },
+    }));
+    return;
+  }
   if (module === "brain") {
     document.dispatchEvent(new CustomEvent("fleet:vehicle-open", { detail: { assetId: vehicleId } }));
     window.setTimeout(() => {

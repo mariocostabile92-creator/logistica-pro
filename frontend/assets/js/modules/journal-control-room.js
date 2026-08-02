@@ -6,6 +6,7 @@ import { journalLiveDetail } from "./journal-control-room/live-detail.js";
 import { setJournalWorkspaceView } from "./journal-control-room/navigation.js";
 import { wireJournalMediaFallback } from "./journal-control-room/media-section.js";
 import { journalControlRoomShell } from "./journal-control-room/renderer.js";
+import { journalCompletionSection } from "./journal-control-room/completion-section.js";
 import { mountJournalArchive } from "./journal-archive/index.js?v=3";
 import {
   journalControlRoomState as state, resetJournalControlRoomState,
@@ -17,6 +18,7 @@ async function load(preferredId = state.selected?.id) {
   root().setAttribute("aria-busy", "true");
   const params = { vehicle_id: state.vehicle_id };
   if (state.live_filter !== "all") params.live_status = state.live_filter;
+  if (state.completion_filter !== "all") params.completion_filter = state.completion_filter;
   for (const [selector, key] of [["[data-jcr-search]", "search"], ["[data-jcr-operation]", "operation_type"], ["[data-jcr-anomaly]", "anomaly"]]) {
     const value = root().querySelector(selector)?.value;
     if (value) params[key] = value;
@@ -32,6 +34,9 @@ async function load(preferredId = state.selected?.id) {
   }
   state.items = response.items;
   state.selected = state.items.find(item => item.id === preferredId) || state.items[0] || null;
+  root().querySelector("[data-jcr-completion]").innerHTML = journalCompletionSection(
+    response.completion, state.completion_filter, response.context?.operational_date,
+  );
   root().querySelector("[data-jcr-list]").innerHTML = state.items.length
     ? state.items.map(item => journalLiveCard(item, state.selected?.id)).join("")
     : `<div class="view-state"><strong>Nessuna procedura per la giornata operativa.</strong><p>Per consultare lo storico apri Archivio GDB.</p></div>`;
@@ -75,8 +80,37 @@ document.addEventListener("click", async event => {
   const liveFilter = event.target.closest("[data-jcr-live-filter]")?.dataset.jcrLiveFilter;
   if (liveFilter && root() && !root().hidden) {
     state.live_filter = liveFilter;
+    state.completion_filter = "all";
     state.selected = null;
     await load();
+  }
+  const completionFilter = event.target.closest("[data-jcr-completion-filter]")?.dataset.jcrCompletionFilter;
+  if (completionFilter && root() && !root().hidden) {
+    state.completion_filter = completionFilter;
+    state.live_filter = "all";
+    state.selected = null;
+    await load();
+  }
+  if (event.target.closest("[data-jcr-completion-reset]") && root() && !root().hidden) {
+    state.completion_filter = "all";
+    state.selected = null;
+    await load();
+  }
+  const missingDriver = event.target.closest("[data-jcr-missing-driver]")?.dataset.jcrMissingDriver;
+  if (missingDriver) {
+    document.dispatchEvent(new CustomEvent("workspace:navigate", {
+      detail: { view: "workforce", driverId: missingDriver },
+    }));
+  }
+  const missingGdb = event.target.closest("[data-jcr-missing-gdb]");
+  if (missingGdb) {
+    if (missingGdb.dataset.jcrMissingGdb) {
+      await load(missingGdb.dataset.jcrMissingGdb);
+    } else {
+      const sharedLink = root().querySelector(".jcr-shared-card a[target='_blank']");
+      if (sharedLink) sharedLink.click();
+      else root().querySelector("[data-jcr-shared-access]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   }
   const entry = event.target.closest("[data-jcr-id]");
   if (entry && !entry.closest("[data-jcr-archive]")) load(entry.dataset.jcrId);

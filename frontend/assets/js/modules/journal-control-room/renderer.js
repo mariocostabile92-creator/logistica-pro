@@ -7,6 +7,7 @@ export function journalControlRoomShell() {
     <p class="jcr-operational-context" data-jcr-context></p></div></header>
     <aside class="jcr-archive-hint">Per consultare le giornate precedenti apri <strong>Archivio GDB</strong>.</aside>
     <section class="jcr-shared-access" data-jcr-shared-access aria-label="Accesso condiviso Driver Journal"></section>
+    <div data-jcr-completion></div>
     <section class="jcr-kpis" aria-label="Riepilogo monitoraggio live">${journalLiveKpis()}</section>
     <section class="jcr-filter-panel" aria-label="Filtri Journal Control Room">
       <div class="jcr-tools"><label>Ricerca<input data-jcr-search type="search" placeholder="Driver, targa, data, note"></label>

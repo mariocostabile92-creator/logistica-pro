@@ -50,5 +50,6 @@ document.addEventListener("click", event => {
     source.dataset.fveSource,
     Number(source.dataset.fveVehicleId) || fleetVisionState.data.items[0]?.id,
     source.dataset.fveRecordId || null,
+    source.dataset.fveDriverId || null,
   );
 });

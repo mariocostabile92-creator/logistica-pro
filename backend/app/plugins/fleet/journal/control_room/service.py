@@ -5,6 +5,8 @@ from zoneinfo import ZoneInfo
 from app.auth import repository as auth_repository
 from app.plugins.fleet.journal.domain.operational_day import operational_date
 from app.plugins.fleet.journal.control_room import repository
+from app.plugins.fleet.journal.control_room.completion_presenter import apply_filter as apply_completion_filter
+from app.plugins.fleet.journal.control_room.completion_service import journal_completion
 
 
 def _iso_date(value: str) -> date:
@@ -167,13 +169,18 @@ def list_procedures(
         )]
     current_items = [item for item in items if
                      date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == today]
+    completion = journal_completion(context, current_items)
     items = [item for item in items if _matches(item, filters, today)]
+    items, completion = apply_completion_filter(
+        items, completion, filters.get("completion_filter")
+    )
     return {
         "items": items,
         "total": len(items),
         "context": context,
+        "completion": completion,
         "summary": {
-            "expected_drivers": len(current_items),
+            "expected_drivers": completion["drivers_expected"],
             "not_started": sum(item["status"] == "generated" for item in current_items),
             "in_progress_live": sum(
                 item["status"] in {"opened", "in_progress"} for item in current_items

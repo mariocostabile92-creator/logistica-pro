@@ -24,6 +24,7 @@
 .fve2-origin{font-size:.8rem;color:#4d5a56;font-weight:700}.fve2-level{font-size:.74rem;font-weight:800;text-transform:uppercase;color:#26332f;border:1px solid var(--border-strong);border-radius:999px;background:var(--surface);padding:.2rem .45rem}
 .fve2-criticality dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem}.fve2-criticality dt{font-size:.76rem;color:#4d5a56;font-weight:700}.fve2-criticality dd{margin:.1rem 0 0;overflow-wrap:anywhere;font-weight:700}
 .fve2-criticality .quiet{justify-self:start;border:1px solid var(--accent);background:var(--surface);color:var(--accent-dark);font-weight:800}.fve2-criticality .quiet:hover{background:var(--surface-strong);color:#0d584f}
+.fve2-criticality-actions{display:flex;flex-wrap:wrap;gap:.45rem;min-width:0}
 .fve2-operations>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}.fve2-operations article{display:flex;align-items:center;justify-content:space-between;gap:.8rem;border:1px solid var(--border-strong);border-radius:10px;padding:.8rem;background:var(--surface-subtle);color:#1d2624}
 .fve2-operations article>div{display:grid;gap:.22rem}.fve2-operations h4{margin:0;color:#14201d;font-size:1rem}.fve2-operation-status{font-weight:800;color:#26332f}.fve2-operations small{color:#4d5a56;font-size:.8rem}
 .fve2-open-action{min-height:38px;border:1px solid var(--accent);background:var(--surface);color:var(--accent-dark);padding:0 .8rem}.fve2-open-action:hover{background:var(--surface-strong);color:#0d584f}

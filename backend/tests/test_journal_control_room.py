@@ -198,7 +198,8 @@ def test_live_summary_exposes_expected_not_started_and_objective_late_state():
     item = next(entry for entry in payload["items"] if entry["id"] == response.json()["id"])
     assert item["status"] == "generated"
     assert item["is_late"] is True
-    assert payload["summary"]["expected_drivers"] == 1
+    assert payload["summary"]["expected_drivers"] == 0
+    assert payload["completion"]["planning_id"] is None
     assert payload["summary"]["not_started"] == 1
     assert payload["summary"]["late"] == 1
     filtered = client.get(CONTROL, params={"live_status": "late"}).json()

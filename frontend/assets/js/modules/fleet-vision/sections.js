@@ -31,6 +31,9 @@ export function snapshotSection(summary) {
 }
 
 function criticalityCard(item) {
+  const actions = item.actions?.length ? item.actions : [{
+    module: item.module, label: directActionLabel(item),
+  }];
   return `<article class="fve2-criticality priority-${item.priority}">
     <header><div><span class="fve2-origin">Origine · ${escapeHtml(item.origin || domainLabel[item.module] || item.module)}</span>
       <h5>${escapeHtml(item.title)}</h5></div><span class="fve2-level">${escapeHtml(priorityLabel[item.priority])}</span></header>
@@ -38,9 +41,10 @@ function criticalityCard(item) {
       <div><dt>Data</dt><dd>${escapeHtml(dateLabel(item.date))}</dd></div>
       <div><dt>Stato</dt><dd>${escapeHtml(item.status)}</dd></div></dl>
     <p><strong>Perché?</strong> ${escapeHtml(item.description)}</p>
-    <button type="button" class="quiet" data-fve-source="${escapeHtml(item.module)}"
-      data-fve-vehicle-id="${item.vehicle_id}" data-fve-record-id="${item.record_id || ""}">
-      ${escapeHtml(directActionLabel(item))}</button>
+    <div class="fve2-criticality-actions">${actions.map(action => `<button type="button" class="quiet"
+      data-fve-source="${escapeHtml(action.module)}" data-fve-vehicle-id="${item.vehicle_id}"
+      data-fve-record-id="${item.record_id || ""}" data-fve-driver-id="${escapeHtml(item.driver_id || "")}">
+      ${escapeHtml(action.label)}</button>`).join("")}</div>
   </article>`;
 }
 
