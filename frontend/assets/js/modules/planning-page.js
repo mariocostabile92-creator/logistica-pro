@@ -4,7 +4,7 @@ import {
   getPlanning,
   patchPlanningAssignment,
   recalculatePlanning,
-} from "../api.js";
+} from "../api.js?v=5";
 import { state } from "../state.js";
 import {
   byId,

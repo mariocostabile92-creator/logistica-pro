@@ -5,7 +5,7 @@ import {
   listFleetAssets,
   saveFleetAssetProfile,
   updateFleetAsset,
-} from "../api.js";
+} from "../api.js?v=5";
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import {
@@ -40,43 +40,43 @@ function loadFleetModule(name, loader) {
 
 
 async function showDamageWorkspace(options) {
-  const module = await loadFleetModule("damage", () => import("./damage-workspace.js?v=5"));
+  const module = await loadFleetModule("damage", () => import("./damage-workspace.js?v=6"));
   return module.showDamageWorkspace(options);
 }
 
 
 async function showMaintenanceWorkspace(options) {
-  const module = await loadFleetModule("maintenance", () => import("./maintenance-workspace.js?v=3"));
+  const module = await loadFleetModule("maintenance", () => import("./maintenance-workspace.js?v=4"));
   return module.showMaintenanceWorkspace(options);
 }
 
 
 async function showDocumentsWorkspace(options) {
-  const module = await loadFleetModule("documents", () => import("./documents-workspace.js?v=2"));
+  const module = await loadFleetModule("documents", () => import("./documents-workspace.js?v=3"));
   return module.showDocumentsWorkspace(options);
 }
 
 
 async function showFranchiseWorkspace(options) {
-  const module = await loadFleetModule("franchises", () => import("./franchise-workspace.js?v=1"));
+  const module = await loadFleetModule("franchises", () => import("./franchise-workspace.js?v=2"));
   return module.showFranchiseWorkspace(options);
 }
 
 
 async function showInsuranceWorkspace(options) {
-  const module = await loadFleetModule("insurance", () => import("./insurance-workspace.js?v=2"));
+  const module = await loadFleetModule("insurance", () => import("./insurance-workspace.js?v=3"));
   return module.showInsuranceWorkspace(options);
 }
 
 
 async function showRentalWorkspace(options) {
-  const module = await loadFleetModule("rentals", () => import("./rental-workspace.js?v=2"));
+  const module = await loadFleetModule("rentals", () => import("./rental-workspace.js?v=3"));
   return module.showRentalWorkspace(options);
 }
 
 
 async function showJournalControlRoom(options) {
-  const module = await loadFleetModule("journal", () => import("./journal-control-room.js?v=8"));
+  const module = await loadFleetModule("journal", () => import("./journal-control-room.js?v=9"));
   return module.showJournalControlRoom(options);
 }
 
@@ -90,7 +90,7 @@ async function showFleetVisionWorkspace(options) {
 async function openOperationalStatusControl(options) {
   const module = await loadFleetModule(
     "operational-status",
-    () => import("./operational-status-control.js"),
+    () => import("./operational-status-control.js?v=1"),
   );
   return module.openOperationalStatusControl(options);
 }
@@ -176,7 +176,7 @@ async function showAsset(assetId) {
   byId("fleetDossierState").textContent = "Caricamento scheda mezzo";
   byId("fleetDossierContent").hidden = true;
   const [loader, modelBuilder, renderer, timeline, navigation, attachments] = await Promise.all([
-    loadFleetModule("dossier-loader", () => import("./vehicle-dossier/loader.js")),
+    loadFleetModule("dossier-loader", () => import("./vehicle-dossier/loader.js?v=1")),
     loadFleetModule("dossier-model", () => import("./vehicle-dossier/model.js")),
     loadFleetModule("dossier-renderer", () => import("./vehicle-dossier/renderer.js")),
     loadFleetModule("dossier-timeline", () => import("./vehicle-dossier/timeline.js")),

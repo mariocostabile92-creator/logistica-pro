@@ -2,7 +2,7 @@ import {
   downloadPlanningCsv,
   getDemoWorkspaceStatus,
   loadDemoWorkspace,
-} from "../api.js";
+} from "../api.js?v=5";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import {
   isExpectedApiError,

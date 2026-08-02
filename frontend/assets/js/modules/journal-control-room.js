@@ -1,4 +1,4 @@
-import { deleteJournalMedia, listJournalControlRoom } from "../api.js";
+import { deleteJournalMedia, listJournalControlRoom } from "../api.js?v=5";
 import { escapeHtml } from "../utils/dom.js";
 import { mountJournalSharedAccess } from "./journal-shared-access.js?v=2";
 import { journalLiveCard } from "./journal-control-room/live-overview.js";

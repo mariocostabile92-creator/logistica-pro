@@ -7,7 +7,7 @@ import {
   listWorkforceMembers,
   saveWorkforceDayStatus,
   updateWorkforceMember,
-} from "../api.js?v=4";
+} from "../api.js?v=5";
 import {
   byId,
   renderViewState,

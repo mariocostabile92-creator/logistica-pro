@@ -2,6 +2,14 @@ import { logout, session } from "./api.js";
 import { renderSessionControl } from "./components.js";
 import { setSession } from "./state.js";
 
+let sessionRedirecting = false;
+
+function redirectToLogin() {
+  if (sessionRedirecting) return;
+  sessionRedirecting = true;
+  location.replace("/app/login.html");
+}
+
 export async function requireAdministrativeSession() {
   try {
     const payload = await session();
@@ -13,7 +21,7 @@ export async function requireAdministrativeSession() {
     return payload.user;
   } catch (error) {
     setSession(null);
-    if (error.status === 401) location.replace("/app/login.html");
+    if (error.status === 401) redirectToLogin();
     throw error;
   }
 }
@@ -24,3 +32,5 @@ document.addEventListener("click", async event => {
   setSession(null);
   location.replace("/app/login.html");
 });
+
+document.addEventListener("auth:expired", redirectToLogin);

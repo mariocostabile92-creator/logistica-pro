@@ -17,6 +17,9 @@ let refreshQueued = false;
 function update(event) {
   state = applyMissionControlEvent(state, event);
   renderMissionControl(deriveMissionControlView(state));
+  if (event.type === "summary-loaded") {
+    document.body.dataset.homeUsefulMs = String(Math.round(performance.now()));
+  }
 }
 
 

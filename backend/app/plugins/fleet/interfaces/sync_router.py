@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.domain.core_language.models import ResourceAvailability
-from app.importers.excel_reader import validate_upload
+from app.importers.excel_reader import read_validated_upload
 from app.importers.workbook_profiler.errors import (
     WorkbookImportBlockedError,
     WorkbookProfileError,
@@ -64,8 +64,7 @@ def _selected_rows(raw: str) -> list[int]:
 
 
 async def _content(file: UploadFile) -> tuple[bytes, str]:
-    content = await file.read()
-    validate_upload(file, content)
+    content = await read_validated_upload(file)
     return content, file.filename or "fleet-registry-upload"
 
 

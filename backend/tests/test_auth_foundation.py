@@ -58,6 +58,13 @@ def test_invalid_credentials_and_expired_session_return_401_not_500():
             ((datetime.now(UTC) - timedelta(minutes=1)).isoformat(),),
         )
     assert client.get("/api/fleet/vision", headers=ENFORCE).status_code == 401
+    expired = client.get("/api/auth/session", headers=ENFORCE)
+    assert expired.status_code == 401
+    assert "operations_session=" in expired.headers["set-cookie"]
+    with db_session() as conn:
+        assert conn.execute(
+            "SELECT revoked_at FROM auth_sessions ORDER BY created_at DESC LIMIT 1"
+        ).fetchone()["revoked_at"] is not None
 
 
 def test_roles_exist_and_viewer_write_is_forbidden():
@@ -100,3 +107,46 @@ def test_driver_journal_and_shared_link_validation_remain_public():
     assert client.get(
         "/api/plugins/fleet/v1/journal/shared-access/unknown", headers=ENFORCE,
     ).status_code in {404, 410}
+
+
+def test_admin_journal_routes_are_not_exposed_by_the_public_driver_prefix():
+    assert client.get(
+        "/api/plugins/fleet/v1/journal/vehicles/1/history", headers=ENFORCE,
+    ).status_code == 401
+    assert client.get(
+        "/api/plugins/fleet/v1/journal/not-a-public-route", headers=ENFORCE,
+    ).status_code == 401
+    assert client.get("/api/fleet/journal-integrity", headers=ENFORCE).status_code == 401
+
+
+def test_backend_permissions_separate_planning_and_fleet_mutations():
+    dispatcher_password = user("dispatcher@example.test", Role.DISPATCHER)
+    assert sign_in("dispatcher@example.test", dispatcher_password).status_code == 200
+    assert client.post(
+        "/api/fleet/damage-cases", json={}, headers=ENFORCE,
+    ).status_code == 403
+    assert client.post(
+        "/api/planning-operations/forecast", json={}, headers=ENFORCE,
+    ).status_code != 403
+
+    fleet_password = user("fleet.permissions@example.test", Role.FLEET_MANAGER)
+    assert sign_in("fleet.permissions@example.test", fleet_password).status_code == 200
+    assert client.post(
+        "/api/planning-operations/forecast", json={}, headers=ENFORCE,
+    ).status_code == 403
+    assert client.post(
+        "/api/fleet/damage-cases", json={}, headers=ENFORCE,
+    ).status_code != 403
+
+
+def test_pwa_and_unhashed_modules_require_revalidation():
+    password = user("pwa@example.test", Role.ADMINISTRATOR)
+    assert sign_in("pwa@example.test", password).status_code == 200
+    for path in (
+        "/app/", "/app/sw.js", "/app/manifest.webmanifest",
+        "/app/assets/js/app.js", "/app/assets/css/base.css",
+    ):
+        response = client.get(path, headers=ENFORCE)
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-cache"
+    assert client.get("/app/sw.js", headers=ENFORCE).text.count("operations-offline-v1") == 1

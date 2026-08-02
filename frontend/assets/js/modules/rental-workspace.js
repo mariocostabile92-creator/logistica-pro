@@ -1,6 +1,6 @@
 import {
   createRental, getRental, listFleetAssets, listRentals, updateRental,
-} from "../api.js";
+} from "../api.js?v=5";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js";
 import { createAttachmentDraft } from "./attachments/draft-uploader.js";

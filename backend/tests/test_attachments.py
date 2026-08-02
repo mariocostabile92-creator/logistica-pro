@@ -94,6 +94,45 @@ def test_rejects_unsupported_or_spoofed_files():
     assert unknown_entity.status_code == 422
 
 
+def test_upload_rejects_oversize_before_buffering_more_than_the_limit(monkeypatch):
+    vehicle = create_vehicle("ATT-LIMIT-01", "AL001AA")
+    monkeypatch.setattr("app.attachments.router.MAX_UPLOAD_SIZE_BYTES", 16)
+    response = upload("vehicle", vehicle["id"], "large.pdf", PDF + b"x" * 32, "application/pdf")
+    assert response.status_code == 413
+    assert response.json() == {"detail": "Il file supera la dimensione massima consentita."}
+
+
+def test_upload_normalizes_path_traversal_filename():
+    vehicle = create_vehicle("ATT-PATH-01", "AX001AA")
+    item = upload("vehicle", vehicle["id"], "../../segreto.png", PNG, "image/png").json()
+    try:
+        assert item["original_filename"] == "segreto.png"
+        assert ".." not in item["storage_path"]
+        assert "\\" not in item["storage_path"]
+    finally:
+        client.delete(f"{BASE}/{item['id']}")
+
+
+def test_scoped_reads_never_claim_unowned_legacy_attachment():
+    vehicle = create_vehicle("ATT-LEGACY-01", "AG001AA")
+    with db_session() as conn:
+        conn.execute(
+            """INSERT INTO attachments
+            (id,entity_type,entity_id,original_filename,stored_filename,mime_type,size,
+             created_at,created_by,storage_path,preview_available,notes,organization_id)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NULL)""",
+            ("legacy-unowned", "vehicle", vehicle["id"], "legacy.png", "legacy.png",
+             "image/png", len(PNG), "2026-08-02T00:00:00+00:00", "legacy",
+             "legacy/legacy.png", 1, None),
+        )
+    assert client.get(BASE, params={
+        "entity_type": "vehicle", "entity_id": vehicle["id"],
+    }).json() == {"items": [], "count": 0}
+    with db_session() as conn:
+        row = conn.execute("SELECT organization_id FROM attachments WHERE id='legacy-unowned'").fetchone()
+        assert row["organization_id"] is None
+
+
 def test_damage_and_maintenance_files_use_relative_atomic_persistent_keys():
     vehicle = create_vehicle("ATT-PERSIST-01", "AP001AA")
     damage = client.post("/api/fleet/damage-cases", json={
@@ -157,3 +196,43 @@ def test_attachment_organization_isolation_and_missing_file_message():
     finally:
         with db_session() as conn:
             conn.execute("DELETE FROM attachments WHERE id=?", (item["id"],))
+
+
+def test_cross_organization_attachment_read_download_and_delete_are_denied():
+    vehicle = create_vehicle("ATT-ORG-GUARD-01", "OG001AA")
+    item = service.upload(
+        "vehicle", vehicle["id"], "protetta.png", "image/png", PNG,
+        "user-org-a", None, "organization-a",
+    )
+    try:
+        assert service.list_items("vehicle", vehicle["id"], "organization-b") == {
+            "items": [], "count": 0,
+        }
+        for operation in (
+            lambda: service.resolve_file(item["id"], "organization-b"),
+            lambda: service.delete(item["id"], "organization-b", "user-org-b"),
+        ):
+            try:
+                operation()
+                raise AssertionError("L'operazione cross-organization deve essere negata")
+            except service.AttachmentError as exc:
+                assert exc.status_code == 404
+        assert service.get(item["id"], "organization-a")["id"] == item["id"]
+    finally:
+        try:
+            service.delete(item["id"], "organization-a", "user-org-a")
+        except service.AttachmentError:
+            pass
+
+
+def test_document_foreign_id_cannot_receive_an_attachment_from_another_organization():
+    vehicle = create_vehicle("ATT-ORG-DOC-01", "OD001AA")
+    document = create_document(vehicle["id"])
+    try:
+        service.upload(
+            "document", document["id"], "estranea.pdf", "application/pdf", PDF,
+            "user-org-b", None, "organization-b",
+        )
+        raise AssertionError("Un documento di un'altra organizzazione non deve essere scrivibile")
+    except service.AttachmentError as exc:
+        assert exc.status_code == 404

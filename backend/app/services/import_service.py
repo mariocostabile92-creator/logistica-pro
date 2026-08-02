@@ -1,7 +1,7 @@
 from fastapi import UploadFile
 
 from app.importers.adapter_contract import TabularImportAdapter
-from app.importers.excel_reader import validate_upload
+from app.importers.excel_reader import read_validated_upload
 from app.importers.fleet_importer import normalize_fleet_rows
 from app.importers.planning_importer import normalize_planning_rows
 from app.importers.workbook_profiler.errors import (
@@ -26,8 +26,7 @@ async def preview_file(
     header_row: int | None = None,
     manual_mapping: dict[str, str | None] | None = None,
 ) -> ImportPreviewResponse:
-    content = await file.read()
-    validate_upload(file, content)
+    content = await read_validated_upload(file)
     profile = build_workbook_profile(
         content=content,
         filename=file.filename or "upload",
@@ -129,8 +128,7 @@ async def import_file(
     manual_mapping: dict[str, str | None] | None = None,
 ) -> ImportResultResponse:
     ensure_real_data_write_allowed()
-    content = await file.read()
-    validate_upload(file, content)
+    content = await read_validated_upload(file)
     return import_tabular_content(
         content=content,
         original_filename=file.filename or "upload",

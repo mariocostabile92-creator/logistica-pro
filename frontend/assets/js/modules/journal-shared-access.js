@@ -2,7 +2,7 @@ import {
   createJournalSharedAccess,
   getActiveJournalSharedAccess,
   revokeJournalSharedAccess,
-} from "../api.js";
+} from "../api.js?v=5";
 import { escapeHtml } from "../utils/dom.js";
 
 

@@ -1,4 +1,4 @@
-import { getWorkspaceStatus } from "../api.js";
+import { getWorkspaceStatus } from "../api.js?v=5";
 import { byId, setMessage } from "../utils/dom.js";
 import {
   reportUnexpectedError,

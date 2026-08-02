@@ -2,7 +2,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Respon
 
 from app.auth.permission_service import has_permission
 
-from app.importers.excel_reader import validate_upload
+from app.importers.excel_reader import read_validated_upload
 from app.importers.workbook_profiler.errors import WorkbookProfileError
 from app.plugins.workforce.application import workforce_service
 from app.plugins.workforce.application import consecutivity_policy, override_service
@@ -46,8 +46,7 @@ router = APIRouter(
 
 
 async def _read_upload(file: UploadFile) -> tuple[bytes, str]:
-    content = await file.read()
-    validate_upload(file, content)
+    content = await read_validated_upload(file)
     return content, file.filename or "workforce-upload"
 
 

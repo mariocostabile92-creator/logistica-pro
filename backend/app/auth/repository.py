@@ -129,7 +129,13 @@ def user_by_session(token: str) -> tuple[AuthenticatedUser, str] | None:
             WHERE s.token_hash=? AND s.revoked_at IS NULL AND u.active=1""",
             (token_hash,),
         ).fetchone()
-        if not row or datetime.fromisoformat(row["expires_at"]) <= datetime.now(UTC):
+        if not row:
+            return None
+        if datetime.fromisoformat(row["expires_at"]) <= datetime.now(UTC):
+            conn.execute(
+                "UPDATE auth_sessions SET revoked_at=? WHERE id=? AND revoked_at IS NULL",
+                (now_iso(), row["session_id"]),
+            )
             return None
         conn.execute("UPDATE auth_sessions SET last_seen_at=? WHERE id=?", (now_iso(), row["session_id"]))
     return AuthenticatedUser(

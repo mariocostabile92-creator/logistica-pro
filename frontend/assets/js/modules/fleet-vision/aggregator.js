@@ -1,4 +1,4 @@
-import { getFleetVision, listJournalControlRoom } from "../../api.js";
+import { getFleetVision, listJournalControlRoom } from "../../api.js?v=5";
 import { listVehicleAttachments } from "../attachments/api.js";
 
 const priorityRank = { alta: 0, media: 1, bassa: 2 };

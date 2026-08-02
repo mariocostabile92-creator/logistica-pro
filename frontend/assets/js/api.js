@@ -7,6 +7,9 @@ const API_BASE = globalThis.OPERATIONS_API_URL || "";
 async function parseResponse(response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401) {
+      document.dispatchEvent(new CustomEvent("auth:expired"));
+    }
     const detail = data.detail;
     const message = typeof detail === "object"
       ? detail.message || detail.code

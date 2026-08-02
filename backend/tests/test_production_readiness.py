@@ -155,7 +155,9 @@ def test_frontend_is_served_same_origin_with_security_headers():
     asset = client.get("/app/assets/js/api.js")
     assert asset.status_code == 200
     assert "127.0.0.1:8000" not in asset.text
-    assert asset.headers["cache-control"] == "public, max-age=300"
+    # Source modules are not content-hashed, so they must be revalidated on
+    # every release to prevent mixed JS/CSS versions after a deploy.
+    assert asset.headers["cache-control"] == "no-cache"
 
 
 def test_root_redirects_to_frontend_and_public_entrypoints_remain_available():

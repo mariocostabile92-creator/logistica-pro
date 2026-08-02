@@ -1,6 +1,7 @@
 import { planningOperationsApi } from "./api.js";
 import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js";
 import { filteredRoutes, planningOperationsState as state } from "./state.js";
+import { userMessageForError } from "../../utils/errors.js";
 
 let root;
 async function load() {
@@ -11,7 +12,11 @@ async function load() {
     const diagnostics = root.closest(".planning-workspace-shell")?.querySelector(".planning-advanced-diagnostics");
     if (diagnostics) diagnostics.hidden = !state.payload.permissions.diagnostics;
   } catch (error) {
-    root.innerHTML = `<section class="planning-ops-error"><h2>Planning non disponibile</h2><p>${error?.message || "Riprova."}</p><button type="button" data-planning-retry>Riprova</button></section>`;
+    root.innerHTML = '<section class="planning-ops-error" role="alert"><h2>Planning non disponibile</h2><p data-planning-error></p><button type="button" data-planning-retry>Riprova</button></section>';
+    root.querySelector("[data-planning-error]").textContent = userMessageForError(
+      error,
+      "Non è stato possibile caricare il Planning. Riprova.",
+    );
   } finally {
     root.setAttribute("aria-busy", "false");
   }

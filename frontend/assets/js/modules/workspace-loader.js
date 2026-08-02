@@ -7,7 +7,7 @@ let loaderInitialized = false;
 
 const STYLES = {
   operations: [
-    "planning-workspace.css?v=4",
+    "planning-workspace.css?v=5",
     "onboarding.css",
     "fleet-sync.css",
     "excel-import.css",
@@ -25,6 +25,18 @@ const STYLES = {
     "fleet-sync.css",
     "damage-workspace.css?v=2",
     "maintenance-workspace.css?v=2",
+    "documents-workspace.css?v=1",
+    "franchise-workspace.css?v=1",
+    "insurance-workspace.css?v=1",
+    "rental-workspace.css?v=1",
+    "journal-control-room.css?v=6",
+    "journal-completion.css?v=1",
+    "journal-archive.css?v=3",
+    "journal-calendar-intelligence.css?v=4",
+    "journal-shared-access.css?v=2",
+    "attachments.css?v=2",
+    "vehicle-dossier.css?v=1",
+    "fleet-vision-workspace.css?v=3",
   ],
   settings: ["settings.css", "organization-settings.css?v=1"],
   demo: ["demo-workspace.css"],
@@ -76,7 +88,7 @@ const WORKSPACE_PREPARERS = {
       import("./operations-dashboard.js"),
       import("./planning-page.js"),
       import("./onboarding.js"),
-      import("./planning-workspace/index.js"),
+      import("./planning-workspace/index.js?v=2"),
       loadWorkspaceStyles("operations"),
     ]);
     return () => {
@@ -90,14 +102,14 @@ const WORKSPACE_PREPARERS = {
   },
   workforce: async () => {
     const [module] = await Promise.all([
-      import("./workforce-page.js"),
+      import("./workforce-page.js?v=6"),
       loadWorkspaceStyles("workforce"),
     ]);
     return module.initWorkforcePage;
   },
   fleet: async () => {
     const [module, fleetSync] = await Promise.all([
-      import("./fleet-page.js?v=20"),
+      import("./fleet-page.js?v=21"),
       import("./fleet-sync.js"),
       loadWorkspaceStyles("fleet"),
     ]);

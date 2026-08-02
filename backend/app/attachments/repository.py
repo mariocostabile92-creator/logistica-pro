@@ -100,12 +100,6 @@ def create(values: dict) -> dict:
 
 def get(attachment_id: str, organization_id: str | None = None) -> dict | None:
     with db_session() as conn:
-        if organization_id:
-            conn.execute(
-                "UPDATE attachments SET organization_id=? "
-                "WHERE id=? AND organization_id IS NULL",
-                (organization_id, attachment_id),
-            )
         row = conn.execute(
             "SELECT * FROM attachments WHERE id = ?"
             + (" AND organization_id = ?" if organization_id else ""),
@@ -122,11 +116,6 @@ def document_organization_id(document_id: int) -> str | None:
 
 def list_for_entity(entity_type: str, entity_id: int, organization_id: str) -> list[dict]:
     with db_session() as conn:
-        conn.execute(
-            "UPDATE attachments SET organization_id=? "
-            "WHERE entity_type=? AND entity_id=? AND organization_id IS NULL",
-            (organization_id, entity_type, entity_id),
-        )
         rows = conn.execute(
             """
             SELECT * FROM attachments
@@ -140,27 +129,6 @@ def list_for_entity(entity_type: str, entity_id: int, organization_id: str) -> l
 
 def list_for_vehicle(vehicle_id: int, organization_id: str) -> list[dict]:
     with db_session() as conn:
-        # Preserve pre-organization attachments when an existing installation is
-        # upgraded: the first scoped vehicle read claims only records that
-        # already belong to this vehicle's aggregate.
-        conn.execute(
-            """
-            UPDATE attachments SET organization_id = ?
-            WHERE organization_id IS NULL AND (
-                  (entity_type = 'vehicle' AND entity_id = ?)
-               OR (entity_type = 'document' AND entity_id IN
-                    (SELECT id FROM fleet_vehicle_documents WHERE vehicle_id = ?))
-               OR (entity_type = 'insurance' AND entity_id IN
-                    (SELECT id FROM fleet_insurance_policies WHERE vehicle_id = ?))
-               OR (entity_type = 'damage' AND entity_id IN
-                    (SELECT id FROM damage_cases WHERE vehicle_id = ?))
-               OR (entity_type = 'rental' AND entity_id IN
-                    (SELECT id FROM fleet_rentals WHERE vehicle_id = ?))
-               OR (entity_type = 'maintenance' AND entity_id IN
-                    (SELECT id FROM fleet_maintenances WHERE vehicle_id = ?)))
-            """,
-            (organization_id, *((vehicle_id,) * 6)),
-        )
         rows = conn.execute(
             """
             SELECT * FROM attachments a

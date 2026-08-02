@@ -1,4 +1,4 @@
-import { getJournalArchiveDay, getJournalArchiveMonth } from "../../api.js";
+import { getJournalArchiveDay, getJournalArchiveMonth } from "../../api.js?v=5";
 import { escapeHtml } from "../../utils/dom.js";
 import {
   journalArchiveState as state, moveMonth, resetToOperationalToday,

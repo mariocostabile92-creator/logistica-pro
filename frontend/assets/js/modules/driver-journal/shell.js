@@ -1,4 +1,4 @@
-import { getHealth } from "../../api.js";
+import { getHealth } from "../../api.js?v=5";
 
 
 async function checkJournalHealth() {

@@ -19,3 +19,10 @@ def validate_upload(file: UploadFile, content: bytes) -> None:
         raise HTTPException(status_code=413, detail="File troppo grande.")
     if not content:
         raise HTTPException(status_code=400, detail="File vuoto.")
+
+
+async def read_validated_upload(file: UploadFile) -> bytes:
+    """Read at most one byte beyond the accepted limit before validation."""
+    content = await file.read(MAX_UPLOAD_SIZE_BYTES + 1)
+    validate_upload(file, content)
+    return content

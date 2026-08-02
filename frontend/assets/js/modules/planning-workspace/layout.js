@@ -11,7 +11,7 @@ import {
   createStatusCard,
 } from "./components.js";
 import { element } from "./utils.js";
-import { initPlanningOperations } from "../planning-operations/index.js";
+import { initPlanningOperations } from "../planning-operations/index.js?v=2";
 
 
 export function createPlanningWorkspaceLayout(root) {

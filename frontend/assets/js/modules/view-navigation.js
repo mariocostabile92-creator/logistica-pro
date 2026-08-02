@@ -106,6 +106,7 @@ function revealTarget(targetId) {
 
 
 async function navigate(view, targetId = null) {
+  const startedAt = globalThis.performance?.now?.() || 0;
   const version = ++navigationVersion;
   const selectedView = normalizedWorkspace(view);
   attachWorkspaceSections(selectedView);
@@ -113,6 +114,10 @@ async function navigate(view, targetId = null) {
   if (version !== navigationVersion) return;
   showWorkspace(selectedView);
   announceWorkspace(selectedView);
+  if (startedAt) {
+    document.body.dataset.navigationReadyMs = String(Math.round(performance.now() - startedAt));
+    document.body.dataset.navigationReadyView = selectedView;
+  }
   if (targetId) requestAnimationFrame(() => revealTarget(targetId));
 }
 

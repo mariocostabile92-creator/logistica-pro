@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 
 from app.auth import repository, service
 from app.auth.permission_service import permissions_for
@@ -75,7 +76,12 @@ def login(payload: LoginRequest, response: Response):
 def session(request: Request):
     user = getattr(request.state, "user", None)
     if not user:
-        raise HTTPException(status_code=401, detail="Autenticazione richiesta.")
+        response = JSONResponse(
+            status_code=401,
+            content={"detail": "Autenticazione richiesta."},
+        )
+        response.delete_cookie(COOKIE_NAME, path="/", samesite="strict")
+        return response
     return {"user": _user_payload(user)}
 
 

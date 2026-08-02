@@ -1,6 +1,7 @@
 from fastapi import APIRouter, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from app.auth.permission_service import has_permission
+from app.core.config import MAX_UPLOAD_SIZE_BYTES
 
 from app.attachments import service
 router = APIRouter(prefix="/api/attachments", tags=["attachments"])
@@ -23,7 +24,9 @@ async def upload_attachment(
     user = request.state.user
     if not has_permission(user.role, "attachments:write"):
         raise HTTPException(status_code=403, detail="Permesso upload allegati insufficiente.")
-    content = await file.read()
+    content = await file.read(MAX_UPLOAD_SIZE_BYTES + 1)
+    if len(content) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="Il file supera la dimensione massima consentita.")
     return guarded(
         service.upload, entity_type, entity_id, file.filename or "allegato",
         file.content_type or "", content, user.id, notes, user.organization_id,

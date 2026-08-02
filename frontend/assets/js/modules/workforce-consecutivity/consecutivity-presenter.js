@@ -2,7 +2,7 @@ import {
   createWorkforceConsecutivityOverride,
   getWorkforceConsecutivityPolicy,
   updateWorkforceConsecutivityPolicy,
-} from "../../api.js";
+} from "../../api.js?v=5";
 
 let snapshot = null;
 

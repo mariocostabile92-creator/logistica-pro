@@ -73,12 +73,13 @@ test("Fleet Vision replaces the skeleton with a contextual retry state on API fa
   assert.match(module, /reportUnexpectedError\("fleet\.vision", error\)/);
   assert.match(module, /data-fve-retry/);
   assert.match(module, /Vista operativa non disponibile/);
-  assert.match(module, /fleet-vision\/aggregator\.js\?v=3/);
+  assert.match(module, /fleet-vision\/aggregator\.js\?v=4/);
   assert.match(css, /\.fve2-failure/);
   assert.match(sections, /Nessuna criticità operativa rilevata/);
-  assert.match(page, /fleet-vision-workspace\.css\?v=3/);
-  assert.match(page, /app\.js\?v=31/);
-  assert.match(app, /workspace-loader\.js\?v=23/);
-  assert.match(loader, /fleet-page\.js\?v=20/);
+  assert.doesNotMatch(page, /stylesheet[^>]+fleet-vision-workspace\.css/);
+  assert.match(loader, /fleet-vision-workspace\.css\?v=3/);
+  assert.match(page, /app\.js\?v=33/);
+  assert.match(app, /workspace-loader\.js\?v=24/);
+  assert.match(loader, /fleet-page\.js\?v=21/);
   assert.match(fleet, /fleet-vision-workspace\.js\?v=4/);
 });

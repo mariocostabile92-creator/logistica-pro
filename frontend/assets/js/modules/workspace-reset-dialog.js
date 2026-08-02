@@ -1,4 +1,4 @@
-import { resetWorkspace } from "../api.js";
+import { resetWorkspace } from "../api.js?v=5";
 import { byId, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 import {

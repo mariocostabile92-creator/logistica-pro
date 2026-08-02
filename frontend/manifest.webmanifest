@@ -1,0 +1,20 @@
+{
+  "id": "/app/",
+  "name": "Operations Engine",
+  "short_name": "Operations",
+  "description": "Workspace operativo per la gestione logistica.",
+  "lang": "it",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#173f35",
+  "icons": [
+    {
+      "src": "/app/assets/icons/operations-engine.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

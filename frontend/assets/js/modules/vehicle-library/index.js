@@ -1,4 +1,4 @@
-import { getFleetAsset, getFleetVehicleHistory, getHealth } from "../../api.js";
+import { getFleetAsset, getFleetVehicleHistory, getHealth } from "../../api.js?v=5";
 import { escapeHtml } from "../../utils/dom.js";
 import { mountOperationalDocumentHistory } from "./operational-documents.js";
 import { openOperationalStatusControl } from "../operational-status-control.js";

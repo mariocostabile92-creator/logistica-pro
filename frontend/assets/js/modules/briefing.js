@@ -1,7 +1,7 @@
 import {
   generateDailyBriefing,
   getLatestDailyBriefing,
-} from "../api.js";
+} from "../api.js?v=5";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 import { operationalCodeLabel } from "../utils/formatters.js";

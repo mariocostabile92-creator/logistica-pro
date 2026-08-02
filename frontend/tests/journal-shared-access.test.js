@@ -7,11 +7,11 @@ const file = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 
 test("Control Room exposes one shared GDB access component", async () => {
-  const [room, shared, api, page] = await Promise.all([
+  const [room, shared, api, loader] = await Promise.all([
     file("assets/js/modules/journal-control-room.js"),
     file("assets/js/modules/journal-shared-access.js"),
     file("assets/js/api.js"),
-    file("index.html"),
+    file("assets/js/modules/workspace-loader.js"),
   ]);
   assert.match(room, /mountJournalSharedAccess/);
   assert.match(room, /data-jcr-shared-access/);
@@ -27,7 +27,7 @@ test("Control Room exposes one shared GDB access component", async () => {
   assert.match(shared, /navigator\.clipboard\.writeText/);
   assert.match(api, /journal-control-room\/shared-access\/active/);
   assert.match(api, /journal-control-room\/shared-access/);
-  assert.match(page, /journal-shared-access\.css/);
+  assert.match(loader, /journal-shared-access\.css/);
   assert.doesNotMatch(shared, /<label>Driver|<label>Targa|procedure_type|scheduled_date/i);
 });
 

@@ -1,7 +1,7 @@
 import {
   archiveVehicleDocument, createVehicleDocument, getVehicleDocument,
   listFleetAssets, listVehicleDocuments, updateVehicleDocument,
-} from "../api.js";
+} from "../api.js?v=5";
 import { can } from "../auth/state.js";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js";

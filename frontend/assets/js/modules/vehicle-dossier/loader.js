@@ -9,7 +9,7 @@ import {
   listMaintenances,
   listRentals,
   listVehicleDocuments,
-} from "../../api.js";
+} from "../../api.js?v=5";
 import { listVehicleAttachments } from "../attachments/api.js";
 
 const sources = assetId => ({
@@ -42,4 +42,3 @@ export async function loadVehicleDossier(assetId) {
   }
   return { data, errors };
 }
-

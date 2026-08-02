@@ -1,4 +1,4 @@
-import { changeVehicleOperationalStatus } from "../api.js";
+import { changeVehicleOperationalStatus } from "../api.js?v=5";
 
 
 export const OPERATIONAL_STATUS_OPTIONS = Object.freeze([

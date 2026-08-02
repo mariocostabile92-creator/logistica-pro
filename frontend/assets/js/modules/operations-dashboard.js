@@ -1,4 +1,4 @@
-import { getOperationsDashboard } from "../api.js";
+import { getOperationsDashboard } from "../api.js?v=5";
 import { state } from "../state.js";
 import {
   byId,

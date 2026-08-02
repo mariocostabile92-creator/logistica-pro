@@ -1,4 +1,4 @@
-import { patchPlanningAssignment } from "../api.js";
+import { patchPlanningAssignment } from "../api.js?v=5";
 import { state } from "../state.js";
 import { byId, escapeHtml, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";

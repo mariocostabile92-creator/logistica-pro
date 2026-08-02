@@ -1,4 +1,4 @@
-import { downloadPlanningCsv } from "../api.js";
+import { downloadPlanningCsv } from "../api.js?v=5";
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";

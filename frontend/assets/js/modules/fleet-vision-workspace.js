@@ -1,4 +1,4 @@
-import { loadFleetVisionExcellence } from "./fleet-vision/aggregator.js?v=3";
+import { loadFleetVisionExcellence } from "./fleet-vision/aggregator.js?v=4";
 import {
   openFleetDeadlineSource, openFleetVisionSource,
 } from "./fleet-vision/navigation.js?v=3";

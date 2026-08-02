@@ -160,10 +160,15 @@ async def production_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
-    if request.url.path in {"/app", "/app/"}:
+    if (
+        request.url.path in {"/app", "/app/", "/app/sw.js", "/app/manifest.webmanifest"}
+        or (request.url.path.startswith("/app/") and request.url.path.endswith(".html"))
+    ):
         response.headers["Cache-Control"] = "no-cache"
     elif request.url.path.startswith("/app/assets/"):
-        response.headers["Cache-Control"] = "public, max-age=300"
+        # Modules import other modules without content hashes. Mandatory
+        # revalidation prevents a deploy from combining old JS with new CSS.
+        response.headers["Cache-Control"] = "no-cache"
     return response
 
 

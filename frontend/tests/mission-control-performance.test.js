@@ -96,7 +96,7 @@ test("non-visible workspaces are loaded dynamically instead of at startup", asyn
   ]);
   assert.doesNotMatch(app, /from "\.\/modules\/(fleet-page|workforce-page|planning-page)/);
   assert.match(loader, /import\("\.\/fleet-page\.js(?:\?v=\d+)?"\)/);
-  assert.match(loader, /import\("\.\/workforce-page\.js"\)/);
+  assert.match(loader, /import\("\.\/workforce-page\.js(?:\?v=\d+)?"\)/);
   assert.match(loader, /prepared\.has\(view\)/);
   assert.match(loader, /loadWorkspaceStyles/);
   assert.doesNotMatch(html, /href="\.\/assets\/css\/workforce\.css/);

@@ -6,7 +6,7 @@ import {
   patchPlanningConvocation,
   previewImport,
   transitionOperationalPlanning,
-} from "../../api.js";
+} from "../../api.js?v=5";
 
 export const planningOperationsApi = Object.freeze({
   load: getPlanningOperations,

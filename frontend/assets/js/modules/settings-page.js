@@ -1,4 +1,4 @@
-import { getCurrentConfiguration } from "../api.js";
+import { getCurrentConfiguration } from "../api.js?v=5";
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import {

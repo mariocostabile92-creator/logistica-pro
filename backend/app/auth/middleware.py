@@ -1,4 +1,5 @@
 import hmac
+import re
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -17,6 +18,38 @@ PUBLIC_EXACT = {
 }
 
 
+PUBLIC_JOURNAL_ROUTES = (
+    ({"GET", "HEAD"}, re.compile(r"^/api/plugins/fleet/v1/journal/(configuration|assets)$")),
+    ({"POST"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions(?:/shared)?$")),
+    ({"GET", "HEAD"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+$")),
+    ({"POST"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+/(progress|warnings|media|complete)$")),
+    ({"DELETE"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+/media/[^/]+$")),
+    ({"GET", "HEAD"}, re.compile(r"^/api/plugins/fleet/v1/journal/(movements/[^/]+/receipt|media/[^/]+|shared-access/[^/]+)$")),
+)
+
+
+def _public_journal_path(request: Request) -> bool:
+    return any(
+        request.method in methods and pattern.fullmatch(request.url.path)
+        for methods, pattern in PUBLIC_JOURNAL_ROUTES
+    )
+
+
+def _required_permission(path: str, method: str) -> str:
+    reading = method in {"GET", "HEAD", "OPTIONS"}
+    if path.startswith("/api/attachments"):
+        return "attachments:read" if reading else "attachments:write"
+    if path.startswith("/api/fleet/journal") or path.startswith("/api/plugins/fleet/v1/journal"):
+        return "journal:read" if reading else "journal:write"
+    if path.startswith("/api/fleet") or path.startswith("/api/plugins/fleet/v1"):
+        return "fleet:read" if reading else "fleet:write"
+    if path.startswith("/api/plugins/workforce"):
+        return "workforce:read" if reading else "workforce:write"
+    if path.startswith(("/api/planning", "/api/operations", "/api/imports")):
+        return "planning:read" if reading else "planning:write"
+    return "admin:read" if reading else "admin:write"
+
+
 def public_path(request: Request) -> bool:
     path = request.url.path
     if path in PUBLIC_EXACT or path.startswith("/app/assets/"):
@@ -28,7 +61,7 @@ def public_path(request: Request) -> bool:
     if path.startswith("/app/journal/"):
         return True
     if path.startswith("/api/plugins/fleet/v1/journal/"):
-        return not path.startswith("/api/plugins/fleet/v1/journal/vehicles/")
+        return _public_journal_path(request)
     return False
 
 
@@ -78,7 +111,7 @@ async def enforce_authentication(request: Request, call_next):
             return RedirectResponse(target, status_code=303)
         return await call_next(request)
     user, session_id = resolved
-    required = "admin:read" if request.method in {"GET", "HEAD", "OPTIONS"} else "admin:write"
+    required = _required_permission(path, request.method)
     if path.startswith("/api/") and not has_permission(user.role, required):
         return JSONResponse(status_code=403, content={"detail": "Permesso insufficiente."})
     response = await call_next(request)

@@ -105,6 +105,13 @@ def post_import(content: bytes, dataset_type: str, **data):
     )
 
 
+def test_tabular_uploads_stop_reading_after_the_configured_limit(monkeypatch):
+    monkeypatch.setattr("app.importers.excel_reader.MAX_UPLOAD_SIZE_BYTES", 32)
+    response = post_preview(simple_daily_workbook(), "planning")
+    assert response.status_code == 413
+    assert response.json() == {"detail": "File troppo grande."}
+
+
 def test_simple_daily_workbook_is_classified_and_explained():
     result = profile(simple_daily_workbook(), "planning")
 

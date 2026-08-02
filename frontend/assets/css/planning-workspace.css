@@ -69,6 +69,10 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 }
 
 @media (max-width: 640px) {
+  body[data-active-workspace="operations"] .app-header .workspace-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
   .planning-ops-hero { padding: 18px; }
   .planning-ops-hero dl, .planning-publication dl { grid-template-columns: 1fr 1fr; }
   .planning-ops-kpis { grid-template-columns: 1fr 1fr; }

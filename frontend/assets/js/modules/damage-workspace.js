@@ -7,7 +7,7 @@ import {
   listDamageCandidates,
   listDamageCases,
   updateDamageCase,
-} from "../api.js";
+} from "../api.js?v=5";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js?v=2";
 import { createAttachmentDraft } from "./attachments/draft-uploader.js";

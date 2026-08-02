@@ -1,4 +1,4 @@
-import { listFleetAssets } from "../api.js";
+import { listFleetAssets } from "../api.js?v=5";
 import { byId } from "../utils/dom.js";
 import { reportUnexpectedError } from "../utils/errors.js";
 import {

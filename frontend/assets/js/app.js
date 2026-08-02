@@ -1,14 +1,20 @@
-import { getHealth } from "./api.js";
+import { getHealth } from "./api.js?v=5";
 import { initBriefing } from "./modules/briefing.js";
-import { initMissionControl } from "./modules/mission-control.js?v=5";
-import { initViewNavigation } from "./modules/view-navigation.js?v=2";
+import { initMissionControl } from "./modules/mission-control.js?v=6";
+import { initViewNavigation } from "./modules/view-navigation.js?v=3";
 import {
   ensureWorkspaceInitialized,
   initWorkspaceLoader,
-} from "./modules/workspace-loader.js?v=23";
+} from "./modules/workspace-loader.js?v=24";
 import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js";
 import { byId } from "./utils/dom.js";
-import { requireAdministrativeSession } from "./auth/session.js?v=1";
+import { requireAdministrativeSession } from "./auth/session.js?v=2";
+import {
+  failAdministrativeBootstrap,
+  revealAdministrativeApp,
+  startAdministrativeBootstrap,
+} from "./modules/app-bootstrap.js?v=1";
+import { registerServiceWorker } from "./modules/pwa.js?v=1";
 
 
 async function checkHealth() {
@@ -25,13 +31,20 @@ async function checkHealth() {
 
 
 async function bootstrapAdministrativeApp() {
-  await requireAdministrativeSession();
-  initMissionControl();
-  initBriefing();
-  initWorkspaceLifecycle();
-  initWorkspaceLoader();
-  initViewNavigation({ loadWorkspace: ensureWorkspaceInitialized });
-  checkHealth();
+  startAdministrativeBootstrap();
+  try {
+    await requireAdministrativeSession();
+    initMissionControl();
+    initBriefing();
+    initWorkspaceLifecycle();
+    initWorkspaceLoader();
+    initViewNavigation({ loadWorkspace: ensureWorkspaceInitialized });
+    await revealAdministrativeApp();
+    checkHealth();
+    registerServiceWorker();
+  } catch (error) {
+    if (error?.status !== 401) failAdministrativeBootstrap();
+  }
 }
 
 bootstrapAdministrativeApp();

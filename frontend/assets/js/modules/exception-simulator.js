@@ -1,4 +1,4 @@
-import { applyPlanningEvent, simulatePlanningEvent } from "../api.js";
+import { applyPlanningEvent, simulatePlanningEvent } from "../api.js?v=5";
 import { changeDiff } from "../components/change-diff.js";
 import { state } from "../state.js";
 import { byId, setLoading, setMessage } from "../utils/dom.js";

@@ -13,7 +13,7 @@ import {
   updatePlanningDraftMetadata,
   validatePlanningConfirmation,
   validatePlanningPublication,
-} from "../../api.js";
+} from "../../api.js?v=5";
 import {
   createPlanningConfirmationLoader,
   normalizePlanningConfirmationReport,
@@ -26,7 +26,7 @@ import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
 } from "./conflicts.js";
-import { createPlanningWorkspaceLayout } from "./layout.js";
+import { createPlanningWorkspaceLayout } from "./layout.js?v=2";
 import {
   readinessEventType,
 } from "./readiness.js";
