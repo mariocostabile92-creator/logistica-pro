@@ -36,7 +36,7 @@ const deadlineCriticalityLabel = {
 
 export function upcomingDeadlinesSection(categories) {
   return `<section class="fve2-section fve2-deadlines" aria-labelledby="fveDeadlinesTitle">
-    <header><p class="eyebrow">PrioritÃ  temporali</p><h3 id="fveDeadlinesTitle">Prossime scadenze</h3>
+    <header><p class="eyebrow">Priorità temporali</p><h3 id="fveDeadlinesTitle">Prossime scadenze</h3>
       <p>Le urgenze sono aggregate dalle fonti operative. Il dettaglio resta nel workspace di origine.</p></header>
     <div>${categories.map(item => {
       const nearest = item.nearest;
@@ -44,8 +44,8 @@ export function upcomingDeadlinesSection(categories) {
       return `<article class="fve2-deadline-card criticality-${escapeHtml(item.criticality)}">
         <header><div><span>${escapeHtml(item.label)}</span><strong>${item.count}</strong></div>
           <span class="fve2-deadline-level">${escapeHtml(deadlineCriticalityLabel[item.criticality])}</span></header>
-        <dl><div><dt>PiÃ¹ urgente</dt><dd>${escapeHtml(nearest?.title || "Nessuna scadenza entro 30 giorni")}</dd></div>
-          <div><dt>Mezzo</dt><dd>${escapeHtml(vehicle || "â€”")}</dd></div>
+        <dl><div><dt>Più urgente</dt><dd>${escapeHtml(nearest?.title || "Nessuna scadenza entro 30 giorni")}</dd></div>
+          <div><dt>Mezzo</dt><dd>${escapeHtml(vehicle || "—")}</dd></div>
           <div><dt>Prossima data</dt><dd>${escapeHtml(dateLabel(nearest?.due_date))}</dd></div></dl>
         <button type="button" class="fve2-deadline-action" data-fve-deadline-source="${escapeHtml(item.module)}"
           data-fve-deadline-ids="${item.source_ids.join(",")}">Apri ${escapeHtml(item.label)}</button>

@@ -30,6 +30,7 @@ let assets = [];
 let selectedId = null;
 let vehicleFilter = null;
 let insuranceDraft = null;
+let deadlineFilterIds = null;
 
 const root = () => document.getElementById("insuranceWorkspace");
 const date = (value) => value
@@ -133,7 +134,9 @@ async function renderDetail(policyId) {
 
 async function refresh(policyId = selectedId) {
   const response = await listInsurancePolicies({ vehicle_id: vehicleFilter });
-  policies = response.items;
+  policies = deadlineFilterIds
+    ? response.items.filter(item => deadlineFilterIds.has(Number(item.id)))
+    : response.items;
   renderSummary(response.summary);
   renderList();
   if (policyId && policies.some((item) => Number(item.id) === Number(policyId))) {
@@ -170,7 +173,9 @@ function shell() {
     </form></dialog>`;
 }
 
-export async function showInsuranceWorkspace({ policyId = null, vehicleId = null } = {}) {
+export async function showInsuranceWorkspace({
+  policyId = null, vehicleId = null, deadlineIds = null,
+} = {}) {
   const workspace = root();
   ["damageWorkspace", "maintenanceWorkspace", "documentsWorkspace",
     "franchiseWorkspace", "rentalWorkspace", "fleetWorkspaceHome", "fleetVehicleDossier"].forEach((id) => {
@@ -178,6 +183,8 @@ export async function showInsuranceWorkspace({ policyId = null, vehicleId = null
   });
   workspace.hidden = false;
   vehicleFilter = vehicleId ? Number(vehicleId) : null;
+  deadlineFilterIds = Array.isArray(deadlineIds)
+    ? new Set(deadlineIds.map(Number)) : null;
   if (!workspace.dataset.ready) {
     workspace.innerHTML = shell();
     workspace.dataset.ready = "true";

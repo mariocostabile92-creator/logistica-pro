@@ -57,3 +57,11 @@ test("upcoming deadlines cards remain responsive without a fixed canvas", async 
   assert.match(css, /@media\(max-width:600px\)[\s\S]*?\.fve2-deadlines>div/);
   assert.doesNotMatch(css, /width:(?:1440|768|390)px/);
 });
+
+test("Fleet Vision deadline copy is valid UTF-8 without mojibake", async () => {
+  const sections = await file("assets/js/modules/fleet-vision/sections.js");
+  assert.match(sections, /Priorità temporali/);
+  assert.match(sections, /Più urgente/);
+  assert.match(sections, /vehicle \|\| "—"/);
+  assert.doesNotMatch(sections, /â|Ã|Â|�/);
+});

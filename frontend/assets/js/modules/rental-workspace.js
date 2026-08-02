@@ -20,6 +20,7 @@ let selectedId = null;
 let vehicleFilter = null;
 let originPreset = null;
 let rentalDraft = null;
+let deadlineFilterIds = null;
 const root = () => document.getElementById("rentalWorkspace");
 const date = (value) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString("it-IT") : "Non indicata";
 
@@ -109,7 +110,9 @@ async function detail(id) {
 
 async function refresh(id = selectedId) {
   const response = await listRentals({ vehicle_id: vehicleFilter });
-  records = response.items;
+  records = deadlineFilterIds
+    ? response.items.filter(item => deadlineFilterIds.has(Number(item.id)))
+    : response.items;
   summary(response.summary);
   renderList();
   if (id && records.some((item) => Number(item.id) === Number(id))) await detail(id);
@@ -134,7 +137,9 @@ function shell() {
       <div class="editor-actions"><button type="button" class="secondary" data-close-rental>Annulla</button><button type="submit">Salva noleggio</button></div></form></dialog>`;
 }
 
-export async function showRentalWorkspace({ rentalId = null, vehicleId = null, preset = null } = {}) {
+export async function showRentalWorkspace({
+  rentalId = null, vehicleId = null, preset = null, deadlineIds = null,
+} = {}) {
   const workspace = root();
   ["damageWorkspace","maintenanceWorkspace","documentsWorkspace","franchiseWorkspace",
     "insuranceWorkspace","fleetWorkspaceHome","fleetVehicleDossier"].forEach((id) => {
@@ -142,6 +147,8 @@ export async function showRentalWorkspace({ rentalId = null, vehicleId = null, p
   });
   workspace.hidden = false;
   vehicleFilter = vehicleId ? Number(vehicleId) : null;
+  deadlineFilterIds = Array.isArray(deadlineIds)
+    ? new Set(deadlineIds.map(Number)) : null;
   originPreset = preset;
   if (!workspace.dataset.ready) {
     workspace.innerHTML = shell();

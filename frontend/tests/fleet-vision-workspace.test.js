@@ -15,7 +15,7 @@ test("Fleet Vision Engine is an active inline workspace", async () => {
   assert.doesNotMatch(module, /location\.reload|location\.href|history\.pushState/);
 });
 
-test("Fleet Vision has four concise sections and grouped explainable criticalities", async () => {
+test("Fleet Vision has concise sections and grouped explainable criticalities", async () => {
   const [module, sections, aggregator, navigation] = await Promise.all([
     file("assets/js/modules/fleet-vision-workspace.js"),
     file("assets/js/modules/fleet-vision/sections.js"),
@@ -26,7 +26,7 @@ test("Fleet Vision has four concise sections and grouped explainable criticaliti
     "Mezzi operativi", "Mezzi indisponibili", "Mezzi in manutenzione",
     "Pratiche danno aperte", "Documenti mancanti", "Contratti in scadenza",
     "Assicurazioni in scadenza", "Driver Journal incompleti", "Perché?",
-    "Apri Fleet Brain"]) assert.match(sections, new RegExp(text));
+    "Apri Fleet Brain", "Prossime scadenze"]) assert.match(sections, new RegExp(text));
   assert.match(navigation, /Apri record originale/);
   assert.match(sections, /data-fve-vehicle-toggle/);
   assert.match(sections, /slice\(0, 5\)/);
@@ -73,12 +73,12 @@ test("Fleet Vision replaces the skeleton with a contextual retry state on API fa
   assert.match(module, /reportUnexpectedError\("fleet\.vision", error\)/);
   assert.match(module, /data-fve-retry/);
   assert.match(module, /Vista operativa non disponibile/);
-  assert.match(module, /fleet-vision\/aggregator\.js\?v=2/);
+  assert.match(module, /fleet-vision\/aggregator\.js\?v=3/);
   assert.match(css, /\.fve2-failure/);
   assert.match(sections, /Nessuna criticità operativa rilevata/);
-  assert.match(page, /fleet-vision-workspace\.css\?v=2/);
-  assert.match(page, /app\.js\?v=19/);
-  assert.match(app, /workspace-loader\.js\?v=17/);
-  assert.match(loader, /fleet-page\.js\?v=17/);
-  assert.match(fleet, /fleet-vision-workspace\.js\?v=2/);
+  assert.match(page, /fleet-vision-workspace\.css\?v=3/);
+  assert.match(page, /app\.js\?v=21/);
+  assert.match(app, /workspace-loader\.js\?v=19/);
+  assert.match(loader, /fleet-page\.js\?v=19/);
+  assert.match(fleet, /fleet-vision-workspace\.js\?v=4/);
 });

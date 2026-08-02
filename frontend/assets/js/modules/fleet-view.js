@@ -393,7 +393,6 @@ export function renderVehicleDossier(
   franchises = [],
   insurance = [],
   rentals = [],
-  deadlines = [],
 ) {
   const { asset, kpis, movements } = payload;
   const damageCases = movements.filter((movement) => movement.damage_case_id);
@@ -468,14 +467,6 @@ export function renderVehicleDossier(
           <span>${escapeHtml(item.start_date)} → ${escapeHtml(item.end_date || item.expected_end_date)}</span>
         </button>`).join("")
     : '<div class="empty-state">Nessun noleggio registrato.</div>';
-  byId("fleetDossierDeadlines").innerHTML = deadlines.length
-    ? deadlines.map((item) => `
-        <article class="fleet-document-item">
-          <strong>${escapeHtml(item.deadline_type.replaceAll("_", " "))}</strong>
-          <span>${escapeHtml(item.module_label)} · ${escapeHtml(item.status)}</span>
-          <span>${escapeHtml(item.due_date)}</span>
-        </article>`).join("")
-    : '<div class="empty-state">Nessuna scadenza registrata.</div>';
   mountOperationalDocumentHistory({
     movements,
     list: byId("fleetDossierTimeline"),

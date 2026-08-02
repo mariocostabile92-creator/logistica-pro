@@ -39,6 +39,7 @@ const root = () => document.getElementById("maintenanceWorkspace");
 let records = [];
 let maintenanceDraft = null;
 let selectedId = null;
+let deadlineFilterIds = null;
 
 const date = (value) => {
   if (!value) return "Non registrata";
@@ -200,7 +201,9 @@ async function renderDetail(maintenanceId) {
 
 async function refresh(maintenanceId = selectedId) {
   const response = await listMaintenances();
-  records = response.items;
+  records = deadlineFilterIds
+    ? response.items.filter(item => deadlineFilterIds.has(Number(item.id)))
+    : response.items;
   renderSummary(response.summary);
   renderList();
   if (maintenanceId && records.some((item) => Number(item.id) === Number(maintenanceId))) {
@@ -248,7 +251,9 @@ function shell() {
     </dialog>`;
 }
 
-export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
+export async function showMaintenanceWorkspace({
+  maintenanceId = null, deadlineIds = null,
+} = {}) {
   const workspace = root();
   document.getElementById("damageWorkspace").hidden = true;
   document.getElementById("documentsWorkspace").hidden = true;
@@ -258,6 +263,8 @@ export async function showMaintenanceWorkspace({ maintenanceId = null } = {}) {
   document.getElementById("fleetWorkspaceHome").hidden = true;
   document.getElementById("fleetVehicleDossier").hidden = true;
   workspace.hidden = false;
+  deadlineFilterIds = Array.isArray(deadlineIds)
+    ? new Set(deadlineIds.map(Number)) : null;
   if (!workspace.dataset.ready) {
     workspace.innerHTML = shell();
     workspace.dataset.ready = "true";

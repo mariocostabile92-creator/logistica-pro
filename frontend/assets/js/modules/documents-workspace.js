@@ -19,6 +19,7 @@ let assetFilter = null;
 let assets = [];
 let documentDraft = null;
 let kpiMode = "";
+let deadlineFilterIds = null;
 
 const root = () => document.getElementById("documentsWorkspace");
 const formatDate = (value, emptyLabel = "Senza scadenza") => value
@@ -48,7 +49,8 @@ function renderSummary(summary) {
 
 function activeFilters() {
   return ["#documentsSearch", "#documentsVehicle", "#documentsStatus", "#documentsType", "#documentsFile", "#documentsExpiry"]
-    .some(selector => root().querySelector(selector)?.value) || Boolean(kpiMode);
+    .some(selector => root().querySelector(selector)?.value)
+    || Boolean(kpiMode) || Boolean(deadlineFilterIds);
 }
 
 function renderList() {
@@ -87,7 +89,10 @@ async function refresh(documentId = selectedId) {
       document_type: workspace.querySelector("#documentsType").value,
       has_file: fileMode === "" ? null : fileMode === "present",
     });
-    records = kpiMode === "assets_without_documents" ? [] : applyDocumentFilters(response.items, {
+    const sourceItems = deadlineFilterIds
+      ? response.items.filter(item => deadlineFilterIds.has(Number(item.id)))
+      : response.items;
+    records = kpiMode === "assets_without_documents" ? [] : applyDocumentFilters(sourceItems, {
       expiry: workspace.querySelector("#documentsExpiry").value,
       sort: workspace.querySelector("#documentsSort").value,
     });
@@ -193,11 +198,15 @@ function shell() {
     <dialog id="documentMetadataEditor" class="assignment-editor fleet-dialog" aria-labelledby="documentEditorTitle"><form><div class="editor-heading"><div><p class="eyebrow">Documenti flotta</p><h3 id="documentEditorTitle">Nuovo documento</h3></div><button type="button" class="icon-button" data-close-documents aria-label="Chiudi">&times;</button></div><div class="document-form" data-document-fields></div><div data-document-attachment-draft></div><p data-document-form-status role="status" aria-live="polite"></p><div class="editor-actions"><button type="button" class="secondary" data-close-documents>Annulla</button><button type="submit">Salva documento</button></div></form></dialog>`;
 }
 
-export async function showDocumentsWorkspace({ vehicleId = null, documentId = null } = {}) {
+export async function showDocumentsWorkspace({
+  vehicleId = null, documentId = null, deadlineIds = null,
+} = {}) {
   const workspace = root();
   ["damageWorkspace", "maintenanceWorkspace", "fleetWorkspaceHome", "fleetVehicleDossier", "franchiseWorkspace", "insuranceWorkspace", "rentalWorkspace"].forEach(id => { document.getElementById(id).hidden = true; });
   workspace.hidden = false;
   assetFilter = vehicleId ? Number(vehicleId) : null;
+  deadlineFilterIds = Array.isArray(deadlineIds)
+    ? new Set(deadlineIds.map(Number)) : null;
   if (!workspace.dataset.ready) {
     workspace.innerHTML = shell();
     workspace.dataset.ready = "true";

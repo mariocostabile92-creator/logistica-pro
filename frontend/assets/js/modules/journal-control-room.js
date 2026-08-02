@@ -57,7 +57,7 @@ async function load(preferredId = state.selected?.id) {
 }
 
 export async function showJournalControlRoom(options = {}) {
-  document.querySelectorAll("#fleetWorkspaceHome,#fleetVehicleDossier,#damageWorkspace,#maintenanceWorkspace,#documentsWorkspace,#franchiseWorkspace,#insuranceWorkspace,#rentalWorkspace,#deadlinesWorkspace")
+  document.querySelectorAll("#fleetWorkspaceHome,#fleetVehicleDossier,#damageWorkspace,#maintenanceWorkspace,#documentsWorkspace,#franchiseWorkspace,#insuranceWorkspace,#rentalWorkspace")
     .forEach(element => { element.hidden = true; });
   resetJournalControlRoomState(options.vehicle_id || null);
   root().hidden = false;
