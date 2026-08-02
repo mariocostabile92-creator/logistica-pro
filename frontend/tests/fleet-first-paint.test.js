@@ -5,16 +5,16 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const source = (path) => readFile(new URL(path, root), "utf8");
 
-test("Fleet is prepared while hidden and revealed only after initialization", async () => {
+test("Fleet reveals its definitive route skeleton before controller initialization", async () => {
   const navigation = await source("assets/js/modules/view-navigation.js");
   const navigate = navigation.slice(
     navigation.indexOf("async function navigate"),
     navigation.indexOf("function handleNavigationClick"),
   );
 
-  assert.match(navigate, /attachWorkspaceSections\(selectedView\);[\s\S]*await initializeWorkspace\(selectedView\);/);
-  assert.match(navigate, /await initializeWorkspace\(selectedView\);[\s\S]*showWorkspace\(selectedView\);[\s\S]*announceWorkspace\(selectedView\);/);
-  assert.doesNotMatch(navigate, /showWorkspace\(view\)[\s\S]*await initializeWorkspace/);
+  assert.match(navigate, /showWorkspace\(selectedView\);[\s\S]*await initializeWorkspace\(selectedView\);/);
+  assert.match(navigate, /await initializeWorkspace\(selectedView\);[\s\S]*announceWorkspace\(selectedView\);/);
+  assert.doesNotMatch(navigate, /await initializeWorkspace\(selectedView\);[\s\S]*showWorkspace\(selectedView\);/);
 });
 
 test("Fleet reveals its definitive skeleton without waiting for registry data", async () => {

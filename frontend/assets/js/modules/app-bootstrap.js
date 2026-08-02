@@ -1,16 +1,11 @@
 const startedAt = performance.now();
 
-function frame() {
-  return new Promise((resolve) => requestAnimationFrame(resolve));
-}
-
 export function startAdministrativeBootstrap() {
   document.body.dataset.appState = "bootstrapping";
   performance.mark?.("operations-bootstrap-start");
 }
 
-export async function revealAdministrativeApp() {
-  await frame();
+export function revealAdministrativeApp() {
   const header = document.querySelector(".app-header");
   const main = document.querySelector(".app-shell");
   const shell = document.getElementById("appBootstrapShell");

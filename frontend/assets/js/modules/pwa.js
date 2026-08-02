@@ -1,11 +1,17 @@
-const SERVICE_WORKER_URL = "/app/sw.js?v=1";
+const RETIREMENT_WORKER_URL = "/app/sw.js?v=3";
 
-export function registerServiceWorker() {
+export function retireLegacyServiceWorker() {
   if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
-  navigator.serviceWorker.register(SERVICE_WORKER_URL, {
-    scope: "/app/",
-    updateViaCache: "none",
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    const hasApplicationWorker = registrations.some(
+      (registration) => new URL(registration.scope).pathname.startsWith("/app/"),
+    );
+    if (!hasApplicationWorker) return null;
+    return navigator.serviceWorker.register(RETIREMENT_WORKER_URL, {
+      scope: "/app/",
+      updateViaCache: "none",
+    });
   }).catch(() => {
-    // PWA support is progressive: application navigation remains network-first.
+    // Retirement is best-effort and never blocks the administrative workspace.
   });
 }

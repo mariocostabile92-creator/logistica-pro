@@ -8,7 +8,6 @@ import {
   createSnapshotCache,
   isAbortError,
 } from "../utils/snapshot-cache.js";
-import { renderWorkspaceCard } from "./workspace-card.js";
 import { renderWorkspaceHeader } from "./workspace-header.js";
 import { initWorkspaceDialogs } from "./workspace-reset-dialog.js";
 import {
@@ -30,7 +29,6 @@ const workspaceSnapshotCache = createSnapshotCache({ ttlMs: 30000 });
 function renderWorkspace() {
   const view = deriveWorkspaceView(workspaceState);
   renderWorkspaceHeader(view);
-  renderWorkspaceCard(view);
 }
 
 

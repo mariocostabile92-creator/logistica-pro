@@ -8,7 +8,8 @@ let loaderInitialized = false;
 const STYLES = {
   operations: [
     "planning-workspace.css?v=5",
-    "onboarding.css",
+  ],
+  "operations-legacy": [
     "fleet-sync.css",
     "excel-import.css",
   ],
@@ -23,6 +24,8 @@ const STYLES = {
   fleet: [
     "fleet.css",
     "fleet-sync.css",
+  ],
+  "fleet-secondary": [
     "damage-workspace.css?v=2",
     "maintenance-workspace.css?v=2",
     "documents-workspace.css?v=1",
@@ -41,6 +44,37 @@ const STYLES = {
   settings: ["settings.css", "organization-settings.css?v=1"],
   demo: ["demo-workspace.css"],
 };
+
+let legacyOperationsPreparation = null;
+
+
+function prepareLegacyOperations() {
+  if (legacyOperationsPreparation) return legacyOperationsPreparation;
+  legacyOperationsPreparation = Promise.all([
+    import("./import-planning.js"),
+    import("./import-fleet.js"),
+    import("./operations-dashboard.js"),
+    import("./planning-page.js"),
+    loadWorkspaceStyles("operations-legacy"),
+  ]).then(([planningImport, fleetImport, operationsDashboard, planningPage]) => {
+    planningImport.initPlanningImport();
+    fleetImport.initFleetImport();
+    operationsDashboard.initOperationsDashboard();
+    planningPage.initPlanningPage();
+  });
+  return legacyOperationsPreparation;
+}
+
+
+function initializeLegacyOperationsTrigger() {
+  initializeOnce("operations-legacy-trigger", () => {
+    const disclosure = document.getElementById("legacyOperationsRegion");
+    if (!disclosure) return;
+    disclosure.addEventListener("toggle", () => {
+      if (disclosure.open) void prepareLegacyOperations();
+    });
+  });
+}
 
 
 function loadStylesheet(filename) {
@@ -75,29 +109,13 @@ function initializeOnce(key, callback) {
 
 const WORKSPACE_PREPARERS = {
   operations: async () => {
-    const [
-      planningImport,
-      fleetImport,
-      operationsDashboard,
-      planningPage,
-      onboarding,
-      planningWorkspace,
-    ] = await Promise.all([
-      import("./import-planning.js"),
-      import("./import-fleet.js"),
-      import("./operations-dashboard.js"),
-      import("./planning-page.js"),
-      import("./onboarding.js"),
+    const [planningWorkspace] = await Promise.all([
       import("./planning-workspace/index.js?v=2"),
       loadWorkspaceStyles("operations"),
     ]);
     return () => {
       planningWorkspace.initPlanningWorkspace();
-      planningImport.initPlanningImport();
-      fleetImport.initFleetImport();
-      operationsDashboard.initOperationsDashboard();
-      planningPage.initPlanningPage();
-      onboarding.initOnboarding();
+      initializeLegacyOperationsTrigger();
     };
   },
   workforce: async () => {
@@ -117,6 +135,9 @@ const WORKSPACE_PREPARERS = {
       module.initFleetPage();
       initializeOnce("fleet-sync", fleetSync.initFleetSync);
       module.prepareFleetFirstPaint();
+      const loadSecondaryStyles = () => void loadWorkspaceStyles("fleet-secondary");
+      if ("requestIdleCallback" in window) window.requestIdleCallback(loadSecondaryStyles);
+      else queueMicrotask(loadSecondaryStyles);
     };
   },
   settings: async () => {

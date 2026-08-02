@@ -82,7 +82,8 @@ test("Home and Operations use progressive disclosure", async () => {
 
   assert.match(navigation, /home: HOME_SECTIONS/);
   assert.match(navigation, /operations: OPERATIONS_SECTIONS/);
-  assert.match(layout, /data-home-state="setup"[\s\S]*#briefingSection/);
+  assert.match(html, /id="missionControlSection"/);
+  assert.doesNotMatch(html, /id="briefingSection"/);
   assert.match(layout, /data-planning-state="empty"[\s\S]*#dashboardSection/);
   assert.match(html, /id="importsDisclosure"[\s\S]*Gestisci dati di origine/);
 });

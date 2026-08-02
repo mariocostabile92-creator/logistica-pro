@@ -149,4 +149,9 @@ def test_pwa_and_unhashed_modules_require_revalidation():
         response = client.get(path, headers=ENFORCE)
         assert response.status_code == 200
         assert response.headers["cache-control"] == "no-cache"
-    assert client.get("/app/sw.js", headers=ENFORCE).text.count("operations-offline-v1") == 1
+    worker = client.get("/app/sw.js", headers=ENFORCE).text
+    assert "registration.unregister" in worker
+    assert 'addEventListener("fetch"' not in worker
+
+    versioned = client.get("/app/assets/js/app.js?v=37", headers=ENFORCE)
+    assert versioned.headers["cache-control"] == "public, max-age=31536000, immutable"

@@ -159,6 +159,12 @@ def test_frontend_is_served_same_origin_with_security_headers():
     # every release to prevent mixed JS/CSS versions after a deploy.
     assert asset.headers["cache-control"] == "no-cache"
 
+    versioned_asset = client.get("/app/assets/js/api.js?v=34")
+    assert versioned_asset.status_code == 200
+    assert versioned_asset.headers["cache-control"] == (
+        "public, max-age=31536000, immutable"
+    )
+
 
 def test_root_redirects_to_frontend_and_public_entrypoints_remain_available():
     response = client.get("/", follow_redirects=False)

@@ -65,12 +65,14 @@ test("badge PRODUCTION uses explicit text and production tone", () => {
 });
 
 
-test("workspace card contains source files counts and update fields", async () => {
-  const [html, source] = await Promise.all([
+test("workspace lifecycle updates the header without mounting a legacy Home card", async () => {
+  const [html, lifecycle, source] = await Promise.all([
     frontendFile("index.html"),
+    frontendFile("assets/js/modules/workspace-lifecycle.js"),
     frontendFile("assets/js/modules/workspace-card.js"),
   ]);
-  assert.match(html, /id="workspaceCurrentCard"/);
+  assert.doesNotMatch(html, /id="workspaceCurrentCard"/);
+  assert.doesNotMatch(lifecycle, /renderWorkspaceCard/);
   for (const label of [
     "File Planning",
     "Import Planning",

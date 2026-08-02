@@ -141,20 +141,10 @@ test("the onboarding closes after the first Planning is generated", () => {
 });
 
 
-test("the page contains the simplified sequential onboarding", async () => {
+test("the legacy onboarding is absent from the definitive Home payload", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
-  assert.match(html, /Benvenuto in Operations Engine/);
-  assert.match(
-    html,
-    /Completa i tre passaggi iniziali per preparare la prima giornata/,
-  );
-  assert.match(html, /Importa Planning turni/);
-  assert.match(html, /Importa Fleet/);
-  assert.match(html, /Genera il primo Planning/);
-  assert.match(html, /data-onboarding-action="planning"/);
-  assert.match(html, /data-onboarding-action="fleet"/);
-  assert.match(html, /data-onboarding-action="generate"/);
-  assert.doesNotMatch(html, /Checklist iniziale/);
+  assert.doesNotMatch(html, /id="onboardingSection"|data-onboarding-action=/);
+  assert.match(html, /id="missionControlSection"/);
   assert.match(html, />Learn</);
 });

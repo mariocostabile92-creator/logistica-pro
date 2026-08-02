@@ -126,8 +126,8 @@ test("Home navigation excludes technical source panels", async () => {
     new URL("../assets/js/modules/view-navigation.js", import.meta.url), "utf8",
   );
   assert.match(navigation, /const HOME_SECTIONS = \["missionControlSection"\]/);
-  assert.match(navigation, /HOME_SOURCE_SECTIONS = \[[\s\S]*?briefingSection/);
-  assert.match(navigation, /\.\.\.HOME_SOURCE_SECTIONS/);
+  assert.doesNotMatch(navigation, /HOME_SOURCE_SECTIONS|briefingSection|legacyMissionControlSection/);
+  assert.match(navigation, /showWorkspace\("home"\)[\s\S]*announceWorkspace\("home"\)/);
 });
 
 

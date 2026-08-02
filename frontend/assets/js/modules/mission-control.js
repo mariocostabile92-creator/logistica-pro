@@ -75,7 +75,7 @@ function handleNavigation(event) {
 
 
 export function initMissionControl() {
-  if (initialized) return;
+  if (initialized) return request || Promise.resolve();
   initialized = true;
   document.getElementById("missionControlSection").addEventListener("click", handleNavigation);
   document.addEventListener("briefing:changed", (event) => {
@@ -93,5 +93,5 @@ export function initMissionControl() {
     "journal:changed", "fleet:status-changed", "planning:changed",
   ].forEach((name) => document.addEventListener(name, scheduleRefresh));
   renderMissionControl(deriveMissionControlView(state));
-  refreshSummary();
+  return refreshSummary();
 }

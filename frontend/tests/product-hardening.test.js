@@ -5,25 +5,25 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const source = (path) => readFile(new URL(path, root), "utf8");
 
-test("administrative first paint is neutral and legacy sources are statically hidden", async () => {
+test("administrative first paint contains only the definitive Home surface", async () => {
   const html = await source("index.html");
   assert.match(html, /id="appBootstrapShell"/);
   assert.match(html, /<header class="app-header" hidden>/);
   assert.match(html, /<main class="app-shell" hidden>/);
   for (const id of [
     "legacyMissionControlSection", "workspaceCurrentSection",
-    "onboardingSection", "demoWorkspaceHomeSection",
+    "onboardingSection", "briefingSection", "demoWorkspaceHomeSection",
   ]) {
-    const section = html.slice(html.indexOf(`id="${id}"`), html.indexOf(">", html.indexOf(`id="${id}"`)));
-    assert.match(section, /\bhidden\b/);
+    assert.doesNotMatch(html, new RegExp(`id="${id}"`));
   }
+  assert.equal(html.match(/id="missionControlSection"/g)?.length, 1);
 });
 
 test("bootstrap reveals the initialized app atomically and provides a finite error state", async () => {
   const app = await source("assets/js/app.js");
   const bootstrap = await source("assets/js/modules/app-bootstrap.js");
-  assert.match(app, /await requireAdministrativeSession\(\)[\s\S]*initMissionControl\(\)[\s\S]*initViewNavigation[\s\S]*await revealAdministrativeApp\(\)/);
-  assert.match(bootstrap, /await frame\(\)/);
+  assert.match(app, /await requireAdministrativeSession\(\)[\s\S]*const homeReady = initMissionControl\(\)[\s\S]*initViewNavigation[\s\S]*revealAdministrativeApp\(\)/);
+  assert.doesNotMatch(bootstrap, /await frame\(\)|requestAnimationFrame/);
   assert.match(bootstrap, /header\.hidden = false[\s\S]*main\.hidden = false[\s\S]*shell\.hidden = true/);
   assert.match(bootstrap, /dataset\.appState = "failed"/);
   assert.doesNotMatch(bootstrap, /setTimeout|opacity/);
@@ -41,7 +41,7 @@ test("Fleet-only styles are lazy and never block the Home shell", async () => {
   }
 });
 
-test("PWA is network-first, caches only the offline page and versions its cache", async () => {
+test("retirement worker removes PWA caches and never intercepts application traffic", async () => {
   const [html, manifestText, worker, registration] = await Promise.all([
     source("index.html"), source("manifest.webmanifest"), source("sw.js"),
     source("assets/js/modules/pwa.js"),
@@ -50,11 +50,33 @@ test("PWA is network-first, caches only the offline page and versions its cache"
   assert.equal(manifest.start_url, "/app/");
   assert.equal(manifest.display, "standalone");
   assert.match(html, /rel="manifest"/);
-  assert.match(worker, /operations-offline-v1/);
-  assert.match(worker, /request\.mode !== "navigate"/);
-  assert.match(worker, /fetch\(request\)\.catch/);
-  assert.doesNotMatch(worker, /cache\.addAll|respondWith\(caches\.match\(request\)/);
+  assert.match(worker, /CACHE_PREFIX = "operations-"/);
+  assert.match(worker, /caches\.delete/);
+  assert.match(worker, /registration\.unregister/);
+  assert.doesNotMatch(worker, /addEventListener\("fetch"|respondWith|cache\.add/);
   assert.match(registration, /updateViaCache: "none"/);
+  assert.match(registration, /sw\.js\?v=3/);
+  assert.match(registration, /getRegistrations\(\)/);
+});
+
+test("bootstrap defers PWA retirement until Home data settles", async () => {
+  const app = await source("assets/js/app.js");
+  assert.match(app, /retirePwaAfterHome\(homeReady\)/);
+  assert.match(app, /Promise\.resolve\(homeReady\)\.finally/);
+  assert.doesNotMatch(app, /initBriefing|registerServiceWorker/);
+});
+
+test("workspace first paints await only their current primary surface", async () => {
+  const loader = await source("assets/js/modules/workspace-loader.js");
+  const operations = loader.slice(loader.indexOf("operations: async"), loader.indexOf("workforce: async"));
+  const fleet = loader.slice(loader.indexOf("fleet: async"), loader.indexOf("settings: async"));
+  assert.match(operations, /planning-workspace\/index\.js/);
+  assert.doesNotMatch(operations, /import-planning|import-fleet|operations-dashboard|onboarding/);
+  assert.match(loader, /operations-legacy-trigger/);
+  assert.match(loader, /if \(disclosure\.open\) void prepareLegacyOperations\(\)/);
+  assert.doesNotMatch(operations, /void prepareLegacyOperations\(\)/);
+  assert.match(fleet, /loadWorkspaceStyles\("fleet"\)/);
+  assert.match(fleet, /requestIdleCallback\(loadSecondaryStyles\)/);
 });
 
 test("source files do not contain common UTF-8 mojibake sequences", async () => {
@@ -91,6 +113,7 @@ test("bootstrap and SPA navigation expose measured shell and useful-content timi
   assert.match(bootstrap, /dataset\.shellReadyMs/);
   assert.match(navigation, /dataset\.navigationReadyMs/);
   assert.match(navigation, /dataset\.navigationReadyView/);
+  assert.match(navigation, /dataset\.navigationFeedbackMs/);
   assert.match(mission, /dataset\.homeUsefulMs/);
 });
 

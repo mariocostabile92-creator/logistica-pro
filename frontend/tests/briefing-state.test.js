@@ -165,28 +165,14 @@ test("unexpected failures produce a dedicated user state", () => {
 });
 
 
-test("page embeds the existing Briefing inside Mission Control", async () => {
+test("legacy Briefing surface is not embedded in the definitive Home", async () => {
   const html = await readFile(
     new URL("../index.html", import.meta.url),
     "utf8",
   );
 
-  assert.match(html, /Mission Control/);
-  assert.match(html, /Azioni richieste/);
-  assert.match(html, /Unità operativa/);
-  assert.match(html, /id="briefingTitle">Briefing/);
-  assert.match(
-    html,
-    /Il briefing sarà disponibile dopo la creazione del primo planning\./,
-  );
-  assert.match(html, /Importa dati/);
-  assert.match(html, /Carica demo/);
-  assert.match(html, /Criticità/);
-  assert.match(html, /Azioni consigliate/);
-  assert.match(html, /Vedi tutte le criticità/);
-  assert.match(html, /data-briefing-filter="critical"/);
-  assert.match(html, /data-briefing-filter="attention"/);
-  assert.match(html, /data-briefing-filter="information"/);
+  assert.match(html, /id="missionControlSection"/);
+  assert.doesNotMatch(html, /id="briefingSection"|id="briefingTitle"/);
   assert.match(html, /aria-live="polite"/);
 });
 

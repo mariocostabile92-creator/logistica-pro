@@ -2,11 +2,6 @@ import { byId } from "../utils/dom.js";
 
 
 const HOME_SECTIONS = ["missionControlSection"];
-const HOME_SOURCE_SECTIONS = [
-  "workspaceCurrentSection", "onboardingSection", "briefingSection",
-  "demoWorkspaceHomeSection", "legacyMissionControlSection",
-];
-
 const OPERATIONS_SECTIONS = [
   "planningWorkspaceSection",
   "legacyOperationsRegion",
@@ -66,7 +61,7 @@ function showWorkspace(view) {
   const activeSections = WORKSPACE_SECTIONS[selectedView];
   attachWorkspaceSections(selectedView);
   document.body.dataset.activeWorkspace = selectedView;
-  for (const sectionId of [...Object.values(WORKSPACE_SECTIONS).flat(), ...HOME_SOURCE_SECTIONS]) {
+  for (const sectionId of Object.values(WORKSPACE_SECTIONS).flat()) {
     const section = sectionNode(sectionId);
     if (section?.isConnected) section.hidden = !activeSections.includes(sectionId);
   }
@@ -109,10 +104,14 @@ async function navigate(view, targetId = null) {
   const startedAt = globalThis.performance?.now?.() || 0;
   const version = ++navigationVersion;
   const selectedView = normalizedWorkspace(view);
-  attachWorkspaceSections(selectedView);
+  showWorkspace(selectedView);
+  if (startedAt) {
+    document.body.dataset.navigationFeedbackMs = String(
+      Math.round(performance.now() - startedAt),
+    );
+  }
   await initializeWorkspace(selectedView);
   if (version !== navigationVersion) return;
-  showWorkspace(selectedView);
   announceWorkspace(selectedView);
   if (startedAt) {
     document.body.dataset.navigationReadyMs = String(Math.round(performance.now() - startedAt));
@@ -138,5 +137,6 @@ export function initViewNavigation({ loadWorkspace } = {}) {
   document.addEventListener("workspace:navigate", (event) => {
     navigate(event.detail.view, event.detail.targetId || null);
   });
-  navigate("home");
+  showWorkspace("home");
+  announceWorkspace("home");
 }

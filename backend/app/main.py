@@ -166,9 +166,13 @@ async def production_headers(request: Request, call_next):
     ):
         response.headers["Cache-Control"] = "no-cache"
     elif request.url.path.startswith("/app/assets/"):
-        # Modules import other modules without content hashes. Mandatory
-        # revalidation prevents a deploy from combining old JS with new CSS.
-        response.headers["Cache-Control"] = "no-cache"
+        if request.query_params.get("v"):
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable"
+            )
+        else:
+            # Unversioned transitive modules must revalidate on every release.
+            response.headers["Cache-Control"] = "no-cache"
     return response
 
 
