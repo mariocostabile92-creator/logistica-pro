@@ -17,13 +17,12 @@ RUN python -m pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY backend /app/backend
 COPY frontend /app/frontend
-COPY docker/entrypoint.sh /usr/local/bin/operations-entrypoint
+COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/operations-entrypoint
 
 RUN addgroup --system operations \
     && adduser --system --ingroup operations operations \
     && mkdir -p /app/backend/data \
-    && chown -R operations:operations /app \
-    && chmod 0755 /usr/local/bin/operations-entrypoint
+    && chown -R operations:operations /app
 
 WORKDIR /app/backend
 

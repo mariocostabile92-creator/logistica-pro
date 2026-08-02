@@ -28,7 +28,9 @@ Nel container l'entrypoint prepara esclusivamente `/data` oppure la root locale 
 9. Eseguire **Redeploy** dello stesso commit.
 10. Verificare nuovamente preview e download della stessa foto.
 
-Il comando Railway può continuare a sovrascrivere il `CMD`: l'`ENTRYPOINT` dell'immagine viene comunque eseguito dopo il mount del volume e prima del comando applicativo. Non configurare `RAILWAY_RUN_UID=0`.
+Il `startCommand` Railway richiama esplicitamente `/usr/local/bin/operations-entrypoint` e gli passa il comando Uvicorn come argomento. In questo modo la preparazione del volume non dipende dal modo in cui Railway applica l'override del comando dell'immagine. L'entrypoint è idempotente: l'invocazione root prepara la root e passa a `operations`; un'eventuale seconda invocazione come `operations` verifica la scrivibilità e avvia il comando senza tentare un nuovo `chown`. Non configurare `RAILWAY_RUN_UID=0`.
+
+Il file `docker/entrypoint.sh` è forzato a LF tramite `.gitattributes` e viene copiato nell'immagine con modalità eseguibile `0755`.
 
 Un filesystem del container senza volume non è persistente e non costituisce una configurazione valida per la produzione.
 

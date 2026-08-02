@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -75,8 +76,9 @@ def test_entrypoint_prepares_only_approved_roots_and_drops_privileges():
     script = (ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
     for expected in [
         "set -eu", "/data|/data/*", "/app/backend/data",
-        '"$runtime_root/journal_media"', '"$runtime_root/attachments"',
+        '"$RUNTIME_ROOT/journal_media"', '"$RUNTIME_ROOT/attachments"',
         "install -d -m 0770", 'exec gosu "$APPLICATION_USER:$APPLICATION_GROUP" "$@"',
+        "verify_runtime_storage", 'exec "$@"',
     ]:
         assert expected in script
     assert "chmod 777" not in script
@@ -86,9 +88,21 @@ def test_entrypoint_prepares_only_approved_roots_and_drops_privileges():
 
 def test_dockerfile_keeps_root_only_for_entrypoint_bootstrap():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    railway = (ROOT / "railway.json").read_text(encoding="utf-8")
+    railway_text = (ROOT / "railway.json").read_text(encoding="utf-8")
+    railway = json.loads(railway_text)
     assert "apt-get install -y --no-install-recommends gosu" in dockerfile
+    assert "COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/operations-entrypoint" in dockerfile
     assert 'ENTRYPOINT ["/usr/local/bin/operations-entrypoint"]' in dockerfile
     assert "USER operations" not in dockerfile
-    assert "gosu" not in railway
-    assert "RAILWAY_RUN_UID" not in dockerfile + railway
+    assert railway["deploy"]["startCommand"].startswith(
+        "/usr/local/bin/operations-entrypoint sh -c \"exec python -m uvicorn "
+    )
+    assert "RAILWAY_RUN_UID" not in dockerfile + railway_text
+
+
+def test_entrypoint_is_forced_to_lf_and_has_no_crlf_bytes():
+    script = (ROOT / "docker" / "entrypoint.sh").read_bytes()
+    attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+    assert script.startswith(b"#!/bin/sh\n")
+    assert b"\r\n" not in script
+    assert "docker/*.sh text eol=lf" in attributes

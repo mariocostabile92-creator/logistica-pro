@@ -4,8 +4,9 @@ set -eu
 APPLICATION_USER="operations"
 APPLICATION_GROUP="operations"
 APPLICATION_UID="$(id -u operations)"
+RUNTIME_ROOT=""
 
-prepare_runtime_storage() {
+resolve_runtime_storage() {
     configured_root="${RUNTIME_STORAGE_ROOT:-}"
     [ -n "$configured_root" ] || return 0
 
@@ -13,9 +14,9 @@ prepare_runtime_storage() {
         /*) candidate="$configured_root" ;;
         *) candidate="/app/backend/$configured_root" ;;
     esac
-    runtime_root="$(readlink -m -- "$candidate")"
+    RUNTIME_ROOT="$(readlink -m -- "$candidate")"
 
-    case "$runtime_root" in
+    case "$RUNTIME_ROOT" in
         /data|/data/*|/app/backend/data|/app/backend/data/*) ;;
         *)
             echo "RUNTIME_STORAGE_ROOT non consentita per il bootstrap container." >&2
@@ -23,21 +24,37 @@ prepare_runtime_storage() {
             ;;
     esac
 
-    if [ "$(id -u)" -ne 0 ]; then
-        echo "Il bootstrap della root storage richiede i privilegi iniziali del container." >&2
-        exit 70
-    fi
+}
+
+prepare_runtime_storage() {
+    [ -n "$RUNTIME_ROOT" ] || return 0
 
     umask 0027
     install -d -m 0770 -o "$APPLICATION_USER" -g "$APPLICATION_GROUP" \
-        "$runtime_root" \
-        "$runtime_root/journal_media" \
-        "$runtime_root/attachments"
+        "$RUNTIME_ROOT" \
+        "$RUNTIME_ROOT/journal_media" \
+        "$RUNTIME_ROOT/attachments"
 }
 
-prepare_runtime_storage
+verify_runtime_storage() {
+    [ -n "$RUNTIME_ROOT" ] || return 0
+
+    for directory in \
+        "$RUNTIME_ROOT" \
+        "$RUNTIME_ROOT/journal_media" \
+        "$RUNTIME_ROOT/attachments"
+    do
+        if [ ! -d "$directory" ] || [ ! -r "$directory" ] || [ ! -w "$directory" ] || [ ! -x "$directory" ]; then
+            echo "Root storage non accessibile all'utente operations: $directory" >&2
+            exit 70
+        fi
+    done
+}
+
+resolve_runtime_storage
 
 if [ "$(id -u)" -eq 0 ]; then
+    prepare_runtime_storage
     exec gosu "$APPLICATION_USER:$APPLICATION_GROUP" "$@"
 fi
 
@@ -46,4 +63,5 @@ if [ "$(id -u)" -ne "$APPLICATION_UID" ]; then
     exit 70
 fi
 
+verify_runtime_storage
 exec "$@"

@@ -177,7 +177,7 @@ def test_railway_configuration_and_secret_hygiene():
     assert railway["build"]["builder"] == "DOCKERFILE"
     assert railway["deploy"]["healthcheckPath"] == "/api/health"
     assert railway["deploy"]["startCommand"] == (
-        "sh -c \"python -m uvicorn app.main:app --host 0.0.0.0 "
+        "/usr/local/bin/operations-entrypoint sh -c \"exec python -m uvicorn app.main:app --host 0.0.0.0 "
         "--port ${PORT:-8000} --proxy-headers "
         "--forwarded-allow-ips '*'\""
     )
