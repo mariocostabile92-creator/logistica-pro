@@ -78,16 +78,13 @@ test("refresh keeps an existing briefing available while data is in flight", () 
 });
 
 
-test("one module failure does not block the parallel Mission refresh", async () => {
-  const app = await frontendFile("assets/js/app.js");
-  assert.match(app, /Promise\.allSettled/);
-  assert.match(app, /refreshBriefing/);
-  assert.match(app, /refreshWorkspaceStatus/);
-  const state = applyMissionControlEvent(
-    createMissionControlState(),
-    { type: "refresh-settled", error: "Snapshot parziale" },
-  );
-  assert.equal(deriveMissionControlView(state).refreshError, "Snapshot parziale");
+test("one source failure does not block the parallel Home summary", async () => {
+  const api = await frontendFile("assets/js/modules/mission-control-api.js");
+  assert.match(api, /Promise\.allSettled/);
+  assert.match(api, /partial: failedSources > 0/);
+  assert.match(api, /listFleetAssets\(\)/);
+  assert.doesNotMatch(api, /getLatestPlanning/);
+  assert.doesNotMatch(api, /getFleetVision/);
 });
 
 
@@ -107,25 +104,23 @@ test("non-visible workspaces are loaded dynamically instead of at startup", asyn
 });
 
 
-test("Mission rendering is incremental and skips unchanged blocks", async () => {
-  const source = await frontendFile("assets/js/modules/mission-control.js");
-  assert.match(source, /renderSignatures/);
-  assert.match(source, /renderChanged\("status"/);
-  assert.match(source, /renderChanged\("actions"/);
-  assert.match(source, /renderChanged\("snapshots"/);
-  assert.match(source, /queueMicrotask/);
-  assert.match(source, /requestAnimationFrame/);
+test("Home renderer is componentized instead of one large controller", async () => {
+  const [controller, renderer] = await Promise.all([
+    frontendFile("assets/js/modules/mission-control.js"),
+    frontendFile("assets/js/modules/mission-control/renderer.js"),
+  ]);
+  assert.match(controller, /loadMissionControlSummary/);
+  assert.match(controller, /renderMissionControl/);
+  assert.match(renderer, /renderHero/);
+  assert.match(renderer, /renderPriorities/);
+  assert.match(renderer, /renderRecent/);
 });
 
 
-test("Timeline and Briefing rendering are deferred off the critical path", async () => {
-  const [mission, briefing] = await Promise.all([
-    frontendFile("assets/js/modules/mission-control.js"),
-    frontendFile("assets/js/modules/briefing.js"),
-  ]);
-  assert.match(mission, /scheduleIdle\([\s\S]*renderTimeline/);
-  assert.match(briefing, /scheduleBriefingRender/);
-  assert.match(briefing, /scheduleIdle/);
+test("Home shell renders before background summary requests", async () => {
+  const mission = await frontendFile("assets/js/modules/mission-control.js");
+  assert.match(mission, /renderMissionControl\(deriveMissionControlView\(state\)\);[\s\S]*refreshSummary\(\)/);
+  assert.doesNotMatch(mission, /await loadMissionControlSummary/);
 });
 
 
@@ -149,14 +144,10 @@ test("Mission and workspace listeners are guarded against duplicate setup", asyn
 });
 
 
-test("manual refresh forces both caches without clearing Mission data", async () => {
-  const [app, briefing, workspace] = await Promise.all([
-    frontendFile("assets/js/app.js"),
-    frontendFile("assets/js/modules/briefing.js"),
-    frontendFile("assets/js/modules/workspace-lifecycle.js"),
-  ]);
-  assert.match(app, /refreshBriefing\(\{ announce: false \}\)/);
-  assert.match(app, /force: true, preserveCurrent: true/);
-  assert.match(briefing, /generate: true, force: true/);
-  assert.match(workspace, /preserveCurrent/);
+test("operational changes coalesce Home refreshes", async () => {
+  const mission = await frontendFile("assets/js/modules/mission-control.js");
+  assert.match(mission, /refreshQueued/);
+  assert.match(mission, /damage:changed/);
+  assert.match(mission, /maintenance:changed/);
+  assert.match(mission, /documents:changed/);
 });

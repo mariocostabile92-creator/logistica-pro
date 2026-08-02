@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="./assets/css/layout.css" />
   <link rel="stylesheet" href="./assets/css/components.css" />
   <link rel="stylesheet" href="./assets/css/briefing.css" />
-  <link rel="stylesheet" href="./assets/css/mission-control.css?v=2" />
+  <link rel="stylesheet" href="./assets/css/mission-control.css?v=3" />
   <link rel="stylesheet" href="./assets/css/workspace-lifecycle.css?v=5" />
   <link rel="stylesheet" href="./assets/css/responsive.css?v=3" />
   <link rel="stylesheet" href="./assets/css/documents-workspace.css?v=1" />
@@ -149,10 +149,120 @@
       class="mission-control"
       aria-labelledby="missionControlTitle"
     >
+      <header class="operations-home-hero">
+        <div>
+          <p class="eyebrow">Giornata operativa</p>
+          <h2 id="missionControlTitle"><span id="operationsHomeGreeting">Buongiorno</span></h2>
+          <time id="operationsHomeDate">Data in aggiornamento</time>
+        </div>
+        <div class="operations-home-update">
+          <span id="operationsHomeFreshness">Aggiornamento in corso</span>
+          <small id="operationsHomeDataNotice">Dati operativi in caricamento.</small>
+        </div>
+      </header>
+
+      <section
+        id="operationsHomeStatus"
+        class="mission-day-status is-loading"
+        aria-labelledby="operationsHomeStatusLabel"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span class="mission-status-symbol" aria-hidden="true"></span>
+        <div>
+          <h3 id="operationsHomeStatusLabel">Giornata operativa</h3>
+          <p id="operationsHomeStatusDescription">Riepilogo in aggiornamento.</p>
+        </div>
+      </section>
+
+      <section class="operations-home-priorities" aria-labelledby="operationsHomePrioritiesTitle">
+        <header class="mission-section-heading">
+          <div><p class="eyebrow">Prima di iniziare</p><h3 id="operationsHomePrioritiesTitle">Attività prioritarie</h3></div>
+          <span id="operationsHomePriorityCount" class="mission-count-badge">—</span>
+        </header>
+        <div id="operationsHomePriorityList" class="operations-home-priority-list" aria-live="polite"></div>
+      </section>
+
+      <section class="operations-home-fleet" aria-labelledby="operationsHomeFleetTitle">
+        <header class="operations-home-card-header">
+          <div><p class="eyebrow">Parco mezzi</p><h3 id="operationsHomeFleetTitle">Fleet</h3></div>
+          <button type="button" class="mission-link" data-mission-target="vision">Apri Fleet Vision</button>
+        </header>
+        <dl class="operations-home-kpi-grid">
+          <div><dt>Mezzi disponibili</dt><dd id="operationsHomeFleetAvailable">—</dd></div>
+          <div><dt>Mezzi indisponibili</dt><dd id="operationsHomeFleetUnavailable">—</dd></div>
+          <div><dt>In manutenzione</dt><dd id="operationsHomeFleetMaintenance">—</dd></div>
+          <div><dt>Danni aperti</dt><dd id="operationsHomeFleetDamage">—</dd></div>
+          <div><dt>Documenti critici</dt><dd id="operationsHomeFleetDocuments">—</dd></div>
+          <div><dt>GDB mancanti</dt><dd id="operationsHomeFleetJournal">—</dd></div>
+          <div><dt>Scadenze</dt><dd id="operationsHomeFleetDeadlines">—</dd></div>
+        </dl>
+      </section>
+
+      <div class="operations-home-module-grid">
+        <section class="operations-home-module" aria-labelledby="operationsHomeWorkforceTitle">
+          <header class="operations-home-card-header">
+            <div><p class="eyebrow">Persone</p><h3 id="operationsHomeWorkforceTitle">Workforce</h3></div>
+            <button type="button" class="mission-link" data-mission-target="workforce">Apri Workforce</button>
+          </header>
+          <strong id="operationsHomeWorkforceStatus">Workspace in preparazione</strong>
+          <dl id="operationsHomeWorkforceFacts" class="operations-home-compact-facts" hidden>
+            <div><dt>Driver disponibili</dt><dd id="operationsHomeWorkforceDrivers">—</dd></div>
+            <div><dt>Driver richiesti</dt><dd id="operationsHomeWorkforceRequired">—</dd></div>
+            <div><dt>Assenze</dt><dd id="operationsHomeWorkforceAbsences">—</dd></div>
+          </dl>
+        </section>
+
+        <section class="operations-home-module" aria-labelledby="operationsHomePlanningTitle">
+          <header class="operations-home-card-header">
+            <div><p class="eyebrow">Assegnazioni</p><h3 id="operationsHomePlanningTitle">Planning</h3></div>
+            <button type="button" class="mission-link" data-mission-target="planning">Apri Planning</button>
+          </header>
+          <dl class="operations-home-compact-facts">
+            <div><dt>Driver assegnati</dt><dd id="operationsHomePlanningDrivers">—</dd></div>
+            <div><dt>Mezzi assegnati</dt><dd id="operationsHomePlanningVehicles">—</dd></div>
+            <div><dt>Conflitti reali</dt><dd id="operationsHomePlanningConflicts">—</dd></div>
+            <div><dt>Pubblicazione</dt><dd id="operationsHomePlanningPublication">—</dd></div>
+          </dl>
+        </section>
+
+        <section class="operations-home-module is-preparing" aria-labelledby="operationsHomeDspTitle">
+          <div><p class="eyebrow">Sviluppo operativo</p><h3 id="operationsHomeDspTitle">DSP Workspace</h3></div>
+          <strong>In preparazione</strong>
+          <p>La superficie DSP sarà disponibile in una fase successiva.</p>
+        </section>
+      </div>
+
+      <section class="operations-home-recent" aria-labelledby="operationsHomeRecentTitle">
+        <header class="mission-section-heading">
+          <div><p class="eyebrow">Ultimi aggiornamenti</p><h3 id="operationsHomeRecentTitle">Attività recenti</h3></div>
+          <span class="section-note">Massimo 8 eventi</span>
+        </header>
+        <ol id="operationsHomeRecentList" class="operations-home-recent-list" aria-live="polite">
+          <li class="mission-recent-empty">Attività in aggiornamento.</li>
+        </ol>
+      </section>
+
+      <section class="operations-home-quick" aria-labelledby="operationsHomeQuickTitle">
+        <header><p class="eyebrow">Vai direttamente</p><h3 id="operationsHomeQuickTitle">Azioni rapide</h3></header>
+        <div>
+          <button type="button" data-mission-target="vision">Apri Fleet Vision</button>
+          <button type="button" data-mission-target="journal">Apri Journal</button>
+          <button type="button" data-mission-target="library">Apri Vehicle Library</button>
+          <button type="button" data-mission-target="planning">Apri Planning</button>
+        </div>
+      </section>
+    </section>
+
+    <section
+      id="legacyMissionControlSection"
+      class="mission-control mission-control-source"
+      aria-labelledby="legacyMissionControlTitle"
+    >
       <header class="mission-control-header">
         <div class="mission-control-heading">
           <p class="eyebrow">Scrivania operativa</p>
-          <h2 id="missionControlTitle">Mission Control</h2>
+          <h2 id="legacyMissionControlTitle">Mission Control</h2>
           <div class="mission-control-clock" aria-label="Contesto temporale">
             <time id="missionDate">Data in aggiornamento</time>
             <span aria-hidden="true">·</span>
@@ -2487,6 +2597,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=22"></script>
+  <script type="module" src="./assets/js/app.js?v=25"></script>
 </body>
 </html>

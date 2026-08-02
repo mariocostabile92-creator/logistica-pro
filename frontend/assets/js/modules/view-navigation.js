@@ -1,12 +1,10 @@
 import { byId } from "../utils/dom.js";
 
 
-const HOME_SECTIONS = [
-  "missionControlSection",
-  "workspaceCurrentSection",
-  "onboardingSection",
-  "briefingSection",
-  "demoWorkspaceHomeSection",
+const HOME_SECTIONS = ["missionControlSection"];
+const HOME_SOURCE_SECTIONS = [
+  "workspaceCurrentSection", "onboardingSection", "briefingSection",
+  "demoWorkspaceHomeSection", "legacyMissionControlSection",
 ];
 
 const OPERATIONS_SECTIONS = [
@@ -68,7 +66,7 @@ function showWorkspace(view) {
   const activeSections = WORKSPACE_SECTIONS[selectedView];
   attachWorkspaceSections(selectedView);
   document.body.dataset.activeWorkspace = selectedView;
-  for (const sectionId of Object.values(WORKSPACE_SECTIONS).flat()) {
+  for (const sectionId of [...Object.values(WORKSPACE_SECTIONS).flat(), ...HOME_SOURCE_SECTIONS]) {
     const section = sectionNode(sectionId);
     if (section?.isConnected) section.hidden = !activeSections.includes(sectionId);
   }
