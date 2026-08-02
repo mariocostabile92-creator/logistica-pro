@@ -52,7 +52,9 @@ def _dict(row):
 def _select() -> str:
     return """
         SELECT m.*, a.plate, a.external_identifier,
-               a.category AS vehicle_model, d.case_number AS damage_case_number
+               a.category AS vehicle_model, d.case_number AS damage_case_number,
+               (SELECT COUNT(*) FROM attachments att
+                WHERE att.entity_type='maintenance' AND att.entity_id=m.id) AS attachment_count
         FROM fleet_maintenances m
         JOIN fleet_assets a ON a.id = m.vehicle_id
         LEFT JOIN damage_cases d ON d.id = m.damage_case_id

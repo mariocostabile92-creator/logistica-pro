@@ -109,6 +109,7 @@ def reset_database():
         conn.execute("DELETE FROM auth_sessions")
         conn.execute("DELETE FROM auth_users")
         conn.execute("DELETE FROM organizations")
+        conn.execute("DELETE FROM attachment_events")
         conn.execute("DELETE FROM attachments")
         conn.execute("DELETE FROM fleet_rentals")
         conn.execute("DELETE FROM fleet_insurance_policies")

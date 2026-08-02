@@ -1,6 +1,12 @@
+from pathlib import Path, PurePosixPath
+
 from fastapi.testclient import TestClient
 
+from app.attachments import service
+from app.attachments.storage import LocalAttachmentStorage
+from app.core.database import db_session
 from app.main import app
+from conftest import TEST_STORAGE_ROOT
 
 
 client = TestClient(app)
@@ -86,3 +92,68 @@ def test_rejects_unsupported_or_spoofed_files():
     assert unsupported.status_code == 422
     assert spoofed.status_code == 422
     assert unknown_entity.status_code == 422
+
+
+def test_damage_and_maintenance_files_use_relative_atomic_persistent_keys():
+    vehicle = create_vehicle("ATT-PERSIST-01", "AP001AA")
+    damage = client.post("/api/fleet/damage-cases", json={
+        "vehicle_id": vehicle["id"], "occurred_at": "2026-08-02T10:00:00Z",
+        "origin": "manual", "manual_reason": "QA persistenza",
+        "description": "Foto danno QA", "severity": "media",
+        "vehicle_operational_status": "indisponibile",
+    }).json()
+    maintenance = client.post("/api/fleet/maintenances", json={
+        "vehicle_id": vehicle["id"], "description": "Fattura QA",
+        "maintenance_type": "meccanica", "status": "aperta", "priority": "media",
+    }).json()
+    photo = upload("damage", damage["id"], "danno.png", PNG, "image/png").json()
+    invoice = upload("maintenance", maintenance["id"], "fattura.pdf", PDF, "application/pdf").json()
+
+    for item, expected in ((photo, PNG), (invoice, PDF)):
+        key = item["storage_path"]
+        assert PurePosixPath(key).is_absolute() is False
+        assert ":" not in key and "\\" not in key and key.count("/") == 2
+        assert LocalAttachmentStorage(TEST_STORAGE_ROOT / "attachments").read(key) == expected
+        assert client.get(item["preview_url"]).content == expected
+        assert client.get(item["download_url"]).content == expected
+    assert list((TEST_STORAGE_ROOT / "attachments").rglob("*.tmp")) == []
+    assert client.delete(f"/api/attachments/{photo['id']}").status_code == 204
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT organization_id,action FROM attachment_events ORDER BY created_at"
+        ).fetchall()
+    assert [(row["organization_id"], row["action"]) for row in rows] == [
+        ("test-organization", "uploaded"), ("test-organization", "uploaded"),
+        ("test-organization", "deleted"),
+    ]
+
+
+def test_attachment_organization_isolation_and_missing_file_message():
+    vehicle = create_vehicle("ATT-ORG-01", "AO001AA")
+    item = service.upload(
+        "vehicle", vehicle["id"], "isolata.png", "image/png", PNG,
+        "user-org-a", None, "organization-a",
+    )
+    try:
+        assert service.get(item["id"], "organization-a")["organization_id"] == "organization-a"
+        try:
+            service.get(item["id"], "organization-b")
+            raise AssertionError("Un'altra organizzazione non deve leggere l'allegato")
+        except service.AttachmentError as exc:
+            assert exc.status_code == 404
+
+        physical = TEST_STORAGE_ROOT / "attachments" / Path(item["storage_path"])
+        physical.unlink()
+        missing = client.get(item["download_url"])
+        assert missing.status_code == 404
+        assert missing.json() == {"detail": "Allegato non trovato."}
+        # The harness organization cannot see an attachment owned by organization-a;
+        # the owner receives the storage-specific message through the service contract.
+        try:
+            service.resolve_file(item["id"], "organization-a")
+            raise AssertionError("Il file fisico e stato rimosso")
+        except service.AttachmentError as exc:
+            assert str(exc) == "File non disponibile nello storage."
+    finally:
+        with db_session() as conn:
+            conn.execute("DELETE FROM attachments WHERE id=?", (item["id"],))

@@ -3,9 +3,6 @@ from fastapi.responses import FileResponse
 from app.auth.permission_service import has_permission
 
 from app.attachments import service
-from app.attachments.storage import attachment_storage
-
-
 router = APIRouter(prefix="/api/attachments", tags=["attachments"])
 
 
@@ -39,24 +36,24 @@ def list_attachments(entity_type: str, entity_id: int, request: Request):
 
 
 @router.get("/vehicle/{vehicle_id}")
-def vehicle_attachments(vehicle_id: int):
-    return guarded(service.list_vehicle, vehicle_id)
+def vehicle_attachments(vehicle_id: int, request: Request):
+    return guarded(service.list_vehicle, vehicle_id, request.state.user.organization_id)
 
 
 @router.get("/{attachment_id}/download")
 def download_attachment(attachment_id: str, request: Request):
-    item = guarded(service.get, attachment_id, request.state.user.organization_id)
+    item, path = guarded(service.resolve_file, attachment_id, request.state.user.organization_id)
     return FileResponse(
-        attachment_storage.resolve(item["storage_path"]),
+        path,
         media_type=item["mime_type"], filename=item["original_filename"],
     )
 
 
 @router.get("/{attachment_id}/preview")
 def preview_attachment(attachment_id: str, request: Request):
-    item = guarded(service.get, attachment_id, request.state.user.organization_id)
+    item, path = guarded(service.resolve_file, attachment_id, request.state.user.organization_id)
     return FileResponse(
-        attachment_storage.resolve(item["storage_path"]),
+        path,
         media_type=item["mime_type"],
         headers={"Content-Disposition": "inline"},
     )

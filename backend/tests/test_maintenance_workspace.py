@@ -62,6 +62,7 @@ def test_maintenance_lifecycle_list_detail_and_vehicle_history():
         "in_workshop": 0,
         "scheduled": 1,
         "completed": 0,
+        "overdue": 0,
     }
     vehicle_items = client.get(
         MAINTENANCE,

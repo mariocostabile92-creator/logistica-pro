@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime, timezone
 
 from app.plugins.fleet.application.asset_service import AssetNotFoundError, get_asset
 from app.plugins.fleet.damage.application.service import DamageNotFound, get_case
@@ -35,8 +36,19 @@ def _serialize(item):
     return result
 
 
+def _is_overdue(item: dict, now: datetime) -> bool:
+    if not item.get("expected_at") or item["status"] in {"completata", "annullata"}:
+        return False
+    due = datetime.fromisoformat(str(item["expected_at"]).replace("Z", "+00:00"))
+    if due.tzinfo is None:
+        due = due.replace(tzinfo=timezone.utc)
+    return due < now
+
+
 def list_maintenances(vehicle_id: int | None = None):
     items = [_serialize(item) for item in repository.list_all(vehicle_id)]
+    now = datetime.now(timezone.utc)
+    overdue = sum(_is_overdue(item, now) for item in items)
     return {
         "items": items,
         "summary": {
@@ -46,6 +58,7 @@ def list_maintenances(vehicle_id: int | None = None):
             }),
             "scheduled": sum(item["status"] == "programmata" for item in items),
             "completed": sum(item["status"] == "completata" for item in items),
+            "overdue": overdue,
         },
     }
 

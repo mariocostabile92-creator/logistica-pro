@@ -1,7 +1,7 @@
 import {
   deleteAttachment, listAttachments, listVehicleAttachments, uploadAttachment,
 } from "./api.js";
-import { renderAttachments } from "./renderer.js";
+import { renderAttachments } from "./renderer.js?v=2";
 import { attachmentState } from "./state.js";
 
 export async function mountAttachments(container, options) {
@@ -48,9 +48,15 @@ export async function mountAttachments(container, options) {
   container.onclick = async event => {
     const attachmentId = event.target.closest("[data-attachment-delete]")?.dataset.attachmentDelete;
     if (!attachmentId || !window.confirm("Eliminare definitivamente questo allegato?")) return;
-    await deleteAttachment(attachmentId);
-    state.items = state.items.filter(item => item.id !== attachmentId);
-    renderAttachments(container, state, options);
-    await options.onChange?.();
+    try {
+      await deleteAttachment(attachmentId);
+      state.items = state.items.filter(item => item.id !== attachmentId);
+      state.error = "";
+      renderAttachments(container, state, options);
+      await options.onChange?.();
+    } catch (error) {
+      state.error = error.message;
+      renderAttachments(container, state, options);
+    }
   };
 }

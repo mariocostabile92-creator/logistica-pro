@@ -1,14 +1,21 @@
 .maintenance-workspace { min-width: 0; }
 .maintenance-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
 .maintenance-header p:last-child { margin-bottom: 0; color: var(--text-muted); }
-.maintenance-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin: 20px 0; }
+.maintenance-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; margin: 20px 0; }
 .maintenance-kpis article { padding: 15px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); }
 .maintenance-kpis span, .maintenance-card small { display: block; color: var(--text-muted); font-size: 11px; }
 .maintenance-kpis strong { display: block; margin-top: 8px; font-size: 22px; }
+.maintenance-tools { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 9px; margin-bottom: 18px; align-items: end; }
+.maintenance-tools label { display: grid; gap: 4px; min-width: 0; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.maintenance-tools input, .maintenance-tools select { width: 100%; min-width: 0; }
+.maintenance-search { grid-column: span 2; }
+.maintenance-tools button { min-height: 40px; }
 .maintenance-navigator { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 14px; align-items: start; }
 .maintenance-list-pane { position: sticky; top: 12px; max-height: calc(100vh - 110px); padding: 14px; overflow-y: auto; border: 1px solid var(--border); border-radius: 7px; background: var(--surface-strong); }
 .maintenance-list { display: grid; gap: 9px; margin-top: 10px; }
+.maintenance-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .maintenance-card { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; width: 100%; padding: 13px; border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); text-align: left; }
+.maintenance-card-open { grid-column: 1 / -1; justify-self: end; color: var(--accent); font-size: 11px; font-weight: 700; }
 .maintenance-card:hover, .maintenance-card:focus-visible, .maintenance-card.selected { border-color: var(--accent); }
 .maintenance-card.selected { background: var(--stable-bg); box-shadow: inset 3px 0 0 var(--accent); }
 .maintenance-card-heading { display: flex; grid-column: 1 / -1; align-items: center; justify-content: space-between; gap: 8px; }
@@ -35,9 +42,11 @@
 .maintenance-mobile-back { display: none; margin-bottom: 10px; }
 @media (max-width: 1100px) {
   .maintenance-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .maintenance-tools { grid-template-columns: repeat(3, minmax(130px, 1fr)); }
   .maintenance-navigator { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr); }
 }
 @media (max-width: 900px) {
+  .maintenance-tools { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
   .maintenance-navigator { display: block; }
   .maintenance-list-pane { position: static; max-height: none; }
   .maintenance-detail-pane { display: none; }
@@ -52,4 +61,6 @@
   .maintenance-kpis, .maintenance-card, .maintenance-detail-grid, .maintenance-detail-grid dl, .maintenance-form { grid-template-columns: 1fr; }
   .maintenance-form-wide { grid-column: auto; }
   .maintenance-list-pane { padding: 10px; border-right: 0; border-left: 0; }
+  .maintenance-tools { grid-template-columns: 1fr; }
+  .maintenance-search { grid-column: auto; }
 }

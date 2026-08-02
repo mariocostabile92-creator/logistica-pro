@@ -40,13 +40,13 @@ function loadFleetModule(name, loader) {
 
 
 async function showDamageWorkspace(options) {
-  const module = await loadFleetModule("damage", () => import("./damage-workspace.js?v=4"));
+  const module = await loadFleetModule("damage", () => import("./damage-workspace.js?v=5"));
   return module.showDamageWorkspace(options);
 }
 
 
 async function showMaintenanceWorkspace(options) {
-  const module = await loadFleetModule("maintenance", () => import("./maintenance-workspace.js?v=2"));
+  const module = await loadFleetModule("maintenance", () => import("./maintenance-workspace.js?v=3"));
   return module.showMaintenanceWorkspace(options);
 }
 

@@ -9,7 +9,7 @@ import {
   updateDamageCase,
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
-import { mountAttachments } from "./attachments/component.js";
+import { mountAttachments } from "./attachments/component.js?v=2";
 import { createAttachmentDraft } from "./attachments/draft-uploader.js";
 import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 import { openOperationalStatusControl } from "./operational-status-control.js";
@@ -33,8 +33,11 @@ const CLOSED = new Set(["chiusa", "annullata"]);
 let root;
 let allCases = [];
 let candidates = [];
-let activeFilter = "all";
 let query = "";
+const filters = {
+  plate: "", status: "all", severity: "all", stopped: "all",
+  origin: "all", attachments: "all",
+};
 let initialized = false;
 let selectedCaseId = null;
 let damageDraft = null;
@@ -74,23 +77,20 @@ export function sortDamageCases(items) {
 
 function filteredCases() {
   const term = query.trim().toLocaleLowerCase("it-IT");
-  const now = Date.now();
   return sortDamageCases(allCases.filter((item) => {
     const textMatch = !term || [
       item.case_number, item.plate, item.declared_driver, item.description, item.repair_shop,
     ].some((value) => String(value || "").toLocaleLowerCase("it-IT").includes(term));
-    const matches = {
-      all: true,
-      open: !CLOSED.has(item.status),
-      in_valutazione: item.status === "in_valutazione",
-      in_riparazione: item.status === "in_riparazione",
-      closed: item.status === "chiusa",
-      stopped: ["indisponibile", "in_manutenzione", "in_officina"].includes(item.asset_availability),
-      severe: ["alta", "critica"].includes(item.severity),
-      last_7_days: new Date(item.occurred_at).getTime() >= now - 7 * 86400000,
-      last_30_days: new Date(item.occurred_at).getTime() >= now - 30 * 86400000,
-    };
-    return textMatch && matches[activeFilter];
+    const stopped = ["indisponibile", "in_manutenzione", "in_officina"].includes(
+      item.asset_availability || item.vehicle_operational_status,
+    );
+    return textMatch
+      && (!filters.plate || String(item.plate || item.external_identifier || "").toLocaleLowerCase("it-IT").includes(filters.plate))
+      && (filters.status === "all" || item.status === filters.status)
+      && (filters.severity === "all" || item.severity === filters.severity)
+      && (filters.stopped === "all" || stopped === (filters.stopped === "yes"))
+      && (filters.origin === "all" || item.origin === filters.origin)
+      && (filters.attachments === "all" || (Number(item.attachment_count || 0) > 0) === (filters.attachments === "yes"));
   }));
 }
 
@@ -99,10 +99,11 @@ function metrics() {
   return `
     <div class="damage-kpis" aria-label="Indicatori pratiche danno">
       <article><span>Pratiche aperte</span><strong>${open.length}</strong></article>
-      <article><span>In valutazione</span><strong>${allCases.filter((item) => item.status === "in_valutazione").length}</strong></article>
-      <article><span>In riparazione</span><strong>${allCases.filter((item) => item.status === "in_riparazione").length}</strong></article>
+      <article><span>Da valutare</span><strong>${allCases.filter((item) => ["nuova", "in_valutazione"].includes(item.status)).length}</strong></article>
       <article><span>Veicoli fermi</span><strong>${new Set(allCases.filter((item) => ["indisponibile", "in_manutenzione", "in_officina"].includes(item.asset_availability)).map((item) => item.vehicle_id)).size}</strong></article>
-      <article><span>Costo stimato aperto</span><strong>${money(open.reduce((sum, item) => sum + Number(item.estimated_cost || 0), 0))}</strong></article>
+      <article><span>In riparazione</span><strong>${allCases.filter((item) => item.status === "in_riparazione").length}</strong></article>
+      <article><span>Chiuse</span><strong>${allCases.filter((item) => item.status === "chiusa").length}</strong></article>
+      <article><span>Costo stimato totale</span><strong>${money(allCases.reduce((sum, item) => sum + Number(item.estimated_cost || 0), 0))}</strong></article>
     </div>`;
 }
 
@@ -116,6 +117,11 @@ function caseCard(item) {
       <span class="damage-case-status">${STATUS[item.status]}</span>
       <span class="damage-case-severity severity-${item.severity}">${SEVERITY[item.severity]}</span>
       <span class="damage-case-vehicle-status">${VEHICLE[item.asset_availability] || VEHICLE[item.vehicle_operational_status]}</span>
+      <span class="damage-case-meta"><small>Origine</small>${escapeHtml(item.origin === "journal" ? "Driver Journal" : "Manuale")}</span>
+      <span class="damage-case-meta"><small>Fermo mezzo</small>${["indisponibile", "in_manutenzione", "in_officina"].includes(item.asset_availability || item.vehicle_operational_status) ? "Sì" : "No"}</span>
+      <span class="damage-case-meta"><small>Costo stimato</small>${escapeHtml(money(item.estimated_cost))}</span>
+      <span class="damage-case-meta"><small>Allegati</small>${Number(item.attachment_count || 0)}</span>
+      <span class="damage-case-open">Apri →</span>
     </button>`;
 }
 
@@ -136,12 +142,13 @@ function renderNavigator() {
     <div class="damage-tools">
       <label><span class="visually-hidden">Cerca pratiche</span><input id="damageSearch" type="search" placeholder="Cerca numero pratica, targa, driver o descrizione" value="${escapeHtml(query)}"></label>
       <div class="damage-filters" aria-label="Filtri pratiche">
-        ${[
-          ["all", "Tutte"], ["open", "Aperte"], ["in_valutazione", "In valutazione"],
-          ["in_riparazione", "In riparazione"], ["closed", "Chiuse"],
-          ["stopped", "Veicoli fermi"], ["severe", "Alta o critica"],
-          ["last_7_days", "Ultimi 7 giorni"], ["last_30_days", "Ultimi 30 giorni"],
-        ].map(([value, label]) => `<button type="button" data-damage-filter="${value}" aria-pressed="${activeFilter === value}" class="${activeFilter === value ? "active" : ""}">${label}</button>`).join("")}
+        <label>Targa<input data-damage-filter="plate" value="${escapeHtml(filters.plate)}" placeholder="Tutte"></label>
+        <label>Stato<select data-damage-filter="status"><option value="all">Tutti</option>${Object.entries(STATUS).map(([value,label]) => `<option value="${value}" ${filters.status === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+        <label>Gravità<select data-damage-filter="severity"><option value="all">Tutte</option>${Object.entries(SEVERITY).map(([value,label]) => `<option value="${value}" ${filters.severity === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+        <label>Mezzo fermo<select data-damage-filter="stopped"><option value="all">Tutti</option><option value="yes">Sì</option><option value="no">No</option></select></label>
+        <label>Origine<select data-damage-filter="origin"><option value="all">Tutte</option><option value="journal">Driver Journal</option><option value="manual">Manuale</option></select></label>
+        <label>Allegati<select data-damage-filter="attachments"><option value="all">Tutti</option><option value="yes">Presenti</option><option value="no">Assenti</option></select></label>
+        <button type="button" class="quiet" data-damage-reset>Reset</button>
       </div>
     </div>
     <div id="damageNavigator" class="damage-navigator">
@@ -163,7 +170,7 @@ function renderShell() {
       <p class="section-note">Gestione delle pratiche danno del parco mezzi</p></div>
       <div class="damage-actions">
         <button type="button" data-damage-view="candidates">Anomalie da gestire <span class="count-badge">${candidates.length}</span></button>
-        <button type="button" class="secondary" data-damage-manual>Nuova pratica manuale</button>
+        <button type="button" class="secondary" data-damage-manual>Nuova pratica danno</button>
       </div>
     </header><div id="damageMain"></div>`;
   renderNavigator();
@@ -262,6 +269,7 @@ async function renderDetail(caseId) {
     </div><div data-attachments></div>`;
   await mountAttachments(root.querySelector("[data-attachments]"), {
     entityType: "damage", entityId: item.id,
+    title: "Foto, video e documenti della pratica",
   });
   bindDetail(item.id);
 }
@@ -410,19 +418,22 @@ export async function showDamageWorkspace(options = {}) {
   if (initialized) return;
   initialized = true;
   root.addEventListener("input", (event) => {
-    if (event.target.id !== "damageSearch") return;
-    query = event.target.value; renderCaseList();
+    if (event.target.id === "damageSearch") query = event.target.value;
+    else if (event.target.matches("[data-damage-filter='plate']")) filters.plate = event.target.value.trim().toLocaleLowerCase("it-IT");
+    else return;
+    renderCaseList();
+  });
+  root.addEventListener("change", (event) => {
+    const key = event.target.dataset.damageFilter;
+    if (!key || key === "plate") return;
+    filters[key] = event.target.value;
+    renderCaseList();
   });
   root.addEventListener("click", async (event) => {
-    const filter = event.target.closest("[data-damage-filter]")?.dataset.damageFilter;
-    if (filter) {
-      activeFilter = filter;
-      root.querySelectorAll("[data-damage-filter]").forEach((button) => {
-        const active = button.dataset.damageFilter === filter;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-pressed", String(active));
-      });
-      renderCaseList();
+    if (event.target.closest("[data-damage-reset]")) {
+      query = "";
+      Object.assign(filters, { plate: "", status: "all", severity: "all", stopped: "all", origin: "all", attachments: "all" });
+      renderNavigator();
       return;
     }
     const caseId = event.target.closest("[data-damage-case]")?.dataset.damageCase;

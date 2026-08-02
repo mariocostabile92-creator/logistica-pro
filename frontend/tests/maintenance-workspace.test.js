@@ -37,6 +37,12 @@ test("Maintenance workspace provides real KPI list and master detail", async () 
   assert.match(module, /maintenance-list-pane/);
   assert.match(module, /maintenance-detail-pane/);
   assert.match(module, /Torna alla lista/);
+  for (const filter of ["plate", "type", "status", "priority", "deadline", "attachments"]) {
+    assert.match(module, new RegExp(`data-maintenance-filter="${filter}"`));
+  }
+  assert.match(module, /data-maintenance-reset/);
+  assert.match(module, /maintenanceOverdue/);
+  assert.match(module, /attachment_count/);
 });
 
 
@@ -57,10 +63,15 @@ test("Damage creates a maintenance and Vehicle Library exposes history", async (
 
 
 test("Maintenance layout covers desktop tablet and 390 px without fixed canvas", async () => {
-  const css = await file("assets/css/maintenance-workspace.css");
+  const [css, loader] = await Promise.all([
+    file("assets/css/maintenance-workspace.css"),
+    file("assets/js/modules/workspace-loader.js"),
+  ]);
   assert.match(css, /grid-template-columns:\s*minmax\(300px,\s*360px\)\s+minmax\(0,\s*1fr\)/);
   assert.match(css, /@media \(max-width:\s*900px\)/);
   assert.match(css, /@media \(max-width:\s*480px\)/);
   assert.match(css, /\.maintenance-mobile-back/);
   assert.doesNotMatch(css, /width:\s*(?:1440|768|390)px/);
+  assert.match(loader, /maintenance-workspace\.css\?v=2/);
+  assert.match(css, /\.maintenance-tools/);
 });

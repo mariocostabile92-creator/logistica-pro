@@ -22,6 +22,9 @@ test("one Attachment component owns upload list preview download and delete", as
   assert.match(component, /mountAttachments/);
   assert.match(renderer, /multiple/);
   assert.match(component, /window\.confirm/);
+  assert.match(renderer, /File non disponibile nello storage\./);
+  assert.match(renderer, /storage_available/);
+  assert.match(renderer, /Rimuovi riferimento/);
 });
 
 test("all Fleet modules reuse the same Attachment component", async () => {

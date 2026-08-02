@@ -62,7 +62,9 @@ def get_case(case_id: int):
         row = conn.execute(
             """
             SELECT c.*, a.plate, a.external_identifier, a.category AS vehicle_model,
-                   a.availability AS asset_availability
+                   a.availability AS asset_availability,
+                   (SELECT COUNT(*) FROM attachments att
+                    WHERE att.entity_type='damage' AND att.entity_id=c.id) AS attachment_count
             FROM damage_cases c
             JOIN fleet_assets a ON a.id = c.vehicle_id
             WHERE c.id = ?
@@ -153,7 +155,9 @@ def list_cases(filters: dict[str, object]):
         rows = conn.execute(
             f"""
             SELECT c.*, a.plate, a.external_identifier, a.category AS vehicle_model,
-                   a.availability AS asset_availability
+                   a.availability AS asset_availability,
+                   (SELECT COUNT(*) FROM attachments att
+                    WHERE att.entity_type='damage' AND att.entity_id=c.id) AS attachment_count
             FROM damage_cases c JOIN fleet_assets a ON a.id = c.vehicle_id
             {where}
             ORDER BY

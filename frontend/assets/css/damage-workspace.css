@@ -4,15 +4,16 @@
 }
 .damage-header { padding-bottom: 22px; border-bottom: 1px solid var(--border); }
 .damage-actions, .damage-detail-badges { display: flex; flex-wrap: wrap; gap: 8px; }
-.damage-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 22px 0; }
+.damage-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin: 22px 0; }
 .damage-kpis article { min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
 .damage-kpis span, .damage-case-card small { display: block; color: var(--text-muted); font-size: 11px; }
 .damage-kpis strong { display: block; margin-top: 8px; font-size: 20px; overflow-wrap: anywhere; }
 .damage-tools { display: grid; grid-template-columns: minmax(240px, 330px) minmax(0, 1fr); gap: 12px; margin-bottom: 22px; }
 .damage-tools input { width: 100%; }
-.damage-filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 3px; }
-.damage-filters button { flex: 0 0 auto; padding: 7px 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); }
-.damage-filters button.active { border-color: var(--accent); background: var(--stable-bg); color: var(--accent-dark); }
+.damage-filters { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 8px; }
+.damage-filters label { display: grid; gap: 4px; min-width: 0; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.damage-filters input, .damage-filters select { width: 100%; min-width: 0; }
+.damage-filters button { align-self: end; min-height: 40px; }
 .damage-case-list, .damage-candidates { display: grid; gap: 9px; margin-top: 12px; }
 .damage-case-card { display: grid; grid-template-columns: 120px 135px minmax(170px, 1fr) 80px 120px 120px 90px; gap: 12px; width: 100%; padding: 14px; border: 1px solid var(--border); border-left: 4px solid var(--border-strong); background: var(--surface); color: var(--text); text-align: left; }
 .damage-case-card.severity-alta, .damage-case-card.severity-critica { border-left-color: var(--danger); }
@@ -137,6 +138,10 @@
   font-weight: 700;
 }
 
+.damage-case-meta { display: grid; gap: 2px; color: var(--text); font-size: 11px; }
+.damage-case-meta small { color: var(--text-muted); }
+.damage-case-open { grid-column: 1 / -1; justify-self: end; color: var(--accent); font-size: 11px; font-weight: 700; }
+
 .damage-case-status {
   background: var(--accent);
   color: var(--surface);
@@ -194,9 +199,11 @@
   .damage-navigator {
     grid-template-columns: minmax(250px, 290px) minmax(0, 1fr);
   }
+  .damage-filters { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
 }
 
 @media (max-width: 900px) {
+  .damage-tools { grid-template-columns: 1fr; }
   .damage-navigator {
     display: block;
   }
@@ -238,4 +245,5 @@
   .damage-case-card {
     grid-template-columns: 1fr auto;
   }
+  .damage-filters { grid-template-columns: 1fr; margin: 0; padding: 0; }
 }

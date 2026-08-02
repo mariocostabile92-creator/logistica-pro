@@ -22,6 +22,7 @@ class Attachment:
     size: int
     created_at: str
     created_by: str
+    organization_id: str
     storage_path: str
     preview_available: bool
     notes: str | None = None

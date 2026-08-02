@@ -6,7 +6,7 @@ import {
   updateMaintenance,
 } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
-import { mountAttachments } from "./attachments/component.js";
+import { mountAttachments } from "./attachments/component.js?v=2";
 import { createAttachmentDraft } from "./attachments/draft-uploader.js";
 import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 
@@ -40,6 +40,11 @@ let records = [];
 let maintenanceDraft = null;
 let selectedId = null;
 let deadlineFilterIds = null;
+let maintenanceQuery = "";
+const maintenanceFilters = {
+  plate: "", type: "all", status: "all", priority: "all",
+  deadline: "all", attachments: "all",
+};
 
 const date = (value) => {
   if (!value) return "Non registrata";
@@ -54,19 +59,46 @@ function renderSummary(summary) {
   root().querySelector("#maintenanceWorkshop").textContent = summary.in_workshop;
   root().querySelector("#maintenanceScheduled").textContent = summary.scheduled;
   root().querySelector("#maintenanceCompleted").textContent = summary.completed;
+  root().querySelector("#maintenanceOverdue").textContent = summary.overdue || 0;
+}
+
+function filteredRecords() {
+  const now = Date.now();
+  const nextThirtyDays = now + 30 * 86400000;
+  return records.filter((item) => {
+    const text = maintenanceQuery.trim().toLocaleLowerCase("it-IT");
+    const due = item.expected_at ? new Date(item.expected_at).getTime() : null;
+    const deadlineMatch = {
+      all: true,
+      overdue: due != null && due < now && !["completata", "annullata"].includes(item.status),
+      next_30_days: due != null && due >= now && due <= nextThirtyDays,
+      none: due == null,
+    }[maintenanceFilters.deadline];
+    return (!text || [item.maintenance_number, item.plate, item.description, item.repair_shop]
+      .some(value => String(value || "").toLocaleLowerCase("it-IT").includes(text)))
+      && (!maintenanceFilters.plate || String(item.plate || item.external_identifier || "").toLocaleLowerCase("it-IT").includes(maintenanceFilters.plate))
+      && (maintenanceFilters.type === "all" || item.maintenance_type === maintenanceFilters.type)
+      && (maintenanceFilters.status === "all" || item.status === maintenanceFilters.status)
+      && (maintenanceFilters.priority === "all" || item.priority === maintenanceFilters.priority)
+      && deadlineMatch
+      && (maintenanceFilters.attachments === "all" || (Number(item.attachment_count || 0) > 0) === (maintenanceFilters.attachments === "yes"));
+  });
 }
 
 function renderList() {
   const list = root().querySelector("#maintenanceList");
-  if (!records.length) {
+  const visible = filteredRecords();
+  const count = root().querySelector("#maintenanceResultCount");
+  if (count) count.textContent = `${visible.length} risultati`;
+  if (!visible.length) {
     list.innerHTML = `
       <div class="maintenance-empty">
-        <strong>Nessuna manutenzione registrata</strong>
-        <p>Le manutenzioni create dal Fleet Manager o da una pratica danno compariranno qui.</p>
+        <strong>${records.length ? "Nessun intervento corrisponde ai filtri" : "Nessuna manutenzione registrata"}</strong>
+        <p>${records.length ? "Modifica o azzera i filtri per visualizzare altri interventi." : "Le manutenzioni create dal Fleet Manager o da una pratica danno compariranno qui."}</p>
       </div>`;
     return;
   }
-  list.innerHTML = records.map((item) => `
+  list.innerHTML = visible.map((item) => `
     <button
       type="button"
       class="maintenance-card${Number(item.id) === Number(selectedId) ? " selected" : ""}"
@@ -78,10 +110,15 @@ function renderList() {
         <span class="maintenance-status status-${escapeHtml(item.status)}">${escapeHtml(STATUS[item.status])}</span>
       </span>
       <span><small>Mezzo</small><strong>${escapeHtml(item.plate || item.external_identifier)}</strong></span>
+      <span><small>Modello</small>${escapeHtml(item.vehicle_model || "Non indicato")}</span>
       <span><small>Tipologia</small>${escapeHtml(TYPE[item.maintenance_type])}</span>
       <span><small>Priorità</small><span class="priority-${escapeHtml(item.priority)}">${escapeHtml(PRIORITY[item.priority])}</span></span>
       <span><small>Officina</small>${escapeHtml(item.repair_shop || "Da assegnare")}</span>
-      <span><small>Apertura</small>${escapeHtml(date(item.opened_at))}</span>
+      <span><small>Data prevista</small>${escapeHtml(date(item.expected_at))}</span>
+      <span><small>Km previsti</small>Non previsti</span>
+      <span><small>Costo</small>Non previsto</span>
+      <span><small>Allegati</small>${Number(item.attachment_count || 0)}</span>
+      <span class="maintenance-card-open">Apri →</span>
     </button>
   `).join("");
 }
@@ -143,7 +180,7 @@ async function renderDetail(maintenanceId) {
     </header>
     <div class="maintenance-actions"><button type="button" class="secondary" data-create-rental>Crea noleggio</button></div>
     <div class="maintenance-detail-grid">
-      <section><h4>Intervento</h4><dl>
+      <section><h4>Identificazione e veicolo</h4><dl>
         <div><dt>Mezzo</dt><dd>${escapeHtml(item.vehicle_model || "Non indicato")}</dd></div>
         <div><dt>Targa</dt><dd>${escapeHtml(item.plate || item.external_identifier)}</dd></div>
         <div><dt>Tipologia</dt><dd>${escapeHtml(TYPE[item.maintenance_type])}</dd></div>
@@ -153,7 +190,7 @@ async function renderDetail(maintenanceId) {
         <div><dt>Data apertura</dt><dd>${escapeHtml(date(item.opened_at))}</dd></div>
         <div><dt>Data prevista</dt><dd>${escapeHtml(date(item.expected_at))}</dd></div>
       </dl></section>
-      <section><h4>Descrizione</h4><p>${escapeHtml(item.description)}</p><h4>Note</h4><p>${escapeHtml(item.notes || "Nessuna nota")}</p></section>
+      <section><h4>Tipologia e pianificazione</h4><p>${escapeHtml(item.description)}</p><dl><div><dt>Chilometraggio previsto</dt><dd>Non previsto dal modello corrente</dd></div><div><dt>Costi</dt><dd>Non previsti dal modello corrente</dd></div></dl><h4>Note</h4><p>${escapeHtml(item.notes || "Nessuna nota")}</p></section>
       <section><h4>Profilo contrattuale del mezzo</h4>${contractContext(item.asset_profile)}</section>
       <section class="maintenance-update-section"><h4>Avanzamento</h4>
         <form id="maintenanceUpdateForm" class="maintenance-form">
@@ -170,6 +207,7 @@ async function renderDetail(maintenanceId) {
     </div><div data-attachments></div>`;
   await mountAttachments(workspace.querySelector("[data-attachments]"), {
     entityType: "maintenance", entityId: item.id,
+    title: "Fatture, preventivi, foto e documenti officina",
   });
   workspace.querySelector("[data-maintenance-back]").addEventListener("click", () => {
     workspace.classList.remove("maintenance-detail-mode");
@@ -222,10 +260,21 @@ function shell() {
       <article><span>Mezzi in officina</span><strong id="maintenanceWorkshop">0</strong></article>
       <article><span>Manutenzioni programmate</span><strong id="maintenanceScheduled">0</strong></article>
       <article><span>Manutenzioni concluse</span><strong id="maintenanceCompleted">0</strong></article>
+      <article><span>Scadute</span><strong id="maintenanceOverdue">0</strong></article>
+    </div>
+    <div class="maintenance-tools" aria-label="Filtri manutenzioni">
+      <label class="maintenance-search">Ricerca<input id="maintenanceSearch" type="search" placeholder="Numero, targa, descrizione o officina"></label>
+      <label>Targa<input data-maintenance-filter="plate" placeholder="Tutte"></label>
+      <label>Tipologia<select data-maintenance-filter="type"><option value="all">Tutte</option>${Object.entries(TYPE).map(([value,label]) => `<option value="${value}">${label}</option>`).join("")}</select></label>
+      <label>Stato<select data-maintenance-filter="status"><option value="all">Tutti</option>${Object.entries(STATUS).map(([value,label]) => `<option value="${value}">${label}</option>`).join("")}</select></label>
+      <label>Priorità<select data-maintenance-filter="priority"><option value="all">Tutte</option>${Object.entries(PRIORITY).map(([value,label]) => `<option value="${value}">${label}</option>`).join("")}</select></label>
+      <label>Scadenza<select data-maintenance-filter="deadline"><option value="all">Tutte</option><option value="overdue">Scadute</option><option value="next_30_days">Entro 30 giorni</option><option value="none">Senza data</option></select></label>
+      <label>Allegati<select data-maintenance-filter="attachments"><option value="all">Tutti</option><option value="yes">Presenti</option><option value="no">Assenti</option></select></label>
+      <button type="button" class="quiet" data-maintenance-reset>Reset</button>
     </div>
     <div id="maintenanceNavigator" class="maintenance-navigator">
       <aside class="maintenance-list-pane" aria-label="Lista manutenzioni">
-        <h3>Interventi</h3><div id="maintenanceList" class="maintenance-list"></div>
+        <div class="maintenance-list-heading"><h3>Interventi</h3><span id="maintenanceResultCount" class="tag">0 risultati</span></div><div id="maintenanceList" class="maintenance-list"></div>
       </aside>
       <div id="maintenanceDetail" class="maintenance-detail-pane">
         <div class="maintenance-empty"><strong>Seleziona una manutenzione</strong><p>Apri un intervento per seguirne stato e dettagli.</p></div>
@@ -275,6 +324,25 @@ export async function showMaintenanceWorkspace({
     workspace.querySelector("#maintenanceList").addEventListener("click", (event) => {
       const target = event.target.closest("[data-maintenance-id]");
       if (target) renderDetail(Number(target.dataset.maintenanceId));
+    });
+    workspace.querySelector(".maintenance-tools").addEventListener("input", (event) => {
+      if (event.target.id === "maintenanceSearch") maintenanceQuery = event.target.value;
+      else if (event.target.matches("[data-maintenance-filter='plate']")) maintenanceFilters.plate = event.target.value.trim().toLocaleLowerCase("it-IT");
+      else return;
+      renderList();
+    });
+    workspace.querySelector(".maintenance-tools").addEventListener("change", (event) => {
+      const key = event.target.dataset.maintenanceFilter;
+      if (!key || key === "plate") return;
+      maintenanceFilters[key] = event.target.value;
+      renderList();
+    });
+    workspace.querySelector("[data-maintenance-reset]").addEventListener("click", () => {
+      maintenanceQuery = "";
+      Object.assign(maintenanceFilters, { plate: "", type: "all", status: "all", priority: "all", deadline: "all", attachments: "all" });
+      workspace.querySelector(".maintenance-tools").querySelectorAll("input").forEach(input => { input.value = ""; });
+      workspace.querySelector(".maintenance-tools").querySelectorAll("select").forEach(select => { select.value = "all"; });
+      renderList();
     });
     workspace.querySelector("[data-new-maintenance]").addEventListener("click", async () => {
       const assets = await listFleetAssets();

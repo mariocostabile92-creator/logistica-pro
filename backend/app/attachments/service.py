@@ -9,6 +9,7 @@ from app.attachments.domain import (
 )
 from app.attachments.storage import attachment_storage
 from app.core.config import MAX_UPLOAD_SIZE_BYTES
+from app.core.runtime_storage import RuntimeStorageError
 
 
 class AttachmentError(ValueError):
@@ -20,10 +21,16 @@ class AttachmentError(ValueError):
 def _present(item: dict) -> dict:
     result = dict(item)
     result["preview_available"] = bool(item["preview_available"])
-    result["download_url"] = f"/api/attachments/{item['id']}/download"
+    try:
+        result["storage_available"] = attachment_storage.resolve(item["storage_path"]).is_file()
+    except (OSError, ValueError, RuntimeStorageError):
+        result["storage_available"] = False
+    result["download_url"] = (
+        f"/api/attachments/{item['id']}/download" if result["storage_available"] else None
+    )
     result["preview_url"] = (
         f"/api/attachments/{item['id']}/preview"
-        if result["preview_available"] else None
+        if result["preview_available"] and result["storage_available"] else None
     )
     return result
 
@@ -70,21 +77,30 @@ def upload(
     safe_name = Path(filename or "allegato").name
     verified_mime = _validate(entity_type, safe_name, mime_type, content)
     attachment_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
     stored_filename = f"{attachment_id}{Path(safe_name).suffix.lower()}"
-    storage_path = attachment_storage.save(stored_filename, content)
+    storage_key = f"{now:%Y/%m}/{stored_filename}"
+    storage_path = attachment_storage.save(storage_key, content)
     try:
         item = repository.create({
             "id": attachment_id, "entity_type": entity_type,
             "entity_id": entity_id, "original_filename": safe_name,
             "stored_filename": stored_filename, "mime_type": verified_mime,
-            "size": len(content), "created_at": datetime.now(timezone.utc).isoformat(),
+            "size": len(content), "created_at": now.isoformat(),
             "created_by": created_by.strip() or "fleet_manager",
             "storage_path": storage_path, "preview_available": True,
             "notes": notes.strip() if notes else None,
+            "organization_id": organization_id or "default",
         })
     except Exception:
         attachment_storage.delete(storage_path)
         raise
+    repository.record_event({
+        "id": str(uuid.uuid4()), "attachment_id": attachment_id,
+        "organization_id": organization_id or "default", "action": "uploaded",
+        "actor_user_id": created_by, "created_at": now.isoformat(),
+        "details": safe_name,
+    })
     if entity_type == "document" and organization_id:
         from app.plugins.fleet.documents.infrastructure import repository as document_repository
         document_repository.add_event(
@@ -100,7 +116,7 @@ def _authorize_document(entity_type: str, entity_id: int, organization_id: str |
 
 
 def get(attachment_id: str, organization_id: str | None = None) -> dict:
-    item = repository.get(attachment_id)
+    item = repository.get(attachment_id, organization_id)
     if not item:
         raise AttachmentError("Allegato non trovato.", 404)
     _authorize_document(item["entity_type"], int(item["entity_id"]), organization_id)
@@ -111,22 +127,44 @@ def list_items(entity_type: str, entity_id: int, organization_id: str | None = N
     if entity_type not in SUPPORTED_ENTITY_TYPES:
         raise AttachmentError("Tipo entità allegato non supportato.")
     _authorize_document(entity_type, entity_id, organization_id)
-    items = [_present(item) for item in repository.list_for_entity(entity_type, entity_id)]
+    items = [_present(item) for item in repository.list_for_entity(
+        entity_type, entity_id, organization_id or "default",
+    )]
     return {"items": items, "count": len(items)}
 
 
-def list_vehicle(vehicle_id: int) -> dict:
-    items = [_present(item) for item in repository.list_for_vehicle(vehicle_id)]
+def list_vehicle(vehicle_id: int, organization_id: str | None = None) -> dict:
+    items = [_present(item) for item in repository.list_for_vehicle(
+        vehicle_id, organization_id or "default",
+    )]
     return {"items": items, "count": len(items)}
 
 
 def delete(attachment_id: str, organization_id: str | None = None, actor_user_id: str = "system") -> None:
     item = get(attachment_id, organization_id)
     attachment_storage.delete(item["storage_path"])
-    repository.delete(attachment_id)
+    repository.delete(attachment_id, organization_id or "default")
+    repository.record_event({
+        "id": str(uuid.uuid4()), "attachment_id": attachment_id,
+        "organization_id": organization_id or "default", "action": "deleted",
+        "actor_user_id": actor_user_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "details": item["original_filename"],
+    })
     if item["entity_type"] == "document" and organization_id:
         from app.plugins.fleet.documents.infrastructure import repository as document_repository
         document_repository.add_event(
             str(uuid.uuid4()), organization_id, int(item["entity_id"]), actor_user_id,
             "attachment.removed", item["original_filename"],
         )
+
+
+def resolve_file(attachment_id: str, organization_id: str | None = None) -> tuple[dict, Path]:
+    item = get(attachment_id, organization_id)
+    try:
+        path = attachment_storage.resolve(item["storage_path"])
+    except (OSError, ValueError, RuntimeStorageError) as exc:
+        raise AttachmentError("File non disponibile nello storage.", 404) from exc
+    if not path.is_file():
+        raise AttachmentError("File non disponibile nello storage.", 404)
+    return item, path
