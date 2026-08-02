@@ -10,8 +10,8 @@ test("Workforce foundation asks the dispatcher how many people are callable", as
   const html = await source("index.html");
   assert.match(html, /Quante persone posso convocare\?/);
   for (const label of [
-    "Organico totale", "Convocabili", "Disponibili", "Ferie", "Malattie",
-    "Permessi", "Riposi", "Non convocabili", "Riserve",
+    "Organico totale", "Convocabili", "Disponibili", "Ferie", "Malattia",
+    "Permesso", "Riposo", "Non convocabili", "Override attivi",
   ]) assert.match(html, new RegExp(label));
   assert.doesNotMatch(html, /workforce-foundation[\s\S]{0,3000}(Costo|Marginalita|POD|DNR|DCR)/i);
 });
@@ -37,7 +37,7 @@ test("Planning reads callable Workforce drivers without moving assignments into 
     source("assets/js/modules/workforce-foundation.js"),
   ]);
   assert.match(renderer, /payload\.workforce/);
-  assert.match(renderer, /item\.callable/);
+  assert.match(renderer, /planningDriverOptions/);
   assert.match(routes, /planningWorkforceDrivers/);
   assert.doesNotMatch(foundation, /assignment|save.*convocation/i);
 });

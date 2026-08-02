@@ -34,7 +34,7 @@ import {
 import {
   initWorkforceFoundation,
   renderWorkforceFoundation,
-} from "./workforce-foundation.js";
+} from "./workforce-foundation.js?v=2";
 
 
 const PAGE_STATES = Object.freeze({
@@ -543,6 +543,9 @@ export function initWorkforcePage() {
     }));
     const file = event.detail?.file || null;
     workforceImportFlow.open(file, { analyzeFile: Boolean(file) });
+  });
+  document.addEventListener("workforce:consecutivity-changed", () => {
+    if (loaded && currentStatus?.member_count) loadCalendar();
   });
   document.addEventListener("workspace:view-changed", (event) => {
     if (event.detail.view === "workforce" && !loaded) refresh();

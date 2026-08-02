@@ -43,6 +43,9 @@ function workforceView(briefing, workforce) {
       absences: Number(workforce.holiday || 0) + Number(workforce.sickness || 0) + Number(workforce.leave || 0),
       coverage: null,
       status: `${Number(workforce.callable || 0)} persone convocabili`,
+      atLimit: Number(workforce.at_limit || 0),
+      restRecommended: Number(workforce.rest_recommended || 0),
+      insufficient: Number(workforce.insufficient_data || 0),
     };
   }
   const coverage = factValue(briefing, "human_resources", "workforce_coverage");

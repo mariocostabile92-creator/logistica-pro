@@ -1,6 +1,9 @@
+import { CONSECUTIVITY_FILTERS, matchesConsecutivity } from "../workforce-consecutivity/consecutivity-state.js";
+
 export const EMPTY_FILTERS = Object.freeze({
   query: "", callability: "all", availability: "all",
   role: "all", station: "all", contract: "all", reserve: false,
+  ...CONSECUTIVITY_FILTERS,
 });
 
 export function createAvailabilityState() {
@@ -34,6 +37,7 @@ export function selectAvailabilityDrivers(state) {
       && (filters.role === "all" || driver.role === filters.role)
       && (filters.station === "all" || driver.station === filters.station)
       && (filters.contract === "all" || driver.contract === filters.contract)
-      && (!filters.reserve || driver.is_reserve);
+      && (!filters.reserve || driver.is_reserve)
+      && matchesConsecutivity(driver, filters);
   });
 }

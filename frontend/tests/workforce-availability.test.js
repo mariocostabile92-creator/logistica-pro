@@ -35,8 +35,8 @@ test("KPI filters select callable limited unavailable and reserve drivers determ
   assert.deepEqual(selectAvailabilityDrivers(state).map((item) => item.workforce_member_id), [1, 2, 4]);
   state = reduceAvailabilityState(state, { type: "kpi", filters: { callability: "limited" } });
   assert.deepEqual(selectAvailabilityDrivers(state).map((item) => item.workforce_member_id), [2]);
-  state = reduceAvailabilityState(state, { type: "kpi", filters: { reserve: true } });
-  assert.deepEqual(selectAvailabilityDrivers(state).map((item) => item.workforce_member_id), [4]);
+  state = reduceAvailabilityState(state, { type: "kpi", filters: { callability: "not_callable" } });
+  assert.deepEqual(selectAvailabilityDrivers(state).map((item) => item.workforce_member_id), [3]);
 });
 
 test("availability architecture is split into service presenter state KPI card detail and tests", async () => {

@@ -2,6 +2,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.plugins.workforce.domain.consecutivity import ConsecutivitySnapshot
+
 
 class WorkforceValueOrigin(str, Enum):
     IMPORTED = "imported"
@@ -27,6 +29,7 @@ class WorkforceMember(BaseModel):
     source_reference: str
     created_at: str
     updated_at: str
+    organization_id: str = "default"
 
 
 class WorkforceDayStatus(BaseModel):
@@ -42,6 +45,7 @@ class WorkforceDayStatus(BaseModel):
     source_reference: str
     observed_or_confirmed: WorkforceValueOrigin
     updated_at: str
+    organization_id: str = "default"
 
 
 class WorkforceRequirement(BaseModel):
@@ -153,6 +157,7 @@ class WorkforceDriverReadiness(BaseModel):
     leave: bool = False
     consecutive_days: int | None = None
     consecutivity_status: str = "not_evaluated"
+    consecutivity: ConsecutivitySnapshot | None = None
     capabilities: list[str] = Field(default_factory=list)
     operational_notes: str | None = None
     convocation_status: str = "not_started"
@@ -172,6 +177,10 @@ class WorkforceFoundationSummary(BaseModel):
     rest: int = 0
     not_callable: int = 0
     reserves: int = 0
+    at_limit: int = 0
+    rest_recommended: int = 0
+    insufficient_data: int = 0
+    active_overrides: int = 0
 
 
 class WorkforceFoundationSnapshot(BaseModel):
@@ -179,3 +188,4 @@ class WorkforceFoundationSnapshot(BaseModel):
     summary: WorkforceFoundationSummary
     drivers: list[WorkforceDriverReadiness] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
+    permissions: dict[str, bool] = Field(default_factory=dict)

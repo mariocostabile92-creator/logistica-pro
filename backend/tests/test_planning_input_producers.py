@@ -266,20 +266,20 @@ def test_plugin_producers_read_only_their_existing_sources(monkeypatch):
     monkeypatch.setattr(
         workforce_producer.read_repository,
         "list_members",
-        lambda: [member(1)],
+        lambda organization_id=None: [member(1)],
     )
     monkeypatch.setattr(
         workforce_producer.read_repository,
         "list_statuses",
-        lambda date_from, date_to: (
-            status_filters.append((date_from, date_to)) or [day_status(1, 1)]
+        lambda date_from=None, date_to=None, member_id=None, organization_id=None: (
+            status_filters.append((date_from, date_to, organization_id)) or [day_status(1, 1)]
         ),
     )
     monkeypatch.setattr(
         workforce_producer.read_repository,
         "list_requirements",
-        lambda date_from, date_to: (
-            requirement_filters.append((date_from, date_to))
+        lambda date_from, date_to, organization_id=None: (
+            requirement_filters.append((date_from, date_to, organization_id))
             or [requirement()]
         ),
     )
@@ -304,8 +304,11 @@ def test_plugin_producers_read_only_their_existing_sources(monkeypatch):
         freshness_ttl=TTL,
     )
 
-    expected_filters = (OPERATION_DATE.isoformat(), OPERATION_DATE.isoformat())
-    assert status_filters == [expected_filters]
+    expected_filters = (
+        OPERATION_DATE.isoformat(), OPERATION_DATE.isoformat(),
+        "organization-one",
+    )
+    assert expected_filters in status_filters
     assert requirement_filters == [expected_filters]
     assert workforce.validation.status is PlanningInputStatus.READY
     assert fleet.validation.status is PlanningInputStatus.READY

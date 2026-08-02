@@ -15,6 +15,10 @@ from app.services.planning_operations_service import (
     update_convocation,
 )
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
+from app.plugins.workforce.application.planning_adapter import (
+    planning_conflicts,
+    planning_contract,
+)
 
 
 router = APIRouter(prefix="/api/planning/operations", tags=["planning-operations"])
@@ -43,7 +47,20 @@ def snapshot(request: Request) -> PlanningOperationResponse:
         payload["planning"].get("operation_date") if payload["planning"]
         else (payload.get("forecast") or {}).get("period_start")
     )
-    payload["workforce"] = foundation_snapshot(operation_date).model_dump(mode="json")
+    workforce = foundation_snapshot(operation_date, user.organization_id)
+    payload["workforce"] = workforce.model_dump(mode="json")
+    payload["workforce"]["planning"] = planning_contract(workforce)
+    consecutivity_conflicts = planning_conflicts(workforce, payload["routes"])
+    payload["conflicts"] = [*payload["conflicts"], *consecutivity_conflicts]
+    payload["summary"]["conflicts"] = len(payload["conflicts"])
+    payload["summary"]["blocking_conflicts"] = sum(
+        bool(item.get("blocking")) for item in payload["conflicts"]
+    )
+    if consecutivity_conflicts:
+        payload["lifecycle"]["can_confirm"] = (
+            payload["lifecycle"]["can_confirm"]
+            and not any(item["blocking"] for item in consecutivity_conflicts)
+        )
     return PlanningOperationResponse.model_validate(payload)
 
 

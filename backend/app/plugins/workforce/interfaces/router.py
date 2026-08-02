@@ -1,8 +1,12 @@
-from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Response, UploadFile
+
+from app.auth.permission_service import has_permission
 
 from app.importers.excel_reader import validate_upload
 from app.importers.workbook_profiler.errors import WorkbookProfileError
 from app.plugins.workforce.application import workforce_service
+from app.plugins.workforce.application import consecutivity_policy, override_service
+from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
 from app.plugins.workforce.domain.errors import (
     WorkforceImportError,
@@ -26,6 +30,8 @@ from app.plugins.workforce.interfaces.schemas import (
     WorkforceMembersResponse,
     WorkforceMemberUpdateRequest,
     WorkforceStatusResponse,
+    ConsecutivityOverrideRequest,
+    ConsecutivityPolicyRequest,
 )
 from app.workspace.status_service import (
     DemoWorkspaceResetRequiredError,
@@ -61,9 +67,17 @@ def _write_error(exc: Exception) -> HTTPException:
     )
 
 
+def _require(request: Request, permission: str):
+    user = request.state.user
+    if not has_permission(user.role, permission):
+        raise HTTPException(status_code=403, detail="Operazione Workforce non autorizzata.")
+    return user
+
+
 @router.get("/status", response_model=WorkforceStatusResponse)
-def status() -> WorkforceStatusResponse:
-    members = workforce_service.list_members()
+def status(request: Request) -> WorkforceStatusResponse:
+    user = _require(request, "workforce:read")
+    members = workforce_service.list_members(user.organization_id)
     return WorkforceStatusResponse(
         member_count=len(members),
         latest_import=read_repository.latest_import_summary(),
@@ -71,28 +85,91 @@ def status() -> WorkforceStatusResponse:
 
 
 @router.get("/members", response_model=WorkforceMembersResponse)
-def members() -> WorkforceMembersResponse:
-    return WorkforceMembersResponse(items=workforce_service.list_members())
+def members(request: Request) -> WorkforceMembersResponse:
+    user = _require(request, "workforce:read")
+    return WorkforceMembersResponse(items=workforce_service.list_members(user.organization_id))
 
 
 @router.get("/foundation", response_model=WorkforceFoundationSnapshot)
 def foundation(
+    request: Request,
     operation_date: str | None = Query(default=None),
 ) -> WorkforceFoundationSnapshot:
     try:
-        return foundation_snapshot(operation_date)
+        user = _require(request, "workforce:read")
+        snapshot = foundation_snapshot(operation_date, user.organization_id)
+        snapshot.permissions = {
+            "can_configure_policy": has_permission(user.role, "workforce:policy:write"),
+            "can_override": has_permission(user.role, "workforce:override"),
+        }
+        return snapshot
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="Data operativa non valida.") from exc
 
 
+@router.get("/consecutivity/policy")
+def get_consecutivity_policy(request: Request):
+    user = _require(request, "workforce:read")
+    return consecutivity_policy.policy(user.organization_id)
+
+
+@router.put("/consecutivity/policy")
+def put_consecutivity_policy(payload: ConsecutivityPolicyRequest, request: Request):
+    user = _require(request, "workforce:policy:write")
+    try:
+        return consecutivity_policy.update_policy(
+            user.organization_id, **payload.model_dump(), actor=user.email
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/consecutivity/overrides", status_code=201)
+def create_consecutivity_override(payload: ConsecutivityOverrideRequest, request: Request):
+    user = _require(request, "workforce:override")
+    try:
+        return override_service.create_override(
+            user.organization_id, **payload.model_dump(), actor=user.email
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/consecutivity/{member_id}")
+def member_consecutivity(
+    member_id: int,
+    request: Request,
+    operation_date: str | None = Query(default=None),
+):
+    user = _require(request, "workforce:read")
+    target = operation_date or date.today().isoformat()
+    members = [
+        item for item in read_repository.list_members(user.organization_id)
+        if item.workforce_member_id == member_id
+    ]
+    if not members:
+        raise HTTPException(status_code=404, detail="Driver Workforce non trovato.")
+    snapshot = consecutivity_snapshots(user.organization_id, target, members)[member_id]
+    return {
+        "snapshot": snapshot,
+        "override_history": override_service.history(user.organization_id, member_id),
+    }
+
+
 @router.patch("/members/{member_id}", response_model=WorkforceMember)
-def update_member(member_id: int, request: WorkforceMemberUpdateRequest):
+def update_member(
+    member_id: int,
+    request: WorkforceMemberUpdateRequest,
+    http_request: Request,
+):
     try:
         ensure_real_data_write_allowed()
+        user = _require(http_request, "workforce:write")
         return workforce_service.update_member(
             member_id,
             request.model_dump(exclude={"actor"}, exclude_unset=True),
             request.actor,
+            user.organization_id,
         )
     except (DemoWorkspaceResetRequiredError, WorkforceMemberNotFoundError, WorkforceValidationError) as exc:
         raise _write_error(exc) from exc
@@ -150,22 +227,33 @@ async def import_confirmed(
 
 
 @router.post("/day-status", response_model=WorkforceDayStatus)
-def create_day_status(request: WorkforceDayStatusRequest) -> WorkforceDayStatus:
+def create_day_status(
+    request: WorkforceDayStatusRequest,
+    http_request: Request,
+) -> WorkforceDayStatus:
     try:
         ensure_real_data_write_allowed()
+        user = _require(http_request, "workforce:write")
         return workforce_service.save_day_status(
-            request.model_dump(exclude={"actor"}), request.actor
+            request.model_dump(exclude={"actor"}), request.actor,
+            organization_id=user.organization_id,
         )
     except (DemoWorkspaceResetRequiredError, WorkforceMemberNotFoundError, WorkforceValidationError) as exc:
         raise _write_error(exc) from exc
 
 
 @router.patch("/day-status/{status_id}", response_model=WorkforceDayStatus)
-def update_day_status(status_id: int, request: WorkforceDayStatusRequest) -> WorkforceDayStatus:
+def update_day_status(
+    status_id: int,
+    request: WorkforceDayStatusRequest,
+    http_request: Request,
+) -> WorkforceDayStatus:
     try:
         ensure_real_data_write_allowed()
+        user = _require(http_request, "workforce:write")
         return workforce_service.save_day_status(
-            request.model_dump(exclude={"actor"}), request.actor, status_id
+            request.model_dump(exclude={"actor"}), request.actor, status_id,
+            user.organization_id,
         )
     except (
         DemoWorkspaceResetRequiredError,

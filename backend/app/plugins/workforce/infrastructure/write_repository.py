@@ -38,13 +38,14 @@ def _change(
     reason: str,
     source: str,
     timestamp: str,
+    organization_id: str = "default",
 ) -> None:
     conn.execute(
         """
         INSERT INTO workforce_changes (
             entity_type, entity_id, actor, timestamp, before_value,
-            after_value, reason, source
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            after_value, reason, source, organization_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             entity_type,
@@ -55,6 +56,7 @@ def _change(
             _json(after),
             reason,
             source,
+            organization_id,
         ),
     )
 
@@ -90,12 +92,17 @@ def _status_values(row) -> dict[str, object]:
     }
 
 
-def update_member(member_id: int, changes: dict[str, object], actor: str):
+def update_member(
+    member_id: int,
+    changes: dict[str, object],
+    actor: str,
+    organization_id: str = "default",
+):
     now = utc_now_iso()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT * FROM workforce_members WHERE id = ?",
-            (member_id,),
+            "SELECT * FROM workforce_members WHERE id = ? AND organization_id IN (?, 'default')",
+            (member_id, organization_id),
         ).fetchone()
         if not row:
             raise WorkforceMemberNotFoundError(
@@ -146,6 +153,7 @@ def update_member(member_id: int, changes: dict[str, object], actor: str):
                 reason="manual_update",
                 source="manual",
                 timestamp=now,
+                organization_id=organization_id,
             )
         updated = conn.execute(
             "SELECT * FROM workforce_members WHERE id = ?",
@@ -158,12 +166,13 @@ def save_manual_status(
     values: dict[str, object],
     actor: str,
     status_id: int | None = None,
+    organization_id: str = "default",
 ):
     now = utc_now_iso()
     with db_session() as conn:
         member = conn.execute(
-            "SELECT id FROM workforce_members WHERE id = ?",
-            (values["workforce_member_id"],),
+            "SELECT id FROM workforce_members WHERE id = ? AND organization_id IN (?, 'default')",
+            (values["workforce_member_id"], organization_id),
         ).fetchone()
         if not member:
             raise WorkforceMemberNotFoundError(
@@ -221,8 +230,9 @@ def save_manual_status(
                 INSERT INTO workforce_day_statuses (
                     workforce_member_id, date, status_code, availability,
                     shift_code, start_time, end_time, notes,
-                    source_reference, observed_or_confirmed, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    source_reference, observed_or_confirmed, updated_at,
+                    organization_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     values["workforce_member_id"],
@@ -236,6 +246,7 @@ def save_manual_status(
                     after["source_reference"],
                     "manual",
                     now,
+                    organization_id,
                 ),
             )
             status_id = int(cursor.lastrowid)
@@ -249,6 +260,7 @@ def save_manual_status(
             reason="manual_update",
             source="manual",
             timestamp=now,
+            organization_id=organization_id,
         )
         updated = conn.execute(
             "SELECT * FROM workforce_day_statuses WHERE id = ?",

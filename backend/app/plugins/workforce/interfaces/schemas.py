@@ -73,3 +73,23 @@ class WorkforceDayStatusRequest(BaseModel):
     def valid_date(cls, value: str) -> str:
         date.fromisoformat(value)
         return value
+
+
+class ConsecutivityPolicyRequest(BaseModel):
+    warning_threshold: int = Field(default=5, ge=1, le=30)
+    rest_required_threshold: int = Field(default=6, ge=2, le=31)
+    rest_break_days: int = Field(default=1, ge=1, le=7)
+
+
+class ConsecutivityOverrideRequest(BaseModel):
+    workforce_member_id: int = Field(gt=0)
+    operation_date: str
+    valid_until: str
+    target_callability: str = Field(pattern="^(callable|limited|not_callable)$")
+    reason: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("operation_date", "valid_until")
+    @classmethod
+    def valid_override_date(cls, value: str) -> str:
+        date.fromisoformat(value)
+        return value

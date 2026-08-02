@@ -193,16 +193,31 @@ def produce_workforce_planning_input_snapshot(
     assessed_at: datetime,
     freshness_ttl: timedelta,
 ) -> PlanningInputSnapshot:
+    from app.plugins.workforce.application.availability_service import foundation_snapshot
+
     date_value = operation_date.isoformat()
+    foundation = foundation_snapshot(date_value, organization_id)
+    callable_by_member = {
+        item.workforce_member_id: item.callable for item in foundation.drivers
+    }
+    statuses = [
+        item.model_copy(update={
+            "availability": callable_by_member.get(item.workforce_member_id, False)
+        })
+        for item in read_repository.list_statuses(
+            date_value, date_value, organization_id=organization_id
+        )
+    ]
     return build_workforce_planning_input_snapshot(
         organization_id=organization_id,
         operational_unit=operational_unit,
         operation_date=operation_date,
-        members=read_repository.list_members(),
-        statuses=read_repository.list_statuses(date_value, date_value),
+        members=read_repository.list_members(organization_id),
+        statuses=statuses,
         requirements=read_repository.list_requirements(
             date_value,
             date_value,
+            organization_id,
         ),
         assessed_at=assessed_at,
         freshness_ttl=freshness_ttl,

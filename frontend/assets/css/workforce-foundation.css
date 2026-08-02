@@ -37,7 +37,7 @@
 
 .workforce-foundation-kpis {
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 8px;
   margin: 18px 0 0;
 }
@@ -155,6 +155,64 @@
   min-height: 38px;
 }
 
+.workforce-consecutivity-filters {
+  min-width: 190px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.workforce-consecutivity-filters summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.workforce-consecutivity-filters > div {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.workforce-checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.workforce-checkbox input {
+  width: auto;
+}
+
+.workforce-consecutivity-card {
+  grid-column: 1 / -2;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 8px 14px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised, #f7f9f8);
+}
+
+.workforce-consecutivity-card > div {
+  display: grid;
+  gap: 3px;
+}
+
+.workforce-consecutivity-card p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.workforce-override-badge {
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #e7e1f7;
+  color: #5b3f91 !important;
+}
+
 .workforce-foundation-result-count {
   margin: 0 0 8px;
   font-weight: 800;
@@ -216,6 +274,66 @@
   gap: 7px;
 }
 
+.workforce-consecutivity-detail {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.workforce-consecutivity-strip {
+  display: grid;
+  grid-template-columns: repeat(14, minmax(42px, 1fr));
+  gap: 4px;
+  margin: 12px 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+}
+
+.workforce-consecutivity-strip li {
+  display: grid;
+  gap: 3px;
+  min-width: 42px;
+  padding: 6px 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.workforce-consecutivity-strip [data-day-state="worked"] { background: #dff1e9; }
+.workforce-consecutivity-strip [data-day-state="planned"] { background: #dcecf8; }
+.workforce-consecutivity-strip [data-day-state="rest"] { background: #edf0ef; }
+.workforce-consecutivity-strip [data-day-state="holiday"],
+.workforce-consecutivity-strip [data-day-state="sickness"],
+.workforce-consecutivity-strip [data-day-state="leave"] { background: #fff0f0; }
+
+.workforce-policy-note {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.workforce-override-summary {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+  padding: 10px;
+  border-left: 4px solid #6c52a3;
+  background: #f7f3ff;
+}
+
+.workforce-availability-detail > form {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.workforce-availability-detail > form > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .workforce-readiness-badge[data-status="available"],
 .workforce-readiness-badge[data-status="scheduled"] {
   background: #dff1e9;
@@ -242,6 +360,11 @@
 
   .workforce-driver-readiness {
     grid-template-columns: minmax(190px, 1.4fr) repeat(2, minmax(120px, 1fr));
+  }
+
+  .workforce-consecutivity-card {
+    grid-template-columns: 1fr 1fr;
+    grid-column: 1 / -1;
   }
 
   .workforce-driver-state {
@@ -271,6 +394,10 @@
     min-width: 0;
   }
 
+  .workforce-consecutivity-filters {
+    min-width: 0;
+  }
+
   .workforce-foundation-kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -281,6 +408,7 @@
 
   .workforce-driver-identity,
   .workforce-driver-state,
+  .workforce-consecutivity-card,
   .workforce-driver-detail-button {
     grid-column: 1 / -1;
   }
@@ -300,6 +428,10 @@
   }
 
   .workforce-availability-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workforce-consecutivity-card {
     grid-template-columns: 1fr;
   }
 }

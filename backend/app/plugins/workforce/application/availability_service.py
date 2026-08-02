@@ -7,6 +7,9 @@ from app.plugins.workforce.domain.models import (
     WorkforceFoundationSummary,
 )
 from app.plugins.workforce.infrastructure import read_repository
+from app.plugins.workforce.application.consecutivity_service import (
+    snapshots as consecutivity_snapshots,
+)
 
 
 CALLABLE_STATUSES = {"available", "scheduled"}
@@ -38,7 +41,42 @@ DEFAULT_REASONS = {
 }
 
 
-def _decision(status: str, notes: str | None, reserve: bool) -> dict[str, object]:
+def _decision(status: str, notes: str | None, reserve: bool, consecutivity=None) -> dict[str, object]:
+    if status not in CALLABLE_STATUSES | LIMITED_STATUSES:
+        return {
+            "status": "not_callable", "label": "Non convocabile",
+            "tone": "rest" if status == "rest" else "danger", "callable": False,
+            "reason": notes.strip() if notes and notes.strip() else DEFAULT_REASONS[status],
+        }
+    if consecutivity and consecutivity.override:
+        target = consecutivity.override.target_callability
+        return {
+            "status": target,
+            "label": {
+                "callable": "Convocabile", "limited": "Convocabile con limitazioni",
+                "not_callable": "Non convocabile",
+            }[target],
+            "tone": {"callable": "success", "limited": "warning", "not_callable": "danger"}[target],
+            "callable": target != "not_callable",
+            "reason": f"Override autorizzato: {consecutivity.override.reason}",
+        }
+    if consecutivity:
+        if consecutivity.calculated_status == "dati_insufficienti":
+            return {
+                "status": "not_callable", "label": "Verifica manuale richiesta",
+                "tone": "danger", "callable": False,
+                "reason": "Convocabilita manuale richiesta: storico consecutivita incompleto.",
+            }
+        if consecutivity.calculated_status in {"limite_raggiunto", "riposo_raccomandato"}:
+            return {
+                "status": "not_callable", "label": "Non convocabile",
+                "tone": "danger", "callable": False, "reason": consecutivity.reason,
+            }
+        if consecutivity.calculated_status == "attenzione":
+            return {
+                "status": "limited", "label": "Convocabile con limitazioni",
+                "tone": "warning", "callable": True, "reason": consecutivity.reason,
+            }
     if status in LIMITED_STATUSES:
         return {
             "status": "limited", "label": "Convocabile con limitazioni",
@@ -51,11 +89,7 @@ def _decision(status: str, notes: str | None, reserve: bool) -> dict[str, object
             "tone": "reserve" if reserve else "success", "callable": True,
             "reason": "Disponibile come riserva." if reserve else DEFAULT_REASONS[status],
         }
-    return {
-        "status": "not_callable", "label": "Non convocabile",
-        "tone": "rest" if status == "rest" else "danger", "callable": False,
-        "reason": notes.strip() if notes and notes.strip() else DEFAULT_REASONS[status],
-    }
+    raise ValueError("Stato Workforce non classificato.")
 
 
 def _history_item(item) -> dict[str, str | bool | None]:
@@ -73,10 +107,15 @@ def _history_item(item) -> dict[str, str | bool | None]:
     }
 
 
-def foundation_snapshot(operation_date: str | None = None) -> WorkforceFoundationSnapshot:
+def foundation_snapshot(
+    operation_date: str | None = None,
+    organization_id: str = "default",
+) -> WorkforceFoundationSnapshot:
     target_date = operation_date or date.today().isoformat()
     date.fromisoformat(target_date)
-    all_statuses = read_repository.list_statuses(date_to=target_date)
+    all_statuses = read_repository.list_statuses(
+        date_to=target_date, organization_id=organization_id
+    )
     history_by_member = defaultdict(list)
     daily_by_member = {}
     for item in all_statuses:
@@ -86,7 +125,11 @@ def foundation_snapshot(operation_date: str | None = None) -> WorkforceFoundatio
 
     drivers = []
     unknown_statuses: set[str] = set()
-    for member in read_repository.list_members():
+    members = read_repository.list_members(organization_id=organization_id)
+    consecutivity_by_member = consecutivity_snapshots(
+        organization_id, target_date, members
+    )
+    for member in members:
         if not member.active:
             continue
         daily = daily_by_member.get(member.workforce_member_id)
@@ -94,7 +137,10 @@ def foundation_snapshot(operation_date: str | None = None) -> WorkforceFoundatio
         if status not in KNOWN_STATUSES:
             unknown_statuses.add(status)
             status = "unknown"
-        decision = _decision(status, daily.notes if daily else None, member.is_reserve)
+        consecutivity = consecutivity_by_member[member.workforce_member_id]
+        decision = _decision(
+            status, daily.notes if daily else None, member.is_reserve, consecutivity
+        )
         history = sorted(
             history_by_member[member.workforce_member_id],
             key=lambda item: (item.date, item.updated_at), reverse=True,
@@ -123,6 +169,9 @@ def foundation_snapshot(operation_date: str | None = None) -> WorkforceFoundatio
             holiday=status == "holiday",
             sickness=status == "sickness",
             leave=status == "leave",
+            consecutive_days=consecutivity.effective_consecutive_days,
+            consecutivity_status=consecutivity.calculated_status,
+            consecutivity=consecutivity,
             capabilities=member.capabilities,
             operational_notes=member.operational_notes,
             convocation_status="not_started" if decision["callable"] else "not_applicable",
@@ -145,9 +194,13 @@ def foundation_snapshot(operation_date: str | None = None) -> WorkforceFoundatio
         rest=sum(item.rest for item in drivers),
         not_callable=sum(not item.callable for item in drivers),
         reserves=sum(item.is_reserve and item.callable for item in drivers),
+        at_limit=sum(item.consecutivity_status == "limite_raggiunto" for item in drivers),
+        rest_recommended=sum(item.consecutivity_status == "riposo_raccomandato" for item in drivers),
+        insufficient_data=sum(item.consecutivity_status == "dati_insufficienti" for item in drivers),
+        active_overrides=sum(bool(item.consecutivity and item.consecutivity.override) for item in drivers),
     )
     limitations = [
-        "La consecutivita e predisposta ma non viene ancora calcolata automaticamente.",
+        "Valutazione basata sulla policy operativa dell'organizzazione.",
         "Le convocazioni appartengono al Planning e non vengono eseguite da Workforce.",
     ]
     if unknown_statuses:

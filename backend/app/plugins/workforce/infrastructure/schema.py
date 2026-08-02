@@ -7,6 +7,13 @@ PROFILE_COLUMNS = {
     "station": "TEXT",
     "operational_notes": "TEXT",
     "is_reserve": "INTEGER NOT NULL DEFAULT 0",
+    "organization_id": "TEXT NOT NULL DEFAULT 'default'",
+}
+
+SCOPED_COLUMNS = {
+    "workforce_day_statuses": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
+    "workforce_requirements": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
+    "workforce_changes": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
 }
 
 
@@ -27,6 +34,22 @@ def _ensure_profile_columns(conn) -> None:
             conn.execute(
                 f"ALTER TABLE workforce_members ADD COLUMN {name} {definition}"
             )
+
+
+def _ensure_columns(conn, table: str, columns: dict[str, str]) -> None:
+    if isinstance(conn, PostgresConnection):
+        rows = conn.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = ?",
+            (table,),
+        ).fetchall()
+        existing = {row["column_name"] for row in rows}
+    else:
+        existing = {
+            row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
 
 
 def init_schema() -> None:
@@ -105,6 +128,54 @@ def init_schema() -> None:
                 ON workforce_requirements(date, operational_unit_id);
             CREATE INDEX IF NOT EXISTS idx_workforce_changes_time
                 ON workforce_changes(timestamp, id);
+
+            CREATE TABLE IF NOT EXISTS workforce_consecutivity_policies (
+                organization_id TEXT PRIMARY KEY,
+                warning_threshold INTEGER NOT NULL,
+                rest_required_threshold INTEGER NOT NULL,
+                rest_break_days INTEGER NOT NULL,
+                updated_by TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS workforce_consecutivity_overrides (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                workforce_member_id INTEGER NOT NULL,
+                operation_date TEXT NOT NULL,
+                valid_until TEXT NOT NULL,
+                target_callability TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                revoked_at TEXT,
+                FOREIGN KEY (workforce_member_id) REFERENCES workforce_members(id)
+                    ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_workforce_policy_override_scope
+                ON workforce_consecutivity_overrides(
+                    organization_id, workforce_member_id,
+                    operation_date, valid_until
+                );
             """
         )
         _ensure_profile_columns(conn)
+        for table, columns in SCOPED_COLUMNS.items():
+            _ensure_columns(conn, table, columns)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_workforce_member_org ON workforce_members(organization_id, active)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_workforce_status_org_date ON workforce_day_statuses(organization_id, date, workforce_member_id)"
+        )
+        organizations = conn.execute(
+            "SELECT id FROM organizations ORDER BY created_at LIMIT 2"
+        ).fetchall()
+        if len(organizations) == 1:
+            organization_id = organizations[0]["id"]
+            for table in ("workforce_members", "workforce_day_statuses", "workforce_requirements", "workforce_changes"):
+                conn.execute(
+                    f"UPDATE {table} SET organization_id = ? WHERE organization_id = 'default'",
+                    (organization_id,),
+                )

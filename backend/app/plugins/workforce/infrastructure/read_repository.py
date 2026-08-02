@@ -10,10 +10,13 @@ from app.plugins.workforce.infrastructure.records import (
 )
 
 
-def list_members():
+def list_members(organization_id: str | None = None):
+    where = " WHERE organization_id IN (?, 'default')" if organization_id else ""
+    parameters = (organization_id,) if organization_id else ()
     with db_session() as conn:
         rows = conn.execute(
-            "SELECT * FROM workforce_members ORDER BY display_name, id"
+            f"SELECT * FROM workforce_members{where} ORDER BY display_name, id",
+            parameters,
         ).fetchall()
     return [member_from_row(row) for row in rows]
 
@@ -44,6 +47,7 @@ def list_statuses(
     date_from: str | None = None,
     date_to: str | None = None,
     member_id: int | None = None,
+    organization_id: str | None = None,
 ):
     clauses = []
     parameters: list[object] = []
@@ -56,6 +60,9 @@ def list_statuses(
     if member_id:
         clauses.append("workforce_member_id = ?")
         parameters.append(member_id)
+    if organization_id:
+        clauses.append("organization_id IN (?, 'default')")
+        parameters.append(organization_id)
     where = " WHERE " + " AND ".join(clauses) if clauses else ""
     with db_session() as conn:
         rows = conn.execute(
@@ -73,7 +80,11 @@ def get_status(status_id: int):
     return status_from_row(row) if row else None
 
 
-def list_requirements(date_from: str | None = None, date_to: str | None = None):
+def list_requirements(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    organization_id: str | None = None,
+):
     clauses = []
     parameters: list[object] = []
     if date_from:
@@ -82,6 +93,9 @@ def list_requirements(date_from: str | None = None, date_to: str | None = None):
     if date_to:
         clauses.append("date <= ?")
         parameters.append(date_to)
+    if organization_id:
+        clauses.append("organization_id IN (?, 'default')")
+        parameters.append(organization_id)
     where = " WHERE " + " AND ".join(clauses) if clauses else ""
     with db_session() as conn:
         rows = conn.execute(

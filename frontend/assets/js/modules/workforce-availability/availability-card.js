@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../utils/dom.js";
+import { consecutivityCard } from "../workforce-consecutivity/consecutivity-card.js";
 
 export function availabilityCard(driver) {
   const reserve = driver.is_reserve ? '<span class="workforce-reserve-badge">Riserva</span>' : "";
@@ -9,6 +10,7 @@ export function availabilityCard(driver) {
     <div><span>Disponibilita</span><strong>${escapeHtml(driver.availability_label)}</strong></div>
     <div><span>Abilitazioni</span><strong>${escapeHtml(driver.capabilities?.join(", ") || "Nessuna")}</strong></div>
     <div class="workforce-driver-state"><span class="workforce-readiness-badge">${escapeHtml(driver.callability_label)}</span>${reserve}<strong>${escapeHtml(driver.callability_reason)}</strong></div>
+    ${consecutivityCard(driver)}
     <button type="button" class="quiet workforce-driver-detail-button" data-workforce-driver-detail="${driver.workforce_member_id}">Dettaglio</button>
   </article>`;
 }

@@ -31,10 +31,12 @@ def member_from_row(row) -> WorkforceMember:
         source_reference=row["source_reference"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
+        organization_id=row["organization_id"] if "organization_id" in keys else "default",
     )
 
 
 def status_from_row(row) -> WorkforceDayStatus:
+    keys = set(row.keys())
     return WorkforceDayStatus(
         status_id=int(row["id"]),
         workforce_member_id=int(row["workforce_member_id"]),
@@ -48,6 +50,7 @@ def status_from_row(row) -> WorkforceDayStatus:
         source_reference=row["source_reference"],
         observed_or_confirmed=row["observed_or_confirmed"],
         updated_at=row["updated_at"],
+        organization_id=row["organization_id"] if "organization_id" in keys else "default",
     )
 
 

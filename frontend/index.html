@@ -210,6 +210,9 @@
             <div><dt>Convocabili</dt><dd id="operationsHomeWorkforceDrivers">—</dd></div>
             <div><dt>Organico totale</dt><dd id="operationsHomeWorkforceRequired">—</dd></div>
             <div><dt>Assenze</dt><dd id="operationsHomeWorkforceAbsences">—</dd></div>
+            <div><dt>Al limite</dt><dd id="operationsHomeWorkforceLimit">—</dd></div>
+            <div><dt>Riposi da pianificare</dt><dd id="operationsHomeWorkforceRest">—</dd></div>
+            <div><dt>Dati insufficienti</dt><dd id="operationsHomeWorkforceInsufficient">—</dd></div>
           </dl>
         </section>
 
@@ -1361,19 +1364,28 @@
               <label>Ruolo<select id="workforceRoleFilter"><option value="all">Tutti</option></select></label>
               <label>Station<select id="workforceStationFilter"><option value="all">Tutte</option></select></label>
               <label>Contratto<select id="workforceContractFilter"><option value="all">Tutti</option></select></label>
+              <details class="workforce-consecutivity-filters">
+                <summary>Filtri consecutivita</summary>
+                <div>
+                  <label>Valutazione<select id="workforceConsecutivityFilter"><option value="all">Tutte</option><option value="regolare">Regolare</option><option value="attenzione">Attenzione</option><option value="limite_raggiunto">Limite raggiunto</option><option value="riposo_raccomandato">Riposo raccomandato</option><option value="dati_insufficienti">Dati insufficienti</option></select></label>
+                  <label>Giorni da<input id="workforceConsecutiveMin" type="number" min="0" max="31" inputmode="numeric" /></label>
+                  <label>Giorni a<input id="workforceConsecutiveMax" type="number" min="0" max="31" inputmode="numeric" /></label>
+                  <label class="workforce-checkbox"><input id="workforceOverrideFilter" type="checkbox" /> Override attivo</label>
+                </div>
+              </details>
               <button id="workforceFoundationReset" type="button" class="quiet">Reset</button>
+              <button id="workforcePolicyOpen" type="button" class="quiet" hidden>Configura policy</button>
             </div>
           </header>
           <div id="workforceFoundationKpis" class="workforce-foundation-kpis" aria-label="Filtri rapidi disponibilita Workforce">
             <button type="button" data-workforce-kpi-filter="Total"><span>Organico</span><strong>0</strong></button>
             <button type="button" class="is-primary" data-workforce-kpi-filter="Callable"><span>Convocabili</span><strong>0</strong></button>
-            <button type="button" data-workforce-kpi-filter="Available"><span>Disponibili</span><strong>0</strong></button>
-            <button type="button" data-workforce-kpi-filter="Reserves"><span>Riserve</span><strong>0</strong></button>
-            <button type="button" data-workforce-kpi-filter="Holiday"><span>Ferie</span><strong>0</strong></button>
-            <button type="button" data-workforce-kpi-filter="Sickness"><span>Malattie</span><strong>0</strong></button>
-            <button type="button" data-workforce-kpi-filter="Leave"><span>Permessi</span><strong>0</strong></button>
-            <button type="button" data-workforce-kpi-filter="Rest"><span>Riposi</span><strong>0</strong></button>
             <button type="button" data-workforce-kpi-filter="NotCallable"><span>Non convocabili</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Limited"><span>Con limitazioni</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="AtLimit"><span>Al limite</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="RestRecommended"><span>Riposo raccomandato</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Insufficient"><span>Dati insufficienti</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Overrides"><span>Override attivi</span><strong>0</strong></button>
           </div>
           <p id="workforceFoundationLimit" class="workforce-foundation-limit"></p>
           <p id="workforceFoundationResultCount" class="workforce-foundation-result-count" aria-live="polite">0 driver</p>
@@ -1381,6 +1393,27 @@
           <dialog id="workforceAvailabilityDetail" class="workforce-availability-detail" aria-labelledby="workforceAvailabilityDetailTitle">
             <header><div><p class="eyebrow">Disponibilita driver</p><h3 id="workforceAvailabilityDetailTitle">Dettaglio</h3></div><button id="workforceAvailabilityDetailClose" type="button" class="quiet">Chiudi</button></header>
             <div id="workforceAvailabilityDetailBody"></div>
+          </dialog>
+          <dialog id="workforcePolicyDialog" class="workforce-availability-detail" aria-labelledby="workforcePolicyTitle">
+            <form id="workforcePolicyForm">
+              <header><div><p class="eyebrow">Policy organizzativa</p><h3 id="workforcePolicyTitle">Consecutivita</h3></div><button id="workforcePolicyClose" type="button" class="quiet">Chiudi</button></header>
+              <p>Valutazione operativa interna; non costituisce consulenza legale.</p>
+              <label>Soglia attenzione<input id="workforcePolicyWarning" type="number" min="1" max="30" required /></label>
+              <label>Soglia limite<input id="workforcePolicyLimit" type="number" min="2" max="31" required /></label>
+              <label>Giornate complete di riposo<input id="workforcePolicyRestDays" type="number" min="1" max="7" required /></label>
+              <button type="submit">Salva policy</button>
+            </form>
+          </dialog>
+          <dialog id="workforceOverrideDialog" class="workforce-availability-detail" aria-labelledby="workforceOverrideTitle">
+            <form id="workforceOverrideForm">
+              <header><div><p class="eyebrow">Decisione autorizzata</p><h3 id="workforceOverrideTitle">Override · <span id="workforceOverrideDriver"></span></h3></div><button id="workforceOverrideClose" type="button" class="quiet">Chiudi</button></header>
+              <input id="workforceOverrideMemberId" type="hidden" />
+              <label>Data iniziale<input id="workforceOverrideDate" type="date" required /></label>
+              <label>Valido fino al<input id="workforceOverrideUntil" type="date" required /></label>
+              <label>Nuovo stato<select id="workforceOverrideTarget"><option value="callable">Convocabile</option><option value="limited">Con limitazioni</option><option value="not_callable">Non convocabile</option></select></label>
+              <label>Motivazione<textarea id="workforceOverrideReason" maxlength="1000" required></textarea></label>
+              <button type="submit">Applica override</button>
+            </form>
           </dialog>
         </section>
 
@@ -2648,6 +2681,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="./assets/js/app.js?v=30"></script>
+  <script type="module" src="./assets/js/app.js?v=31"></script>
 </body>
 </html>

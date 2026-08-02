@@ -31,7 +31,13 @@ def _member(identifier: str, name: str, *, reserve: bool = False) -> int:
         return int(cursor.lastrowid)
 
 
-def _status(member_id: int, code: str, available: bool, notes: str | None = None) -> None:
+def _status(
+    member_id: int,
+    code: str,
+    available: bool,
+    notes: str | None = None,
+    day: str = "2026-08-03",
+) -> None:
     with db_session() as conn:
         conn.execute(
             """
@@ -41,7 +47,7 @@ def _status(member_id: int, code: str, available: bool, notes: str | None = None
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                member_id, "2026-08-03", code, int(available), notes, "test",
+                member_id, day, code, int(available), notes, "test",
                 "manual", "2026-08-02T08:00:00+00:00",
             ),
         )
@@ -54,6 +60,10 @@ def test_foundation_answers_how_many_people_are_callable_without_creating_shifts
     _status(callable_id, "available", True)
     _status(reserve_id, "scheduled", True)
     _status(sick_id, "sickness", False)
+    _status(callable_id, "rest", False, day="2026-07-31")
+    _status(callable_id, "scheduled", True, day="2026-08-01")
+    _status(reserve_id, "rest", False, day="2026-07-31")
+    _status(reserve_id, "scheduled", True, day="2026-08-01")
 
     response = client.get(f"{BASE}/foundation?operation_date=2026-08-03")
 
@@ -63,9 +73,11 @@ def test_foundation_answers_how_many_people_are_callable_without_creating_shifts
         "total": 3, "available": 2, "callable": 2, "limited": 0, "holiday": 0,
         "sickness": 1, "leave": 0, "rest": 0, "not_callable": 1,
         "reserves": 1,
+        "at_limit": 0, "rest_recommended": 0,
+        "insufficient_data": 1, "active_overrides": 0,
     }
     assert payload["drivers"][0]["convocation_status"] == "not_started"
-    assert payload["drivers"][0]["consecutivity_status"] == "not_evaluated"
+    assert payload["drivers"][0]["consecutivity_status"] == "regolare"
     assert payload["drivers"][0]["callability_reason"]
     assert any("Planning" in item for item in payload["limitations"])
 
@@ -109,6 +121,9 @@ def test_availability_engine_explains_callable_limited_and_not_callable_states()
     _status(limited, "available_limited", True, "Limitazione manuale verificata.")
     _status(holiday, "holiday", False)
     _status(rest, "rest", False)
+    for member_id in (available, limited):
+        _status(member_id, "rest", False, day="2026-07-31")
+        _status(member_id, "scheduled", True, day="2026-08-01")
 
     payload = client.get(f"{BASE}/foundation?operation_date=2026-08-03").json()
     by_id = {item["external_identifier"]: item for item in payload["drivers"]}

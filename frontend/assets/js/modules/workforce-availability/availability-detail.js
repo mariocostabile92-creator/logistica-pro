@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../utils/dom.js";
+import { consecutivityDetail } from "../workforce-consecutivity/consecutivity-detail.js";
 
 function timestamp(value) {
   if (!value) return "Non disponibile";
@@ -22,7 +23,8 @@ export function createAvailabilityDetail() {
         <section><h4>Limitazioni</h4><p>${escapeHtml(driver.limitations?.join(" · ") || "Nessuna limitazione.")}</p></section>
         <section><h4>Storico stato</h4><div class="workforce-availability-history">${driver.status_history?.length
           ? driver.status_history.map((item) => `<article><strong>${escapeHtml(item.date)} · ${escapeHtml(item.callability_label)}</strong><span>${escapeHtml(item.reason)}</span><small>${escapeHtml(timestamp(item.updated_at))}</small></article>`).join("")
-          : "<p>Nessuno storico disponibile.</p>"}</div></section>`;
+          : "<p>Nessuno storico disponibile.</p>"}</div></section>
+        ${consecutivityDetail(driver)}`;
       dialog.showModal();
     },
   };

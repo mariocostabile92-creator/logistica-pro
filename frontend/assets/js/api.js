@@ -608,6 +608,22 @@ export async function getWorkforceFoundation(operationDate = "") {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/foundation?${params}`));
 }
 
+export async function getWorkforceConsecutivityPolicy() {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/consecutivity/policy`));
+}
+
+export async function updateWorkforceConsecutivityPolicy(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/consecutivity/policy`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+  }));
+}
+
+export async function createWorkforceConsecutivityOverride(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/consecutivity/overrides`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+  }));
+}
+
 
 export async function getPlanningOperations({ signal } = {}) {
   return parseResponse(await fetch(`${API_BASE}/api/planning/operations`, { signal }));

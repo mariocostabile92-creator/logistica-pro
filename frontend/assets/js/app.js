@@ -5,7 +5,7 @@ import { initViewNavigation } from "./modules/view-navigation.js?v=2";
 import {
   ensureWorkspaceInitialized,
   initWorkspaceLoader,
-} from "./modules/workspace-loader.js?v=22";
+} from "./modules/workspace-loader.js?v=23";
 import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js";
 import { byId } from "./utils/dom.js";
 import { requireAdministrativeSession } from "./auth/session.js?v=1";

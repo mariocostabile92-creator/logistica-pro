@@ -8,4 +8,7 @@ export function renderWorkforce(view) {
   setText("operationsHomeWorkforceDrivers", view.workforce.drivers);
   setText("operationsHomeWorkforceRequired", view.workforce.required);
   setText("operationsHomeWorkforceAbsences", view.workforce.absences);
+  setText("operationsHomeWorkforceLimit", view.workforce.atLimit || 0);
+  setText("operationsHomeWorkforceRest", view.workforce.restRecommended || 0);
+  setText("operationsHomeWorkforceInsufficient", view.workforce.insufficient || 0);
 }

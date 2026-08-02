@@ -1,7 +1,16 @@
-import { availabilityCard } from "./availability-card.js";
-import { KPI_FILTERS, renderAvailabilityKpis } from "./availability-kpi.js";
-import { createAvailabilityState, reduceAvailabilityState, selectAvailabilityDrivers } from "./availability-state.js";
-import { createAvailabilityDetail } from "./availability-detail.js";
+import { availabilityCard } from "./availability-card.js?v=2";
+import { KPI_FILTERS, renderAvailabilityKpis } from "./availability-kpi.js?v=2";
+import { createAvailabilityState, reduceAvailabilityState, selectAvailabilityDrivers } from "./availability-state.js?v=2";
+import { createAvailabilityDetail } from "./availability-detail.js?v=2";
+import {
+  CONSECUTIVITY_BINDINGS,
+  filterValue,
+  resetConsecutivityFilters,
+} from "../workforce-consecutivity/consecutivity-filters.js";
+import {
+  initConsecutivityPresenter,
+  presentConsecutivity,
+} from "../workforce-consecutivity/consecutivity-presenter.js";
 
 let state = createAvailabilityState();
 let detail = null;
@@ -46,15 +55,17 @@ export function initAvailabilityPresenter() {
     workforceFoundationSearch: "query", workforceCallabilityFilter: "callability",
     workforceAvailabilityFilter: "availability", workforceRoleFilter: "role",
     workforceStationFilter: "station", workforceContractFilter: "contract",
+    ...CONSECUTIVITY_BINDINGS,
   };
   for (const [id, name] of Object.entries(bindings)) {
     const eventName = id === "workforceFoundationSearch" ? "input" : "change";
-    document.getElementById(id)?.addEventListener(eventName, (event) => setFilter(name, event.target.value));
+    document.getElementById(id)?.addEventListener(eventName, (event) => setFilter(name, filterValue(event.target)));
   }
   document.getElementById("workforceFoundationReset")?.addEventListener("click", () => {
     activeKpi = ""; state = reduceAvailabilityState(state, { type: "reset" });
     document.getElementById("workforceFoundationSearch").value = "";
     document.querySelectorAll(".workforce-foundation-tools select").forEach((select) => { select.value = "all"; });
+    resetConsecutivityFilters();
     render();
   });
   document.getElementById("workforceFoundationKpis")?.addEventListener("click", (event) => {
@@ -68,12 +79,14 @@ export function initAvailabilityPresenter() {
     const button = event.target.closest("[data-workforce-driver-detail]");
     if (!button) return;
     const driver = state.snapshot.drivers.find((item) => item.workforce_member_id === Number(button.dataset.workforceDriverDetail));
-    if (driver) detail.open(driver);
+    if (driver) detail.open({ ...driver, permissions: state.snapshot.permissions });
   });
+  initConsecutivityPresenter();
 }
 
 export function presentAvailabilitySnapshot(snapshot) {
   state = reduceAvailabilityState(state, { type: "snapshot", value: snapshot });
+  presentConsecutivity(snapshot);
   fillSelect("workforceRoleFilter", options("role"));
   fillSelect("workforceStationFilter", options("station"));
   fillSelect("workforceContractFilter", options("contract"));

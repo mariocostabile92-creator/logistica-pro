@@ -91,12 +91,12 @@ def apply_import(
     return result
 
 
-def list_members():
-    return read_repository.list_members()
+def list_members(organization_id: str | None = None):
+    return read_repository.list_members(organization_id)
 
 
-def list_calendar(date_from: str | None = None, date_to: str | None = None, member_id: int | None = None):
-    return read_repository.list_statuses(date_from, date_to, member_id)
+def list_calendar(date_from: str | None = None, date_to: str | None = None, member_id: int | None = None, organization_id: str | None = None):
+    return read_repository.list_statuses(date_from, date_to, member_id, organization_id)
 
 
 def _allowed_statuses() -> set[str]:
@@ -105,7 +105,7 @@ def _allowed_statuses() -> set[str]:
     return configured | {"available_limited"}
 
 
-def save_day_status(values: dict[str, object], actor: str, status_id: int | None = None):
+def save_day_status(values: dict[str, object], actor: str, status_id: int | None = None, organization_id: str = "default"):
     status_code = str(values["status_code"])
     if status_code not in _allowed_statuses():
         raise WorkforceValidationError(
@@ -124,13 +124,13 @@ def save_day_status(values: dict[str, object], actor: str, status_id: int | None
         } if isinstance(configured, list) else {"available", "scheduled"}
         available_statuses.add("available_limited")
         values["availability"] = status_code in available_statuses
-    return write_repository.save_manual_status(values, actor, status_id)
+    return write_repository.save_manual_status(values, actor, status_id, organization_id)
 
 
-def update_member(member_id: int, changes: dict[str, object], actor: str):
+def update_member(member_id: int, changes: dict[str, object], actor: str, organization_id: str = "default"):
     if not changes:
         raise WorkforceValidationError("Nessuna modifica specificata.")
-    return write_repository.update_member(member_id, changes, actor)
+    return write_repository.update_member(member_id, changes, actor, organization_id)
 
 
 def coverage(date_from: str | None = None, date_to: str | None = None):
