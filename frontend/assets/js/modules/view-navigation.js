@@ -58,8 +58,13 @@ function attachWorkspaceSections(view) {
 }
 
 
+function normalizedWorkspace(view) {
+  return WORKSPACE_SECTIONS[view] ? view : "home";
+}
+
+
 function showWorkspace(view) {
-  const selectedView = WORKSPACE_SECTIONS[view] ? view : "home";
+  const selectedView = normalizedWorkspace(view);
   const activeSections = WORKSPACE_SECTIONS[selectedView];
   attachWorkspaceSections(selectedView);
   document.body.dataset.activeWorkspace = selectedView;
@@ -104,9 +109,11 @@ function revealTarget(targetId) {
 
 async function navigate(view, targetId = null) {
   const version = ++navigationVersion;
-  const selectedView = showWorkspace(view);
+  const selectedView = normalizedWorkspace(view);
+  attachWorkspaceSections(selectedView);
   await initializeWorkspace(selectedView);
   if (version !== navigationVersion) return;
+  showWorkspace(selectedView);
   announceWorkspace(selectedView);
   if (targetId) requestAnimationFrame(() => revealTarget(targetId));
 }

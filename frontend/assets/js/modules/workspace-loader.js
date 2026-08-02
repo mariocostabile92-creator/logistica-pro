@@ -91,13 +91,14 @@ const WORKSPACE_PREPARERS = {
   },
   fleet: async () => {
     const [module, fleetSync] = await Promise.all([
-      import("./fleet-page.js?v=13"),
+      import("./fleet-page.js?v=14"),
       import("./fleet-sync.js"),
       loadWorkspaceStyles("fleet"),
     ]);
-    return () => {
+    return async () => {
       module.initFleetPage();
       initializeOnce("fleet-sync", fleetSync.initFleetSync);
+      await module.prepareFleetFirstPaint();
     };
   },
   settings: async () => {
@@ -128,7 +129,7 @@ export async function ensureWorkspaceInitialized(view) {
   if (!WORKSPACE_PREPARERS[view] || initialized.has(view)) return false;
   const initialize = await prepareWorkspace(view);
   if (!initialize || initialized.has(view)) return false;
-  initialize();
+  await initialize();
   initialized.add(view);
   return true;
 }

@@ -45,6 +45,7 @@ let loaded = false;
 let demoEnabled = false;
 let searchTerm = "";
 let latestFleetImportAt = null;
+let firstPaintPromise = null;
 
 
 async function refreshSyncSummary(hasAssets) {
@@ -245,6 +246,21 @@ async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId)
     renderFleetTree(response.items);
   }
   loaded = true;
+}
+
+
+export function prepareFleetFirstPaint() {
+  if (loaded) return Promise.resolve();
+  if (firstPaintPromise) return firstPaintPromise;
+  firstPaintPromise = refreshFleet().catch((error) => {
+    reportUnexpectedError("fleet.list", error);
+    renderFleetFailure();
+    byId("fleetPluginTimestamp").textContent = "Asset non disponibili.";
+    loaded = true;
+  }).finally(() => {
+    firstPaintPromise = null;
+  });
+  return firstPaintPromise;
 }
 
 
