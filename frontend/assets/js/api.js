@@ -346,8 +346,9 @@ export async function getJournalControlRoomProcedure(procedureId) {
 }
 
 export async function getJournalArchiveMonth(month) {
+  const query = month ? `?month=${encodeURIComponent(month)}` : "";
   return parseResponse(await fetch(
-    `${API_BASE}/api/fleet/journal-archive/month?month=${encodeURIComponent(month)}`,
+    `${API_BASE}/api/fleet/journal-archive/month${query}`,
   ));
 }
 

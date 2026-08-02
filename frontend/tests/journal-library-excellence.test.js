@@ -16,17 +16,20 @@ test("Journal workspace exposes inline Control Room and Archivio GDB navigation"
 });
 
 test("Archive calendar and day filters use dedicated API aggregation", async () => {
-  const [calendar, renderer, api] = await Promise.all([
+  const [calendar, renderer, api, archive] = await Promise.all([
     file("assets/js/modules/journal-archive/calendar.js"),
     file("assets/js/modules/journal-archive/renderer.js"),
     file("assets/js/api.js"),
+    file("assets/js/modules/journal-archive/index.js"),
   ]);
   for (const text of ["Mese precedente", "Mese successivo", "Oggi", "Totali",
     "Prese in carico", "Rientri", "Complete", "Incomplete", "Con anomalie", "Con media",
-    "Targa, driver, note, ID", "Reimposta"]) assert.match(renderer + calendar, new RegExp(text));
+    "Targa, driver, note, ID", "Filtra targa", "Filtra driver", "Reimposta", "Media presenti"]) assert.match(renderer + calendar, new RegExp(text));
   assert.match(api, /journal-archive\/month/);
   assert.match(api, /journal-archive\/day/);
   assert.match(calendar, /role="grid"/);
+  assert.match(archive, /state\.currentOperationalDate\?\.startsWith/);
+  assert.doesNotMatch(await file("assets/js/modules/journal-archive/state.js"), /new Date\(\)\.toISOString|date\.today/);
 });
 
 test("Journal media supports image video multiple retry and submit protection", async () => {

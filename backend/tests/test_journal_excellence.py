@@ -81,7 +81,11 @@ def test_operational_day_after_midnight_and_archive_queries():
     day = client.get("/api/fleet/journal-archive/day", params={"date": "2026-08-01", "search": vehicle["plate"]})
     assert month.status_code == day.status_code == 200
     assert month.json()["days"][0]["incomplete"] == 1
+    assert month.json()["context"]["timezone"] == "Europe/Rome"
     assert day.json()["summary"]["incomplete"] == 1
+    current_month = client.get("/api/fleet/journal-archive/month")
+    assert current_month.status_code == 200
+    assert current_month.json()["month"] == current_month.json()["context"]["operational_date"][:7]
 
 
 def test_cross_organization_media_and_archive_are_not_visible():

@@ -10,6 +10,23 @@ def _iso_date(value: str) -> date:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
 
 
+def operational_context(organization_id: str) -> dict:
+    organization = auth_repository.organization_by_id(organization_id)
+    timezone_name = organization["timezone"] if organization else "Europe/Rome"
+    start = organization["operational_day_start_hour"] if organization else 4
+    current = operational_date(datetime.now(timezone.utc), timezone_name, start)
+    for session in repository.sessions_without_operational_date(organization_id):
+        reference = datetime.fromisoformat(str(session["reference_at"]).replace("Z", "+00:00"))
+        repository.set_operational_date(
+            str(session["id"]), operational_date(reference, timezone_name, start).isoformat()
+        )
+    return {
+        "operational_date": current.isoformat(),
+        "timezone": timezone_name,
+        "operational_day_start_hour": int(start),
+    }
+
+
 def _present(item: dict, can_delete_media: bool = False) -> dict:
     incomplete = bool(item.get("incomplete"))
     anomaly = bool(item.get("anomaly_present"))
@@ -55,6 +72,12 @@ def _matches(item: dict, filters: dict, today: date) -> bool:
         )).casefold()
         if search not in haystack:
             return False
+    plate = str(filters.get("plate") or "").casefold().strip()
+    if plate and plate not in str(item.get("plate_snapshot") or "").casefold():
+        return False
+    driver = str(filters.get("driver") or "").casefold().strip()
+    if driver and driver not in str(item.get("declared_driver_identifier") or "").casefold():
+        return False
     operation = filters.get("operation_type")
     if operation and item.get("operation_type") != operation:
         return False
@@ -62,7 +85,11 @@ def _matches(item: dict, filters: dict, today: date) -> bool:
     if anomaly == "with" and not item["anomaly_present"]:
         return False
     status = filters.get("status")
-    if status and item.get("status") != status:
+    if status == "complete" and item.get("status") not in {"completed", "con_anomalia"}:
+        return False
+    if status == "incomplete" and item.get("status") not in {"generated", "opened", "in_progress"}:
+        return False
+    if status and status not in {"complete", "incomplete"} and item.get("status") != status:
         return False
     media = filters.get("media")
     has_media = bool(item.get("media"))
@@ -92,28 +119,43 @@ def list_procedures(
     start_date: str | None = None,
     end_date: str | None = None,
     can_delete_media: bool = False,
+    current_scope: bool = False,
 ) -> dict:
-    organization = auth_repository.organization_by_id(organization_id)
-    timezone_name = organization["timezone"] if organization else "Europe/Rome"
-    start = organization["operational_day_start_hour"] if organization else 4
-    today = operational_date(datetime.now(timezone.utc), timezone_name, start)
-    items = [_present(item, can_delete_media) for item in repository.list_procedures(organization_id, start_date, end_date)]
+    context = operational_context(organization_id)
+    today = date.fromisoformat(context["operational_date"])
+    query_start, query_end = start_date, end_date
+    if current_scope:
+        query_start, query_end = (today - timedelta(days=1)).isoformat(), today.isoformat()
+    items = [_present(item, can_delete_media) for item in repository.list_procedures(
+        organization_id, query_start, query_end
+    )]
+    if current_scope:
+        previous = today - timedelta(days=1)
+        items = [item for item in items if (
+            date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == today
+            or (
+                date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == previous
+                and item["status"] in {"generated", "opened", "in_progress"}
+            )
+        )]
     items = [item for item in items if _matches(item, filters, today)]
+    current_items = [item for item in items if
+                     date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == today]
     return {
         "items": items,
         "total": len(items),
+        "context": context,
         "summary": {
             "completed_today": sum(
                 item["status"] in {"completed", "con_anomalia"}
-                and date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == today
-                for item in items
+                for item in current_items
             ),
-            "check_outs": sum(item["operation_type"] == "check_out" for item in items),
-            "check_ins": sum(item["operation_type"] == "check_in" for item in items),
-            "with_anomalies": sum(item["anomaly_present"] for item in items),
+            "check_outs": sum(item["operation_type"] == "check_out" for item in current_items),
+            "check_ins": sum(item["operation_type"] == "check_in" for item in current_items),
+            "with_anomalies": sum(item["anomaly_present"] for item in current_items),
             "incomplete": sum(
                 item["status"] in {"generated", "opened", "in_progress"}
-                for item in items
+                for item in current_items
             ),
         },
     }

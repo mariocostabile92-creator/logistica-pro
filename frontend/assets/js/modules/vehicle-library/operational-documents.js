@@ -6,8 +6,8 @@ const FILTERS = {
   check_in: (item) => item.operation_type === "check_in",
   anomaly: (item) => item.anomaly_present,
   no_anomaly: (item) => !item.anomaly_present,
-  last_7_days: (item, now) => withinDays(item.occurred_at, now, 7),
-  last_30_days: (item, now) => withinDays(item.occurred_at, now, 30),
+  last_7_days: (item, now) => withinDays(item.operational_date || item.occurred_at, now, 7),
+  last_30_days: (item, now) => withinDays(item.operational_date || item.occurred_at, now, 30),
 };
 
 function withinDays(value, now, days) {
@@ -60,8 +60,10 @@ export function filterOperationalDocuments(
     if (!predicate(item, now)) return false;
     if (!normalized) return true;
     const occurred = dateParts(item.occurred_at);
+    const operational = dateParts(item.operational_date || item.occurred_at);
     return [
       occurred.date,
+      operational.date,
       occurred.time,
       item.declared_driver_identifier,
       item.operation_type,
@@ -85,6 +87,7 @@ function initialAndFinalKm(item, movements) {
 
 function operationalDocument(item, movements) {
   const occurred = dateParts(item.occurred_at);
+  const operational = dateParts(item.operational_date || item.occurred_at);
   const kilometers = initialAndFinalKm(item, movements);
   const photos = (item.media || []).filter((media) => media.media_type === "image");
   const equipment = item.equipment || [];
@@ -115,7 +118,7 @@ function operationalDocument(item, movements) {
   return `
     <details class="operational-document" data-document-id="${escapeHtml(item.id)}">
       <summary>
-        <span class="operational-document-date"><strong>${escapeHtml(occurred.date)}</strong><small>${escapeHtml(occurred.time)}</small></span>
+        <span class="operational-document-date"><strong>${escapeHtml(operational.date)}</strong><small>${escapeHtml(occurred.time)}</small></span>
         <span><strong>${escapeHtml(operationLabel(item.operation_type))}</strong><small>${escapeHtml(item.plate_snapshot || "Targa non registrata")}</small></span>
         <span><small>Driver dichiarato</small><strong>${escapeHtml(item.declared_driver_identifier || "—")}</strong></span>
         <span><small>Km</small><strong>${Number(item.odometer_km).toLocaleString("it-IT")}</strong></span>
@@ -125,7 +128,7 @@ function operationalDocument(item, movements) {
       <div class="operational-document-body">
         <div class="operational-document-identity">
           <div><span>Identificativo documento</span><strong>${escapeHtml(documentIdentifier(item))}</strong><small>${escapeHtml(item.id)}</small></div>
-          <div><span>Data</span><strong>${escapeHtml(occurred.date)}</strong></div>
+          <div><span>Giornata operativa</span><strong>${escapeHtml(operational.date)}</strong></div>
           <div><span>Ora</span><strong>${escapeHtml(occurred.time)}</strong></div>
           <div><span>Tipo</span><strong>${escapeHtml(operationLabel(item.operation_type))}</strong></div>
           <div><span>Stato</span><strong>Registrazione completata</strong></div>

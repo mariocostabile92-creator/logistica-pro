@@ -14,10 +14,12 @@ def snapshot(organization_id: str | None = None) -> dict[str, list[dict]]:
             ORDER BY COALESCE(a.plate,a.external_identifier)
         """,
         "movements": """
-            SELECT asset_id, id, operation_type, occurred_at,
-                   declared_driver_identifier, odometer_km
-            FROM asset_movements
-            WHERE (? IS NULL OR organization_id = ?)
+            SELECT m.asset_id, m.id, m.operation_type, m.occurred_at,
+                   m.declared_driver_identifier, m.odometer_km, m.anomaly_present,
+                   s.operational_date
+            FROM asset_movements m
+            JOIN journal_sessions s ON s.id = m.session_id
+            WHERE (? IS NULL OR m.organization_id = ?)
         """,
         "damages": """
             SELECT vehicle_id, id, case_number, status, severity,

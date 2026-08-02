@@ -2,7 +2,9 @@ import { getFleetVision, listJournalControlRoom } from "../../api.js";
 import { listVehicleAttachments } from "../attachments/api.js";
 
 const priorityRank = { alta: 0, media: 1, bassa: 2 };
-const incompleteJournal = new Set(["generata", "aperta", "in_compilazione"]);
+const incompleteJournal = new Set([
+  "generated", "opened", "in_progress", "generata", "aperta", "in_compilazione",
+]);
 
 function recordFor(item, decision) {
   if (decision.module === "damage") {

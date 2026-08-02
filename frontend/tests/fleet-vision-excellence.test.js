@@ -45,3 +45,11 @@ test("P2 does not create decisions, actions or rules", async () => {
   ]);
   assert.doesNotMatch(sources.join("\n"), /ACTION_RULES|result\.push\(_decision|risk.?score/i);
 });
+
+test("Fleet Vision correlates canonical incomplete Journal states", async () => {
+  const aggregator = await file("assets/js/modules/fleet-vision/aggregator.js");
+  for (const status of ["generated", "opened", "in_progress"]) {
+    assert.match(aggregator, new RegExp(`"${status}"`));
+  }
+  assert.match(aggregator, /journal_incomplete/);
+});

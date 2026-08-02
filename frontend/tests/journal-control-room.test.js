@@ -25,7 +25,7 @@ test("Control Room exposes real KPI filters list and inline detail", async () =>
   ]);
   const presentation = components + renderer + shared;
   for (const text of ["Journal Control Room", "Completate oggi", "Prese in carico",
-    "Rientri", "Anomalie", "In compilazione", "Ultimi 7 giorni", "Ultimi 30 giorni",
+    "Rientri", "Anomalie", "In compilazione", "giornata corrente", "Archivio GDB",
     "Apri documento operativo", "Apri dossier mezzo", "Torna alla lista",
     "Generata", "Aperta", "In compilazione", "Completata",
     "link condiviso", "Origine", "Avvisi smart"]) {
@@ -34,6 +34,7 @@ test("Control Room exposes real KPI filters list and inline detail", async () =>
   assert.match(module, /listJournalControlRoom/);
   assert.match(module, /data-jcr-search/);
   assert.match(module, /data-jcr-detail/);
+  assert.doesNotMatch(presentation + module, /Ultimi 7 giorni|Ultimi 30 giorni|data-jcr-period/);
   assert.doesNotMatch(module, /Genera procedura Driver|createJournalDriverSession|journalSessionGenerator/);
 });
 

@@ -12,7 +12,7 @@ from app.core.config import SETTINGS
 from app.plugins.fleet.journal.application import shared_access_service
 from app.plugins.fleet.journal.infrastructure import repository
 from app.plugins.fleet.journal.infrastructure.storage import media_storage
-from app.plugins.fleet.journal.domain.operational_day import operational_date
+from app.plugins.fleet.journal.domain.operational_day import operational_date, organization_timezone
 from app.utils.text_normalizer import normalize_plate
 
 
@@ -248,9 +248,7 @@ def _smart_warnings(
     )
     same_day = [
         row for row in history
-        if datetime.fromisoformat(
-            str(row["occurred_at"]).replace("Z", "+00:00")
-        ).date() == today
+        if date.fromisoformat(str(row.get("operational_date") or row["occurred_at"][:10])) == today
     ]
     latest = history[0] if history else None
     warnings: list[dict[str, str]] = []
@@ -274,9 +272,9 @@ def _smart_warnings(
         })
     yesterday = today - timedelta(days=1)
     if latest and latest["operation_type"] == "check_out":
-        latest_date = datetime.fromisoformat(
-            str(latest["occurred_at"]).replace("Z", "+00:00")
-        ).date()
+        latest_date = date.fromisoformat(
+            str(latest.get("operational_date") or latest["occurred_at"][:10])
+        )
         if latest_date == yesterday:
             warnings.append({
                 "code": "missing_previous_return",
@@ -380,7 +378,11 @@ def create_managed_session(values: dict[str, object], organization_id: str | Non
     token = _managed_token(session_id)
     now = datetime.now(timezone.utc)
     organization_id = organization_id or str(_organization(None)["id"])
-    _, day = _session_clock(organization_id, scheduled.replace(tzinfo=timezone.utc))
+    organization = _organization(organization_id)
+    scheduled_local = scheduled.replace(
+        tzinfo=organization_timezone(str(organization.get("timezone") or "Europe/Rome"))
+    )
+    _, day = _session_clock(organization_id, scheduled_local)
     shift = "morning" if scheduled.hour < 14 else "evening"
     session = repository.create_session({
         "id": session_id,
@@ -580,7 +582,11 @@ def complete(
     configured = {code for code, _ in EQUIPMENT}
     if {item["code"] for item in equipment} != configured:
         raise JournalError("Completa la checklist delle dotazioni.")
-    now = datetime.now(timezone.utc).isoformat()
+    occurred = datetime.now(timezone.utc)
+    now = occurred.isoformat()
+    timezone_name, operational_day = _session_clock(
+        str(session.get("organization_id") or "default"), occurred
+    )
     movement_id = str(uuid.uuid4())
     try:
         repository.complete_session_atomic(
@@ -598,10 +604,8 @@ def complete(
                 "operational_note": values.get("operational_note"),
                 "client_submission_id": submission_id,
                 "occurred_at": now,
-                "timezone": _session_clock(
-                    str(session.get("organization_id") or "default"),
-                    datetime.now(timezone.utc),
-                )[0],
+                "timezone": timezone_name,
+                "operational_date": operational_day,
                 "created_at": now,
             },
             equipment=equipment,

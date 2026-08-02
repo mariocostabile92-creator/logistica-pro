@@ -44,6 +44,7 @@ def _event(
     event_type: str,
     label: str,
     module: str,
+    operational_date: str | None = None,
 ) -> dict | None:
     if not occurred_at:
         return None
@@ -55,6 +56,7 @@ def _event(
         "event_type": event_type,
         "label": label,
         "module": module,
+        "operational_date": operational_date,
     }
 
 
@@ -73,7 +75,7 @@ def _timeline(
         events.append(_event(
             "journal", row["id"], row["occurred_at"], row["operation_type"],
             "Driver prende in carico" if row["operation_type"] == "check_out" else "Driver riconsegna il mezzo",
-            "journal",
+            "journal", row.get("operational_date"),
         ))
     for row in damages:
         events.append(_event("damage", row["id"], row["occurred_at"], "damage",
@@ -401,6 +403,7 @@ def fleet_vision(vehicle_id: int | None = None, organization_id: str | None = No
             "operational_status": status,
             "operational_status_reason": (event or {}).get("details", {}).get("reason"),
             "movement_count": len(asset_movements),
+            "journal_anomalies": sum(bool(row.get("anomaly_present")) for row in asset_movements),
             "damage_open": sum(row["status"] in OPEN_DAMAGE for row in asset_damages),
             "damage_closed": sum(row["status"] in {"chiusa", "annullata"} for row in asset_damages),
             "maintenance_open": sum(row["status"] in OPEN_MAINTENANCE for row in asset_maintenance),
@@ -443,6 +446,7 @@ def fleet_vision(vehicle_id: int | None = None, organization_id: str | None = No
             "missing_documents": sum(item["missing_documents"] for item in items),
             "expired_insurance": sum(item["insurance_expired"] for item in items),
             "expiring_contracts": sum(item["contracts_expiring"] for item in items),
+            "journal_anomalies": sum(item["journal_anomalies"] for item in items),
             "decisions": sum(len(item["decisions"]) for item in items),
             "high_priority_decisions": sum(
                 decision["priority"] == "alta"

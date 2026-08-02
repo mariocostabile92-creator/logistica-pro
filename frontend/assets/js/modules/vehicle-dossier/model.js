@@ -38,6 +38,7 @@ function timeline(data) {
     source: item.source,
     sourceId: item.source_id,
     occurredAt: item.occurred_at,
+    operationalDate: item.operational_date,
     title: item.label,
     description: `Origine: ${item.module}`,
     status: "Registrato",
@@ -121,4 +122,3 @@ export function vehicleDossierModel({ data, errors }) {
     errors,
   };
 }
-

@@ -246,11 +246,12 @@ def movement_history(asset_id: int) -> list[dict[str, object]]:
     with db_session() as conn:
         rows = conn.execute(
             """
-            SELECT id, operation_type, occurred_at, odometer_km,
-                   declared_driver_identifier
-            FROM asset_movements
-            WHERE asset_id = ?
-            ORDER BY occurred_at DESC, created_at DESC
+            SELECT m.id, m.operation_type, m.occurred_at, m.odometer_km,
+                   m.declared_driver_identifier, s.operational_date
+            FROM asset_movements m
+            JOIN journal_sessions s ON s.id = m.session_id
+            WHERE m.asset_id = ?
+            ORDER BY m.occurred_at DESC, m.created_at DESC
             """,
             (asset_id,),
         ).fetchall()
@@ -364,10 +365,11 @@ def complete_session_atomic(
         cursor = conn.execute(
             """
             UPDATE journal_sessions
-            SET status = 'completed', lifecycle_status = 'completed', completed_at = ?
+            SET status = 'completed', lifecycle_status = 'completed', completed_at = ?,
+                operational_date = ?
             WHERE id = ? AND status = 'open'
             """,
-            (movement["created_at"], session["id"]),
+            (movement["created_at"], movement["operational_date"], session["id"]),
         )
         if getattr(cursor, "rowcount", 1) == 0:
             raise sqlite3.IntegrityError("Session already completed")
@@ -467,7 +469,7 @@ def receipt(movement_id: str) -> dict[str, object] | None:
 
 
 def asset_history(asset_id: int, organization_id: str | None = None) -> dict[str, object] | None:
-    organization_clause = " AND organization_id = ?" if organization_id else ""
+    organization_clause = " AND asset_movements.organization_id = ?" if organization_id else ""
     movement_params: tuple[object, ...] = (asset_id, organization_id) if organization_id else (asset_id,)
     with db_session() as conn:
         asset = conn.execute(
@@ -486,11 +488,16 @@ def asset_history(asset_id: int, organization_id: str | None = None) -> dict[str
             return None
         movements = conn.execute(
             f"""
-            SELECT id, plate_snapshot, declared_driver_identifier,
-                   operation_type, operational_shift, occurred_at, timezone,
-                   odometer_km, fuel_percentage, cleanliness_status,
-                   anomaly_present, anomaly_description, operational_note,
-                   created_at,
+            SELECT asset_movements.id, asset_movements.plate_snapshot,
+                   asset_movements.declared_driver_identifier,
+                   asset_movements.operation_type, asset_movements.operational_shift,
+                   asset_movements.occurred_at, asset_movements.timezone,
+                   asset_movements.odometer_km, asset_movements.fuel_percentage,
+                   asset_movements.cleanliness_status,
+                   asset_movements.anomaly_present,
+                   asset_movements.anomaly_description,
+                   asset_movements.operational_note,
+                   asset_movements.created_at, journal_sessions.operational_date,
                    (SELECT id FROM damage_cases dc
                     WHERE dc.source_movement_id = asset_movements.id) AS damage_case_id,
                    (SELECT case_number FROM damage_cases dc
@@ -500,8 +507,9 @@ def asset_history(asset_id: int, organization_id: str | None = None) -> dict[str
                    (SELECT severity FROM damage_cases dc
                     WHERE dc.source_movement_id = asset_movements.id) AS damage_case_severity
             FROM asset_movements
-            WHERE asset_id = ? {organization_clause}
-            ORDER BY occurred_at DESC, created_at DESC
+            JOIN journal_sessions ON journal_sessions.id = asset_movements.session_id
+            WHERE asset_movements.asset_id = ? {organization_clause}
+            ORDER BY asset_movements.occurred_at DESC, asset_movements.created_at DESC
             """,
             movement_params,
         ).fetchall()

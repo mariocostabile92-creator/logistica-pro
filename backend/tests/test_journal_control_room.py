@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from fastapi.testclient import TestClient
 
 from app.core.database import db_session
@@ -97,11 +99,12 @@ def test_combined_filters_search_vehicle_and_missing_detail():
 
 def test_manager_session_link_recovery_and_lifecycle():
     vehicle = asset()
+    operational_day = client.get(CONTROL).json()["context"]["operational_date"]
     generated_response = client.post(f"{CONTROL}/sessions", json={
         "operation_type": "check_in",
         "plate": vehicle["plate"],
         "declared_driver_identifier": "Driver Demo",
-        "scheduled_date": "2026-07-30",
+        "scheduled_date": operational_day,
         "scheduled_time": "18:45",
     })
     assert generated_response.status_code == 201
@@ -125,7 +128,7 @@ def test_manager_session_link_recovery_and_lifecycle():
     assert opened["declared_driver_identifier"] == "Driver Demo"
     assert opened["plate_snapshot"] == vehicle["plate"]
     assert opened["operation_type"] == "check_in"
-    assert opened["scheduled_at"] == "2026-07-30T18:45:00"
+    assert opened["scheduled_at"] == f"{operational_day}T18:45:00"
     assert opened["token"]
 
     progress = client.post(
@@ -141,6 +144,45 @@ def test_manager_session_link_recovery_and_lifecycle():
     completed = client.get(CONTROL).json()["items"][0]
     assert completed["status"] == "completed"
     assert completed["source"] == "fleet_manager"
+
+
+def test_control_room_is_current_day_plus_relevant_previous_carryover():
+    vehicle = asset()
+    current = date.fromisoformat(client.get(CONTROL).json()["context"]["operational_date"])
+    current_open = open_session(vehicle, "check_out", "Driver Oggi")
+    previous_open = open_session(vehicle, "check_in", "Driver Ieri")
+    old_open = open_session(vehicle, "check_out", "Driver Storico")
+    old_completed = complete(open_session(vehicle, "check_in", "Driver Completo"))
+    with db_session() as conn:
+        conn.execute("UPDATE journal_sessions SET operational_date=? WHERE id=?", ((current - timedelta(days=1)).isoformat(), previous_open["id"]))
+        conn.execute("UPDATE journal_sessions SET operational_date=? WHERE id=?", ((current - timedelta(days=2)).isoformat(), old_open["id"]))
+        conn.execute("UPDATE journal_sessions SET operational_date=? WHERE id=(SELECT session_id FROM asset_movements WHERE id=?)", ((current - timedelta(days=2)).isoformat(), old_completed["id"]))
+
+    payload = client.get(CONTROL).json()
+    identifiers = {item["id"] for item in payload["items"]}
+    assert current_open["id"] in identifiers
+    assert previous_open["id"] in identifiers
+    assert old_open["id"] not in identifiers
+    assert old_completed["id"] not in identifiers
+    assert payload["summary"]["incomplete"] == 1
+
+    archive_day = (current - timedelta(days=2)).isoformat()
+    historical = client.get("/api/fleet/journal-archive/day", params={
+        "date": archive_day, "plate": vehicle["plate"], "driver": "Completo",
+    }).json()
+    assert [item["id"] for item in historical["items"]] == [old_completed["id"]]
+    assert historical["summary"]["total"] == 2
+
+
+def test_managed_session_uses_organization_timezone_at_operational_boundary():
+    vehicle = asset()
+    response = client.post(f"{CONTROL}/sessions", json={
+        "operation_type": "check_in", "plate": vehicle["plate"],
+        "declared_driver_identifier": "Driver Notturno",
+        "scheduled_date": "2026-08-02", "scheduled_time": "03:20",
+    })
+    assert response.status_code == 201
+    assert response.json()["operational_date"] == "2026-08-01"
 
 
 def test_manager_session_requires_real_vehicle_and_valid_shared_id():

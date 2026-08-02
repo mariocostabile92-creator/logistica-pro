@@ -26,8 +26,11 @@ export function mountDossierTimeline(container, items) {
       </div>
       <ol class="vehicle-timeline">${filtered.slice(0, limit).map(item => {
         const occurred = dateTime(item.occurredAt);
+        const operational = item.operationalDate
+          ? dateTime(`${item.operationalDate}T12:00:00`)
+          : occurred;
         return `<li>
-          <time><strong>${escapeHtml(occurred.date)}</strong><span>${escapeHtml(occurred.time)}</span></time>
+          <time><strong>${escapeHtml(operational.date)}</strong><span>${escapeHtml(occurred.time)}</span></time>
           <div><span class="vehicle-origin">${escapeHtml(item.category.replaceAll("_", " "))}</span>
             <h4>${escapeHtml(item.title)}</h4><p>${escapeHtml(item.description || "")}</p>
             <small>${escapeHtml(item.status || "Registrato")}</small>
@@ -52,4 +55,3 @@ export function mountDossierTimeline(container, items) {
   };
   render();
 }
-

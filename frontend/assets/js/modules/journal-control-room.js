@@ -13,7 +13,7 @@ const root = () => document.getElementById("journalControlRoom");
 async function load(preferredId = state.selected?.id) {
   root().setAttribute("aria-busy", "true");
   const params = { vehicle_id: state.vehicle_id };
-  for (const [selector, key] of [["[data-jcr-search]", "search"], ["[data-jcr-operation]", "operation_type"], ["[data-jcr-anomaly]", "anomaly"], ["[data-jcr-period]", "period"]]) {
+  for (const [selector, key] of [["[data-jcr-search]", "search"], ["[data-jcr-operation]", "operation_type"], ["[data-jcr-anomaly]", "anomaly"]]) {
     const value = root().querySelector(selector)?.value;
     if (value) params[key] = value;
   }
@@ -30,12 +30,14 @@ async function load(preferredId = state.selected?.id) {
   state.selected = state.items.find(item => item.id === preferredId) || state.items[0] || null;
   root().querySelector("[data-jcr-list]").innerHTML = state.items.length
     ? state.items.map(item => journalCard(item, state.selected?.id)).join("")
-    : `<div class="view-state">Nessuna procedura trovata.</div>`;
+    : `<div class="view-state"><strong>Nessuna procedura per la giornata operativa.</strong><p>Per consultare lo storico apri Archivio GDB.</p></div>`;
   root().querySelector("[data-jcr-detail]").innerHTML = journalDetail(state.selected);
   root().classList.toggle("detail-open", Boolean(state.selected));
   for (const [key, value] of Object.entries(response.summary)) {
     root().querySelector(`[data-jcr-kpi="${key}"]`).textContent = value;
   }
+  const context = response.context;
+  root().querySelector("[data-jcr-context]").textContent = `Giornata operativa ${context.operational_date} · ${context.timezone} · dalle ${String(context.operational_day_start_hour).padStart(2, "0")}:00`;
   root().setAttribute("aria-busy", "false");
 }
 
@@ -56,7 +58,7 @@ document.addEventListener("input", event => {
   if (event.target.matches("[data-jcr-search]")) load();
 });
 document.addEventListener("change", event => {
-  if (event.target.matches("[data-jcr-operation],[data-jcr-anomaly],[data-jcr-period]")) load();
+  if (event.target.matches("[data-jcr-operation],[data-jcr-anomaly]")) load();
 });
 document.addEventListener("click", async event => {
   const entry = event.target.closest("[data-jcr-id]");

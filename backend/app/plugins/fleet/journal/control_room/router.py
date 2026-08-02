@@ -29,7 +29,8 @@ def procedures(
     return service.list_procedures({
         "search": search, "operation_type": operation_type, "anomaly": anomaly,
         "period": period, "vehicle_id": vehicle_id,
-    }, request.state.user.organization_id, can_delete_media=has_permission(request.state.user.role, "journal:media:delete"))
+    }, request.state.user.organization_id, can_delete_media=has_permission(request.state.user.role, "journal:media:delete"),
+       current_scope=True)
 
 
 @router.get("/{procedure_id}")

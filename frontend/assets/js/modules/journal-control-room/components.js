@@ -20,9 +20,17 @@ const dateParts = value => {
   };
 };
 
+const procedureDateParts = item => {
+  const occurred = dateParts(item.occurred_at);
+  const operational = item.operational_date
+    ? new Date(`${item.operational_date}T12:00:00`).toLocaleDateString("it-IT")
+    : occurred.date;
+  return { ...occurred, date: operational };
+};
+
 export function journalCard(item, selectedId) {
   const status = statusPresentation(item.status);
-  const occurred = dateParts(item.occurred_at);
+  const occurred = procedureDateParts(item);
   return `<button type="button" class="jcr-item status-${status.tone} ${selectedId === item.id ? "active" : ""}"
     data-jcr-id="${escapeHtml(item.id)}" aria-pressed="${selectedId === item.id}">
     <header><strong>${escapeHtml(item.plate_snapshot)}</strong>
@@ -31,6 +39,8 @@ export function journalCard(item, selectedId) {
       <div><dt>Procedura</dt><dd>${escapeHtml(operationLabel(item.operation_type))}</dd></div>
       <div><dt>Data</dt><dd>${escapeHtml(occurred.date)}</dd></div>
       <div><dt>Ora</dt><dd>${escapeHtml(occurred.time)}</dd></div></dl>
+    <div class="jcr-card-meta"><span>${item.anomaly_present ? "Anomalia presente" : "Nessuna anomalia"}</span>
+      <span>${item.media.length} allegati</span><span>${escapeHtml(item.origin)}</span></div>
     <span class="jcr-card-action">Apri dettaglio <b aria-hidden="true">›</b></span>
   </button>`;
 }
@@ -76,7 +86,7 @@ function mediaSection(media = []) {
 export function journalDetail(item) {
   if (!item) return `<div class="view-state"><strong>Seleziona una procedura</strong><p>Apri una registrazione per consultarne i dettagli.</p></div>`;
   const status = statusPresentation(item.status);
-  const occurred = dateParts(item.occurred_at);
+  const occurred = procedureDateParts(item);
   const equipment = item.equipment.length
     ? `<ul class="jcr-checklist">${item.equipment.map(entry =>
       `<li><strong>${escapeHtml(entry.equipment_label_snapshot)}</strong>
@@ -93,7 +103,7 @@ export function journalDetail(item) {
       ${infoSection("Driver", "jcr-driver", facts([["Driver dichiarato", item.declared_driver_identifier]]))}
       ${infoSection("Veicolo", "jcr-vehicle", facts([["Targa", item.plate_snapshot], ["Modello", item.vehicle_model || "Non registrato"]]))}
       ${infoSection("Procedura", "jcr-procedure", facts([
-        ["Tipo", operationLabel(item.operation_type)], ["Data", occurred.date], ["Ora", occurred.time],
+        ["Tipo", operationLabel(item.operation_type)], ["Giornata operativa", occurred.date], ["Ora", occurred.time],
         ["Origine", item.origin], ["Documento", item.operational_document_id || "Non disponibile"],
       ]))}
       ${infoSection("Timeline", "jcr-timeline", `<ol><li><time>${escapeHtml(occurred.full)}</time><strong>${escapeHtml(status.label)}</strong></li></ol>`)}

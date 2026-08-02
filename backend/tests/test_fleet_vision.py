@@ -61,7 +61,7 @@ def test_vision_aggregates_existing_modules_without_new_table():
         "operational": 0, "unavailable": 1, "in_maintenance": 0,
         "open_damages": 1, "open_maintenances": 1, "active_rentals": 1,
         "missing_documents": 1, "expired_insurance": 1,
-        "expiring_contracts": 1,
+        "expiring_contracts": 1, "journal_anomalies": 0,
         "decisions": 9, "high_priority_decisions": 3,
         "critical_actions": 3, "important_actions": 4,
         "informative_actions": 2,
@@ -77,6 +77,7 @@ def test_vision_aggregates_existing_modules_without_new_table():
     assert insight["deadlines_imminent"] >= 1
     assert insight["insurance_expired"] == 1
     assert insight["contracts_expiring"] == 1
+    assert insight["journal_anomalies"] == 0
     assert {item["source"] for item in insight["timeline"]} >= {
         "damage", "maintenance", "document", "franchise", "rental",
     }

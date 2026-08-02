@@ -1,6 +1,69 @@
 from app.core.database import db_session
 
 
+def sessions_without_operational_date(organization_id: str) -> list[dict]:
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT s.id,
+                   COALESCE(m.occurred_at, s.scheduled_at, s.opened_at, s.created_at) AS reference_at
+            FROM journal_sessions s
+            LEFT JOIN asset_movements m ON m.session_id = s.id
+            WHERE s.organization_id = ? AND s.operational_date IS NULL
+            """,
+            (organization_id,),
+        ).fetchall()
+    return [{key: row[key] for key in row.keys()} for row in rows]
+
+
+def set_operational_date(session_id: str, operational_day: str) -> None:
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE journal_sessions SET operational_date = ? WHERE id = ? AND operational_date IS NULL",
+            (operational_day, session_id),
+        )
+
+
+def month_counts(organization_id: str, start_date: str, end_date: str) -> list[dict]:
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            WITH procedures AS (
+                SELECT s.operational_date AS operational_date,
+                       CASE WHEN m.anomaly_present = 1 THEN 1 ELSE 0 END AS anomaly,
+                       0 AS incomplete,
+                       CASE WHEN EXISTS (
+                           SELECT 1 FROM movement_media mm WHERE mm.movement_id = m.id
+                       ) THEN 1 ELSE 0 END AS with_media
+                FROM asset_movements m
+                JOIN journal_sessions s ON s.id = m.session_id
+                WHERE m.organization_id = ?
+                  AND s.operational_date BETWEEN ? AND ?
+                UNION ALL
+                SELECT s.operational_date,
+                       0 AS anomaly,
+                       1 AS incomplete,
+                       CASE WHEN EXISTS (
+                           SELECT 1 FROM movement_media mm WHERE mm.session_id = s.id
+                       ) THEN 1 ELSE 0 END AS with_media
+                FROM journal_sessions s
+                WHERE s.organization_id = ? AND s.status = 'open'
+                  AND s.operational_date BETWEEN ? AND ?
+            )
+            SELECT operational_date AS date,
+                   COUNT(*) AS total,
+                   SUM(anomaly) AS anomalies,
+                   SUM(incomplete) AS incomplete,
+                   SUM(with_media) AS with_media
+            FROM procedures
+            GROUP BY operational_date
+            ORDER BY operational_date
+            """,
+            (organization_id, start_date, end_date, organization_id, start_date, end_date),
+        ).fetchall()
+    return [{key: row[key] for key in row.keys()} for row in rows]
+
+
 def list_procedures(
     organization_id: str,
     start_date: str | None = None,
@@ -9,7 +72,7 @@ def list_procedures(
     range_clause = ""
     range_params: list[object] = []
     if start_date and end_date:
-        range_clause = " AND COALESCE(s.operational_date, substr(m.occurred_at, 1, 10)) BETWEEN ? AND ?"
+        range_clause = " AND s.operational_date BETWEEN ? AND ?"
         range_params = [start_date, end_date]
     with db_session() as conn:
         movements = conn.execute(
