@@ -153,7 +153,7 @@ def test_vision_aggregates_existing_modules_without_new_table():
         "maintenance_open": ("Apri Manutenzione", "maintenance", "Operatività"),
         "franchise_open": ("Apri Franchigie", "franchises", "Contratti"),
         "rental_active": ("Apri Noleggi", "rentals", "Operatività"),
-        "deadline_soon": ("Apri Scadenziario", "deadlines", "Fleet"),
+        "deadline_soon": ("Apri Manutenzioni", "maintenance", "Fleet"),
     }
     decisions_by_id = {item["id"]: item for item in insight["decisions"]}
     assert len(insight["actions"]) == len(insight["decisions"]) == 9
@@ -169,6 +169,13 @@ def test_vision_aggregates_existing_modules_without_new_table():
         assert action["origin"] == decision["origin"]
         assert action["vehicle_id"] == vehicle["id"]
     assert "risk_score" not in insight
+    deadlines = {item["category"]: item for item in payload["upcoming_deadlines"]}
+    assert set(deadlines) == {"document", "insurance", "maintenance", "rental"}
+    assert deadlines["maintenance"]["count"] == 1
+    assert deadlines["maintenance"]["nearest"]["source_id"] == maintenance.json()["id"]
+    assert deadlines["rental"]["count"] == 1
+    assert deadlines["document"]["count"] == 0
+    assert deadlines["insurance"]["count"] == 0
     with db_session() as conn:
         tables = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%vision%'"

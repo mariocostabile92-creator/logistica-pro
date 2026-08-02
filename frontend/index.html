@@ -17,7 +17,6 @@
   <link rel="stylesheet" href="./assets/css/franchise-workspace.css?v=1" />
   <link rel="stylesheet" href="./assets/css/insurance-workspace.css?v=1" />
   <link rel="stylesheet" href="./assets/css/rental-workspace.css?v=1" />
-  <link rel="stylesheet" href="./assets/css/deadlines-workspace.css?v=1" />
   <link rel="stylesheet" href="./assets/css/journal-control-room.css?v=6" />
   <link rel="stylesheet" href="./assets/css/journal-completion.css?v=1" />
   <link rel="stylesheet" href="./assets/css/journal-archive.css?v=3" />
@@ -25,7 +24,7 @@
   <link rel="stylesheet" href="./assets/css/journal-shared-access.css?v=2" />
   <link rel="stylesheet" href="./assets/css/attachments.css?v=1" />
   <link rel="stylesheet" href="./assets/css/vehicle-dossier.css?v=1" />
-  <link rel="stylesheet" href="./assets/css/fleet-vision-workspace.css?v=2" />
+  <link rel="stylesheet" href="./assets/css/fleet-vision-workspace.css?v=3" />
   <link rel="stylesheet" href="./assets/css/auth.css?v=1" />
   <link rel="stylesheet" href="./assets/css/auth-header-responsive.css?v=1" />
 </head>
@@ -1519,10 +1518,6 @@
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
             Noleggi
           </button>
-          <button class="fleet-tree-node" type="button" data-fleet-module="deadlines" aria-current="false">
-            <span class="fleet-tree-chevron" aria-hidden="true">›</span>
-            Scadenziario
-          </button>
           <button class="fleet-tree-node" type="button" data-fleet-module="damage" aria-current="false">
             <span class="fleet-tree-chevron" aria-hidden="true">›</span>
             Danni
@@ -1690,7 +1685,6 @@
       <section id="franchiseWorkspace" class="franchise-workspace" aria-labelledby="franchiseWorkspaceTitle" hidden></section>
       <section id="insuranceWorkspace" class="insurance-workspace" aria-labelledby="insuranceWorkspaceTitle" hidden></section>
       <section id="rentalWorkspace" class="rental-workspace" aria-labelledby="rentalWorkspaceTitle" hidden></section>
-      <section id="deadlinesWorkspace" class="deadlines-workspace" aria-labelledby="deadlinesWorkspaceTitle" hidden></section>
       <section id="journalControlRoom" class="journal-control-room" aria-labelledby="journalControlRoomTitle" hidden></section>
       <section id="fleetVisionWorkspace" class="fleet-vision-workspace" aria-labelledby="fleetVisionWorkspaceTitle" hidden></section>
       <section
@@ -1782,11 +1776,6 @@
               <div class="fleet-registry-heading"><div><p class="eyebrow">Sostituzioni</p><h3>Noleggi</h3></div>
                 <button id="fleetDossierManageRentals" type="button" class="quiet">Gestisci noleggi</button></div>
               <div id="fleetDossierRentals" class="fleet-document-list"></div>
-            </section>
-            <section>
-              <div class="fleet-registry-heading"><div><p class="eyebrow">Scadenze</p><h3>Scadenziario</h3></div>
-                <button id="fleetDossierManageDeadlines" type="button" class="quiet">Apri Scadenziario</button></div>
-              <div id="fleetDossierDeadlines" class="fleet-document-list"></div>
             </section>
             <section>
               <div class="fleet-registry-heading"><div><p class="eyebrow">Archivio</p><h3>Documenti</h3></div>
@@ -2498,6 +2487,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=19"></script>
+    <script type="module" src="./assets/js/app.js?v=21"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@ import { fleetVisionState, filteredCriticalities } from "./state.js";
 const domainLabel = {
   damage: "Danni", maintenance: "Manutenzioni", documents: "Documenti",
   insurance: "Assicurazioni", rentals: "Noleggi", journal: "Driver Journal",
-  library: "Fleet Workspace", deadlines: "Scadenziario", franchises: "Franchigie",
+  library: "Fleet Workspace", vision: "Fleet Vision", franchises: "Franchigie",
 };
 const priorityLabel = { alta: "Critiche", media: "Importanti", bassa: "Informative" };
 const dateLabel = value => value
@@ -27,6 +27,30 @@ export function snapshotSection(summary) {
     <div>${kpis.map(([key, label, filter]) => `<button type="button" class="fve2-kpi" data-fve-filter="${filter}">
       <strong>${summary[key] ?? 0}</strong><span>${escapeHtml(label)}</span>
       <small>Apri dettaglio</small></button>`).join("")}</div>
+  </section>`;
+}
+
+const deadlineCriticalityLabel = {
+  critica: "Critica", alta: "Alta", media: "Media", regolare: "Regolare",
+};
+
+export function upcomingDeadlinesSection(categories) {
+  return `<section class="fve2-section fve2-deadlines" aria-labelledby="fveDeadlinesTitle">
+    <header><p class="eyebrow">PrioritÃ  temporali</p><h3 id="fveDeadlinesTitle">Prossime scadenze</h3>
+      <p>Le urgenze sono aggregate dalle fonti operative. Il dettaglio resta nel workspace di origine.</p></header>
+    <div>${categories.map(item => {
+      const nearest = item.nearest;
+      const vehicle = nearest?.plate || nearest?.external_identifier;
+      return `<article class="fve2-deadline-card criticality-${escapeHtml(item.criticality)}">
+        <header><div><span>${escapeHtml(item.label)}</span><strong>${item.count}</strong></div>
+          <span class="fve2-deadline-level">${escapeHtml(deadlineCriticalityLabel[item.criticality])}</span></header>
+        <dl><div><dt>PiÃ¹ urgente</dt><dd>${escapeHtml(nearest?.title || "Nessuna scadenza entro 30 giorni")}</dd></div>
+          <div><dt>Mezzo</dt><dd>${escapeHtml(vehicle || "â€”")}</dd></div>
+          <div><dt>Prossima data</dt><dd>${escapeHtml(dateLabel(nearest?.due_date))}</dd></div></dl>
+        <button type="button" class="fve2-deadline-action" data-fve-deadline-source="${escapeHtml(item.module)}"
+          data-fve-deadline-ids="${item.source_ids.join(",")}">Apri ${escapeHtml(item.label)}</button>
+      </article>`;
+    }).join("")}</div>
   </section>`;
 }
 

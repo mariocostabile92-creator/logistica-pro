@@ -1,4 +1,7 @@
-import { criticalitiesSection, operationsSection, quickAccessSection, snapshotSection } from "./sections.js";
+import {
+  criticalitiesSection, operationsSection, quickAccessSection, snapshotSection,
+  upcomingDeadlinesSection,
+} from "./sections.js?v=2";
 import { fleetVisionState } from "./state.js";
 
 export function renderFleetVisionExcellence(root) {
@@ -8,6 +11,7 @@ export function renderFleetVisionExcellence(root) {
     <p>Comprendi lo stato operativo della flotta, le priorità e la loro origine.</p></div>
     ${data.partialErrors.length ? `<p class="view-state">Dati parziali: ${data.partialErrors.join(", ")}</p>` : ""}</header>
     ${snapshotSection(data.summary)}
+    ${upcomingDeadlinesSection(data.upcomingDeadlines)}
     ${criticalitiesSection()}
     ${operationsSection(data)}
     ${quickAccessSection()}`;

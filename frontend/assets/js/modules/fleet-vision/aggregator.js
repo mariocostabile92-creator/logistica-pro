@@ -7,6 +7,9 @@ const incompleteJournal = new Set([
 ]);
 
 function recordFor(item, decision) {
+  if (decision.rule === "deadline_soon" && decision.evidence?.source_id) {
+    return { id: decision.evidence.source_id, label: decision.origin };
+  }
   if (decision.module === "damage") {
     const record = item.latest?.damage;
     return { id: record?.id, label: record?.case_number || "pratica danno" };
@@ -104,5 +107,6 @@ export async function loadFleetVisionExcellence(options = {}) {
       journal_incomplete: missing.length,
     },
     partialErrors: journalResult.status === "rejected" ? ["Driver Journal"] : [],
+    upcomingDeadlines: vision.upcoming_deadlines || [],
   };
 }

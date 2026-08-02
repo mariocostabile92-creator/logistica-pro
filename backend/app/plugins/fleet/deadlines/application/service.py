@@ -8,6 +8,7 @@ MODULE_LABELS = {
     "insurance": "Assicurazioni",
     "contract": "Contratti",
     "maintenance": "Manutenzioni",
+    "rental": "Noleggi",
 }
 
 

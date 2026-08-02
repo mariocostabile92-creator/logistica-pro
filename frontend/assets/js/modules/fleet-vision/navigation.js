@@ -7,6 +7,12 @@ const eventMap = {
 };
 
 export function openFleetVisionSource(module, vehicleId, recordId, driverId = null) {
+  if (module === "vision") {
+    document.querySelector("#fleetVisionWorkspace .fve2-deadlines")?.scrollIntoView({
+      behavior: "smooth", block: "start",
+    });
+    return;
+  }
   if (module === "workforce") {
     document.dispatchEvent(new CustomEvent("workspace:navigate", {
       detail: { view: "workforce", driverId },
@@ -35,6 +41,16 @@ export function openFleetVisionSource(module, vehicleId, recordId, driverId = nu
   }
   const fleetModule = module === "journal" ? "journal" : module;
   document.querySelector(`[data-fleet-module="${fleetModule}"]`)?.click();
+}
+
+export function openFleetDeadlineSource(module, recordIds) {
+  if (!eventMap[module]) return;
+  const [name] = eventMap[module];
+  const workspace = document.getElementById("fleetVisionWorkspace");
+  if (workspace) workspace.hidden = true;
+  document.dispatchEvent(new CustomEvent(name, {
+    detail: { deadlineIds: recordIds.length ? recordIds : null },
+  }));
 }
 
 export function directActionLabel(item) {

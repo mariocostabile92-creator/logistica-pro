@@ -16,6 +16,13 @@ ACTIVE_RENTAL = {"attivo", "prorogato"}
 OPERATIVE = {"disponibile", "disponibile_con_limitazioni", "available", "reserve"}
 UNAVAILABLE = {"indisponibile", "unavailable"}
 MAINTENANCE = {"in_manutenzione", "in_officina", "maintenance", "workshop"}
+DEADLINE_TARGETS = {
+    "document": ("Documenti", "documents"),
+    "insurance": ("Assicurazioni", "insurance"),
+    "maintenance": ("Manutenzioni", "maintenance"),
+    "rental": ("Noleggi", "rentals"),
+    "contract": ("Fleet Asset Profile", "library"),
+}
 
 
 def _group(rows: list[dict]) -> dict[int, list[dict]]:
@@ -35,6 +42,44 @@ def _document_issues(rows: list[dict]) -> dict[str, int]:
         "scaduti": sum(row.get("derived_status") == "scaduto" for row in rows),
         "in scadenza": sum(row.get("derived_status") == "in_scadenza" for row in rows),
     }
+
+
+def _upcoming_deadline_categories(rows: list[dict]) -> list[dict]:
+    categories = []
+    for source, (label, module) in DEADLINE_TARGETS.items():
+        if source == "contract":
+            continue
+        source_rows = [row for row in rows if row["source_module"] == source]
+        attention = [row for row in source_rows if row["days_remaining"] <= 30]
+        attention.sort(key=lambda row: (row["days_remaining"], row["due_date"]))
+        nearest = attention[0] if attention else None
+        if any(row["days_remaining"] <= 0 for row in attention):
+            criticality = "critica"
+        elif any(row["days_remaining"] <= 7 for row in attention):
+            criticality = "alta"
+        elif attention:
+            criticality = "media"
+        else:
+            criticality = "regolare"
+        categories.append({
+            "category": source,
+            "label": label,
+            "module": module,
+            "count": len(attention),
+            "expired": sum(row["days_remaining"] < 0 for row in attention),
+            "today": sum(row["days_remaining"] == 0 for row in attention),
+            "within_seven_days": sum(0 < row["days_remaining"] <= 7 for row in attention),
+            "within_thirty_days": sum(7 < row["days_remaining"] <= 30 for row in attention),
+            "criticality": criticality,
+            "nearest": None if nearest is None else {
+                key: nearest.get(key) for key in (
+                    "source_id", "vehicle_id", "plate", "external_identifier",
+                    "title", "due_date", "status", "days_remaining",
+                )
+            },
+            "source_ids": [row["source_id"] for row in attention],
+        })
+    return categories
 
 
 def _event(
@@ -215,14 +260,16 @@ def _decisions(
     ]
     if other_deadlines:
         nearest = min(other_deadlines, key=lambda item: item["days_remaining"])
+        origin, target_module = DEADLINE_TARGETS[nearest["source_module"]]
         result.append(_decision(
-            "deadline_soon", asset_id, "Scadenza entro 30 giorni",
-            f"Il mezzo {plate} presenta una scadenza operativa imminente.", "bassa",
-            "Scadenziario", "deadlines",
+            "deadline_soon", asset_id, "Scadenza operativa da verificare",
+            f"Il mezzo {plate} presenta una scadenza operativa da gestire.", "bassa",
+            origin, target_module,
             {
                 "tipo": nearest["deadline_type"],
                 "scadenza": nearest["due_date"],
                 "giorni": nearest["days_remaining"],
+                "source_id": nearest["source_id"],
             },
         ))
     order = {"alta": 0, "media": 1, "bassa": 2}
@@ -263,7 +310,7 @@ ACTION_RULES = {
         "group": "Operatività",
     },
     "deadline_soon": {
-        "title": "Apri Scadenziario", "module": "deadlines",
+        "title": "Apri modulo origine", "module": None,
         "group": "Fleet",
     },
 }
@@ -273,6 +320,12 @@ def _actions(decisions: list[dict], asset_id: int) -> list[dict]:
     actions = []
     for decision in decisions:
         rule = ACTION_RULES[decision["rule"]]
+        if decision["rule"] == "deadline_soon":
+            rule = {
+                **rule,
+                "title": f'Apri {decision["origin"]}',
+                "module": decision["module"],
+            }
         actions.append({
             "id": f"action:{decision['id']}",
             "decision_id": decision["id"],
@@ -294,7 +347,8 @@ def fleet_vision(vehicle_id: int | None = None, organization_id: str | None = No
         {**row, "derived_status": evaluate_document(row, "Europe/Rome")["status"]}
         for row in data["documents"]
     ]
-    deadlines = _group(list_deadlines()["items"])
+    deadline_items = list_deadlines(vehicle_id)["items"]
+    deadlines = _group(deadline_items)
     damages, maintenances = _group(data["damages"]), _group(data["maintenances"])
     documents, franchises = _group(data["documents"]), _group(data["franchises"])
     rentals = _group(data["rentals"])
@@ -319,7 +373,7 @@ def fleet_vision(vehicle_id: int | None = None, organization_id: str | None = No
         asset_maintenance = maintenances[asset_id]
         asset_franchises = franchises[asset_id]
         asset_rentals = rentals[asset_id]
-        imminent = [item for item in deadlines[asset_id] if 0 <= item["days_remaining"] <= 30]
+        imminent = [item for item in deadlines[asset_id] if item["days_remaining"] <= 30]
         policy = insurance.get(asset_id)
         asset_movements = movements[asset_id]
         decisions = _decisions(
@@ -373,8 +427,8 @@ def fleet_vision(vehicle_id: int | None = None, organization_id: str | None = No
             },
             {
                 "key": "imminent_deadlines", "label": "Scadenze imminenti",
-                "value": len(imminent), "source": "Scadenziario",
-                "module": "deadlines", "source_id": None,
+                "value": len(imminent), "source": "Fleet Vision",
+                "module": "vision", "source_id": None,
             },
             {
                 "key": "insurance", "label": "Assicurazione",
@@ -435,6 +489,7 @@ def fleet_vision(vehicle_id: int | None = None, organization_id: str | None = No
     return {
         "items": items,
         "actions": all_actions,
+        "upcoming_deadlines": _upcoming_deadline_categories(deadline_items),
         "total": len(items),
         "summary": {
             "operational": sum(item["operational_status"] in OPERATIVE for item in items),

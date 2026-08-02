@@ -1,13 +1,15 @@
-import { loadFleetVisionExcellence } from "./fleet-vision/aggregator.js?v=2";
-import { openFleetVisionSource } from "./fleet-vision/navigation.js";
-import { renderFleetVisionExcellence } from "./fleet-vision/renderer.js";
+import { loadFleetVisionExcellence } from "./fleet-vision/aggregator.js?v=3";
+import {
+  openFleetDeadlineSource, openFleetVisionSource,
+} from "./fleet-vision/navigation.js?v=3";
+import { renderFleetVisionExcellence } from "./fleet-vision/renderer.js?v=2";
 import {
   fleetVisionState, resetFleetVisionState,
 } from "./fleet-vision/state.js";
 import { reportUnexpectedError } from "../utils/errors.js";
 
 const root = () => document.getElementById("fleetVisionWorkspace");
-const hiddenWorkspaces = "#fleetWorkspaceHome,#fleetVehicleDossier,#damageWorkspace,#maintenanceWorkspace,#documentsWorkspace,#franchiseWorkspace,#insuranceWorkspace,#rentalWorkspace,#deadlinesWorkspace,#journalControlRoom";
+const hiddenWorkspaces = "#fleetWorkspaceHome,#fleetVehicleDossier,#damageWorkspace,#maintenanceWorkspace,#documentsWorkspace,#franchiseWorkspace,#insuranceWorkspace,#rentalWorkspace,#journalControlRoom";
 
 function rerender() {
   renderFleetVisionExcellence(root());
@@ -64,6 +66,14 @@ document.addEventListener("click", event => {
   }
   const showAll = event.target.closest("[data-fve-show-all]")?.dataset.fveShowAll;
   if (showAll) { fleetVisionState.showAll.add(showAll); rerender(); return; }
+  const deadline = event.target.closest("[data-fve-deadline-source]");
+  if (deadline) {
+    openFleetDeadlineSource(
+      deadline.dataset.fveDeadlineSource,
+      deadline.dataset.fveDeadlineIds.split(",").filter(Boolean).map(Number),
+    );
+    return;
+  }
   const source = event.target.closest("[data-fve-source]");
   if (source) openFleetVisionSource(
     source.dataset.fveSource,

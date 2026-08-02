@@ -46,13 +46,13 @@ async function showDamageWorkspace(options) {
 
 
 async function showMaintenanceWorkspace(options) {
-  const module = await loadFleetModule("maintenance", () => import("./maintenance-workspace.js?v=1"));
+  const module = await loadFleetModule("maintenance", () => import("./maintenance-workspace.js?v=2"));
   return module.showMaintenanceWorkspace(options);
 }
 
 
 async function showDocumentsWorkspace(options) {
-  const module = await loadFleetModule("documents", () => import("./documents-workspace.js?v=1"));
+  const module = await loadFleetModule("documents", () => import("./documents-workspace.js?v=2"));
   return module.showDocumentsWorkspace(options);
 }
 
@@ -64,20 +64,14 @@ async function showFranchiseWorkspace(options) {
 
 
 async function showInsuranceWorkspace(options) {
-  const module = await loadFleetModule("insurance", () => import("./insurance-workspace.js?v=1"));
+  const module = await loadFleetModule("insurance", () => import("./insurance-workspace.js?v=2"));
   return module.showInsuranceWorkspace(options);
 }
 
 
 async function showRentalWorkspace(options) {
-  const module = await loadFleetModule("rentals", () => import("./rental-workspace.js?v=1"));
+  const module = await loadFleetModule("rentals", () => import("./rental-workspace.js?v=2"));
   return module.showRentalWorkspace(options);
-}
-
-
-async function showDeadlinesWorkspace(options) {
-  const module = await loadFleetModule("deadlines", () => import("./deadlines-workspace.js?v=1"));
-  return module.showDeadlinesWorkspace(options);
 }
 
 
@@ -88,7 +82,7 @@ async function showJournalControlRoom(options) {
 
 
 async function showFleetVisionWorkspace(options) {
-  const module = await loadFleetModule("vision", () => import("./fleet-vision-workspace.js?v=2"));
+  const module = await loadFleetModule("vision", () => import("./fleet-vision-workspace.js?v=4"));
   return module.showFleetVisionWorkspace(options);
 }
 
@@ -173,7 +167,6 @@ async function showAsset(assetId) {
   byId("franchiseWorkspace").hidden = true;
   byId("insuranceWorkspace").hidden = true;
   byId("rentalWorkspace").hidden = true;
-  byId("deadlinesWorkspace").hidden = true;
   byId("journalControlRoom").hidden = true;
   byId("fleetVisionWorkspace").hidden = true;
   byId("fleetWorkspaceHome").hidden = true;
@@ -256,7 +249,7 @@ function dossierNavigationHandlers() {
     else if (source === "journal") showJournalControlRoom({ vehicle_id: vehicleId() });
     else if (source === "operational_status") showAsset(vehicleId());
     else if (source === "contract") openProfileEditor();
-    else if (source === "deadlines") showDeadlinesWorkspace({ vehicle_id: vehicleId() });
+    else if (source === "deadlines") showFleetVisionWorkspace({ vehicle_id: vehicleId() });
   };
   return {
     back: showFleetLibrary,
@@ -619,7 +612,6 @@ export function initFleetPage() {
     document.querySelectorAll("[data-fleet-module]").forEach(
       (node) => node.classList.toggle("active", node.dataset.fleetModule === module),
     );
-    if (module !== "deadlines") byId("deadlinesWorkspace").hidden = true;
     if (module !== "journal") byId("journalControlRoom").hidden = true;
     if (module !== "vision") byId("fleetVisionWorkspace").hidden = true;
     if (module === "library") showFleetLibrary();
@@ -660,12 +652,6 @@ export function initFleetPage() {
     if (module === "rentals") {
       showRentalWorkspace().catch(
         (error) => showFleetActionError("fleet.rentals", error),
-      );
-      closeFleetSidebar();
-    }
-    if (module === "deadlines") {
-      showDeadlinesWorkspace().catch(
-        (error) => showFleetActionError("fleet.deadlines", error),
       );
       closeFleetSidebar();
     }
@@ -740,20 +726,6 @@ export function initFleetPage() {
     showRentalWorkspace(event.detail || {}).catch(
       (error) => showFleetActionError("fleet.rentals", error),
     );
-  });
-  document.addEventListener("deadline:open-source", (event) => {
-    const item = event.detail || {};
-    if (item.source_module === "document") {
-      document.dispatchEvent(new CustomEvent("documents:open", { detail: { documentId: item.source_id, vehicle_id: item.vehicle_id } }));
-    } else if (item.source_module === "insurance") {
-      document.dispatchEvent(new CustomEvent("insurance:open", { detail: { policyId: item.source_id, vehicle_id: item.vehicle_id } }));
-    } else if (item.source_module === "maintenance") {
-      document.dispatchEvent(new CustomEvent("maintenance:open", { detail: { maintenanceId: item.source_id } }));
-    } else {
-      showAsset(Number(item.vehicle_id)).catch(
-        (error) => showFleetActionError("fleet.asset-detail", error),
-      );
-    }
   });
   document.addEventListener("fleet:vehicle-open", (event) => {
     showAsset(Number(event.detail.assetId)).catch(

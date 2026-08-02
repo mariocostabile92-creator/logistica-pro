@@ -30,6 +30,13 @@ def list_sources(vehicle_id: int | None = None) -> list[dict]:
             FROM fleet_maintenances m JOIN fleet_assets a ON a.id=m.vehicle_id
             WHERE m.expected_at IS NOT NULL AND m.expected_at <> ''
               AND m.status NOT IN ('completata','annullata'){restriction}""",
+        f"""SELECT 'rental' AS source_module, r.id AS source_id, a.id AS vehicle_id,
+                   a.plate, a.external_identifier, a.category AS vehicle_model,
+                   'noleggio' AS deadline_type, r.replacement_vehicle AS title,
+                   r.expected_end_date AS due_date, r.rental_company AS company
+            FROM fleet_rentals r JOIN fleet_assets a ON a.id=r.vehicle_id
+            WHERE r.expected_end_date IS NOT NULL AND r.expected_end_date <> ''
+              AND r.status NOT IN ('concluso','annullato'){restriction}""",
     ]
     items: list[dict] = []
     with db_session() as conn:
