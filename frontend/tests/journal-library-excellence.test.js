@@ -5,14 +5,34 @@ import test from "node:test";
 const file = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("Journal workspace exposes inline Control Room and Archivio GDB navigation", async () => {
-  const [orchestrator, archive] = await Promise.all([
+  const [orchestrator, archive, navigation] = await Promise.all([
     file("assets/js/modules/journal-control-room.js"),
     file("assets/js/modules/journal-archive/index.js"),
+    file("assets/js/modules/journal-control-room/navigation.js"),
   ]);
   assert.match(orchestrator, /Control Room/);
   assert.match(orchestrator, /Archivio GDB/);
   assert.match(orchestrator, /mountJournalArchive/);
-  assert.doesNotMatch(orchestrator + archive, /location\.href|location\.reload|history\.pushState/);
+  assert.match(orchestrator, /selectedDate/);
+  assert.match(orchestrator, /selectedId/);
+  assert.match(archive, /options\.selectedDate/);
+  assert.doesNotMatch(orchestrator + archive + navigation, /location\.href|location\.reload|history\.pushState/);
+});
+
+test("complete Archive detail owns media metadata fallback and full sections", async () => {
+  const [detail, media, components] = await Promise.all([
+    file("assets/js/modules/journal-control-room/archive-detail.js"),
+    file("assets/js/modules/journal-control-room/media-section.js"),
+    file("assets/js/modules/journal-control-room/components.js"),
+  ]);
+  for (const text of ["Identificazione", "Dati operativi", "Dotazioni e checklist",
+    "Anomalie", "Avvisi smart", "Allegati", "Timeline completa", "Azioni",
+    "original_filename", "uploaded_at", "Download", "File non disponibile"]) {
+    assert.match(detail + media + components, new RegExp(text, "i"));
+  }
+  assert.match(media, /<video/);
+  assert.match(media, /<img/);
+  assert.match(media, /addEventListener\("error"/);
 });
 
 test("Archive calendar and day filters use dedicated API aggregation", async () => {
@@ -60,5 +80,7 @@ test("archive responsive contract covers tablet and 390px-compatible mobile", as
   assert.match(css, /@media\(max-width:1000px\)/);
   assert.match(css, /@media\(max-width:600px\)/);
   assert.match(css, /minmax\(0,1fr\)/);
+  assert.match(css, /overflow-y:scroll/);
+  assert.match(css, /max-height:none/);
   assert.doesNotMatch(css, /width:(?:390|768|1440)px/);
 });

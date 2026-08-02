@@ -16,41 +16,47 @@ test("Giornale di bordo opens the inline Journal Control Room", async () => {
   assert.match(publicJournal, /Driver|Journal|Giornale/i);
 });
 
-test("Control Room exposes real KPI filters list and inline detail", async () => {
-  const [module, components, renderer, shared] = await Promise.all([
+test("Control Room is a live driver overview with a concise monitoring detail", async () => {
+  const [module, components, renderer, shared, overview, liveDetail] = await Promise.all([
     file("assets/js/modules/journal-control-room.js"),
     file("assets/js/modules/journal-control-room/components.js"),
     file("assets/js/modules/journal-control-room/renderer.js"),
     file("assets/js/modules/journal-shared-access.js"),
+    file("assets/js/modules/journal-control-room/live-overview.js"),
+    file("assets/js/modules/journal-control-room/live-detail.js"),
   ]);
-  const presentation = components + renderer + shared;
-  for (const text of ["Journal Control Room", "Completate oggi", "Prese in carico",
-    "Rientri", "Anomalie", "In compilazione", "giornata corrente", "Archivio GDB",
-    "Apri documento operativo", "Apri dossier mezzo", "Torna alla lista",
-    "Generata", "Aperta", "In compilazione", "Completata",
-    "link condiviso", "Origine", "Avvisi smart"]) {
+  const presentation = components + renderer + shared + overview + liveDetail;
+  for (const text of ["Journal Control Room", "Driver attesi", "Non iniziati",
+    "In compilazione", "Completati", "Con anomalie", "In ritardo", "giornata corrente",
+    "Archivio GDB", "Apri monitoraggio", "Monitoraggio live", "Timeline essenziale",
+    "Apri GDB completo", "Torna alla lista", "Generata", "Aperta", "Completata",
+    "link condiviso", "Origine"]) {
     assert.match(presentation + module, new RegExp(text, "i"));
   }
   assert.match(module, /listJournalControlRoom/);
   assert.match(module, /data-jcr-search/);
   assert.match(module, /data-jcr-detail/);
+  assert.match(module, /if \(target\) target\.textContent/);
   assert.doesNotMatch(presentation + module, /Ultimi 7 giorni|Ultimi 30 giorni|data-jcr-period/);
   assert.doesNotMatch(module, /Genera procedura Driver|createJournalDriverSession|journalSessionGenerator/);
+  assert.doesNotMatch(liveDetail, /Dotazioni e checklist|Carburante|Pulizia|Avvisi Smart/);
 });
 
-test("Control Room links Vehicle Library operational documents and Damage", async () => {
-  const [renderer, fleet, module, components] = await Promise.all([
+test("Control Room and complete Archive detail link Vehicle Library and Damage", async () => {
+  const [renderer, fleet, module, archiveDetail] = await Promise.all([
     file("assets/js/modules/vehicle-dossier/renderer.js"),
     file("assets/js/modules/fleet-page.js"),
     file("assets/js/modules/journal-control-room.js"),
-    file("assets/js/modules/journal-control-room/components.js"),
+    file("assets/js/modules/journal-control-room/archive-detail.js"),
   ]);
   assert.match(renderer, /Vai al Journal/);
   assert.match(fleet, /showJournalControlRoom\(\{ vehicle_id: vehicleId\(\) \}\)/);
   assert.match(module, /fleet:vehicle-open/);
   assert.match(module, /damage:open/);
-  assert.match(components, /damage_case_number/);
-  assert.match(components, /Anomalia da gestire/);
+  assert.match(archiveDetail, /damage_case_number/);
+  assert.match(archiveDetail, /Anomalia da gestire/);
+  for (const section of ["Identificazione", "Dati operativi", "Dotazioni e checklist",
+    "Anomalie", "Timeline completa", "Azioni"]) assert.match(archiveDetail, new RegExp(section));
 });
 
 test("Control Room responsive CSS supports desktop tablet and mobile", async () => {
@@ -60,6 +66,7 @@ test("Control Room responsive CSS supports desktop tablet and mobile", async () 
   assert.match(css, /@media\(max-width:600px\)/);
   assert.match(css, /\.jcr-back/);
   assert.match(css, /\.jcr-warnings/);
+  assert.match(css, /box-sizing:border-box/);
   assert.doesNotMatch(css, /width:(?:1440|768|390)px/);
 });
 

@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from app.auth import repository as auth_repository
 from app.plugins.fleet.journal.domain.operational_day import operational_date
@@ -27,7 +28,21 @@ def operational_context(organization_id: str) -> dict:
     }
 
 
-def _present(item: dict, can_delete_media: bool = False) -> dict:
+def _is_late(item: dict, timezone_name: str) -> bool:
+    if item.get("lifecycle_status") not in {"generated", "opened", "in_progress"}:
+        return False
+    scheduled_at = item.get("scheduled_at")
+    if not scheduled_at:
+        return False
+    scheduled = datetime.fromisoformat(str(scheduled_at).replace("Z", "+00:00"))
+    if scheduled.tzinfo is None:
+        scheduled = scheduled.replace(tzinfo=ZoneInfo(timezone_name))
+    return scheduled < datetime.now(ZoneInfo(timezone_name))
+
+
+def _present(
+    item: dict, can_delete_media: bool = False, timezone_name: str = "Europe/Rome"
+) -> dict:
     incomplete = bool(item.get("incomplete"))
     anomaly = bool(item.get("anomaly_present"))
     lifecycle = item.get("lifecycle_status")
@@ -43,6 +58,7 @@ def _present(item: dict, can_delete_media: bool = False) -> dict:
         "occurred_at": occurred_at,
         "anomaly_present": anomaly,
         "status": status,
+        "is_late": _is_late(item, timezone_name) if incomplete else False,
         "warnings": json.loads(str(item.get("warnings_json") or "[]")),
         "origin": {
             "shared_link": "Shared link",
@@ -126,7 +142,7 @@ def list_procedures(
     query_start, query_end = start_date, end_date
     if current_scope:
         query_start, query_end = (today - timedelta(days=1)).isoformat(), today.isoformat()
-    items = [_present(item, can_delete_media) for item in repository.list_procedures(
+    items = [_present(item, can_delete_media, context["timezone"]) for item in repository.list_procedures(
         organization_id, query_start, query_end
     )]
     if current_scope:
@@ -146,6 +162,15 @@ def list_procedures(
         "total": len(items),
         "context": context,
         "summary": {
+            "expected_drivers": len(current_items),
+            "not_started": sum(item["status"] == "generated" for item in current_items),
+            "in_progress_live": sum(
+                item["status"] in {"opened", "in_progress"} for item in current_items
+            ),
+            "completed_live": sum(
+                item["status"] in {"completed", "con_anomalia"} for item in current_items
+            ),
+            "late": sum(item["is_late"] for item in current_items),
             "completed_today": sum(
                 item["status"] in {"completed", "con_anomalia"}
                 for item in current_items
@@ -163,4 +188,5 @@ def list_procedures(
 
 def get_procedure(procedure_id: str, organization_id: str, can_delete_media: bool = False) -> dict | None:
     item = repository.get_procedure(procedure_id, organization_id)
-    return _present(item, can_delete_media) if item else None
+    context = operational_context(organization_id)
+    return _present(item, can_delete_media, context["timezone"]) if item else None

@@ -48,6 +48,9 @@ def test_image_video_relative_keys_atomic_restart_and_download():
     assert all(not row["storage_key"].startswith(("/", "C:")) for row in rows)
     assert all(row["organization_id"] == "test-organization" for row in rows)
     assert all(row["vehicle_id"] == vehicle["id"] for row in rows)
+    live = client.get("/api/fleet/journal-control-room").json()["items"][0]
+    assert [entry["original_filename"] for entry in live["media"]] == ["prova.png", "prova.mp4"]
+    assert all(entry["uploaded_at"] for entry in live["media"])
     restarted = PrivateLocalMediaStorage()
     assert all(restarted.path(row["storage_key"]).read_bytes() in {PNG, MP4} for row in rows)
     assert not list(restarted.path(rows[0]["storage_key"]).parent.glob("*.tmp"))

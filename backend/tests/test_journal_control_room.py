@@ -185,6 +185,24 @@ def test_managed_session_uses_organization_timezone_at_operational_boundary():
     assert response.json()["operational_date"] == "2026-08-01"
 
 
+def test_live_summary_exposes_expected_not_started_and_objective_late_state():
+    vehicle = asset()
+    operational_day = client.get(CONTROL).json()["context"]["operational_date"]
+    response = client.post(f"{CONTROL}/sessions", json={
+        "operation_type": "check_out", "plate": vehicle["plate"],
+        "declared_driver_identifier": "Driver Atteso",
+        "scheduled_date": operational_day, "scheduled_time": "04:01",
+    })
+    assert response.status_code == 201
+    payload = client.get(CONTROL).json()
+    item = next(entry for entry in payload["items"] if entry["id"] == response.json()["id"])
+    assert item["status"] == "generated"
+    assert item["is_late"] is True
+    assert payload["summary"]["expected_drivers"] == 1
+    assert payload["summary"]["not_started"] == 1
+    assert payload["summary"]["late"] == 1
+
+
 def test_manager_session_requires_real_vehicle_and_valid_shared_id():
     response = client.post(f"{CONTROL}/sessions", json={
         "operation_type": "check_out",

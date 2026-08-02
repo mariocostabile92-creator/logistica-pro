@@ -82,7 +82,10 @@ def list_procedures(
                    s.opened_at, s.in_progress_at, s.driver_name,
                    s.driver_surname, s.warnings_json, s.operational_date,
                    d.id AS damage_case_id, d.case_number AS damage_case_number,
-                   d.status AS damage_case_status
+                   d.status AS damage_case_status,
+                   d.severity AS damage_case_severity,
+                   d.description AS damage_case_description,
+                   d.created_at AS damage_case_created_at
             FROM asset_movements m
             JOIN journal_sessions s ON s.id = m.session_id
             JOIN fleet_assets a ON a.id = m.asset_id
@@ -109,8 +112,10 @@ def list_procedures(
             """, (organization_id, *range_params)
         ).fetchall()
         movement_ids = [row["id"] for row in movements]
+        open_session_ids = [row["id"] for row in open_sessions]
         equipment: dict[str, list[dict]] = {key: [] for key in movement_ids}
         media: dict[str, list[dict]] = {key: [] for key in movement_ids}
+        session_media: dict[str, list[dict]] = {key: [] for key in open_session_ids}
         if movement_ids:
             placeholders = ",".join("?" for _ in movement_ids)
             for row in conn.execute(
@@ -123,7 +128,7 @@ def list_procedures(
                 equipment[row["movement_id"]].append({key: row[key] for key in row.keys()})
             for row in conn.execute(
                 f"""SELECT id, movement_id, media_type, verified_mime_type,
-                           size_bytes, display_order
+                           size_bytes, display_order, original_filename, uploaded_at
                     FROM movement_media WHERE movement_id IN ({placeholders})
                     ORDER BY movement_id, display_order""",
                 movement_ids,
@@ -132,6 +137,19 @@ def list_procedures(
                 item["url"] = f"/api/fleet/journal-control-room/media/{row['id']}"
                 item["download_url"] = f"/api/fleet/journal-control-room/media/{row['id']}?download=1"
                 media[row["movement_id"]].append(item)
+        if open_session_ids:
+            placeholders = ",".join("?" for _ in open_session_ids)
+            for row in conn.execute(
+                f"""SELECT id, session_id, media_type, verified_mime_type,
+                           size_bytes, display_order, original_filename, uploaded_at
+                    FROM movement_media WHERE session_id IN ({placeholders})
+                    ORDER BY session_id, display_order""",
+                open_session_ids,
+            ).fetchall():
+                item = {key: row[key] for key in row.keys()}
+                item["url"] = f"/api/fleet/journal-control-room/media/{row['id']}"
+                item["download_url"] = f"/api/fleet/journal-control-room/media/{row['id']}?download=1"
+                session_media[row["session_id"]].append(item)
     result = []
     for row in movements:
         item = {key: row[key] for key in row.keys()}
@@ -142,7 +160,7 @@ def list_procedures(
         item = {key: row[key] for key in row.keys()}
         item["incomplete"] = True
         item["equipment"] = []
-        item["media"] = []
+        item["media"] = session_media[row["id"]]
         result.append(item)
     return result
 

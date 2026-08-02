@@ -1,7 +1,10 @@
 import { deleteJournalMedia, listJournalControlRoom } from "../api.js";
 import { escapeHtml } from "../utils/dom.js";
 import { mountJournalSharedAccess } from "./journal-shared-access.js?v=2";
-import { journalCard, journalDetail } from "./journal-control-room/components.js";
+import { journalLiveCard } from "./journal-control-room/live-overview.js";
+import { journalLiveDetail } from "./journal-control-room/live-detail.js";
+import { setJournalWorkspaceView } from "./journal-control-room/navigation.js";
+import { wireJournalMediaFallback } from "./journal-control-room/media-section.js";
 import { journalControlRoomShell } from "./journal-control-room/renderer.js";
 import { mountJournalArchive } from "./journal-archive/index.js";
 import {
@@ -29,12 +32,13 @@ async function load(preferredId = state.selected?.id) {
   state.items = response.items;
   state.selected = state.items.find(item => item.id === preferredId) || state.items[0] || null;
   root().querySelector("[data-jcr-list]").innerHTML = state.items.length
-    ? state.items.map(item => journalCard(item, state.selected?.id)).join("")
+    ? state.items.map(item => journalLiveCard(item, state.selected?.id)).join("")
     : `<div class="view-state"><strong>Nessuna procedura per la giornata operativa.</strong><p>Per consultare lo storico apri Archivio GDB.</p></div>`;
-  root().querySelector("[data-jcr-detail]").innerHTML = journalDetail(state.selected);
+  root().querySelector("[data-jcr-detail]").innerHTML = journalLiveDetail(state.selected);
   root().classList.toggle("detail-open", Boolean(state.selected));
   for (const [key, value] of Object.entries(response.summary)) {
-    root().querySelector(`[data-jcr-kpi="${key}"]`).textContent = value;
+    const target = root().querySelector(`[data-jcr-kpi="${key}"]`);
+    if (target) target.textContent = value;
   }
   const context = response.context;
   root().querySelector("[data-jcr-context]").textContent = `Giornata operativa ${context.operational_date} · ${context.timezone} · dalle ${String(context.operational_day_start_hour).padStart(2, "0")}:00`;
@@ -50,6 +54,7 @@ export async function showJournalControlRoom(options = {}) {
     <button type="button" class="active" data-jcr-view="control" aria-pressed="true">Control Room</button>
     <button type="button" data-jcr-view="archive" aria-pressed="false">Archivio GDB</button>
   </nav><div data-jcr-live>${journalControlRoomShell()}</div><div data-jcr-archive hidden></div>`;
+  wireJournalMediaFallback(root());
   await mountJournalSharedAccess(root().querySelector("[data-jcr-shared-access]"));
   await load();
 }
@@ -66,19 +71,21 @@ document.addEventListener("click", async event => {
   const view = event.target.closest("[data-jcr-view]")?.dataset.jcrView;
   if (view && root() && !root().hidden) {
     const archive = root().querySelector("[data-jcr-archive]");
-    const live = root().querySelector("[data-jcr-live]");
-    const showArchive = view === "archive";
-    live.hidden = showArchive;
-    archive.hidden = !showArchive;
-    root().querySelectorAll("[data-jcr-view]").forEach(button => {
-      const active = button.dataset.jcrView === view;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
-    });
-    if (showArchive && !archive.dataset.mounted) {
+    setJournalWorkspaceView(root(), view);
+    if (view === "archive" && !archive.dataset.mounted) {
       archive.dataset.mounted = "true";
-      mountJournalArchive(archive);
+      await mountJournalArchive(archive);
     }
+  }
+  const fullJournal = event.target.closest("[data-jcr-open-archive]");
+  if (fullJournal) {
+    const archive = root().querySelector("[data-jcr-archive]");
+    setJournalWorkspaceView(root(), "archive");
+    archive.dataset.mounted = "true";
+    await mountJournalArchive(archive, {
+      selectedDate: fullJournal.dataset.jcrOperationalDate,
+      selectedId: fullJournal.dataset.jcrOpenArchive,
+    });
   }
   if (event.target.closest("[data-jcr-back]")) root().classList.remove("detail-open");
   if (event.target.closest("[data-jcr-retry]")) load();

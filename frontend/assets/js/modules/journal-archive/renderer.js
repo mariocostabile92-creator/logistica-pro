@@ -1,4 +1,5 @@
-import { journalCard, journalDetail } from "../journal-control-room/components.js";
+import { journalCard } from "../journal-control-room/components.js";
+import { journalArchiveDetail } from "../journal-control-room/archive-detail.js";
 import { archiveCalendar } from "./calendar.js";
 
 export function archiveShell() {
@@ -19,7 +20,7 @@ export function archiveShell() {
         <label>Anomalia<select name="anomaly"><option value="">Tutte</option><option value="with">Con anomalie</option><option value="without">Senza anomalie</option></select></label>
         <label>Media<select name="media"><option value="">Tutti</option><option value="with">Con media</option><option value="without">Senza media</option></select></label>
         <button type="reset" class="gdb-reset">Reimposta</button></form>
-      <div class="gdb-master-detail"><aside data-gdb-list></aside><article data-gdb-detail></article></div></section>`;
+      <div class="gdb-master-detail"><aside data-gdb-list aria-label="Giornali del giorno"></aside><article data-gdb-detail tabindex="0" aria-label="Dettaglio GDB completo, area scorrevole"></article></div></section>`;
 }
 
 export function renderMonth(root, state) {
@@ -39,7 +40,7 @@ export function renderDay(root, state) {
   const kpis = [["total", "Totali", ""], ["check_outs", "Prese in carico", "check_out"], ["check_ins", "Rientri", "check_in"], ["complete", "Complete", "complete"], ["incomplete", "Incomplete", "incomplete"], ["with_anomalies", "Con anomalie", "anomaly"], ["with_media", "Con media", "media"]];
   root.querySelector("[data-gdb-kpis]").innerHTML = kpis.map(([key, label, filter]) => `<button type="button" class="${state.activeKpi === filter ? "active" : ""}" data-gdb-kpi="${filter}" aria-pressed="${state.activeKpi === filter}"><strong>${data.summary[key]}</strong><span>${label}</span></button>`).join("");
   root.querySelector("[data-gdb-list]").innerHTML = data.items.length ? data.items.map(item => journalCard(item, state.selected?.id)).join("") : `<div class="jcr-empty"><strong>Nessuna procedura</strong><p>Non ci sono registrazioni per il giorno e i filtri selezionati.</p></div>`;
-  root.querySelector("[data-gdb-detail]").innerHTML = journalDetail(state.selected);
+  root.querySelector("[data-gdb-detail]").innerHTML = journalArchiveDetail(state.selected);
   root.querySelector(".gdb-master-detail").classList.toggle("detail-open", Boolean(state.selected));
   root.querySelector(".gdb-day-panel").setAttribute("aria-busy", "false");
 }

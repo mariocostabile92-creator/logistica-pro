@@ -49,18 +49,22 @@ function syncFilterForm() {
   }
 }
 
-async function loadSelectedMonth() {
+async function loadSelectedMonth(preferredId) {
   await loadMonth();
-  await loadDay();
+  await loadDay(preferredId);
 }
 
-export async function mountJournalArchive(root) {
+export async function mountJournalArchive(root, options = {}) {
   container = root;
   state.filters = {};
   state.activeKpi = "";
   state.selected = null;
+  if (options.selectedDate) {
+    state.selectedDate = options.selectedDate;
+    state.month = options.selectedDate.slice(0, 7);
+  }
   container.innerHTML = archiveShell();
-  await loadSelectedMonth();
+  await loadSelectedMonth(options.selectedId);
   container.onclick = async event => {
     const month = event.target.closest("[data-gdb-month]");
     if (month) { moveMonth(Number(month.dataset.gdbMonth)); await loadSelectedMonth(); }
