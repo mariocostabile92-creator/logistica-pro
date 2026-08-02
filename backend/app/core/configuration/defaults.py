@@ -110,6 +110,7 @@ PLATFORM_DEFAULT_SECTIONS = [
             "default": "unknown",
             "allowed": [
                 "available",
+                "available_limited",
                 "scheduled",
                 "rest",
                 "holiday",
@@ -120,6 +121,10 @@ PLATFORM_DEFAULT_SECTIONS = [
             ],
             "external_mappings": {
                 "available": ["available", "disponibile", "disp"],
+                "available_limited": [
+                    "available_limited", "disponibile con limitazioni",
+                    "convocabile con limitazioni",
+                ],
                 "scheduled": ["scheduled", "turno", "presente"],
                 "rest": ["rest", "riposo", "r"],
                 "holiday": ["holiday", "ferie", "f"],
@@ -127,7 +132,7 @@ PLATFORM_DEFAULT_SECTIONS = [
                 "leave": ["leave", "permesso", "p"],
                 "unavailable": ["unavailable", "indisponibile"],
             },
-            "available_statuses": ["available", "scheduled"],
+            "available_statuses": ["available", "available_limited", "scheduled"],
         },
     ),
     _section(

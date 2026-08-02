@@ -31,6 +31,10 @@
   min-width: 180px;
 }
 
+.workforce-foundation-tools {
+  flex-wrap: wrap;
+}
+
 .workforce-foundation-kpis {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
@@ -38,27 +42,32 @@
   margin: 18px 0 0;
 }
 
-.workforce-foundation-kpis > div {
+.workforce-foundation-kpis > button {
+  display: grid;
+  justify-items: start;
   min-width: 0;
   padding: 11px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-raised, #f7f9f8);
+  color: var(--text);
+  text-align: left;
 }
 
-.workforce-foundation-kpis > .is-primary {
+.workforce-foundation-kpis > .is-primary,
+.workforce-foundation-kpis > button.is-active {
   border-color: var(--accent);
   background: #eaf4f0;
 }
 
-.workforce-foundation-kpis dt,
+.workforce-foundation-kpis span,
 .workforce-driver-readiness span {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
 }
 
-.workforce-foundation-kpis dd {
+.workforce-foundation-kpis strong {
   margin: 7px 0 0;
   font-size: 23px;
   font-weight: 850;
@@ -79,17 +88,37 @@
 
 .workforce-driver-readiness {
   display: grid;
-  grid-template-columns: minmax(190px, 1.4fr) repeat(3, minmax(120px, 1fr)) minmax(170px, auto);
+  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(105px, 1fr)) minmax(180px, 1.2fr) auto;
   gap: 12px;
   align-items: center;
   padding: 11px 12px;
   border: 1px solid var(--border);
-  border-left: 4px solid #9ba8a3;
+  border-left: 5px solid #9ba8a3;
   border-radius: var(--radius-sm);
 }
 
-.workforce-driver-readiness.is-callable {
+.workforce-driver-readiness[data-tone="success"] {
   border-left-color: var(--accent);
+}
+
+.workforce-driver-readiness[data-tone="warning"] {
+  border-left-color: #d39a24;
+  background: #fffaf0;
+}
+
+.workforce-driver-readiness[data-tone="danger"] {
+  border-left-color: var(--danger);
+  background: #fff8f8;
+}
+
+.workforce-driver-readiness[data-tone="reserve"] {
+  border-left-color: #3978ad;
+  background: #f5f9fd;
+}
+
+.workforce-driver-readiness[data-tone="rest"] {
+  border-left-color: #89938f;
+  background: #f7f8f8;
 }
 
 .workforce-driver-readiness > div {
@@ -112,6 +141,79 @@
   padding: 3px 7px;
   border-radius: 999px;
   background: #edf1ef;
+}
+
+.workforce-reserve-badge {
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #dcecf8;
+  color: #1d5d8d !important;
+}
+
+.workforce-driver-detail-button {
+  min-height: 38px;
+}
+
+.workforce-foundation-result-count {
+  margin: 0 0 8px;
+  font-weight: 800;
+}
+
+.workforce-availability-detail {
+  width: min(720px, calc(100% - 32px));
+  max-height: 85vh;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+
+.workforce-availability-detail::backdrop {
+  background: rgb(18 29 26 / 45%);
+}
+
+.workforce-availability-detail > header,
+.workforce-availability-detail > div {
+  padding: 18px;
+}
+
+.workforce-availability-detail > header {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-availability-detail h3,
+.workforce-availability-detail h4 {
+  margin: 2px 0 8px;
+}
+
+.workforce-availability-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.workforce-availability-detail-grid > div,
+.workforce-availability-history article {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.workforce-availability-detail-grid dt,
+.workforce-availability-history span,
+.workforce-availability-history small {
+  color: var(--text-muted);
+}
+
+.workforce-availability-history {
+  display: grid;
+  gap: 7px;
 }
 
 .workforce-readiness-badge[data-status="available"],
@@ -178,7 +280,8 @@
   }
 
   .workforce-driver-identity,
-  .workforce-driver-state {
+  .workforce-driver-state,
+  .workforce-driver-detail-button {
     grid-column: 1 / -1;
   }
 }
@@ -194,5 +297,9 @@
 
   .workforce-driver-readiness > div {
     grid-column: auto;
+  }
+
+  .workforce-availability-detail-grid {
+    grid-template-columns: 1fr;
   }
 }

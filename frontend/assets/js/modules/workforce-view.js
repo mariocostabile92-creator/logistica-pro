@@ -3,6 +3,7 @@ import { escapeHtml } from "../utils/dom.js";
 
 const STATUS_LABELS = {
   available: "Disponibile",
+  available_limited: "Disponibile con limitazioni",
   scheduled: "Programmato",
   rest: "Riposo",
   holiday: "Ferie",

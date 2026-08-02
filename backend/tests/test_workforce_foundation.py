@@ -31,17 +31,17 @@ def _member(identifier: str, name: str, *, reserve: bool = False) -> int:
         return int(cursor.lastrowid)
 
 
-def _status(member_id: int, code: str, available: bool) -> None:
+def _status(member_id: int, code: str, available: bool, notes: str | None = None) -> None:
     with db_session() as conn:
         conn.execute(
             """
             INSERT INTO workforce_day_statuses (
                 workforce_member_id, date, status_code, availability,
-                source_reference, observed_or_confirmed, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                notes, source_reference, observed_or_confirmed, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                member_id, "2026-08-03", code, int(available), "test",
+                member_id, "2026-08-03", code, int(available), notes, "test",
                 "manual", "2026-08-02T08:00:00+00:00",
             ),
         )
@@ -60,12 +60,13 @@ def test_foundation_answers_how_many_people_are_callable_without_creating_shifts
     assert response.status_code == 200
     payload = response.json()
     assert payload["summary"] == {
-        "total": 3, "available": 2, "callable": 2, "holiday": 0,
+        "total": 3, "available": 2, "callable": 2, "limited": 0, "holiday": 0,
         "sickness": 1, "leave": 0, "rest": 0, "not_callable": 1,
         "reserves": 1,
     }
     assert payload["drivers"][0]["convocation_status"] == "not_started"
     assert payload["drivers"][0]["consecutivity_status"] == "not_evaluated"
+    assert payload["drivers"][0]["callability_reason"]
     assert any("Planning" in item for item in payload["limitations"])
 
 
@@ -97,3 +98,40 @@ def test_workforce_profile_schema_migration_is_idempotent():
 def test_foundation_rejects_invalid_operation_date():
     response = client.get(f"{BASE}/foundation?operation_date=not-a-date")
     assert response.status_code == 422
+
+
+def test_availability_engine_explains_callable_limited_and_not_callable_states():
+    available = _member("DRV-A", "Driver Disponibile")
+    limited = _member("DRV-L", "Driver Limitato")
+    holiday = _member("DRV-F", "Driver Ferie")
+    rest = _member("DRV-R", "Driver Riposo")
+    _status(available, "available", True)
+    _status(limited, "available_limited", True, "Limitazione manuale verificata.")
+    _status(holiday, "holiday", False)
+    _status(rest, "rest", False)
+
+    payload = client.get(f"{BASE}/foundation?operation_date=2026-08-03").json()
+    by_id = {item["external_identifier"]: item for item in payload["drivers"]}
+    assert by_id["DRV-A"]["callability_status"] == "callable"
+    assert by_id["DRV-A"]["callability_reason"] == "Nessuna limitazione."
+    assert by_id["DRV-L"]["callability_status"] == "limited"
+    assert by_id["DRV-L"]["callability_reason"] == "Limitazione manuale verificata."
+    assert by_id["DRV-F"]["callability_reason"] == "Ferie."
+    assert by_id["DRV-R"]["callability_tone"] == "rest"
+    assert all(item["callability_reason"] for item in payload["drivers"])
+    assert payload["summary"]["limited"] == 1
+
+
+def test_limited_availability_requires_an_explicit_reason_on_write():
+    member_id = _member("DRV-LIMIT", "Driver Limitazione")
+    missing = client.post(f"{BASE}/day-status", json={
+        "workforce_member_id": member_id, "date": "2026-08-03",
+        "status_code": "available_limited",
+    })
+    assert missing.status_code == 422
+    saved = client.post(f"{BASE}/day-status", json={
+        "workforce_member_id": member_id, "date": "2026-08-03",
+        "status_code": "available_limited", "notes": "Guida solo van standard.",
+    })
+    assert saved.status_code == 200
+    assert saved.json()["availability"] is True

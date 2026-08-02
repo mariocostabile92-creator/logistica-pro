@@ -376,7 +376,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                 status, inferred_shift = _canonical_status(raw_status, status_mapping)
                 statuses[(identifier, explicit_date)] = {
                     "status_code": status,
-                    "availability": status in {"available", "scheduled"},
+                    "availability": status in {"available", "available_limited", "scheduled"},
                     "shift_code": str(_value(row, columns, "shift_code") or inferred_shift or "").strip() or None,
                     "start_time": str(_value(row, columns, "start_time") or "").strip() or None,
                     "end_time": str(_value(row, columns, "end_time") or "").strip() or None,
@@ -394,7 +394,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     status, shift = _canonical_status(cell, status_mapping)
                     statuses[(identifier, column.date_value)] = {
                         "status_code": status,
-                        "availability": status in {"available", "scheduled"},
+                        "availability": status in {"available", "available_limited", "scheduled"},
                         "shift_code": shift,
                         "start_time": None,
                         "end_time": None,

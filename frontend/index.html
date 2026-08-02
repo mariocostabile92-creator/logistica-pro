@@ -1355,32 +1355,33 @@
               <p>Disponibilita operativa del <strong id="workforceFoundationDate">—</strong>. Nessun dato economico o valutazione Amazon.</p>
             </div>
             <div class="workforce-foundation-tools">
-              <label>Cerca driver<input id="workforceFoundationSearch" type="search" placeholder="Nome, ID, station o ruolo" /></label>
-              <label>Stato<select id="workforceFoundationFilter">
-                <option value="all">Tutti</option>
-                <option value="callable">Convocabili</option>
-                <option value="reserve">Riserve convocabili</option>
-                <option value="rest">Riposo</option>
-                <option value="holiday">Ferie</option>
-                <option value="sickness">Malattia</option>
-                <option value="leave">Permesso</option>
-                <option value="unavailable">Non disponibili</option>
-              </select></label>
+              <label>Cerca<input id="workforceFoundationSearch" type="search" placeholder="Nome, ID, motivazione" /></label>
+              <label>Stato<select id="workforceCallabilityFilter"><option value="all">Tutti</option><option value="callable">Convocabile</option><option value="limited">Con limitazioni</option><option value="not_callable">Non convocabile</option></select></label>
+              <label>Disponibilita<select id="workforceAvailabilityFilter"><option value="all">Tutte</option><option value="available">Disponibile</option><option value="holiday">Ferie</option><option value="sickness">Malattia</option><option value="leave">Permesso</option><option value="rest">Riposo</option><option value="unavailable">Non disponibile</option><option value="unknown">Da verificare</option></select></label>
+              <label>Ruolo<select id="workforceRoleFilter"><option value="all">Tutti</option></select></label>
+              <label>Station<select id="workforceStationFilter"><option value="all">Tutte</option></select></label>
+              <label>Contratto<select id="workforceContractFilter"><option value="all">Tutti</option></select></label>
+              <button id="workforceFoundationReset" type="button" class="quiet">Reset</button>
             </div>
           </header>
-          <dl class="workforce-foundation-kpis" aria-label="Disponibilita Workforce">
-            <div><dt>Organico totale</dt><dd id="workforceFoundationTotal">0</dd></div>
-            <div class="is-primary"><dt>Convocabili</dt><dd id="workforceFoundationCallable">0</dd></div>
-            <div><dt>Disponibili</dt><dd id="workforceFoundationAvailable">0</dd></div>
-            <div><dt>Riserve</dt><dd id="workforceFoundationReserves">0</dd></div>
-            <div><dt>Ferie</dt><dd id="workforceFoundationHoliday">0</dd></div>
-            <div><dt>Malattie</dt><dd id="workforceFoundationSickness">0</dd></div>
-            <div><dt>Permessi</dt><dd id="workforceFoundationLeave">0</dd></div>
-            <div><dt>Riposi</dt><dd id="workforceFoundationRest">0</dd></div>
-            <div><dt>Non convocabili</dt><dd id="workforceFoundationNotCallable">0</dd></div>
-          </dl>
+          <div id="workforceFoundationKpis" class="workforce-foundation-kpis" aria-label="Filtri rapidi disponibilita Workforce">
+            <button type="button" data-workforce-kpi-filter="Total"><span>Organico</span><strong>0</strong></button>
+            <button type="button" class="is-primary" data-workforce-kpi-filter="Callable"><span>Convocabili</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Available"><span>Disponibili</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Reserves"><span>Riserve</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Holiday"><span>Ferie</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Sickness"><span>Malattie</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Leave"><span>Permessi</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="Rest"><span>Riposi</span><strong>0</strong></button>
+            <button type="button" data-workforce-kpi-filter="NotCallable"><span>Non convocabili</span><strong>0</strong></button>
+          </div>
           <p id="workforceFoundationLimit" class="workforce-foundation-limit"></p>
+          <p id="workforceFoundationResultCount" class="workforce-foundation-result-count" aria-live="polite">0 driver</p>
           <div id="workforceFoundationDrivers" class="workforce-foundation-drivers" aria-live="polite"></div>
+          <dialog id="workforceAvailabilityDetail" class="workforce-availability-detail" aria-labelledby="workforceAvailabilityDetailTitle">
+            <header><div><p class="eyebrow">Disponibilita driver</p><h3 id="workforceAvailabilityDetailTitle">Dettaglio</h3></div><button id="workforceAvailabilityDetailClose" type="button" class="quiet">Chiudi</button></header>
+            <div id="workforceAvailabilityDetailBody"></div>
+          </dialog>
         </section>
 
         <div class="workforce-source-heading">
@@ -1518,6 +1519,7 @@
                     <label><input type="radio" name="workforceStatusCode" value="scheduled" /><span>Programmato</span></label>
                     <label><input type="radio" name="workforceStatusCode" value="rest" /><span>Riposo</span></label>
                     <label><input type="radio" name="workforceStatusCode" value="available" /><span>Disponibile</span></label>
+                    <label><input type="radio" name="workforceStatusCode" value="available_limited" /><span>Disponibile con limitazioni</span></label>
                     <label><input type="radio" name="workforceStatusCode" value="holiday" /><span>Ferie</span></label>
                     <label><input type="radio" name="workforceStatusCode" value="sickness" /><span>Malattia</span></label>
                     <label><input type="radio" name="workforceStatusCode" value="leave" /><span>Permesso</span></label>

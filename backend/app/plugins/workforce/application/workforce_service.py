@@ -101,7 +101,8 @@ def list_calendar(date_from: str | None = None, date_to: str | None = None, memb
 
 def _allowed_statuses() -> set[str]:
     values = workforce_status_configuration().get("allowed", [])
-    return {str(item) for item in values} if isinstance(values, list) else set()
+    configured = {str(item) for item in values} if isinstance(values, list) else set()
+    return configured | {"available_limited"}
 
 
 def save_day_status(values: dict[str, object], actor: str, status_id: int | None = None):
@@ -110,13 +111,18 @@ def save_day_status(values: dict[str, object], actor: str, status_id: int | None
         raise WorkforceValidationError(
             "Lo stato Workforce non e previsto dalla configurazione corrente."
         )
+    if status_code == "available_limited" and not str(values.get("notes") or "").strip():
+        raise WorkforceValidationError(
+            "La disponibilita con limitazioni richiede una motivazione."
+        )
     if values.get("availability") is None:
         configured = workforce_status_configuration().get(
-            "available_statuses", ["available", "scheduled"]
+            "available_statuses", ["available", "available_limited", "scheduled"]
         )
         available_statuses = {
             str(item) for item in configured
         } if isinstance(configured, list) else {"available", "scheduled"}
+        available_statuses.add("available_limited")
         values["availability"] = status_code in available_statuses
     return write_repository.save_manual_status(values, actor, status_id)
 

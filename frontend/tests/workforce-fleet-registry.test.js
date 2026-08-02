@@ -115,7 +115,8 @@ test("Workforce shift editing is compact immediate and keyboard accessible", asy
   ]) {
     assert.match(editor, new RegExp(`id="${id}"`));
   }
-  assert.equal((editor.match(/name="workforceStatusCode"/g) || []).length, 8);
+  assert.equal((editor.match(/name="workforceStatusCode"/g) || []).length, 9);
+  assert.match(editor, /value="available_limited"/);
   assert.doesNotMatch(editor, /workforceStatus(Time|Source)|<textarea/);
   assert.match(detail, /surface\.show\(selectedChoice\)/);
   assert.match(detail, /event\.key !== "Enter"/);

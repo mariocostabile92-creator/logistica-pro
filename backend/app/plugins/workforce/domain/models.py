@@ -140,6 +140,11 @@ class WorkforceDriverReadiness(BaseModel):
     station: str | None = None
     contract: str | None = None
     availability_status: str
+    availability_label: str
+    callability_status: str
+    callability_label: str
+    callability_reason: str = Field(min_length=1)
+    callability_tone: str
     callable: bool
     is_reserve: bool = False
     rest: bool = False
@@ -151,12 +156,16 @@ class WorkforceDriverReadiness(BaseModel):
     capabilities: list[str] = Field(default_factory=list)
     operational_notes: str | None = None
     convocation_status: str = "not_started"
+    limitations: list[str] = Field(default_factory=list)
+    status_history: list[dict[str, str | bool | None]] = Field(default_factory=list)
+    last_updated_at: str
 
 
 class WorkforceFoundationSummary(BaseModel):
     total: int = 0
     available: int = 0
     callable: int = 0
+    limited: int = 0
     holiday: int = 0
     sickness: int = 0
     leave: int = 0
