@@ -153,3 +153,79 @@ def test_vision_lists_all_assets_and_filters_vehicle():
     assert filtered["total"] == 1
     assert filtered["items"][0]["plate"] == "FV002AA"
     assert all(action["vehicle_id"] == first["id"] for action in filtered["actions"])
+
+
+def test_vision_tolerates_legacy_null_status_event_details():
+    vehicle = client.post(ASSETS, json={
+        "external_identifier": "FVE-LEGACY-NULL", "plate": "FVNULL1",
+        "category": "Van", "status": "active", "availability": "disponibile",
+        "capabilities": [],
+    }).json()
+    with db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO fleet_asset_events (
+                asset_id, event_type, occurred_at, actor, details, contract_version
+            ) VALUES (?, 'operational_status_changed', ?, 'legacy', 'null', '1.0')
+            """,
+            (vehicle["id"], "2026-08-02T08:00:00Z"),
+        )
+
+    response = client.get(VISION, params={"vehicle_id": vehicle["id"]})
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["operational_status_reason"] is None
+
+
+def test_vision_keeps_legacy_journal_without_operational_date():
+    vehicle = client.post(ASSETS, json={
+        "external_identifier": "FVE-LEGACY-GDB", "plate": "FVGDB01",
+        "category": None, "status": "active", "availability": "disponibile",
+        "capabilities": [],
+    }).json()
+    with db_session() as conn:
+        organization_id = "test-organization"
+        conn.execute(
+            """INSERT INTO journal_sessions (
+                id, token_hash, operation_type, asset_id, plate_snapshot,
+                declared_driver_identifier, status, created_at, expires_at,
+                completed_at, organization_id, source, lifecycle_status,
+                operational_date, warnings_json
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            ("legacy-session", "legacy", "check_out", vehicle["id"], "FVGDB01",
+             "DRV-LEGACY", "completed", "2026-08-01T08:00:00Z",
+             "2026-08-01T18:00:00Z", "2026-08-01T08:05:00Z",
+             organization_id, "driver", "completed", None, "[]"),
+        )
+        conn.execute(
+            """INSERT INTO asset_movements (
+                id, session_id, schema_version, organization_id,
+                operational_unit_id, asset_id, plate_snapshot,
+                declared_driver_identifier, operation_type, occurred_at,
+                timezone, odometer_km, fuel_percentage, anomaly_present,
+                client_submission_id, created_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            ("legacy-movement", "legacy-session", "1.0", organization_id,
+             "legacy", vehicle["id"], "FVGDB01", "DRV-LEGACY", "check_out",
+             "2026-08-01T08:05:00Z", "Europe/Rome", 1000, 50, 0,
+             "legacy-submission", "2026-08-01T08:05:00Z"),
+        )
+
+    response = client.get(VISION, params={"vehicle_id": vehicle["id"]})
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["movement_count"] == 1
+    assert item["timeline"][0]["operational_date"] is None
+
+
+def test_fleet_vision_hotfix_assets_are_served_from_real_paths():
+    for path in (
+        "/app/assets/js/modules/fleet-vision-workspace.js?v=2",
+        "/app/assets/js/modules/fleet-vision/aggregator.js",
+        "/app/assets/css/fleet-vision-workspace.css?v=2",
+        "/app/assets/css/journal-completion.css?v=1",
+    ):
+        response = client.get(path)
+        assert response.status_code == 200, path
+    assert client.get("/api/fleet/journal-control-room?limit=200").status_code == 200

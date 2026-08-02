@@ -1,15 +1,25 @@
-import { loadFleetVisionExcellence } from "./fleet-vision/aggregator.js";
+import { loadFleetVisionExcellence } from "./fleet-vision/aggregator.js?v=2";
 import { openFleetVisionSource } from "./fleet-vision/navigation.js";
 import { renderFleetVisionExcellence } from "./fleet-vision/renderer.js";
 import {
   fleetVisionState, resetFleetVisionState,
 } from "./fleet-vision/state.js";
+import { reportUnexpectedError } from "../utils/errors.js";
 
 const root = () => document.getElementById("fleetVisionWorkspace");
 const hiddenWorkspaces = "#fleetWorkspaceHome,#fleetVehicleDossier,#damageWorkspace,#maintenanceWorkspace,#documentsWorkspace,#franchiseWorkspace,#insuranceWorkspace,#rentalWorkspace,#deadlinesWorkspace,#journalControlRoom";
 
 function rerender() {
   renderFleetVisionExcellence(root());
+}
+
+function renderFailure() {
+  root().innerHTML = `<section class="fve2-failure" role="alert">
+    <p class="eyebrow">Fleet Vision Engine</p>
+    <h2>Vista operativa non disponibile</h2>
+    <p>Non è stato possibile correlare i dati della flotta. Riprova tra poco.</p>
+    <button type="button" class="secondary" data-fve-retry>Riprova</button>
+  </section>`;
 }
 
 export async function showFleetVisionWorkspace(options = {}) {
@@ -21,12 +31,21 @@ export async function showFleetVisionWorkspace(options = {}) {
     <div aria-hidden="true">${Array.from({ length: 4 }, () =>
       `<span class="fve2-skeleton"></span>`).join("")}</div>
   </section>`;
-  resetFleetVisionState(await loadFleetVisionExcellence(options));
-  rerender();
+  try {
+    resetFleetVisionState(await loadFleetVisionExcellence(options));
+    rerender();
+  } catch (error) {
+    renderFailure();
+    reportUnexpectedError("fleet.vision", error);
+  }
 }
 
 document.addEventListener("click", event => {
   if (!event.target.closest("#fleetVisionWorkspace")) return;
+  if (event.target.closest("[data-fve-retry]")) {
+    showFleetVisionWorkspace();
+    return;
+  }
   const filter = event.target.closest("[data-fve-filter]")?.dataset.fveFilter;
   if (filter) { fleetVisionState.filter = filter; rerender(); return; }
   const group = event.target.closest("[data-fve-group]")?.dataset.fveGroup;

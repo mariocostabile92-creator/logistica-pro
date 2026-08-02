@@ -74,7 +74,8 @@ def snapshot(organization_id: str | None = None) -> dict[str, list[dict]]:
         if event["asset_id"] in seen:
             continue
         seen.add(event["asset_id"])
-        event["details"] = json.loads(event["details"])
+        details = json.loads(event["details"]) if event.get("details") else None
+        event["details"] = details if isinstance(details, dict) else {}
         latest.append(event)
     result["events"] = latest
     return result

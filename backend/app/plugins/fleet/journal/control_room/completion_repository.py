@@ -50,7 +50,9 @@ def planning_snapshot(operation_date: str) -> dict | None:
         ))
     for assignment in assignments:
         for key in ("warnings", "reasons"):
-            assignment[key] = json.loads(str(assignment.get(key) or "[]"))
+            value = assignment.get(key)
+            decoded = value if isinstance(value, list) else json.loads(str(value or "[]"))
+            assignment[key] = decoded if isinstance(decoded, list) else []
     return {
         "planning": dict(planning),
         "assignments": assignments,

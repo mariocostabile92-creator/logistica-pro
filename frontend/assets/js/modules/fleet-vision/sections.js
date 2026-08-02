@@ -90,7 +90,7 @@ export function criticalitiesSection() {
           ${group.items.length > 5 && !fleetVisionState.showAll.has(group.priority)
             ? `<button type="button" class="quiet" data-fve-show-all="${group.priority}">Mostra tutte</button>` : ""}</div>` : ""}
       </section>`;
-    }).join("") : `<div class="view-state"><strong>Nessuna criticità</strong><p>Non risultano condizioni da evidenziare per il filtro selezionato.</p></div>`}
+    }).join("") : `<div class="view-state"><strong>Nessuna criticità operativa rilevata.</strong><p>Non risultano condizioni da evidenziare per il filtro selezionato.</p></div>`}
   </section>`;
 }
 

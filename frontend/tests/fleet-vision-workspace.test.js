@@ -57,3 +57,28 @@ test("Fleet Vision responsive layout has no fixed canvas", async () => {
   assert.match(css, /@media\(max-width:600px\)/);
   assert.doesNotMatch(css, /width:(?:1440|768|390)px/);
 });
+
+test("Fleet Vision replaces the skeleton with a contextual retry state on API failure", async () => {
+  const [module, css, sections, page, app, loader, fleet] = await Promise.all([
+    file("assets/js/modules/fleet-vision-workspace.js"),
+    file("assets/css/fleet-vision-workspace.css"),
+    file("assets/js/modules/fleet-vision/sections.js"),
+    file("index.html"), file("assets/js/app.js"),
+    file("assets/js/modules/workspace-loader.js"),
+    file("assets/js/modules/fleet-page.js"),
+  ]);
+  assert.match(module, /try\s*{/);
+  assert.match(module, /catch \(error\)/);
+  assert.match(module, /renderFailure\(\)/);
+  assert.match(module, /reportUnexpectedError\("fleet\.vision", error\)/);
+  assert.match(module, /data-fve-retry/);
+  assert.match(module, /Vista operativa non disponibile/);
+  assert.match(module, /fleet-vision\/aggregator\.js\?v=2/);
+  assert.match(css, /\.fve2-failure/);
+  assert.match(sections, /Nessuna criticità operativa rilevata/);
+  assert.match(page, /fleet-vision-workspace\.css\?v=2/);
+  assert.match(page, /app\.js\?v=18/);
+  assert.match(app, /workspace-loader\.js\?v=16/);
+  assert.match(loader, /fleet-page\.js\?v=16/);
+  assert.match(fleet, /fleet-vision-workspace\.js\?v=2/);
+});

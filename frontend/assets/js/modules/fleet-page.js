@@ -37,7 +37,7 @@ import { showInsuranceWorkspace } from "./insurance-workspace.js?v=1";
 import { showRentalWorkspace } from "./rental-workspace.js?v=1";
 import { showDeadlinesWorkspace } from "./deadlines-workspace.js?v=1";
 import { showJournalControlRoom } from "./journal-control-room.js?v=8";
-import { showFleetVisionWorkspace } from "./fleet-vision-workspace.js?v=1";
+import { showFleetVisionWorkspace } from "./fleet-vision-workspace.js?v=2";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 
 
