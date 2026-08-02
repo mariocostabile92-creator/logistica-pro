@@ -101,11 +101,16 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     form.reset();
     byId("workforceMemberId").value = member.workforce_member_id;
     byId("workforceMemberEditorTitle").textContent = member.display_name;
+    byId("workforceMemberFirstName").value = member.first_name || "";
+    byId("workforceMemberLastName").value = member.last_name || "";
     byId("workforceMemberRole").value = member.role || "";
+    byId("workforceMemberStation").value = member.station || "";
     byId("workforceEmploymentType").value = member.employment_type || "";
     byId("workforceContractEnd").value = member.contract_end || "";
     byId("workforceWeeklyHours").value = member.weekly_hours ?? "";
     byId("workforceCapabilities").value = member.capabilities.join(", ");
+    byId("workforceMemberOperationalNotes").value = member.operational_notes || "";
+    byId("workforceMemberReserve").checked = Boolean(member.is_reserve);
   }
 
   function openMember(member, trigger) {
@@ -114,11 +119,15 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     trigger.classList.add("is-selected");
     byId("workforceDetailKind").textContent = "Profilo risorsa";
     byId("workforceDetailTitle").textContent = member.display_name;
+    byId("workforceMemberDetailId").textContent = member.external_identifier;
     byId("workforceMemberDetailRole").textContent = member.role || "Non disponibile";
+    byId("workforceMemberDetailStation").textContent = member.station || "Non disponibile";
     byId("workforceMemberDetailContract").textContent = member.employment_type || "Non disponibile";
     byId("workforceMemberDetailCapabilities").textContent = member.capabilities.length
       ? member.capabilities.join(", ")
       : "Nessuna capability";
+    byId("workforceMemberDetailNotes").textContent = member.operational_notes || "Nessuna nota";
+    byId("workforceMemberDetailReserve").textContent = member.is_reserve ? "Si" : "No";
     const history = recentMemberHistory(member.workforce_member_id);
     byId("workforceMemberHistory").innerHTML = history.length
       ? history.map((item) => `

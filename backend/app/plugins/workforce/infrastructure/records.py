@@ -9,16 +9,24 @@ from app.plugins.workforce.domain.models import (
 
 
 def member_from_row(row) -> WorkforceMember:
+    keys = set(row.keys())
+    display_name = row["display_name"]
+    name_parts = display_name.strip().split(maxsplit=1)
     return WorkforceMember(
         workforce_member_id=int(row["id"]),
         external_identifier=row["external_identifier"],
-        display_name=row["display_name"],
+        display_name=display_name,
+        first_name=(row["first_name"] if "first_name" in keys else None) or name_parts[0],
+        last_name=(row["last_name"] if "last_name" in keys else None) or (name_parts[1] if len(name_parts) > 1 else ""),
         role=row["role"],
+        station=row["station"] if "station" in keys else None,
         employment_type=row["employment_type"],
         contract_start=row["contract_start"],
         contract_end=row["contract_end"],
         weekly_hours=row["weekly_hours"],
         capabilities=json.loads(row["capabilities"]),
+        operational_notes=row["operational_notes"] if "operational_notes" in keys else None,
+        is_reserve=bool(row["is_reserve"]) if "is_reserve" in keys else False,
         active=bool(row["active"]),
         source_reference=row["source_reference"],
         created_at=row["created_at"],

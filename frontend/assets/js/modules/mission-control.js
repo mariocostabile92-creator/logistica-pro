@@ -1,4 +1,4 @@
-import { loadMissionControlSummary } from "./mission-control-api.js?v=4";
+import { loadMissionControlSummary } from "./mission-control-api.js?v=5";
 import { renderMissionControl } from "./mission-control/renderer.js?v=2";
 import {
   applyMissionControlEvent,

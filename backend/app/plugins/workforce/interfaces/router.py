@@ -3,6 +3,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, Response, Uploa
 from app.importers.excel_reader import validate_upload
 from app.importers.workbook_profiler.errors import WorkbookProfileError
 from app.plugins.workforce.application import workforce_service
+from app.plugins.workforce.application.foundation_service import foundation_snapshot
 from app.plugins.workforce.domain.errors import (
     WorkforceImportError,
     WorkforceMemberNotFoundError,
@@ -14,6 +15,7 @@ from app.plugins.workforce.domain.models import (
     WorkforceImportPreview,
     WorkforceImportResult,
     WorkforceMember,
+    WorkforceFoundationSnapshot,
 )
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.interfaces.schemas import (
@@ -71,6 +73,16 @@ def status() -> WorkforceStatusResponse:
 @router.get("/members", response_model=WorkforceMembersResponse)
 def members() -> WorkforceMembersResponse:
     return WorkforceMembersResponse(items=workforce_service.list_members())
+
+
+@router.get("/foundation", response_model=WorkforceFoundationSnapshot)
+def foundation(
+    operation_date: str | None = Query(default=None),
+) -> WorkforceFoundationSnapshot:
+    try:
+        return foundation_snapshot(operation_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Data operativa non valida.") from exc
 
 
 @router.patch("/members/{member_id}", response_model=WorkforceMember)

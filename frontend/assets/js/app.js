@@ -1,6 +1,6 @@
 import { getHealth } from "./api.js";
 import { initBriefing } from "./modules/briefing.js";
-import { initMissionControl } from "./modules/mission-control.js?v=4";
+import { initMissionControl } from "./modules/mission-control.js?v=5";
 import { initViewNavigation } from "./modules/view-navigation.js?v=2";
 import {
   ensureWorkspaceInitialized,

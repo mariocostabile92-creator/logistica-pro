@@ -6,7 +6,8 @@ import {
   listMaintenances,
   listVehicleDocuments,
   getPlanningOperationsSummary,
-} from "../api.js?v=3";
+  getWorkforceFoundation,
+} from "../api.js?v=4";
 
 
 function value(result, fallback) {
@@ -56,6 +57,7 @@ export async function loadMissionControlSummary() {
     listJournalControlRoom(),
     listFleetDeadlines(),
     getPlanningOperationsSummary(),
+    getWorkforceFoundation(new Date().toISOString().slice(0, 10)),
   ]);
   const assets = value(settled[0], { items: [] }).items || [];
   const damage = value(settled[1], { items: [] }).items || [];
@@ -67,6 +69,7 @@ export async function loadMissionControlSummary() {
   const journal = journalResponse.items || [];
   const deadlines = value(settled[5], { items: [], summary: {} });
   const planningResponse = value(settled[6], null);
+  const workforceResponse = value(settled[7], null);
   const failedSources = settled.reduce((count, result) => (
     count + Number(result.status === "rejected")
   ), 0);
@@ -102,6 +105,7 @@ export async function loadMissionControlSummary() {
       conflicts: planningResponse.summary?.blocking_conflicts ?? planningResponse.summary?.conflicts ?? null,
       publication: planningResponse.lifecycle?.state || "Non disponibile",
     } : null,
+    workforce: workforceResponse?.summary || null,
     recent: recentEvents({ damage, maintenance, documents, journal }),
   };
 }

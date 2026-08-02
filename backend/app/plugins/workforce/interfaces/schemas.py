@@ -34,12 +34,17 @@ class WorkforceChangesResponse(BaseModel):
 
 class WorkforceMemberUpdateRequest(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=160)
+    first_name: str | None = Field(default=None, max_length=80)
+    last_name: str | None = Field(default=None, max_length=80)
     role: str | None = Field(default=None, max_length=120)
+    station: str | None = Field(default=None, max_length=120)
     employment_type: str | None = Field(default=None, max_length=120)
     contract_start: str | None = None
     contract_end: str | None = None
     weekly_hours: float | None = Field(default=None, ge=0, le=168)
     capabilities: list[str] | None = None
+    operational_notes: str | None = Field(default=None, max_length=1000)
+    is_reserve: bool | None = None
     active: bool | None = None
     actor: str = Field(default="local_operator", min_length=1, max_length=120)
 

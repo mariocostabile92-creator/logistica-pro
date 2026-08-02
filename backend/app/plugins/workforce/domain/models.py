@@ -12,12 +12,17 @@ class WorkforceMember(BaseModel):
     workforce_member_id: int
     external_identifier: str
     display_name: str
+    first_name: str | None = None
+    last_name: str | None = None
     role: str | None = None
+    station: str | None = None
     employment_type: str | None = None
     contract_start: str | None = None
     contract_end: str | None = None
     weekly_hours: float | None = Field(default=None, ge=0)
     capabilities: list[str] = Field(default_factory=list)
+    operational_notes: str | None = None
+    is_reserve: bool = False
     active: bool = True
     source_reference: str
     created_at: str
@@ -123,3 +128,45 @@ class WorkforceBriefingSnapshot(BaseModel):
     absences: int = 0
     contracts_expiring: int = 0
     missing_capabilities: list[str] = Field(default_factory=list)
+
+
+class WorkforceDriverReadiness(BaseModel):
+    workforce_member_id: int
+    external_identifier: str
+    first_name: str
+    last_name: str
+    display_name: str
+    role: str | None = None
+    station: str | None = None
+    contract: str | None = None
+    availability_status: str
+    callable: bool
+    is_reserve: bool = False
+    rest: bool = False
+    holiday: bool = False
+    sickness: bool = False
+    leave: bool = False
+    consecutive_days: int | None = None
+    consecutivity_status: str = "not_evaluated"
+    capabilities: list[str] = Field(default_factory=list)
+    operational_notes: str | None = None
+    convocation_status: str = "not_started"
+
+
+class WorkforceFoundationSummary(BaseModel):
+    total: int = 0
+    available: int = 0
+    callable: int = 0
+    holiday: int = 0
+    sickness: int = 0
+    leave: int = 0
+    rest: int = 0
+    not_callable: int = 0
+    reserves: int = 0
+
+
+class WorkforceFoundationSnapshot(BaseModel):
+    operation_date: str
+    summary: WorkforceFoundationSummary
+    drivers: list[WorkforceDriverReadiness] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)

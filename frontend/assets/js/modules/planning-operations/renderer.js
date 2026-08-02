@@ -2,6 +2,7 @@ import { renderForecast } from "./forecast.js";
 import { renderHero } from "./hero.js";
 import { renderKpis } from "./kpi.js";
 import { renderRoutes } from "./routes.js";
+import { escapeHtml } from "../../utils/dom.js";
 
 export function renderOperationsLoading(root) {
   root.innerHTML = `<section class="planning-ops-loading" aria-label="Caricamento Piano operativo">
@@ -11,7 +12,11 @@ export function renderOperationsLoading(root) {
 }
 
 export function renderOperations(root, payload, routes) {
+  const workforce = payload.workforce || { summary: {}, drivers: [], limitations: [] };
+  const driverOptions = workforce.drivers.filter((item) => item.callable)
+    .map((item) => `<option value="${escapeHtml(item.display_name)}">${escapeHtml(item.external_identifier)}${item.is_reserve ? " · Riserva" : ""}</option>`).join("");
   root.innerHTML = `${renderHero(payload)}${renderKpis(payload.summary)}
+    <section class="planning-ops-panel planning-workforce-input"><header><div><p class="eyebrow">Input Workforce</p><h3>Planning Driver</h3></div><strong>${workforce.summary.callable || 0} convocabili · ${workforce.summary.reserves || 0} riserve</strong></header><p>Elenco persone disponibili per ${workforce.operation_date || "la data operativa"}. L'assegnazione resta nel Planning.</p><datalist id="planningWorkforceDrivers">${driverOptions}</datalist></section>
     <section class="planning-ops-toolbar" aria-label="Filtri rotte">
       <label><span>Cerca</span><input type="search" data-planning-query placeholder="Rotta, driver, targa o wave"></label>
       <label><span>Stato</span><select data-planning-filter-select><option value="all">Tutte</option><option value="missing-driver">Senza driver</option><option value="missing-vehicle">Senza mezzo</option><option value="conflict">Con conflitti</option><option value="complete">Complete</option><option value="convocation">Convocazione da preparare</option></select></label>

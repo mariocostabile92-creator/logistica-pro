@@ -14,6 +14,7 @@ from app.services.planning_operations_service import (
     transition,
     update_convocation,
 )
+from app.plugins.workforce.application.foundation_service import foundation_snapshot
 
 
 router = APIRouter(prefix="/api/planning/operations", tags=["planning-operations"])
@@ -34,10 +35,16 @@ def _require_write(request: Request):
 @router.get("", response_model=PlanningOperationResponse)
 def snapshot(request: Request) -> PlanningOperationResponse:
     user = _user(request)
-    return PlanningOperationResponse.model_validate(operational_snapshot(
+    payload = operational_snapshot(
         can_write=user.role in WRITE_ROLES,
         is_admin=user.role is Role.ADMINISTRATOR,
-    ))
+    )
+    operation_date = (
+        payload["planning"].get("operation_date") if payload["planning"]
+        else (payload.get("forecast") or {}).get("period_start")
+    )
+    payload["workforce"] = foundation_snapshot(operation_date).model_dump(mode="json")
+    return PlanningOperationResponse.model_validate(payload)
 
 
 @router.get("/summary")

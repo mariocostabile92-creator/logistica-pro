@@ -69,6 +69,22 @@ test("Workforce remains explicitly in preparation without an authoritative snaps
 });
 
 
+test("Home reads the authoritative Workforce callability summary when available", () => {
+  const state = applyMissionControlEvent(createMissionControlState(), {
+    type: "summary-loaded",
+    summary: {
+      ...summary,
+      workforce: { total: 32, callable: 24, holiday: 2, sickness: 1, leave: 1 },
+    },
+  });
+  const view = deriveMissionControlView(state);
+  assert.equal(view.workforce.status, "24 persone convocabili");
+  assert.equal(view.workforce.drivers, 24);
+  assert.equal(view.workforce.required, 32);
+  assert.equal(view.workforce.absences, 4);
+});
+
+
 test("Planning presents assignments conflicts and publication without technical internals", () => {
   const view = readyView();
   assert.deepEqual(view.planning, summary.planning);

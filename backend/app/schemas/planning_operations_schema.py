@@ -30,6 +30,7 @@ class PlanningOperationResponse(BaseModel):
     conflicts: list[dict[str, object]] = Field(default_factory=list)
     convocations: list[dict[str, object]] = Field(default_factory=list)
     forecast: dict[str, object] | None = None
+    workforce: dict[str, object]
     lifecycle: dict[str, object]
     audit: list[dict[str, object]] = Field(default_factory=list)
     permissions: dict[str, bool]

@@ -207,8 +207,8 @@
           </header>
           <strong id="operationsHomeWorkforceStatus">Workspace in preparazione</strong>
           <dl id="operationsHomeWorkforceFacts" class="operations-home-compact-facts" hidden>
-            <div><dt>Driver disponibili</dt><dd id="operationsHomeWorkforceDrivers">—</dd></div>
-            <div><dt>Driver richiesti</dt><dd id="operationsHomeWorkforceRequired">—</dd></div>
+            <div><dt>Convocabili</dt><dd id="operationsHomeWorkforceDrivers">—</dd></div>
+            <div><dt>Organico totale</dt><dd id="operationsHomeWorkforceRequired">—</dd></div>
             <div><dt>Assenze</dt><dd id="operationsHomeWorkforceAbsences">—</dd></div>
           </dl>
         </section>
@@ -1264,9 +1264,9 @@
       <div class="section-heading workforce-toolbar">
         <div>
           <p class="eyebrow">Workforce</p>
-          <h2 id="workforceTitle">Planning turni</h2>
+          <h2 id="workforceTitle">Workforce</h2>
           <p id="workforceTimestamp" class="section-note">
-            Verifica dello stato in corso.
+            Preparazione delle persone convocabili per il Planning Driver.
           </p>
         </div>
         <div id="workforceHeaderActions" class="workforce-header-actions" hidden>
@@ -1347,6 +1347,46 @@
       </div>
 
       <article id="workforceReadyView" class="workforce-workspace" hidden>
+        <section class="workforce-foundation" aria-labelledby="workforceFoundationTitle">
+          <header class="workforce-foundation-header">
+            <div>
+              <p class="eyebrow">Planning Driver</p>
+              <h3 id="workforceFoundationTitle">Quante persone posso convocare?</h3>
+              <p>Disponibilita operativa del <strong id="workforceFoundationDate">—</strong>. Nessun dato economico o valutazione Amazon.</p>
+            </div>
+            <div class="workforce-foundation-tools">
+              <label>Cerca driver<input id="workforceFoundationSearch" type="search" placeholder="Nome, ID, station o ruolo" /></label>
+              <label>Stato<select id="workforceFoundationFilter">
+                <option value="all">Tutti</option>
+                <option value="callable">Convocabili</option>
+                <option value="reserve">Riserve convocabili</option>
+                <option value="rest">Riposo</option>
+                <option value="holiday">Ferie</option>
+                <option value="sickness">Malattia</option>
+                <option value="leave">Permesso</option>
+                <option value="unavailable">Non disponibili</option>
+              </select></label>
+            </div>
+          </header>
+          <dl class="workforce-foundation-kpis" aria-label="Disponibilita Workforce">
+            <div><dt>Organico totale</dt><dd id="workforceFoundationTotal">0</dd></div>
+            <div class="is-primary"><dt>Convocabili</dt><dd id="workforceFoundationCallable">0</dd></div>
+            <div><dt>Disponibili</dt><dd id="workforceFoundationAvailable">0</dd></div>
+            <div><dt>Riserve</dt><dd id="workforceFoundationReserves">0</dd></div>
+            <div><dt>Ferie</dt><dd id="workforceFoundationHoliday">0</dd></div>
+            <div><dt>Malattie</dt><dd id="workforceFoundationSickness">0</dd></div>
+            <div><dt>Permessi</dt><dd id="workforceFoundationLeave">0</dd></div>
+            <div><dt>Riposi</dt><dd id="workforceFoundationRest">0</dd></div>
+            <div><dt>Non convocabili</dt><dd id="workforceFoundationNotCallable">0</dd></div>
+          </dl>
+          <p id="workforceFoundationLimit" class="workforce-foundation-limit"></p>
+          <div id="workforceFoundationDrivers" class="workforce-foundation-drivers" aria-live="polite"></div>
+        </section>
+
+        <div class="workforce-source-heading">
+          <div><p class="eyebrow">Dati sorgente</p><h3>Disponibilita importate</h3></div>
+          <p>Il calendario esistente alimenta Workforce; turni e convocazioni saranno sviluppati nelle fasi successive.</p>
+        </div>
         <div class="workforce-command-bar">
           <div class="workforce-period-nav" aria-label="Navigazione periodo">
             <button
@@ -1499,9 +1539,13 @@
 
               <section id="workforceMemberDetail" class="workforce-member-detail" hidden>
                 <dl>
+                  <div><dt>ID</dt><dd id="workforceMemberDetailId">--</dd></div>
                   <div><dt>Ruolo</dt><dd id="workforceMemberDetailRole">--</dd></div>
+                  <div><dt>Station</dt><dd id="workforceMemberDetailStation">--</dd></div>
                   <div><dt>Contratto</dt><dd id="workforceMemberDetailContract">--</dd></div>
                   <div><dt>Capability</dt><dd id="workforceMemberDetailCapabilities">--</dd></div>
+                  <div><dt>Note operative</dt><dd id="workforceMemberDetailNotes">--</dd></div>
+                  <div><dt>Riserva</dt><dd id="workforceMemberDetailReserve">--</dd></div>
                 </dl>
                 <div class="workforce-recent-history">
                   <h4>Storico recente</h4>
@@ -1513,11 +1557,16 @@
               <form id="workforceMemberEditor" class="workforce-member-editor" hidden>
                 <input id="workforceMemberId" type="hidden" />
                 <strong id="workforceMemberEditorTitle" class="visually-hidden">Modifica profilo</strong>
+                <label>Nome<input id="workforceMemberFirstName" type="text" maxlength="80" /></label>
+                <label>Cognome<input id="workforceMemberLastName" type="text" maxlength="80" /></label>
                 <label>Ruolo<input id="workforceMemberRole" type="text" maxlength="120" /></label>
+                <label>Station<input id="workforceMemberStation" type="text" maxlength="120" /></label>
                 <label>Contratto<input id="workforceEmploymentType" type="text" maxlength="120" /></label>
                 <label>Fine contratto<input id="workforceContractEnd" type="date" /></label>
                 <label>Ore settimanali<input id="workforceWeeklyHours" type="number" min="0" max="168" step="0.5" /></label>
                 <label>Capability<input id="workforceCapabilities" type="text" placeholder="separate da virgola" /></label>
+                <label>Note operative<textarea id="workforceMemberOperationalNotes" maxlength="1000"></textarea></label>
+                <label class="workforce-checkbox"><input id="workforceMemberReserve" type="checkbox" /> Riserva operativa</label>
                 <div class="workforce-editor-actions">
                   <button id="workforceMemberCancel" type="button" class="quiet">Annulla</button>
                   <button type="submit">Salva profilo</button>

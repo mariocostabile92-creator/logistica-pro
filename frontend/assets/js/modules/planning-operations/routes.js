@@ -8,7 +8,7 @@ export function renderRoutes(routes, writable) {
   return `<div class="planning-routes-board">${routes.map((route) => `<article class="planning-route-card ${route.complete ? "is-complete" : "is-incomplete"}" data-route-id="${route.route_id}">
     <header><div><strong>${route.route_id}</strong><span>${route.cycle_or_wave || "Orario non disponibile"}</span></div><span>${route.complete ? "Completa" : "Da completare"}</span></header>
     <div class="planning-route-assignments">
-      <label>Driver<input data-assignment-driver="${route.id}" value="${route.driver_name || ""}" placeholder="Assegna driver" ${writable ? "" : "disabled"}></label>
+      <label>Driver<input data-assignment-driver="${route.id}" list="planningWorkforceDrivers" value="${route.driver_name || ""}" placeholder="Assegna driver" ${writable ? "" : "disabled"}></label>
       <label>Mezzo<input data-assignment-vehicle="${route.id}" value="${route.plate || ""}" placeholder="Assegna targa" ${writable ? "" : "disabled"}></label>
     </div>
     <div class="planning-route-meta"><span>Riserva: Non disponibile</span><span>Note: ${route.notes || "Nessuna nota"}</span></div>

@@ -38,6 +38,8 @@ def test_operational_snapshot_uses_real_assignments_and_convocations():
     assert len(payload["convocations"]) == 2
     assert payload["routes"][0]["convocation"]["status"] == "da_preparare"
     assert payload["planning"]["id"] == generated["planning"]["id"]
+    assert payload["workforce"]["operation_date"] == "2026-08-03"
+    assert "callable" in payload["workforce"]["summary"]
 
 
 def test_forecast_remains_distinct_from_definitive_routes():

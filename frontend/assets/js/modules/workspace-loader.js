@@ -18,6 +18,7 @@ const STYLES = {
     "workforce-calendar.css?v=3",
     "workforce-panel.css?v=3",
     "workforce-responsive.css?v=5",
+    "workforce-foundation.css?v=1",
   ],
   fleet: [
     "fleet.css",

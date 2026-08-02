@@ -34,7 +34,17 @@ function factValue(briefing, category, factType) {
 }
 
 
-function workforceView(briefing) {
+function workforceView(briefing, workforce) {
+  if (workforce) {
+    return {
+      available: true,
+      drivers: Number(workforce.callable || 0),
+      required: Number(workforce.total || 0),
+      absences: Number(workforce.holiday || 0) + Number(workforce.sickness || 0) + Number(workforce.leave || 0),
+      coverage: null,
+      status: `${Number(workforce.callable || 0)} persone convocabili`,
+    };
+  }
   const coverage = factValue(briefing, "human_resources", "workforce_coverage");
   if (!coverage) return { available: false, status: "Workspace in preparazione" };
   return {
@@ -107,7 +117,7 @@ export function deriveMissionControlView(state) {
     status: generalStatus(summary ? { ...summary, planning } : null),
     priorities: priorities(summary ? { ...summary, planning } : null, state.briefing),
     fleet: summary?.fleet || null,
-    workforce: workforceView(state.briefing),
+    workforce: workforceView(state.briefing, summary?.workforce),
     planning,
     recent: (summary?.recent || []).slice(0, 8),
     updatedAt: summary?.updatedAt || state.briefing?.generated_at || null,

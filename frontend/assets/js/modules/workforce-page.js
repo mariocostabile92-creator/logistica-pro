@@ -2,11 +2,12 @@ import {
   downloadWorkforceExport,
   getWorkforceCalendar,
   getWorkforceCoverage,
+  getWorkforceFoundation,
   getWorkforceStatus,
   listWorkforceMembers,
   saveWorkforceDayStatus,
   updateWorkforceMember,
-} from "../api.js";
+} from "../api.js?v=4";
 import {
   byId,
   renderViewState,
@@ -30,6 +31,10 @@ import {
   workforceCalendarWindow,
   workforceSummary,
 } from "./workforce-view.js";
+import {
+  initWorkforceFoundation,
+  renderWorkforceFoundation,
+} from "./workforce-foundation.js";
 
 
 const PAGE_STATES = Object.freeze({
@@ -317,16 +322,18 @@ async function loadCalendar(range = null) {
     </div>
   `;
   try {
-    const [members, calendar, coverage] = await Promise.all([
+    const [members, calendar, coverage, foundation] = await Promise.all([
       listWorkforceMembers(),
       getWorkforceCalendar(dateFrom, dateTo),
       getWorkforceCoverage(dateFrom, dateTo),
+      getWorkforceFoundation(dateFrom),
     ]);
     currentData = {
       members: members.items,
       statuses: calendar.items,
       coverage: coverage.items,
     };
+    renderWorkforceFoundation(foundation);
     anomalyLimit = ANOMALY_PAGE_SIZE;
     renderData();
     calendarLoaded = true;
@@ -421,7 +428,10 @@ async function submitMember(event) {
   setLoading(submit, true, "Salvataggio...");
   try {
     await updateWorkforceMember(Number(byId("workforceMemberId").value), {
+      first_name: byId("workforceMemberFirstName").value.trim() || null,
+      last_name: byId("workforceMemberLastName").value.trim() || null,
       role: byId("workforceMemberRole").value.trim() || null,
+      station: byId("workforceMemberStation").value.trim() || null,
       employment_type: byId("workforceEmploymentType").value.trim() || null,
       contract_end: byId("workforceContractEnd").value || null,
       weekly_hours: byId("workforceWeeklyHours").value
@@ -429,6 +439,8 @@ async function submitMember(event) {
         : null,
       capabilities: byId("workforceCapabilities").value
         .split(",").map((item) => item.trim()).filter(Boolean),
+      operational_notes: byId("workforceMemberOperationalNotes").value.trim() || null,
+      is_reserve: byId("workforceMemberReserve").checked,
     });
     workforceDetailPanel.close();
     await loadCalendar({
@@ -470,6 +482,7 @@ function handleTabKeydown(event) {
 
 
 export function initWorkforcePage() {
+  initWorkforceFoundation();
   workforceDetailPanel = initWorkforceDetailPanel({
     getStatuses: () => currentData.statuses,
     onSelectionCleared: () => { selectedCellKey = null; },

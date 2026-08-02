@@ -602,6 +602,13 @@ export async function getLatestPlanning() {
 }
 
 
+export async function getWorkforceFoundation(operationDate = "") {
+  const params = new URLSearchParams();
+  if (operationDate) params.set("operation_date", operationDate);
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/foundation?${params}`));
+}
+
+
 export async function getPlanningOperations({ signal } = {}) {
   return parseResponse(await fetch(`${API_BASE}/api/planning/operations`, { signal }));
 }

@@ -1,4 +1,32 @@
-from app.core.database import db_session
+from app.core.database import PostgresConnection, db_session
+
+
+PROFILE_COLUMNS = {
+    "first_name": "TEXT",
+    "last_name": "TEXT",
+    "station": "TEXT",
+    "operational_notes": "TEXT",
+    "is_reserve": "INTEGER NOT NULL DEFAULT 0",
+}
+
+
+def _ensure_profile_columns(conn) -> None:
+    if isinstance(conn, PostgresConnection):
+        rows = conn.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = ?",
+            ("workforce_members",),
+        ).fetchall()
+        existing = {row["column_name"] for row in rows}
+    else:
+        existing = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(workforce_members)").fetchall()
+        }
+    for name, definition in PROFILE_COLUMNS.items():
+        if name not in existing:
+            conn.execute(
+                f"ALTER TABLE workforce_members ADD COLUMN {name} {definition}"
+            )
 
 
 def init_schema() -> None:
@@ -79,3 +107,4 @@ def init_schema() -> None:
                 ON workforce_changes(timestamp, id);
             """
         )
+        _ensure_profile_columns(conn)

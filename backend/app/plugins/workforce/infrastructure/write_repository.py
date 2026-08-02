@@ -62,12 +62,17 @@ def _change(
 def _member_values(row) -> dict[str, object]:
     return {
         "display_name": row["display_name"],
+        "first_name": row["first_name"],
+        "last_name": row["last_name"],
         "role": row["role"],
+        "station": row["station"],
         "employment_type": row["employment_type"],
         "contract_start": row["contract_start"],
         "contract_end": row["contract_end"],
         "weekly_hours": row["weekly_hours"],
         "capabilities": json.loads(row["capabilities"]),
+        "operational_notes": row["operational_notes"],
+        "is_reserve": bool(row["is_reserve"]),
         "active": bool(row["active"]),
         "source_reference": row["source_reference"],
     }
@@ -106,19 +111,26 @@ def update_member(member_id: int, changes: dict[str, object], actor: str):
             conn.execute(
                 """
                 UPDATE workforce_members
-                SET display_name = ?, role = ?, employment_type = ?,
+                SET display_name = ?, first_name = ?, last_name = ?,
+                    role = ?, station = ?, employment_type = ?,
                     contract_start = ?, contract_end = ?, weekly_hours = ?,
-                    capabilities = ?, active = ?, updated_at = ?
+                    capabilities = ?, operational_notes = ?, is_reserve = ?,
+                    active = ?, updated_at = ?
                 WHERE id = ?
                 """,
                 (
                     after["display_name"],
+                    after["first_name"],
+                    after["last_name"],
                     after["role"],
+                    after["station"],
                     after["employment_type"],
                     after["contract_start"],
                     after["contract_end"],
                     after["weekly_hours"],
                     _json(after["capabilities"]),
+                    after["operational_notes"],
+                    int(bool(after["is_reserve"])),
                     int(bool(after["active"])),
                     now,
                     member_id,
