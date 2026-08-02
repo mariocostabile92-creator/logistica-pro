@@ -5,7 +5,7 @@ const file = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("P3 separates state components renderer and orchestration", async () => {
   const names = ["state", "components", "renderer", "live-overview", "live-detail",
-    "archive-detail", "media-section", "navigation"];
+    "archive-detail", "media-section", "navigation", "live-status-presenter"];
   const sources = await Promise.all(names.map(name =>
     file(`assets/js/modules/journal-control-room/${name}.js`)));
   names.forEach((name, index) => assert.ok(sources[index].length > 80, name));
@@ -14,7 +14,8 @@ test("P3 separates state components renderer and orchestration", async () => {
 
 test("closed cards expose every operational field and textual status", async () => {
   const components = (await file("assets/js/modules/journal-control-room/components.js"))
-    + (await file("assets/js/modules/journal-control-room/live-overview.js"));
+    + (await file("assets/js/modules/journal-control-room/live-overview.js"))
+    + (await file("assets/js/modules/journal-control-room/live-status-presenter.js"));
   for (const text of ["Driver", "Procedura", "Ora apertura", "Ultimo aggiornamento",
     "Apri monitoraggio", "Driver attesi", "Non iniziati", "In ritardo",
     "Generata", "Aperta", "In compilazione", "Completata",

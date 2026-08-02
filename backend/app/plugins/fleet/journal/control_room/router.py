@@ -24,11 +24,15 @@ def procedures(
     operation_type: str | None = Query(default=None, pattern="^(check_out|check_in)$"),
     anomaly: str | None = Query(default=None, pattern="^(with|without)$"),
     period: str | None = Query(default=None, pattern="^(today|7d|30d)$"),
+    live_status: str | None = Query(
+        default=None,
+        pattern="^(not_started|in_progress|completed|anomaly|late)$",
+    ),
     vehicle_id: int | None = Query(default=None, gt=0),
 ):
     return service.list_procedures({
         "search": search, "operation_type": operation_type, "anomaly": anomaly,
-        "period": period, "vehicle_id": vehicle_id,
+        "period": period, "live_status": live_status, "vehicle_id": vehicle_id,
     }, request.state.user.organization_id, can_delete_media=has_permission(request.state.user.role, "journal:media:delete"),
        current_scope=True)
 

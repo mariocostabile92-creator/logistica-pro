@@ -36,14 +36,11 @@ def day_snapshot(day: str, organization_id: str, filters: dict, can_delete_media
     )
     items = result["items"]
     summary_items = unfiltered["items"]
-    status_rank = {
-        "generated": 1, "opened": 1, "in_progress": 2,
-        "completed": 3, "con_anomalia": 3,
-    }
+    operation_rank = {"check_out": 0, "check_in": 1}
     items.sort(key=lambda item: (
-        0 if item["anomaly_present"] else 1,
-        status_rank.get(item["status"], 4),
-        -datetime.fromisoformat(str(item["occurred_at"]).replace("Z", "+00:00")).timestamp(),
+        datetime.fromisoformat(str(item["occurred_at"]).replace("Z", "+00:00")).timestamp(),
+        operation_rank.get(str(item.get("operation_type")), 2),
+        str(item["id"]),
     ))
     return {**result, "date": day, "summary": {
         "total": len(summary_items),

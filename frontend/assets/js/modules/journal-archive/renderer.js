@@ -1,6 +1,8 @@
 import { journalCard } from "../journal-control-room/components.js";
 import { journalArchiveDetail } from "../journal-control-room/archive-detail.js";
 import { archiveCalendar } from "./calendar.js";
+import { dailyTimeline } from "./daily-timeline.js";
+import { archiveViewModeSwitcher } from "./view-mode-switcher.js";
 
 export function archiveShell() {
   return `<section class="gdb-calendar-panel" aria-busy="true">
@@ -10,7 +12,8 @@ export function archiveShell() {
       <button type="button" data-gdb-month="1" aria-label="Mese successivo">→</button></div></header>
     <div data-gdb-calendar><div class="gdb-loading">Caricamento calendario…</div></div>
     <p class="gdb-month-state" data-gdb-month-state></p></section>
-    <section class="gdb-day-panel" aria-busy="true"><header><div><p class="eyebrow">Giorno selezionato</p><h3 data-gdb-day-title></h3></div></header>
+    <section class="gdb-day-panel" aria-busy="true"><header><div><p class="eyebrow">Giorno selezionato</p><h3 data-gdb-day-title></h3></div>
+      <div class="gdb-day-toolbar"><div data-gdb-view-switcher></div><div class="gdb-day-actions" data-gdb-day-action-slot></div></div></header>
       <div class="gdb-kpis" data-gdb-kpis></div>
       <form class="gdb-filters" data-gdb-filters><label>Ricerca<input name="search" type="search" placeholder="Targa, driver, note, ID"></label>
         <label>Targa<input name="plate" type="search" placeholder="Filtra targa"></label>
@@ -27,7 +30,9 @@ export function renderMonth(root, state) {
   const label = new Date(`${state.month}-01T12:00:00Z`).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
   root.querySelector("[data-gdb-month-label]").textContent = label;
   root.querySelector("[data-gdb-context]").textContent = `${state.monthData.context.timezone} · giornata dalle ${String(state.monthData.context.operational_day_start_hour).padStart(2, "0")}:00`;
-  root.querySelector("[data-gdb-calendar]").innerHTML = archiveCalendar(state.month, state.selectedDate, state.monthData?.days || []);
+  root.querySelector("[data-gdb-calendar]").innerHTML = archiveCalendar(
+    state.month, state.selectedDate, state.monthData?.days || [], state.currentOperationalDate,
+  );
   root.querySelector("[data-gdb-month-state]").textContent = state.monthData.total
     ? `${state.monthData.total} procedure nel mese selezionato.`
     : "Nessuna procedura registrata nel mese selezionato.";
@@ -37,10 +42,18 @@ export function renderMonth(root, state) {
 export function renderDay(root, state) {
   const data = state.dayData;
   root.querySelector("[data-gdb-day-title]").textContent = new Date(`${state.selectedDate}T12:00:00`).toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  root.querySelector("[data-gdb-view-switcher]").innerHTML = archiveViewModeSwitcher(state.viewMode);
   const kpis = [["total", "Totali", ""], ["check_outs", "Prese in carico", "check_out"], ["check_ins", "Rientri", "check_in"], ["complete", "Complete", "complete"], ["incomplete", "Incomplete", "incomplete"], ["with_anomalies", "Con anomalie", "anomaly"], ["with_media", "Con media", "media"]];
   root.querySelector("[data-gdb-kpis]").innerHTML = kpis.map(([key, label, filter]) => `<button type="button" class="${state.activeKpi === filter ? "active" : ""}" data-gdb-kpi="${filter}" aria-pressed="${state.activeKpi === filter}"><strong>${data.summary[key]}</strong><span>${label}</span></button>`).join("");
-  root.querySelector("[data-gdb-list]").innerHTML = data.items.length ? data.items.map(item => journalCard(item, state.selected?.id)).join("") : `<div class="jcr-empty"><strong>Nessuna procedura</strong><p>Non ci sono registrazioni per il giorno e i filtri selezionati.</p></div>`;
+  root.querySelector("[data-gdb-list]").innerHTML = state.viewMode === "timeline"
+    ? dailyTimeline(data.items, state.selected?.id)
+    : data.items.length
+      ? data.items.map(item => journalCard(item, state.selected?.id)).join("")
+      : `<div class="jcr-empty"><strong>Nessuna procedura</strong><p>Non ci sono registrazioni per il giorno e i filtri selezionati.</p></div>`;
+  root.querySelector("[data-gdb-list]").setAttribute("aria-label", state.viewMode === "timeline" ? "Timeline della giornata" : "Giornali del giorno");
   root.querySelector("[data-gdb-detail]").innerHTML = journalArchiveDetail(state.selected);
-  root.querySelector(".gdb-master-detail").classList.toggle("detail-open", Boolean(state.selected));
+  const layout = root.querySelector(".gdb-master-detail");
+  layout.classList.toggle("detail-open", Boolean(state.selected) && state.detailOpen);
+  layout.classList.toggle("view-timeline", state.viewMode === "timeline");
   root.querySelector(".gdb-day-panel").setAttribute("aria-busy", "false");
 }

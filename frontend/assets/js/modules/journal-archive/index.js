@@ -59,6 +59,7 @@ export async function mountJournalArchive(root, options = {}) {
   state.filters = {};
   state.activeKpi = "";
   state.selected = null;
+  state.detailOpen = Boolean(options.selectedId);
   if (options.selectedDate) {
     state.selectedDate = options.selectedDate;
     state.month = options.selectedDate.slice(0, 7);
@@ -70,9 +71,14 @@ export async function mountJournalArchive(root, options = {}) {
     if (month) { moveMonth(Number(month.dataset.gdbMonth)); await loadSelectedMonth(); }
     if (event.target.closest("[data-gdb-today]")) { resetToOperationalToday(); await loadSelectedMonth(); }
     const day = event.target.closest("[data-gdb-date]");
-    if (day) { state.selectedDate = day.dataset.gdbDate; state.selected = null; renderMonth(container, state); await loadDay(); }
+    if (day) { state.selectedDate = day.dataset.gdbDate; state.selected = null; state.detailOpen = false; renderMonth(container, state); await loadDay(); }
     const item = event.target.closest("[data-jcr-id]");
-    if (item) await loadDay(item.dataset.jcrId);
+    if (item) { state.detailOpen = true; await loadDay(item.dataset.jcrId); }
+    const viewMode = event.target.closest("[data-gdb-view-mode]")?.dataset.gdbViewMode;
+    if (viewMode) {
+      state.viewMode = viewMode;
+      renderDay(container, state);
+    }
     const kpi = event.target.closest("[data-gdb-kpi]")?.dataset.gdbKpi;
     if (kpi !== undefined) {
       state.activeKpi = kpi;
@@ -83,7 +89,10 @@ export async function mountJournalArchive(root, options = {}) {
       await loadDay();
     }
     if (event.target.closest("[data-gdb-retry]")) await loadSelectedMonth();
-    if (event.target.closest("[data-jcr-back]")) container.querySelector(".gdb-master-detail").classList.remove("detail-open");
+    if (event.target.closest("[data-jcr-back]")) {
+      state.detailOpen = false;
+      container.querySelector(".gdb-master-detail").classList.remove("detail-open");
+    }
   };
   container.oninput = event => {
     if (!event.target.closest("[data-gdb-filters]")) return;

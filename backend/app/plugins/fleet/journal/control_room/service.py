@@ -115,6 +115,17 @@ def _matches(item: dict, filters: dict, today: date) -> bool:
         return False
     if anomaly == "without" and item["anomaly_present"]:
         return False
+    live_status = filters.get("live_status")
+    if live_status == "not_started" and item.get("status") != "generated":
+        return False
+    if live_status == "in_progress" and item.get("status") not in {"opened", "in_progress"}:
+        return False
+    if live_status == "completed" and item.get("status") not in {"completed", "con_anomalia"}:
+        return False
+    if live_status == "anomaly" and not item.get("anomaly_present"):
+        return False
+    if live_status == "late" and not item.get("is_late"):
+        return False
     period = filters.get("period")
     if period == "today" and occurred != today:
         return False
@@ -154,9 +165,9 @@ def list_procedures(
                 and item["status"] in {"generated", "opened", "in_progress"}
             )
         )]
-    items = [item for item in items if _matches(item, filters, today)]
     current_items = [item for item in items if
                      date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == today]
+    items = [item for item in items if _matches(item, filters, today)]
     return {
         "items": items,
         "total": len(items),

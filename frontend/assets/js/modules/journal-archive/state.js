@@ -7,6 +7,8 @@ export const journalArchiveState = {
   selected: null,
   filters: {},
   activeKpi: "",
+  viewMode: "list",
+  detailOpen: false,
   loading: false,
 };
 

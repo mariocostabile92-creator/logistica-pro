@@ -201,6 +201,28 @@ def test_live_summary_exposes_expected_not_started_and_objective_late_state():
     assert payload["summary"]["expected_drivers"] == 1
     assert payload["summary"]["not_started"] == 1
     assert payload["summary"]["late"] == 1
+    filtered = client.get(CONTROL, params={"live_status": "late"}).json()
+    assert [entry["id"] for entry in filtered["items"]] == [response.json()["id"]]
+    assert filtered["summary"] == payload["summary"]
+
+
+def test_archive_day_is_chronological_with_stable_operation_tie_breaking():
+    vehicle = asset()
+    returned = complete(open_session(vehicle, "check_in", "Driver Rientro"))
+    checkout_b = complete(open_session(vehicle, "check_out", "Driver B"))
+    checkout_a = complete(open_session(vehicle, "check_out", "Driver A"))
+    operational_day = client.get(CONTROL).json()["context"]["operational_date"]
+    with db_session() as conn:
+        for movement_id in (returned["id"], checkout_b["id"], checkout_a["id"]):
+            conn.execute(
+                "UPDATE asset_movements SET occurred_at=? WHERE id=?",
+                (f"{operational_day}T08:10:00+00:00", movement_id),
+            )
+    items = client.get("/api/fleet/journal-archive/day", params={
+        "date": operational_day,
+    }).json()["items"]
+    checkout_ids = sorted([checkout_a["id"], checkout_b["id"]])
+    assert [item["id"] for item in items] == [*checkout_ids, returned["id"]]
 
 
 def test_manager_session_requires_real_vehicle_and_valid_shared_id():

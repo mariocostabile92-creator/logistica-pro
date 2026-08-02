@@ -17,15 +17,16 @@ test("Giornale di bordo opens the inline Journal Control Room", async () => {
 });
 
 test("Control Room is a live driver overview with a concise monitoring detail", async () => {
-  const [module, components, renderer, shared, overview, liveDetail] = await Promise.all([
+  const [module, components, renderer, shared, overview, liveDetail, presenter] = await Promise.all([
     file("assets/js/modules/journal-control-room.js"),
     file("assets/js/modules/journal-control-room/components.js"),
     file("assets/js/modules/journal-control-room/renderer.js"),
     file("assets/js/modules/journal-shared-access.js"),
     file("assets/js/modules/journal-control-room/live-overview.js"),
     file("assets/js/modules/journal-control-room/live-detail.js"),
+    file("assets/js/modules/journal-control-room/live-status-presenter.js"),
   ]);
-  const presentation = components + renderer + shared + overview + liveDetail;
+  const presentation = components + renderer + shared + overview + liveDetail + presenter;
   for (const text of ["Journal Control Room", "Driver attesi", "Non iniziati",
     "In compilazione", "Completati", "Con anomalie", "In ritardo", "giornata corrente",
     "Archivio GDB", "Apri monitoraggio", "Monitoraggio live", "Timeline essenziale",
@@ -37,6 +38,8 @@ test("Control Room is a live driver overview with a concise monitoring detail", 
   assert.match(module, /data-jcr-search/);
   assert.match(module, /data-jcr-detail/);
   assert.match(module, /if \(target\) target\.textContent/);
+  assert.match(module, /params\.live_status = state\.live_filter/);
+  assert.match(overview, /data-jcr-live-filter/);
   assert.doesNotMatch(presentation + module, /Ultimi 7 giorni|Ultimi 30 giorni|data-jcr-period/);
   assert.doesNotMatch(module, /Genera procedura Driver|createJournalDriverSession|journalSessionGenerator/);
   assert.doesNotMatch(liveDetail, /Dotazioni e checklist|Carburante|Pulizia|Avvisi Smart/);

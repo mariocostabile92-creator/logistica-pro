@@ -1,18 +1,29 @@
 import { escapeHtml } from "../../utils/dom.js";
-import { operationLabel, procedureDateParts, statusPresentation } from "./components.js";
+import { operationLabel, procedureDateParts } from "./components.js";
+import {
+  liveCardPriority, liveKpiDefinitions, statusPresentation,
+} from "./live-status-presenter.js";
 
 export function liveStatusPresentation(item) {
-  return statusPresentation(item.is_late ? "late" : item.status);
+  return statusPresentation(item.status);
 }
 
 export function journalLiveCard(item, selectedId) {
   const status = liveStatusPresentation(item);
-  const opened = procedureDateParts({ ...item, occurred_at: item.opened_at || item.scheduled_at || item.created_at });
-  const updated = procedureDateParts({ ...item, occurred_at: item.occurred_at || item.in_progress_at || item.opened_at || item.created_at });
-  return `<button type="button" class="jcr-item jcr-live-item status-${status.tone} ${selectedId === item.id ? "active" : ""}"
+  const priority = liveCardPriority(item);
+  const opened = procedureDateParts({
+    ...item, occurred_at: item.opened_at || item.scheduled_at || item.created_at,
+  });
+  const updated = procedureDateParts({
+    ...item,
+    occurred_at: item.occurred_at || item.in_progress_at || item.opened_at || item.created_at,
+  });
+  return `<button type="button" class="jcr-item jcr-live-item status-${status.tone} priority-${priority.tone} ${selectedId === item.id ? "active" : ""}"
     data-jcr-id="${escapeHtml(item.id)}" aria-pressed="${selectedId === item.id}">
     <header><div><strong>${escapeHtml(item.declared_driver_identifier)}</strong><small>${escapeHtml(item.plate_snapshot)} · ${escapeHtml(item.vehicle_model || "Modello non registrato")}</small></div>
       <span class="jcr-status status-${status.tone}"><b aria-hidden="true">${status.marker}</b>${escapeHtml(status.label)}</span></header>
+    <div class="jcr-live-signals">${item.is_late ? '<strong class="jcr-signal signal-late">In ritardo</strong>' : ""}
+      ${item.anomaly_present ? '<strong class="jcr-signal signal-anomaly">Anomalia presente</strong>' : ""}</div>
     <dl><div><dt>Procedura</dt><dd>${escapeHtml(operationLabel(item.operation_type))}</dd></div>
       <div><dt>Ora apertura</dt><dd>${escapeHtml(opened.time)}</dd></div>
       <div><dt>Ultimo aggiornamento</dt><dd>${escapeHtml(updated.time)}</dd></div>
@@ -23,14 +34,9 @@ export function journalLiveCard(item, selectedId) {
   </button>`;
 }
 
-export function journalLiveKpis() {
-  return [
-    ["expected_drivers", "Driver attesi", "expected"],
-    ["not_started", "Non iniziati", "generated"],
-    ["in_progress_live", "In compilazione", "progress"],
-    ["completed_live", "Completati", "completed"],
-    ["with_anomalies", "Con anomalie", "anomaly"],
-    ["late", "In ritardo", "late"],
-  ].map(([key, label, tone]) => `<article class="jcr-kpi tone-${tone}">
-    <strong data-jcr-kpi="${key}">0</strong><span>${label}</span><small>Giornata operativa</small></article>`).join("");
+export function journalLiveKpis(activeFilter = "all") {
+  return liveKpiDefinitions.map(([key, label, filter, tone]) => `<button type="button"
+    class="jcr-kpi tone-${tone} ${activeFilter === filter ? "active" : ""}"
+    data-jcr-live-filter="${filter}" aria-pressed="${activeFilter === filter}">
+    <strong data-jcr-kpi="${key}">0</strong><span>${label}</span><small>Filtra la giornata</small></button>`).join("");
 }

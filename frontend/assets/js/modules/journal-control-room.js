@@ -6,7 +6,7 @@ import { journalLiveDetail } from "./journal-control-room/live-detail.js";
 import { setJournalWorkspaceView } from "./journal-control-room/navigation.js";
 import { wireJournalMediaFallback } from "./journal-control-room/media-section.js";
 import { journalControlRoomShell } from "./journal-control-room/renderer.js";
-import { mountJournalArchive } from "./journal-archive/index.js";
+import { mountJournalArchive } from "./journal-archive/index.js?v=2";
 import {
   journalControlRoomState as state, resetJournalControlRoomState,
 } from "./journal-control-room/state.js";
@@ -16,6 +16,7 @@ const root = () => document.getElementById("journalControlRoom");
 async function load(preferredId = state.selected?.id) {
   root().setAttribute("aria-busy", "true");
   const params = { vehicle_id: state.vehicle_id };
+  if (state.live_filter !== "all") params.live_status = state.live_filter;
   for (const [selector, key] of [["[data-jcr-search]", "search"], ["[data-jcr-operation]", "operation_type"], ["[data-jcr-anomaly]", "anomaly"]]) {
     const value = root().querySelector(selector)?.value;
     if (value) params[key] = value;
@@ -40,6 +41,11 @@ async function load(preferredId = state.selected?.id) {
     const target = root().querySelector(`[data-jcr-kpi="${key}"]`);
     if (target) target.textContent = value;
   }
+  root().querySelectorAll("[data-jcr-live-filter]").forEach(button => {
+    const active = button.dataset.jcrLiveFilter === state.live_filter;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
   const context = response.context;
   root().querySelector("[data-jcr-context]").textContent = `Giornata operativa ${context.operational_date} · ${context.timezone} · dalle ${String(context.operational_day_start_hour).padStart(2, "0")}:00`;
   root().setAttribute("aria-busy", "false");
@@ -66,6 +72,12 @@ document.addEventListener("change", event => {
   if (event.target.matches("[data-jcr-operation],[data-jcr-anomaly]")) load();
 });
 document.addEventListener("click", async event => {
+  const liveFilter = event.target.closest("[data-jcr-live-filter]")?.dataset.jcrLiveFilter;
+  if (liveFilter && root() && !root().hidden) {
+    state.live_filter = liveFilter;
+    state.selected = null;
+    await load();
+  }
   const entry = event.target.closest("[data-jcr-id]");
   if (entry && !entry.closest("[data-jcr-archive]")) load(entry.dataset.jcrId);
   const view = event.target.closest("[data-jcr-view]")?.dataset.jcrView;

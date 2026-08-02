@@ -91,6 +91,41 @@ def test_operational_day_after_midnight_and_archive_queries():
     assert current_month.json()["month"] == current_month.json()["context"]["operational_date"][:7]
 
 
+def test_month_aggregation_reports_anomalies_incomplete_and_media_in_one_snapshot():
+    vehicle, opened = session()
+    headers = {"X-Journal-Token": opened["token"]}
+    client.post(f"{BASE}/sessions/{opened['id']}/media", headers=headers,
+                files={"file": ("prova.png", PNG, "image/png")})
+    completed = client.post(f"{BASE}/sessions/{opened['id']}/complete", headers=headers, json={
+        "odometer_km": 1200, "fuel_percentage": 55,
+        "cleanliness_status": "non_compliant", "anomaly_present": True,
+        "anomaly_description": "Graffio", "operational_note": "Verifica",
+        "equipment": [
+            {"code": "telepass", "status": "present"},
+            {"code": "phone", "status": "present"},
+            {"code": "keys", "status": "present"},
+            {"code": "fuel_card", "status": "present"},
+        ],
+        "client_submission_id": f"p11-{opened['id']}",
+        "timezone": "Europe/Rome",
+    })
+    assert completed.status_code == 200
+    incomplete = client.post(f"{BASE}/sessions", json={
+        "operation_type": "check_out", "plate": vehicle["plate"],
+        "declared_driver_identifier": "Driver Incompleto", "operational_shift": "morning",
+    })
+    assert incomplete.status_code == 201
+    operational_day = client.get("/api/fleet/journal-control-room").json()["context"]["operational_date"]
+    month = client.get("/api/fleet/journal-archive/month", params={
+        "month": operational_day[:7],
+    }).json()
+    metrics = next(day for day in month["days"] if day["date"] == operational_day)
+    assert metrics == {
+        "date": operational_day, "total": 2, "anomalies": 1,
+        "incomplete": 1, "with_media": 1,
+    }
+
+
 def test_cross_organization_media_and_archive_are_not_visible():
     _, opened = session()
     upload = client.post(f"{BASE}/sessions/{opened['id']}/media",
