@@ -195,6 +195,40 @@ def create_initial_setup(organization: dict, administrator: dict, password_hash:
     return user_id
 
 
+def create_registered_organization(organization: dict, administrator: dict, password_hash: str) -> tuple[str, str]:
+    organization_id, user_id, timestamp = str(uuid.uuid4()), str(uuid.uuid4()), now_iso()
+    with db_session() as conn:
+        if conn.execute(
+            "SELECT 1 FROM auth_users WHERE email=? LIMIT 1",
+            (administrator["email"].casefold(),),
+        ).fetchone():
+            raise RuntimeError("Email gia utilizzata.")
+        conn.execute(
+            """INSERT INTO organizations
+            (id,name,primary_station,timezone,language,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?)""",
+            (organization_id, organization["name"].strip(), organization.get("primary_station"),
+             organization["timezone"], organization["language"], timestamp, timestamp),
+        )
+        conn.execute(
+            """INSERT INTO auth_users
+            (id,organization_id,email,password_hash,role,active,created_at,updated_at,
+             first_name,last_name)
+            VALUES (?,?,?,?,?,1,?,?,?,?)""",
+            (user_id, organization_id, administrator["email"].casefold(), password_hash,
+             Role.ADMINISTRATOR.value, timestamp, timestamp,
+             administrator["first_name"].strip(), administrator["last_name"].strip()),
+        )
+        conn.execute(
+            """INSERT INTO admin_audit_events
+            (id,organization_id,user_id,action,target,status_code,created_at)
+            VALUES (?,?,?,?,?,?,?)""",
+            (str(uuid.uuid4()), organization_id, user_id, "organization.registered",
+             organization_id, 201, timestamp),
+        )
+    return organization_id, user_id
+
+
 def organization_by_id(organization_id: str):
     with db_session() as conn:
         return conn.execute("SELECT * FROM organizations WHERE id=?", (organization_id,)).fetchone()

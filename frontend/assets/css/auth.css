@@ -5,3 +5,14 @@
 .app-bootstrap-mark{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;background:var(--primary);color:#fff!important;font-weight:900;letter-spacing:.04em}
 .app-bootstrap-shell button{min-height:44px}
 .auth-card a.button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:var(--radius);background:var(--accent);color:#fff;font-weight:700;text-decoration:none}
+
+.auth-card-wide{width:min(100%,680px)}
+.auth-divider{display:flex;align-items:center;gap:.8rem;margin:1.25rem 0;color:var(--text-muted);font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.auth-divider::before,.auth-divider::after{content:"";height:1px;flex:1;background:var(--border)}
+.auth-register-cta{display:grid;gap:.8rem;padding:1rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-muted,#f6f8f7)}
+.auth-register-cta p{margin:0;color:var(--text)}.auth-register-cta span{color:var(--text-muted);font-size:.92rem}
+.auth-secondary-button{width:100%;background:var(--primary)!important}
+.auth-fieldset{display:grid;gap:.8rem;margin:0;padding:1rem;border:1px solid var(--border);border-radius:12px}
+.auth-fieldset legend{padding:0 .35rem;font-weight:900}.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.auth-optional{font-weight:500;color:var(--text-muted)}.auth-back-link{margin:1rem 0 0!important;text-align:center}.auth-back-link a{font-weight:800}
+@media(max-width:640px){.auth-grid{grid-template-columns:1fr}.auth-card-wide{padding:1rem}.auth-fieldset{padding:.85rem}}

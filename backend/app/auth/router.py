@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from app.auth import repository, service
 from app.auth.permission_service import permissions_for
 from app.auth.password_service import hash_password
-from app.auth.schemas import BootstrapRequest, LoginRequest
+from app.auth.schemas import BootstrapRequest, LoginRequest, OrganizationRegistrationRequest
 from app.core.config import SETTINGS
 
 
@@ -54,6 +54,36 @@ def bootstrap(payload: BootstrapRequest, response: Response):
         samesite="strict", path="/",
     )
     return {"user": _user_payload(user), "expires_at": expires_at.isoformat(), "id": user_id}
+
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+def register_organization(payload: OrganizationRegistrationRequest, response: Response):
+    try:
+        organization_id, user_id = repository.create_registered_organization(
+            payload.organization.model_dump(),
+            payload.administrator.model_dump(),
+            hash_password(payload.administrator.password),
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        if "unique" in str(exc).casefold():
+            raise HTTPException(status_code=409, detail="Email gia utilizzata.") from exc
+        raise
+
+    user, token, expires_at = service.login(
+        payload.administrator.email, payload.administrator.password, False
+    )
+    response.set_cookie(
+        COOKIE_NAME, token, httponly=True, secure=SETTINGS.production,
+        samesite="strict", path="/",
+    )
+    return {
+        "user": _user_payload(user),
+        "expires_at": expires_at.isoformat(),
+        "organization_id": organization_id,
+        "id": user_id,
+    }
 
 
 @router.post("/login")

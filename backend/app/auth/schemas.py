@@ -45,6 +45,13 @@ class BootstrapRequest(BaseModel):
     administrator: BootstrapAdministrator
 
 
+
+
+class OrganizationRegistrationRequest(BaseModel):
+    organization: BootstrapOrganization
+    administrator: BootstrapAdministrator
+
+
 class UserCreateRequest(EmailModel):
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)

@@ -27,3 +27,9 @@ export const bootstrap = payload => fetch("/api/auth/bootstrap", {
   method: "POST", headers: { "Content-Type": "application/json" },
   credentials: "same-origin", body: JSON.stringify(payload),
 }).then(parse);
+
+
+export const registerOrganization = payload => fetch("/api/auth/register", {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  credentials: "same-origin", body: JSON.stringify(payload),
+}).then(parse);

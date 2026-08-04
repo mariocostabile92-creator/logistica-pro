@@ -1,0 +1,26 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Crea organizzazione · Operations Engine</title><link rel="stylesheet" href="./assets/css/base.css"><link rel="stylesheet" href="./assets/css/auth.css?v=4"></head>
+<body><main class="auth-page"><section class="auth-card auth-card-wide" aria-labelledby="registerTitle">
+  <p class="eyebrow">Operations Engine · Private Beta</p><h1 id="registerTitle">Crea la tua organizzazione</h1>
+  <p>Configura l'azienda e il primo account Administrator. Potrai aggiungere gli altri utenti dall'app.</p>
+  <form id="registerForm" class="auth-form">
+    <fieldset class="auth-fieldset"><legend>Azienda</legend>
+      <label>Nome azienda<input name="organization_name" type="text" autocomplete="organization" minlength="2" maxlength="160" required></label>
+      <label>Station principale <span class="auth-optional">(facoltativa)</span><input name="primary_station" type="text" maxlength="160" placeholder="Es. DLO2"></label>
+    </fieldset>
+    <fieldset class="auth-fieldset"><legend>Administrator</legend>
+      <div class="auth-grid">
+        <label>Nome<input name="first_name" type="text" autocomplete="given-name" maxlength="100" required></label>
+        <label>Cognome<input name="last_name" type="text" autocomplete="family-name" maxlength="100" required></label>
+      </div>
+      <label>Email<input name="email" type="email" autocomplete="email" maxlength="320" required></label>
+      <div class="auth-grid">
+        <label>Password<input name="password" type="password" autocomplete="new-password" minlength="10" maxlength="256" required></label>
+        <label>Conferma password<input name="password_confirmation" type="password" autocomplete="new-password" minlength="10" maxlength="256" required></label>
+      </div>
+    </fieldset>
+    <button type="submit">Crea organizzazione</button>
+    <p id="registerMessage" class="auth-message" role="status" aria-live="polite"></p>
+  </form>
+  <p class="auth-back-link">Hai già un account? <a href="./login.html">Torna al login</a></p>
+</section></main><script type="module" src="./assets/js/auth/register.js?v=1"></script></body></html>
