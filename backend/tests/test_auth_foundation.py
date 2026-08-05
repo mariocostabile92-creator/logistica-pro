@@ -32,6 +32,32 @@ def test_admin_area_redirects_and_api_returns_401_without_session():
     assert client.get("/app/login.html", headers=ENFORCE).status_code == 200
 
 
+def test_organization_registration_is_public_before_first_login():
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "organization": {
+                "name": "QA Company",
+                "primary_station": "DLO2",
+                "timezone": "Europe/Rome",
+                "language": "it",
+            },
+            "administrator": {
+                "first_name": "Mario",
+                "last_name": "Costabile",
+                "email": "new-company@example.test",
+                "password": "Password-sicura-123",
+                "password_confirmation": "Password-sicura-123",
+            },
+        },
+        headers=ENFORCE,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["user"]["organization"]["name"] == "QA Company"
+    assert "operations_session" in response.headers["set-cookie"]
+
+
 def test_login_session_remember_and_logout_use_secure_server_session():
     password = user("admin@example.test", Role.ADMINISTRATOR)
     login = sign_in("admin@example.test", password, True)

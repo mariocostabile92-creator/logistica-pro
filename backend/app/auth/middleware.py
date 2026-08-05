@@ -13,7 +13,7 @@ from app.core.config import SETTINGS
 
 PUBLIC_EXACT = {
     "/api/health", "/api/auth/login", "/api/auth/session", "/api/auth/logout",
-    "/api/auth/bootstrap/status", "/api/auth/bootstrap",
+    "/api/auth/bootstrap/status", "/api/auth/bootstrap", "/api/auth/register",
     "/app/login.html", "/app/bootstrap.html", "/app/journal", "/app/journal/",
 }
 
