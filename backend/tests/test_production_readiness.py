@@ -125,13 +125,17 @@ def test_postgres_compatibility_cursor_preserves_lastrowid():
     assert raw_connection.cursor_instance.parameters == ("now", "{}", "[]")
 
 
-def test_postgres_maintenance_insert_preserves_lastrowid():
+@pytest.mark.parametrize(
+    "table",
+    ("fleet_maintenances", "fleet_insurance_policies"),
+)
+def test_postgres_fleet_insert_preserves_lastrowid(table):
     query, returns_identity = _postgres_statement(
-        "INSERT INTO fleet_maintenances (vehicle_id, description) VALUES (?, ?)"
+        f"INSERT INTO {table} (vehicle_id) VALUES (?)"
     )
 
     assert returns_identity is True
-    assert "VALUES (%s, %s)" in query
+    assert "VALUES (%s)" in query
     assert query.endswith("RETURNING id")
 
 
