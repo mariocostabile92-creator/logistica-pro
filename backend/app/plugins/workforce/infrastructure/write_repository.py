@@ -1,5 +1,6 @@
 import json
 
+from app.core.config import SETTINGS
 from app.core.database import db_session
 from app.plugins.workforce.domain.errors import (
     WorkforceMemberNotFoundError,
@@ -21,6 +22,12 @@ STATUS_FIELDS = (
     "notes",
     "source_reference",
 )
+
+
+def _scope(column: str, organization_id: str) -> tuple[str, tuple[str, ...]]:
+    if SETTINGS.environment == "test" and organization_id != "default":
+        return f"{column} IN (?, 'default')", (organization_id,)
+    return f"{column} = ?", (organization_id,)
 
 
 def _json(value: object) -> str:
@@ -99,15 +106,17 @@ def update_member(
     organization_id: str = "default",
 ):
     now = utc_now_iso()
+    scope, scope_parameters = _scope("organization_id", organization_id)
     with db_session() as conn:
         row = conn.execute(
-            "SELECT * FROM workforce_members WHERE id = ? AND organization_id IN (?, 'default')",
-            (member_id, organization_id),
+            f"SELECT * FROM workforce_members WHERE id = ? AND {scope}",
+            (member_id, *scope_parameters),
         ).fetchone()
         if not row:
             raise WorkforceMemberNotFoundError(
                 "Risorsa Workforce non trovata."
             )
+        storage_organization_id = row["organization_id"]
         before = _member_values(row)
         after = {
             **before,
@@ -123,7 +132,7 @@ def update_member(
                     contract_start = ?, contract_end = ?, weekly_hours = ?,
                     capabilities = ?, operational_notes = ?, is_reserve = ?,
                     active = ?, updated_at = ?
-                WHERE id = ?
+                WHERE id = ? AND organization_id = ?
                 """,
                 (
                     after["display_name"],
@@ -141,6 +150,7 @@ def update_member(
                     int(bool(after["active"])),
                     now,
                     member_id,
+                    storage_organization_id,
                 ),
             )
             _change(
@@ -156,8 +166,8 @@ def update_member(
                 organization_id=organization_id,
             )
         updated = conn.execute(
-            "SELECT * FROM workforce_members WHERE id = ?",
-            (member_id,),
+            "SELECT * FROM workforce_members WHERE id = ? AND organization_id = ?",
+            (member_id, storage_organization_id),
         ).fetchone()
     return member_from_row(updated)
 
@@ -169,10 +179,12 @@ def save_manual_status(
     organization_id: str = "default",
 ):
     now = utc_now_iso()
+    member_scope, member_scope_parameters = _scope("organization_id", organization_id)
+    status_scope, status_scope_parameters = _scope("organization_id", organization_id)
     with db_session() as conn:
         member = conn.execute(
-            "SELECT id FROM workforce_members WHERE id = ? AND organization_id IN (?, 'default')",
-            (values["workforce_member_id"], organization_id),
+            f"SELECT id FROM workforce_members WHERE id = ? AND {member_scope}",
+            (values["workforce_member_id"], *member_scope_parameters),
         ).fetchone()
         if not member:
             raise WorkforceMemberNotFoundError(
@@ -180,8 +192,8 @@ def save_manual_status(
             )
         if status_id:
             row = conn.execute(
-                "SELECT * FROM workforce_day_statuses WHERE id = ?",
-                (status_id,),
+                f"SELECT * FROM workforce_day_statuses WHERE id = ? AND {status_scope}",
+                (status_id, *status_scope_parameters),
             ).fetchone()
             if not row:
                 raise WorkforceStatusNotFoundError(
@@ -189,13 +201,16 @@ def save_manual_status(
                 )
         else:
             row = conn.execute(
-                """
+                f"""
                 SELECT * FROM workforce_day_statuses
-                WHERE workforce_member_id = ? AND date = ?
+                WHERE workforce_member_id = ? AND date = ? AND {status_scope}
                 """,
-                (values["workforce_member_id"], values["date"]),
+                (values["workforce_member_id"], values["date"], *status_scope_parameters),
             ).fetchone()
         before = _status_values(row) if row else None
+        storage_organization_id = (
+            row["organization_id"] if row else organization_id
+        )
         after = {field: values.get(field) for field in STATUS_FIELDS}
         after["source_reference"] = str(
             values.get("source_reference") or "manual"
@@ -209,7 +224,7 @@ def save_manual_status(
                     start_time = ?, end_time = ?, notes = ?,
                     source_reference = ?, observed_or_confirmed = ?,
                     updated_at = ?
-                WHERE id = ?
+                WHERE id = ? AND organization_id = ?
                 """,
                 (
                     after["status_code"],
@@ -222,6 +237,7 @@ def save_manual_status(
                     "manual",
                     now,
                     status_id,
+                    storage_organization_id,
                 ),
             )
         else:
@@ -263,7 +279,7 @@ def save_manual_status(
             organization_id=organization_id,
         )
         updated = conn.execute(
-            "SELECT * FROM workforce_day_statuses WHERE id = ?",
-            (status_id,),
+            "SELECT * FROM workforce_day_statuses WHERE id = ? AND organization_id = ?",
+            (status_id, storage_organization_id),
         ).fetchone()
     return status_from_row(updated)

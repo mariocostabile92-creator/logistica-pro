@@ -86,13 +86,42 @@ def init_schema() -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_session_org_date ON journal_sessions(organization_id, operational_date)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_movement_org_date ON asset_movements(organization_id, occurred_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_media_org ON movement_media(organization_id, vehicle_id)")
-        organizations = conn.execute("SELECT id FROM organizations ORDER BY created_at LIMIT 2").fetchall()
-        if len(organizations) == 1:
-            organization_id = organizations[0]["id"]
-            conn.execute("UPDATE journal_sessions SET organization_id=? WHERE organization_id IS NULL OR organization_id='default'", (organization_id,))
-            conn.execute("UPDATE asset_movements SET organization_id=? WHERE organization_id='default'", (organization_id,))
-            conn.execute("UPDATE movement_media SET organization_id=? WHERE organization_id IS NULL OR organization_id='default'", (organization_id,))
-            conn.execute("UPDATE movement_media SET vehicle_id=(SELECT asset_id FROM journal_sessions WHERE journal_sessions.id=movement_media.session_id) WHERE vehicle_id IS NULL")
+        conn.execute(
+            """
+            UPDATE journal_sessions
+            SET organization_id=(
+                SELECT organization_id FROM fleet_assets
+                WHERE fleet_assets.id=journal_sessions.asset_id
+            )
+            WHERE organization_id IS NULL OR organization_id='default'
+            """
+        )
+        conn.execute(
+            """
+            UPDATE asset_movements
+            SET organization_id=(
+                SELECT organization_id FROM journal_sessions
+                WHERE journal_sessions.id=asset_movements.session_id
+            )
+            WHERE organization_id IS NULL OR organization_id='default'
+            """
+        )
+        conn.execute(
+            """
+            UPDATE movement_media
+            SET organization_id=(
+                    SELECT organization_id FROM journal_sessions
+                    WHERE journal_sessions.id=movement_media.session_id
+                ),
+                vehicle_id=COALESCE(
+                    vehicle_id,
+                    (SELECT asset_id FROM journal_sessions
+                     WHERE journal_sessions.id=movement_media.session_id)
+                )
+            WHERE organization_id IS NULL OR organization_id='default'
+               OR vehicle_id IS NULL
+            """
+        )
 
 
 def _ensure_session_columns(conn) -> None:
@@ -144,14 +173,19 @@ def _dict(row) -> dict[str, object] | None:
     return {key: row[key] for key in row.keys()} if row else None
 
 
-def find_asset_by_plate(plate: str) -> dict[str, object] | None:
+def find_asset_by_plate(
+    plate: str,
+    organization_id: str,
+) -> dict[str, object] | None:
     with db_session() as conn:
         rows = conn.execute(
             """
             SELECT id, external_identifier, plate, category, status, availability
             FROM fleet_assets
-            WHERE plate IS NOT NULL
+            WHERE plate IS NOT NULL AND organization_id = ?
             """
+            ,
+            (organization_id,),
         ).fetchall()
     for row in rows:
         normalized = normalize_plate(row["plate"])
@@ -472,17 +506,21 @@ def asset_history(asset_id: int, organization_id: str | None = None) -> dict[str
     organization_clause = " AND asset_movements.organization_id = ?" if organization_id else ""
     movement_params: tuple[object, ...] = (asset_id, organization_id) if organization_id else (asset_id,)
     with db_session() as conn:
+        asset_clause = " AND a.organization_id = ?" if organization_id else ""
+        asset_params: tuple[object, ...] = (
+            (asset_id, organization_id) if organization_id else (asset_id,)
+        )
         asset = conn.execute(
-            """
+            f"""
             SELECT a.id, a.external_identifier, a.plate, a.category,
                    a.status, a.availability, a.capabilities, a.notes,
                    a.created_at, a.updated_at,
                    m.vehicle_model, m.rental_company
             FROM fleet_assets a
             LEFT JOIN fleet_asset_metadata m ON m.asset_id = a.id
-            WHERE a.id = ?
+            WHERE a.id = ? {asset_clause}
             """,
-            (asset_id,),
+            asset_params,
         ).fetchone()
         if not asset:
             return None

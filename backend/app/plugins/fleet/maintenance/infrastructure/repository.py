@@ -1,3 +1,4 @@
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.utils.date_utils import utc_now_iso
 
@@ -54,7 +55,8 @@ def _select() -> str:
         SELECT m.*, a.plate, a.external_identifier,
                a.category AS vehicle_model, d.case_number AS damage_case_number,
                (SELECT COUNT(*) FROM attachments att
-                WHERE att.entity_type='maintenance' AND att.entity_id=m.id) AS attachment_count
+                WHERE att.entity_type='maintenance' AND att.entity_id=m.id
+                  AND att.organization_id=a.organization_id) AS attachment_count
         FROM fleet_maintenances m
         JOIN fleet_assets a ON a.id = m.vehicle_id
         LEFT JOIN damage_cases d ON d.id = m.damage_case_id
@@ -62,26 +64,32 @@ def _select() -> str:
 
 
 def get(maintenance_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            f"{_select()} WHERE m.id = ?",
-            (maintenance_id,),
+            f"{_select()} WHERE m.id = ? AND a.organization_id = ?",
+            (maintenance_id, organization_id),
         ).fetchone()
     return _dict(row)
 
 
 def get_by_damage_case(damage_case_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            f"{_select()} WHERE m.damage_case_id = ?",
-            (damage_case_id,),
+            f"{_select()} WHERE m.damage_case_id = ? AND a.organization_id = ?",
+            (damage_case_id, organization_id),
         ).fetchone()
     return _dict(row)
 
 
 def list_all(vehicle_id: int | None = None):
-    where = "WHERE m.vehicle_id = ?" if vehicle_id else ""
-    params = (vehicle_id,) if vehicle_id else ()
+    clauses = ["a.organization_id = ?"]
+    params: list[object] = [current_organization_id()]
+    if vehicle_id:
+        clauses.append("m.vehicle_id = ?")
+        params.append(vehicle_id)
+    where = f"WHERE {' AND '.join(clauses)}"
     with db_session() as conn:
         rows = conn.execute(
             f"""
@@ -107,21 +115,41 @@ def list_all(vehicle_id: int | None = None):
 
 
 def list_events(maintenance_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
             """
-            SELECT * FROM fleet_maintenance_events
-            WHERE maintenance_id = ?
-            ORDER BY created_at ASC, id ASC
+            SELECT e.* FROM fleet_maintenance_events e
+            JOIN fleet_maintenances m ON m.id=e.maintenance_id
+            JOIN fleet_assets a ON a.id=m.vehicle_id
+            WHERE e.maintenance_id = ? AND a.organization_id = ?
+            ORDER BY e.created_at ASC, e.id ASC
             """,
-            (maintenance_id,),
+            (maintenance_id, organization_id),
         ).fetchall()
     return [_dict(row) for row in rows]
 
 
 def create(values: dict[str, object], actor: str):
     now = utc_now_iso()
+    organization_id = current_organization_id()
     with db_session() as conn:
+        owned = conn.execute(
+            "SELECT 1 FROM fleet_assets WHERE id=? AND organization_id=?",
+            (values["vehicle_id"], organization_id),
+        ).fetchone()
+        if not owned:
+            return None
+        damage_case_id = values.get("damage_case_id")
+        if damage_case_id and not conn.execute(
+            """
+            SELECT 1 FROM damage_cases d
+            JOIN fleet_assets a ON a.id=d.vehicle_id
+            WHERE d.id=? AND a.organization_id=?
+            """,
+            (damage_case_id, organization_id),
+        ).fetchone():
+            return None
         cursor = conn.execute(
             """
             INSERT INTO fleet_maintenances (

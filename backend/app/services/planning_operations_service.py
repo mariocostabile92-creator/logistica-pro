@@ -1,3 +1,4 @@
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.domain.planning_models import PlanningStatus
 from app.repositories.assignment_repository import get_assignments
@@ -59,6 +60,7 @@ def forecast_snapshot() -> dict[str, object] | None:
 
 
 def _convocations(planning_id: int) -> list[dict[str, object]]:
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
             """
@@ -66,9 +68,11 @@ def _convocations(planning_id: int) -> list[dict[str, object]]:
                    a.station, a.cycle_or_wave
             FROM planning_convocations c
             JOIN assignments a ON a.id = c.assignment_id
-            WHERE c.planning_id = ? ORDER BY a.cycle_or_wave, a.route_id
+            JOIN plannings p ON p.id=c.planning_id
+            WHERE c.planning_id = ? AND p.organization_id = ?
+            ORDER BY a.cycle_or_wave, a.route_id
             """,
-            (planning_id,),
+            (planning_id, organization_id),
         ).fetchall()
     return [{key: row[key] for key in row.keys()} for row in rows]
 
@@ -105,6 +109,8 @@ def update_convocation(
     scheduled_time: str | None,
     actor: str,
 ) -> dict[str, object]:
+    if not get_planning_record(planning_id):
+        raise PlanningOperationError("Planning non trovato.")
     ensure_convocations(planning_id, actor)
     now = utc_now_iso()
     with db_session() as conn:

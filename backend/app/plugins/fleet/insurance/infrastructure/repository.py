@@ -1,3 +1,4 @@
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.utils.date_utils import utc_now_iso
 
@@ -42,26 +43,32 @@ def _select() -> str:
 
 
 def get(policy_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            f"{_select()} WHERE p.id = ?",
-            (policy_id,),
+            f"{_select()} WHERE p.id = ? AND a.organization_id = ?",
+            (policy_id, organization_id),
         ).fetchone()
     return _dict(row)
 
 
 def get_by_vehicle(vehicle_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            f"{_select()} WHERE p.vehicle_id = ?",
-            (vehicle_id,),
+            f"{_select()} WHERE p.vehicle_id = ? AND a.organization_id = ?",
+            (vehicle_id, organization_id),
         ).fetchone()
     return _dict(row)
 
 
 def list_all(vehicle_id: int | None = None):
-    where = "WHERE p.vehicle_id = ?" if vehicle_id else ""
-    params = (vehicle_id,) if vehicle_id else ()
+    clauses = ["a.organization_id = ?"]
+    params: list[object] = [current_organization_id()]
+    if vehicle_id:
+        clauses.append("p.vehicle_id = ?")
+        params.append(vehicle_id)
+    where = f"WHERE {' AND '.join(clauses)}"
     with db_session() as conn:
         rows = conn.execute(
             f"""
@@ -81,10 +88,11 @@ def list_all(vehicle_id: int | None = None):
 
 
 def vehicle_exists(vehicle_id: int) -> bool:
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT id FROM fleet_assets WHERE id = ?",
-            (vehicle_id,),
+            "SELECT id FROM fleet_assets WHERE id = ? AND organization_id = ?",
+            (vehicle_id, organization_id),
         ).fetchone()
     return bool(row)
 

@@ -1,12 +1,20 @@
 import json
 
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.domain.operation_events import OperationEvent
 from app.domain.planning_diff import PlanningDiff
 
 
 def save_event(event: OperationEvent, diff: PlanningDiff) -> OperationEvent:
+    organization_id = current_organization_id()
     with db_session() as conn:
+        owned = conn.execute(
+            "SELECT 1 FROM plannings WHERE id=? AND organization_id=?",
+            (event.planning_id, organization_id),
+        ).fetchone()
+        if not owned:
+            raise LookupError("Planning non trovato.")
         cursor = conn.execute(
             """
             INSERT INTO planning_events (
@@ -37,14 +45,16 @@ def save_event(event: OperationEvent, diff: PlanningDiff) -> OperationEvent:
 
 
 def list_events(planning_id: int) -> list[dict[str, object]]:
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
             """
-            SELECT * FROM planning_events
-            WHERE planning_id = ?
-            ORDER BY id ASC
+            SELECT e.* FROM planning_events e
+            JOIN plannings p ON p.id=e.planning_id
+            WHERE e.planning_id = ? AND p.organization_id = ?
+            ORDER BY e.id ASC
             """,
-            (planning_id,),
+            (planning_id, organization_id),
         ).fetchall()
     return [
         {

@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from app.auth.tenant_context import bind_organization, reset_organization
 from app.api.dependencies.planning_publication import (
     get_planning_publication_runtime,
 )
@@ -213,7 +214,11 @@ def test_workspace_reset_removes_publications_before_confirmations():
         actor="qa-publisher",
     )
 
-    reset_workspace(actor="qa")
+    token = bind_organization(PUBLICATION_SCOPE.organization_id)
+    try:
+        reset_workspace(actor="qa")
+    finally:
+        reset_organization(token)
 
     assert SqlPlanningPublicationRepository().get_history(
         PUBLICATION_SCOPE

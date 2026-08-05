@@ -8,6 +8,7 @@ from app.auth import repository
 from app.auth.domain import AuthenticatedUser, Role
 from app.auth.permission_service import has_permission
 from app.auth.router import COOKIE_NAME
+from app.auth.tenant_context import bind_organization, reset_organization
 from app.core.config import SETTINGS
 
 
@@ -20,7 +21,7 @@ PUBLIC_EXACT = {
 
 PUBLIC_JOURNAL_ROUTES = (
     ({"GET", "HEAD"}, re.compile(r"^/api/plugins/fleet/v1/journal/(configuration|assets)$")),
-    ({"POST"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions(?:/shared)?$")),
+    ({"POST"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/shared$")),
     ({"GET", "HEAD"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+$")),
     ({"POST"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+/(progress|warnings|media|complete)$")),
     ({"DELETE"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+/media/[^/]+$")),
@@ -53,10 +54,6 @@ def _required_permission(path: str, method: str) -> str:
 def public_path(request: Request) -> bool:
     path = request.url.path
     if path in PUBLIC_EXACT or path.startswith("/app/assets/"):
-        return True
-    # The public Driver Journal uses the existing read-only asset catalogue to
-    # offer plate selection. Mutating Fleet asset routes remain protected.
-    if request.method in {"GET", "HEAD"} and path == "/api/plugins/fleet/v1/assets":
         return True
     if path.startswith("/app/journal/"):
         return True
@@ -91,7 +88,11 @@ async def enforce_authentication(request: Request, call_next):
             organization_name="Test Organization",
         )
         request.state.organization_id = "test-organization"
-        return await call_next(request)
+        tenant_token = bind_organization(request.state.organization_id)
+        try:
+            return await call_next(request)
+        finally:
+            reset_organization(tenant_token)
     resolved = None
     token = request.cookies.get(COOKIE_NAME)
     if token:
@@ -102,7 +103,13 @@ async def enforce_authentication(request: Request, call_next):
         request.state.session_id = session_id
         request.state.organization_id = user.organization_id
     if auth_optional:
-        return await call_next(request)
+        if not resolved:
+            return await call_next(request)
+        tenant_token = bind_organization(request.state.organization_id)
+        try:
+            return await call_next(request)
+        finally:
+            reset_organization(tenant_token)
     if not resolved:
         if path.startswith("/api/"):
             return JSONResponse(status_code=401, content={"detail": "Autenticazione richiesta."})
@@ -114,7 +121,11 @@ async def enforce_authentication(request: Request, call_next):
     required = _required_permission(path, request.method)
     if path.startswith("/api/") and not has_permission(user.role, required):
         return JSONResponse(status_code=403, content={"detail": "Permesso insufficiente."})
-    response = await call_next(request)
-    if path.startswith("/api/") and request.method not in {"GET", "HEAD", "OPTIONS"}:
-        repository.record_audit(user, request.method, path, response.status_code)
-    return response
+    tenant_token = bind_organization(user.organization_id)
+    try:
+        response = await call_next(request)
+        if path.startswith("/api/") and request.method not in {"GET", "HEAD", "OPTIONS"}:
+            repository.record_audit(user, request.method, path, response.status_code)
+        return response
+    finally:
+        reset_organization(tenant_token)

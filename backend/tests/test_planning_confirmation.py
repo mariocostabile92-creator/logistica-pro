@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from app.auth.tenant_context import bind_organization, reset_organization
 from app.api.dependencies.planning_confirmation import (
     get_planning_confirmation_runtime,
 )
@@ -222,7 +223,11 @@ def test_workspace_reset_removes_confirmations_before_drafts():
         actor="qa-operator",
     )
 
-    reset_workspace(actor="qa")
+    token = bind_organization(SCOPE.organization_id)
+    try:
+        reset_workspace(actor="qa")
+    finally:
+        reset_organization(token)
 
     assert SqlPlanningConfirmationRepository().get_history(SCOPE).total == 0
 

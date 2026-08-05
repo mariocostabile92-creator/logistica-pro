@@ -17,7 +17,7 @@ async function validateCurrentStep() {
   }
   if (state.step === 2) {
     if (!$("plate").value.trim()) throw new Error("Inserisci la targa.");
-    state.asset = await findAsset($("plate").value);
+    state.asset = await findAsset($("plate").value, state.accessToken);
     $("plate").value = state.asset.plate;
     $("assetResult").hidden = false;
     $("assetResult").textContent = `Mezzo verificato: ${state.asset.plate} · ${state.asset.category || "Modello non registrato"}`;

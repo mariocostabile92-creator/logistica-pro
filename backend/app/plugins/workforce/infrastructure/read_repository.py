@@ -1,5 +1,7 @@
 import json
 
+from app.auth.tenant_context import current_organization_id
+from app.core.config import SETTINGS
 from app.core.database import db_session
 from app.plugins.workforce.domain.models import WorkforceImportResult
 from app.plugins.workforce.infrastructure.records import (
@@ -10,22 +12,29 @@ from app.plugins.workforce.infrastructure.records import (
 )
 
 
+def _scope(organization_id: str) -> tuple[str, tuple[str, ...]]:
+    if SETTINGS.environment == "test" and organization_id != "default":
+        return "organization_id IN (?, 'default')", (organization_id,)
+    return "organization_id = ?", (organization_id,)
+
+
 def list_members(organization_id: str | None = None):
-    where = " WHERE organization_id IN (?, 'default')" if organization_id else ""
-    parameters = (organization_id,) if organization_id else ()
+    organization_id = organization_id or current_organization_id()
+    clause, parameters = _scope(organization_id)
     with db_session() as conn:
         rows = conn.execute(
-            f"SELECT * FROM workforce_members{where} ORDER BY display_name, id",
+            f"SELECT * FROM workforce_members WHERE {clause} ORDER BY display_name, id",
             parameters,
         ).fetchall()
     return [member_from_row(row) for row in rows]
 
 
 def imported_result(fingerprint: str) -> WorkforceImportResult | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT summary FROM workforce_imports WHERE fingerprint = ?",
-            (fingerprint,),
+            "SELECT summary FROM workforce_imports WHERE fingerprint = ? AND organization_id = ?",
+            (fingerprint, organization_id),
         ).fetchone()
     if not row:
         return None
@@ -36,9 +45,11 @@ def imported_result(fingerprint: str) -> WorkforceImportResult | None:
 
 
 def get_member(member_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT * FROM workforce_members WHERE id = ?", (member_id,)
+            "SELECT * FROM workforce_members WHERE id = ? AND organization_id = ?",
+            (member_id, organization_id),
         ).fetchone()
     return member_from_row(row) if row else None
 
@@ -49,8 +60,10 @@ def list_statuses(
     member_id: int | None = None,
     organization_id: str | None = None,
 ):
-    clauses = []
-    parameters: list[object] = []
+    organization_id = organization_id or current_organization_id()
+    scope, scope_parameters = _scope(organization_id)
+    clauses = [scope]
+    parameters: list[object] = list(scope_parameters)
     if date_from:
         clauses.append("date >= ?")
         parameters.append(date_from)
@@ -60,9 +73,6 @@ def list_statuses(
     if member_id:
         clauses.append("workforce_member_id = ?")
         parameters.append(member_id)
-    if organization_id:
-        clauses.append("organization_id IN (?, 'default')")
-        parameters.append(organization_id)
     where = " WHERE " + " AND ".join(clauses) if clauses else ""
     with db_session() as conn:
         rows = conn.execute(
@@ -73,9 +83,11 @@ def list_statuses(
 
 
 def get_status(status_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT * FROM workforce_day_statuses WHERE id = ?", (status_id,)
+            "SELECT * FROM workforce_day_statuses WHERE id = ? AND organization_id = ?",
+            (status_id, organization_id),
         ).fetchone()
     return status_from_row(row) if row else None
 
@@ -85,17 +97,16 @@ def list_requirements(
     date_to: str | None = None,
     organization_id: str | None = None,
 ):
-    clauses = []
-    parameters: list[object] = []
+    organization_id = organization_id or current_organization_id()
+    scope, scope_parameters = _scope(organization_id)
+    clauses = [scope]
+    parameters: list[object] = list(scope_parameters)
     if date_from:
         clauses.append("date >= ?")
         parameters.append(date_from)
     if date_to:
         clauses.append("date <= ?")
         parameters.append(date_to)
-    if organization_id:
-        clauses.append("organization_id IN (?, 'default')")
-        parameters.append(organization_id)
     where = " WHERE " + " AND ".join(clauses) if clauses else ""
     with db_session() as conn:
         rows = conn.execute(
@@ -106,17 +117,21 @@ def list_requirements(
 
 
 def list_changes(limit: int = 100):
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
-            "SELECT * FROM workforce_changes ORDER BY id DESC LIMIT ?", (limit,)
+            "SELECT * FROM workforce_changes WHERE organization_id = ? ORDER BY id DESC LIMIT ?",
+            (organization_id, limit),
         ).fetchall()
     return [change_from_row(row) for row in rows]
 
 
 def latest_import_summary():
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT imported_at, original_filename, summary FROM workforce_imports ORDER BY id DESC LIMIT 1"
+            "SELECT imported_at, original_filename, summary FROM workforce_imports WHERE organization_id = ? ORDER BY id DESC LIMIT 1",
+            (organization_id,),
         ).fetchone()
         status_totals = conn.execute(
             """
@@ -126,16 +141,22 @@ def latest_import_summary():
                 MAX(date) AS date_to,
                 SUM(CASE WHEN status_code IN ('holiday', 'sickness', 'leave', 'unavailable') THEN 1 ELSE 0 END) AS absence_count
             FROM workforce_day_statuses
-            """
+            WHERE organization_id = ?
+            """,
+            (organization_id,),
         ).fetchone()
         contract_totals = conn.execute(
             """
             SELECT COUNT(*) AS contract_count
             FROM workforce_members
-            WHERE employment_type IS NOT NULL
-               OR contract_start IS NOT NULL
-               OR contract_end IS NOT NULL
-            """
+            WHERE organization_id = ?
+              AND (
+                    employment_type IS NOT NULL
+                 OR contract_start IS NOT NULL
+                 OR contract_end IS NOT NULL
+              )
+            """,
+            (organization_id,),
         ).fetchone()
     if not row:
         return None

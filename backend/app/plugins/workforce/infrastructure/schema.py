@@ -11,6 +11,7 @@ PROFILE_COLUMNS = {
 }
 
 SCOPED_COLUMNS = {
+    "workforce_imports": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
     "workforce_day_statuses": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
     "workforce_requirements": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
     "workforce_changes": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
@@ -169,12 +170,16 @@ def init_schema() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_workforce_status_org_date ON workforce_day_statuses(organization_id, date, workforce_member_id)"
         )
-        organizations = conn.execute(
-            "SELECT id FROM organizations ORDER BY created_at LIMIT 2"
-        ).fetchall()
-        if len(organizations) == 1:
-            organization_id = organizations[0]["id"]
-            for table in ("workforce_members", "workforce_day_statuses", "workforce_requirements", "workforce_changes"):
+        organization = conn.execute(
+            "SELECT id FROM organizations ORDER BY created_at LIMIT 1"
+        ).fetchone()
+        if organization:
+            organization_id = organization["id"]
+            for table in (
+                "workforce_imports", "workforce_members",
+                "workforce_day_statuses", "workforce_requirements",
+                "workforce_changes",
+            ):
                 conn.execute(
                     f"UPDATE {table} SET organization_id = ? WHERE organization_id = 'default'",
                     (organization_id,),

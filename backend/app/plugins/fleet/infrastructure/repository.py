@@ -2,6 +2,7 @@ import json
 import sqlite3
 from collections import defaultdict
 
+from app.auth.tenant_context import current_organization_id
 from app.core.config import SETTINGS
 from app.core.database import db_session
 from app.plugins.fleet.domain.errors import AssetIdentifierConflictError
@@ -39,12 +40,44 @@ def _ensure_profile_columns(conn, database_backend: str) -> None:
         )
 
 
+def _ensure_asset_tenant(conn, database_backend: str) -> None:
+    if database_backend == "postgresql":
+        conn.execute(
+            "ALTER TABLE fleet_assets ADD COLUMN IF NOT EXISTS organization_id TEXT"
+        )
+    else:
+        columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(fleet_assets)").fetchall()
+        }
+        if "organization_id" not in columns:
+            conn.execute("ALTER TABLE fleet_assets ADD COLUMN organization_id TEXT")
+
+    owner = conn.execute(
+        "SELECT id FROM organizations ORDER BY created_at ASC, id ASC LIMIT 1"
+    ).fetchone()
+    if owner:
+        conn.execute(
+            """
+            UPDATE fleet_assets
+            SET organization_id = ?
+            WHERE organization_id IS NULL OR organization_id = 'default'
+            """,
+            (owner["id"],),
+        )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_fleet_assets_organization "
+        "ON fleet_assets(organization_id, external_identifier)"
+    )
+
+
 def init_schema() -> None:
     with db_session() as conn:
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS fleet_assets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT,
                 external_identifier TEXT NOT NULL UNIQUE,
                 plate TEXT UNIQUE,
                 category TEXT,
@@ -108,6 +141,7 @@ def init_schema() -> None:
                 ON fleet_asset_events(asset_id, id);
             """
         )
+        _ensure_asset_tenant(conn, SETTINGS.database_backend)
         _ensure_profile_columns(conn, SETTINGS.database_backend)
 
 
@@ -260,10 +294,12 @@ def _asset_from_row(
 def _get_asset_in_session(
     conn: sqlite3.Connection,
     asset_id: int,
+    organization_id: str | None = None,
 ) -> Asset | None:
+    organization_id = organization_id or current_organization_id()
     row = conn.execute(
-        "SELECT * FROM fleet_assets WHERE id = ?",
-        (asset_id,),
+        "SELECT * FROM fleet_assets WHERE id = ? AND organization_id = ?",
+        (asset_id, organization_id),
     ).fetchone()
     if not row:
         return None
@@ -274,9 +310,15 @@ def _get_asset_in_session(
 
 
 def list_assets() -> list[Asset]:
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
-            "SELECT * FROM fleet_assets ORDER BY external_identifier ASC"
+            """
+            SELECT * FROM fleet_assets
+            WHERE organization_id = ?
+            ORDER BY external_identifier ASC
+            """,
+            (organization_id,),
         ).fetchall()
         asset_ids = [row["id"] for row in rows]
         documents = _documents_by_asset(conn, asset_ids)
@@ -295,7 +337,7 @@ def list_assets() -> list[Asset]:
 
 def get_asset(asset_id: int) -> Asset | None:
     with db_session() as conn:
-        return _get_asset_in_session(conn, asset_id)
+        return _get_asset_in_session(conn, asset_id, current_organization_id())
 
 
 def upsert_profile(
@@ -304,10 +346,11 @@ def upsert_profile(
     actor: str,
 ) -> FleetAssetProfile | None:
     now = utc_now_iso()
+    organization_id = current_organization_id()
     with db_session() as conn:
         if not conn.execute(
-            "SELECT 1 FROM fleet_assets WHERE id = ?",
-            (asset_id,),
+            "SELECT 1 FROM fleet_assets WHERE id = ? AND organization_id = ?",
+            (asset_id, organization_id),
         ).fetchone():
             return None
         existing = conn.execute(
@@ -367,17 +410,19 @@ def upsert_profile(
 
 def create_asset(values: dict[str, object], actor: str) -> Asset:
     now = utc_now_iso()
+    organization_id = current_organization_id()
     try:
         with db_session() as conn:
             cursor = conn.execute(
                 """
                 INSERT INTO fleet_assets (
-                    external_identifier, plate, category, status,
+                    organization_id, external_identifier, plate, category, status,
                     availability, notes, capabilities, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
+                    organization_id,
                     values["external_identifier"],
                     values.get("plate"),
                     values.get("category"),
@@ -402,7 +447,7 @@ def create_asset(values: dict[str, object], actor: str) -> Asset:
                 },
                 now,
             )
-            asset = _get_asset_in_session(conn, asset_id)
+            asset = _get_asset_in_session(conn, asset_id, organization_id)
     except sqlite3.IntegrityError as exc:
         raise AssetIdentifierConflictError(
             "External identifier o targa già associati a un Asset."
@@ -416,9 +461,10 @@ def update_asset(
     changes: dict[str, object],
     actor: str,
 ) -> Asset | None:
+    organization_id = current_organization_id()
     try:
         with db_session() as conn:
-            current = _get_asset_in_session(conn, asset_id)
+            current = _get_asset_in_session(conn, asset_id, organization_id)
             if not current:
                 return None
             current_values = current.model_dump(
@@ -441,7 +487,7 @@ def update_asset(
                 UPDATE fleet_assets
                 SET plate = ?, category = ?, status = ?, notes = ?,
                     capabilities = ?, updated_at = ?
-                WHERE id = ?
+                WHERE id = ? AND organization_id = ?
                 """,
                 (
                     next_values["plate"],
@@ -451,6 +497,7 @@ def update_asset(
                     json.dumps(next_values["capabilities"], ensure_ascii=False),
                     now,
                     asset_id,
+                    organization_id,
                 ),
             )
             _append_event(
@@ -461,7 +508,7 @@ def update_asset(
                 {"changes": effective_changes},
                 now,
             )
-            return _get_asset_in_session(conn, asset_id)
+            return _get_asset_in_session(conn, asset_id, organization_id)
     except sqlite3.IntegrityError as exc:
         raise AssetIdentifierConflictError(
             "La targa è già associata a un altro Asset."
@@ -476,8 +523,9 @@ def observe_availability(
     event_type: AssetEventType,
     extra_details: dict[str, object] | None = None,
 ) -> Asset | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
-        current = _get_asset_in_session(conn, asset_id)
+        current = _get_asset_in_session(conn, asset_id, organization_id)
         if not current:
             return None
         now = utc_now_iso()
@@ -485,9 +533,9 @@ def observe_availability(
             """
             UPDATE fleet_assets
             SET availability = ?, updated_at = ?
-            WHERE id = ?
+            WHERE id = ? AND organization_id = ?
             """,
-            (availability, now, asset_id),
+            (availability, now, asset_id, organization_id),
         )
         details: dict[str, object] = {
             "previous": current.availability,
@@ -505,7 +553,7 @@ def observe_availability(
             details,
             now,
         )
-        return _get_asset_in_session(conn, asset_id)
+        return _get_asset_in_session(conn, asset_id, organization_id)
 
 
 def add_document(
@@ -513,8 +561,9 @@ def add_document(
     values: dict[str, object],
     actor: str,
 ) -> AssetDocument | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
-        if not _get_asset_in_session(conn, asset_id):
+        if not _get_asset_in_session(conn, asset_id, organization_id):
             return None
         now = utc_now_iso()
         cursor = conn.execute(
@@ -557,7 +606,10 @@ def add_document(
 
 
 def list_events(asset_id: int) -> list[AssetEvent]:
+    organization_id = current_organization_id()
     with db_session() as conn:
+        if not _get_asset_in_session(conn, asset_id, organization_id):
+            return []
         rows = conn.execute(
             """
             SELECT *

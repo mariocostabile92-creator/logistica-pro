@@ -1,4 +1,4 @@
-import { createSharedSession, getSharedSession, listAssets } from "./api.js?v=dj4";
+import { createSharedSession, getSharedSession } from "./api.js?v=dj4";
 import { state } from "./state.js?v=dj4";
 import { escapeHtml } from "../../utils/dom.js?v=dj4";
 import { preparePublicAccess } from "./public-access.js?v=dj4";
@@ -17,10 +17,7 @@ function showContext({ driver, plate, operation, scheduledAt = null }) {
 
 export async function prepareJournalAccess() {
   await preparePublicAccess();
-  const assets = await listAssets();
-  $("journalAssetSuggestions").innerHTML = (assets.items || []).map((asset) =>
-    `<option value="${escapeHtml(asset.plate || "")}">${escapeHtml(asset.vehicle_model || asset.category || "Mezzo")}</option>`
-  ).join("");
+  $("journalAssetSuggestions").innerHTML = "";
   const sessionId = new URLSearchParams(location.search).get("session");
   if (!sessionId) return;
   const session = await getSharedSession(sessionId);

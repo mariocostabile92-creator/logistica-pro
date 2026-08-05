@@ -2,6 +2,7 @@ import json
 from collections.abc import Sequence
 from typing import Any
 
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 
 
@@ -62,9 +63,33 @@ def init_schema() -> None:
 
 
 def _count(conn, table: str) -> int:
-    row = conn.execute(
-        f"SELECT COUNT(*) AS total FROM {table}"
-    ).fetchone()
+    organization_id = current_organization_id()
+    direct = {
+        "imports", "analyses", "operation_snapshots", "plannings",
+        "fleet_assets", "fleet_sync_runs", "workforce_imports",
+        "workforce_members", "workforce_day_statuses", "workforce_requirements",
+        "workforce_changes", "planning_drafts", "planning_confirmations",
+        "planning_publications", "demo_workspaces",
+    }
+    queries = {
+        "planning_draft_changes": "SELECT COUNT(*) total FROM planning_draft_changes c JOIN planning_drafts d ON d.draft_id=c.draft_id WHERE d.organization_id=?",
+        "planning_draft_versions": "SELECT COUNT(*) total FROM planning_draft_versions v JOIN planning_drafts d ON d.draft_id=v.draft_id WHERE d.organization_id=?",
+        "assignments": "SELECT COUNT(*) total FROM assignments a JOIN plannings p ON p.id=a.planning_id WHERE p.organization_id=?",
+        "planning_events": "SELECT COUNT(*) total FROM planning_events e JOIN plannings p ON p.id=e.planning_id WHERE p.organization_id=?",
+        "planning_versions": "SELECT COUNT(*) total FROM planning_versions v JOIN plannings p ON p.id=v.planning_id WHERE p.organization_id=?",
+        "daily_briefings": "SELECT COUNT(*) total FROM daily_briefings b JOIN plannings p ON p.id=b.planning_id WHERE p.organization_id=?",
+        "fleet_asset_documents": "SELECT COUNT(*) total FROM fleet_asset_documents d JOIN fleet_assets a ON a.id=d.asset_id WHERE a.organization_id=?",
+        "fleet_asset_events": "SELECT COUNT(*) total FROM fleet_asset_events e JOIN fleet_assets a ON a.id=e.asset_id WHERE a.organization_id=?",
+        "fleet_asset_metadata": "SELECT COUNT(*) total FROM fleet_asset_metadata m JOIN fleet_assets a ON a.id=m.asset_id WHERE a.organization_id=?",
+        "fleet_sync_event_fingerprints": "SELECT COUNT(*) total FROM fleet_sync_event_fingerprints f JOIN fleet_asset_events e ON e.id=f.event_id JOIN fleet_assets a ON a.id=e.asset_id WHERE a.organization_id=?",
+    }
+    if table in direct:
+        query = f"SELECT COUNT(*) AS total FROM {table} WHERE organization_id=?"
+    else:
+        query = queries.get(table)
+    if not query:
+        return 0
+    row = conn.execute(query, (organization_id,)).fetchone()
     return int(row["total"]) if row else 0
 
 
@@ -87,15 +112,16 @@ def _metadata_ids(metadata: dict[str, Any], key: str) -> set[int]:
 
 
 def _latest_import(conn, dataset_type: str) -> dict[str, Any] | None:
+    organization_id = current_organization_id()
     row = conn.execute(
         """
         SELECT id, original_filename, imported_at, normalized_rows
         FROM imports
-        WHERE dataset_type = ?
+        WHERE dataset_type = ? AND organization_id = ?
         ORDER BY id DESC
         LIMIT 1
         """,
-        (dataset_type,),
+        (dataset_type, organization_id),
     ).fetchone()
     if not row:
         return None
@@ -116,15 +142,18 @@ def _latest_import(conn, dataset_type: str) -> dict[str, Any] | None:
 
 
 def _active_demo(conn) -> dict[str, Any] | None:
+    organization_id = current_organization_id()
     row = conn.execute(
         """
         SELECT status, updated_at, metadata
         FROM demo_workspaces
         WHERE is_demo = 1
+          AND organization_id = ?
           AND status IN ('loading', 'partial', 'ready')
         ORDER BY updated_at DESC
         LIMIT 1
-        """
+        """,
+        (organization_id,),
     ).fetchone()
     if not row:
         return None
@@ -211,27 +240,29 @@ def _owned_demo_ids(
 
 
 def _latest_operational_update(conn) -> str | None:
+    organization_id = current_organization_id()
     statements = (
-        "SELECT MAX(imported_at) AS value FROM imports",
-        "SELECT MAX(created_at) AS value FROM analyses",
-        "SELECT MAX(created_at) AS value FROM operation_snapshots",
-        "SELECT MAX(updated_at) AS value FROM plannings",
-        "SELECT MAX(updated_at) AS value FROM fleet_assets",
-        "SELECT MAX(imported_at) AS value FROM workforce_imports",
-        "SELECT MAX(updated_at) AS value FROM workforce_members",
-        "SELECT MAX(imported_at) AS value FROM fleet_sync_runs",
-        "SELECT MAX(generated_at) AS value FROM daily_briefings",
-        "SELECT MAX(updated_at) AS value FROM demo_workspaces",
+        "SELECT MAX(imported_at) AS value FROM imports WHERE organization_id=?",
+        "SELECT MAX(created_at) AS value FROM analyses WHERE organization_id=?",
+        "SELECT MAX(created_at) AS value FROM operation_snapshots WHERE organization_id=?",
+        "SELECT MAX(updated_at) AS value FROM plannings WHERE organization_id=?",
+        "SELECT MAX(updated_at) AS value FROM fleet_assets WHERE organization_id=?",
+        "SELECT MAX(imported_at) AS value FROM workforce_imports WHERE organization_id=?",
+        "SELECT MAX(updated_at) AS value FROM workforce_members WHERE organization_id=?",
+        "SELECT MAX(imported_at) AS value FROM fleet_sync_runs WHERE organization_id=?",
+        "SELECT MAX(b.generated_at) AS value FROM daily_briefings b JOIN plannings p ON p.id=b.planning_id WHERE p.organization_id=?",
+        "SELECT MAX(updated_at) AS value FROM demo_workspaces WHERE organization_id=?",
     )
     values = []
     for statement in statements:
-        row = conn.execute(statement).fetchone()
+        row = conn.execute(statement, (organization_id,)).fetchone()
         if row and row["value"]:
             values.append(str(row["value"]))
     return max(values) if values else None
 
 
 def read_inventory() -> dict[str, Any]:
+    organization_id = current_organization_id()
     with db_session() as conn:
         counts = {
             table: _count(conn, table)
@@ -242,16 +273,18 @@ def read_inventory() -> dict[str, Any]:
         demo = _active_demo(conn)
         owned = _owned_demo_ids(conn, demo)
         all_ids = {
-            "imports": _ids(conn, "SELECT id FROM imports"),
-            "plannings": _ids(conn, "SELECT id FROM plannings"),
+            "imports": _ids(conn, "SELECT id FROM imports WHERE organization_id=?", (organization_id,)),
+            "plannings": _ids(conn, "SELECT id FROM plannings WHERE organization_id=?", (organization_id,)),
             "operation_snapshots": _ids(
                 conn,
-                "SELECT id FROM operation_snapshots",
+                "SELECT id FROM operation_snapshots WHERE organization_id=?",
+                (organization_id,),
             ),
-            "fleet_assets": _ids(conn, "SELECT id FROM fleet_assets"),
+            "fleet_assets": _ids(conn, "SELECT id FROM fleet_assets WHERE organization_id=?", (organization_id,)),
             "daily_briefings": _ids(
                 conn,
-                "SELECT id FROM daily_briefings",
+                "SELECT b.id FROM daily_briefings b JOIN plannings p ON p.id=b.planning_id WHERE p.organization_id=?",
+                (organization_id,),
             ),
         }
         non_demo_relational_data = any(
@@ -314,12 +347,39 @@ def read_inventory() -> dict[str, Any]:
 
 
 def reset_operational_data(conn) -> dict[str, int]:
+    organization_id = current_organization_id()
     removed = {
         table: _count(conn, table)
         for table in OPERATIONAL_DELETE_ORDER
     }
+    dependent_deletes = {
+        "planning_draft_changes": "DELETE FROM planning_draft_changes WHERE draft_id IN (SELECT draft_id FROM planning_drafts WHERE organization_id=?)",
+        "planning_draft_versions": "DELETE FROM planning_draft_versions WHERE draft_id IN (SELECT draft_id FROM planning_drafts WHERE organization_id=?)",
+        "daily_briefings": "DELETE FROM daily_briefings WHERE planning_id IN (SELECT id FROM plannings WHERE organization_id=?)",
+        "planning_events": "DELETE FROM planning_events WHERE planning_id IN (SELECT id FROM plannings WHERE organization_id=?)",
+        "planning_versions": "DELETE FROM planning_versions WHERE planning_id IN (SELECT id FROM plannings WHERE organization_id=?)",
+        "assignments": "DELETE FROM assignments WHERE planning_id IN (SELECT id FROM plannings WHERE organization_id=?)",
+        "fleet_asset_documents": "DELETE FROM fleet_asset_documents WHERE asset_id IN (SELECT id FROM fleet_assets WHERE organization_id=?)",
+        "fleet_sync_event_fingerprints": "DELETE FROM fleet_sync_event_fingerprints WHERE event_id IN (SELECT e.id FROM fleet_asset_events e JOIN fleet_assets a ON a.id=e.asset_id WHERE a.organization_id=?)",
+        "fleet_asset_events": "DELETE FROM fleet_asset_events WHERE asset_id IN (SELECT id FROM fleet_assets WHERE organization_id=?)",
+        "fleet_asset_metadata": "DELETE FROM fleet_asset_metadata WHERE asset_id IN (SELECT id FROM fleet_assets WHERE organization_id=?)",
+    }
+    direct = {
+        "planning_publications", "planning_confirmations", "planning_drafts",
+        "plannings", "operation_snapshots", "analyses", "workforce_changes",
+        "workforce_day_statuses", "workforce_requirements", "workforce_members",
+        "workforce_imports", "fleet_sync_runs", "fleet_assets", "imports",
+        "demo_workspaces",
+    }
     for table in OPERATIONAL_DELETE_ORDER:
-        conn.execute(f"DELETE FROM {table}")
+        query = dependent_deletes.get(table)
+        if query:
+            conn.execute(query, (organization_id,))
+        elif table in direct:
+            conn.execute(
+                f"DELETE FROM {table} WHERE organization_id=?",
+                (organization_id,),
+            )
     return removed
 
 

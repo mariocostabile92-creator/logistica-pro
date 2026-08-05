@@ -47,7 +47,7 @@ def test_maintenance_lifecycle_list_detail_and_vehicle_history():
         "status": "programmata",
         "priority": "media",
         "repair_shop": "Service Nord",
-        "expected_at": "2026-08-05T08:00:00Z",
+        "expected_at": "2099-08-05T08:00:00Z",
         "notes": "Controllo filtri",
     })
     assert created.status_code == 201

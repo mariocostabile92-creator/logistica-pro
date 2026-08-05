@@ -30,6 +30,12 @@ def asset(plate="AB 123-CD"):
     return response.json()
 
 
+def shared_access_token() -> str:
+    response = client.post("/api/fleet/journal-control-room/shared-access", json={})
+    assert response.status_code == 201
+    return response.json()["token"]
+
+
 def session(operation="check_out", plate="AB123CD"):
     response = client.post(
         f"{BASE}/sessions",
@@ -89,14 +95,20 @@ def test_configuration_is_public_and_checklist_configurable():
 
 def test_plate_is_normalized_and_asset_registry_is_not_listed():
     created = asset()
-    response = client.get(f"{BASE}/assets", params={"plate": " ab-123 cd "})
+    response = client.get(
+        f"{BASE}/assets",
+        params={"plate": " ab-123 cd ", "access_token": shared_access_token()},
+    )
     assert response.status_code == 200
     assert response.json()["id"] == created["id"]
     assert "documents" not in response.json()
 
 
 def test_unknown_asset_and_checkout_without_shift_are_rejected():
-    missing = client.get(f"{BASE}/assets", params={"plate": "ZZ999ZZ"})
+    missing = client.get(
+        f"{BASE}/assets",
+        params={"plate": "ZZ999ZZ", "access_token": shared_access_token()},
+    )
     assert missing.status_code == 404
     asset()
     invalid = client.post(

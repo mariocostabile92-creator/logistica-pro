@@ -1,4 +1,5 @@
 from app.core.database import db_session
+from app.core.tenant_schema import ensure_column
 
 
 def init_sync_schema() -> None:
@@ -22,6 +23,7 @@ def init_sync_schema() -> None:
 
             CREATE TABLE IF NOT EXISTS fleet_sync_runs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT,
                 application_key TEXT NOT NULL UNIQUE,
                 workbook_fingerprint TEXT NOT NULL,
                 original_filename TEXT NOT NULL,
@@ -41,4 +43,20 @@ def init_sync_schema() -> None:
             CREATE INDEX IF NOT EXISTS idx_fleet_sync_workbook
                 ON fleet_sync_runs(workbook_fingerprint, id);
             """
+        )
+        ensure_column(conn, "fleet_sync_runs", "organization_id", "TEXT")
+        owner = conn.execute(
+            "SELECT id FROM organizations ORDER BY created_at ASC, id ASC LIMIT 1"
+        ).fetchone()
+        if owner:
+            conn.execute(
+                """
+                UPDATE fleet_sync_runs SET organization_id=?
+                WHERE organization_id IS NULL OR organization_id='default'
+                """,
+                (owner["id"],),
+            )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_fleet_sync_organization "
+            "ON fleet_sync_runs(organization_id, id)"
         )

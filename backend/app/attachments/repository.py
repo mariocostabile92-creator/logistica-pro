@@ -59,20 +59,21 @@ def _dict(row) -> dict | None:
 
 
 def entity_exists(entity_type: str, entity_id: int) -> bool:
-    tables = {
-        "document": "fleet_vehicle_documents",
-        "insurance": "fleet_insurance_policies",
-        "damage": "damage_cases",
-        "rental": "fleet_rentals",
-        "maintenance": "fleet_maintenances",
-        "vehicle": "fleet_assets",
+    organization_id = current_organization_id()
+    queries = {
+        "document": "SELECT 1 FROM fleet_vehicle_documents WHERE id=? AND organization_id=?",
+        "insurance": "SELECT 1 FROM fleet_insurance_policies p JOIN fleet_assets a ON a.id=p.vehicle_id WHERE p.id=? AND a.organization_id=?",
+        "damage": "SELECT 1 FROM damage_cases d JOIN fleet_assets a ON a.id=d.vehicle_id WHERE d.id=? AND a.organization_id=?",
+        "rental": "SELECT 1 FROM fleet_rentals WHERE id=? AND organization_id=?",
+        "maintenance": "SELECT 1 FROM fleet_maintenances m JOIN fleet_assets a ON a.id=m.vehicle_id WHERE m.id=? AND a.organization_id=?",
+        "vehicle": "SELECT 1 FROM fleet_assets WHERE id=? AND organization_id=?",
     }
-    table = tables.get(entity_type)
-    if not table:
+    query = queries.get(entity_type)
+    if not query:
         return False
     with db_session() as conn:
         return conn.execute(
-            f"SELECT 1 FROM {table} WHERE id = ?", (entity_id,)
+            query, (entity_id, organization_id)
         ).fetchone() is not None
 
 
@@ -109,8 +110,12 @@ def get(attachment_id: str, organization_id: str | None = None) -> dict | None:
 
 
 def document_organization_id(document_id: int) -> str | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
-        row = conn.execute("SELECT organization_id FROM fleet_vehicle_documents WHERE id=?", (document_id,)).fetchone()
+        row = conn.execute(
+            "SELECT organization_id FROM fleet_vehicle_documents WHERE id=? AND organization_id=?",
+            (document_id, organization_id),
+        ).fetchone()
     return row["organization_id"] if row else None
 
 
@@ -175,3 +180,4 @@ def record_event(values: dict) -> None:
                 values.get("details"),
             ),
         )
+from app.auth.tenant_context import current_organization_id

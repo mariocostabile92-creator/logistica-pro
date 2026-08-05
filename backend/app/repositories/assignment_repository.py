@@ -1,5 +1,6 @@
 import json
 
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.domain.assignment_models import Assignment
 
@@ -32,28 +33,36 @@ def _assignment_from_row(row) -> Assignment:
 
 
 def get_assignments(planning_id: int) -> list[Assignment]:
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
             """
-            SELECT * FROM assignments
-            WHERE planning_id = ?
-            ORDER BY station, route_id, id
+            SELECT a.* FROM assignments a
+            JOIN plannings p ON p.id=a.planning_id
+            WHERE a.planning_id = ? AND p.organization_id = ?
+            ORDER BY a.station, a.route_id, a.id
             """,
-            (planning_id,),
+            (planning_id, organization_id),
         ).fetchall()
     return [_assignment_from_row(row) for row in rows]
 
 
 def get_assignment(assignment_id: int) -> Assignment | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT * FROM assignments WHERE id = ?",
-            (assignment_id,),
+            """
+            SELECT a.* FROM assignments a
+            JOIN plannings p ON p.id=a.planning_id
+            WHERE a.id = ? AND p.organization_id = ?
+            """,
+            (assignment_id, organization_id),
         ).fetchone()
     return _assignment_from_row(row) if row else None
 
 
 def update_assignment(assignment: Assignment) -> None:
+    organization_id = current_organization_id()
     with db_session() as conn:
         conn.execute(
             """
@@ -62,7 +71,9 @@ def update_assignment(assignment: Assignment) -> None:
                 assignment_status = ?, assignment_source = ?, confidence = ?,
                 reasons = ?, data_used = ?, warnings = ?, alternatives = ?,
                 manual_override = ?, confirmed = ?, notes = ?, updated_at = ?
-            WHERE id = ?
+            WHERE id = ? AND planning_id IN (
+                SELECT id FROM plannings WHERE organization_id = ?
+            )
             """,
             (
                 assignment.driver_id,
@@ -84,6 +95,7 @@ def update_assignment(assignment: Assignment) -> None:
                 assignment.notes,
                 assignment.updated_at,
                 assignment.id,
+                organization_id,
             ),
         )
 

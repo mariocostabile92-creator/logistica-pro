@@ -4,6 +4,7 @@ from itertools import chain, islice
 from time import perf_counter
 from typing import Any
 
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.plugins.workforce.domain.models import WorkforceImportResult
 from app.plugins.workforce.importer.workbook_interpreter import (
@@ -115,6 +116,7 @@ def _status_values(row) -> dict[str, object]:
 
 
 def _fetch_members(conn, metrics, identifiers: Sequence[str]):
+    organization_id = current_organization_id()
     rows = []
     for batch in _chunks(identifiers, LOOKUP_CHUNK_SIZE):
         placeholders = ", ".join("?" for _ in batch)
@@ -124,9 +126,10 @@ def _fetch_members(conn, metrics, identifiers: Sequence[str]):
                 metrics,
                 f"""
                 SELECT * FROM workforce_members
-                WHERE external_identifier IN ({placeholders})
+                WHERE organization_id = ?
+                  AND external_identifier IN ({placeholders})
                 """,
-                list(batch),
+                [organization_id, *batch],
             ).fetchall()
         )
     return {row["external_identifier"]: row for row in rows}
@@ -139,6 +142,7 @@ def _fetch_statuses(
     date_from: str,
     date_to: str,
 ):
+    organization_id = current_organization_id()
     rows = []
     for batch in _chunks(member_ids, LOOKUP_CHUNK_SIZE):
         placeholders = ", ".join("?" for _ in batch)
@@ -150,8 +154,9 @@ def _fetch_statuses(
                 SELECT * FROM workforce_day_statuses
                 WHERE workforce_member_id IN ({placeholders})
                   AND date >= ? AND date <= ?
+                  AND organization_id = ?
                 """,
-                [*batch, date_from, date_to],
+                [*batch, date_from, date_to, organization_id],
             ).fetchall()
         )
     return {
@@ -167,6 +172,7 @@ def _fetch_status_ids(
     date_from: str,
     date_to: str,
 ):
+    organization_id = current_organization_id()
     rows = []
     for batch in _chunks(member_ids, LOOKUP_CHUNK_SIZE):
         placeholders = ", ".join("?" for _ in batch)
@@ -179,8 +185,9 @@ def _fetch_status_ids(
                 FROM workforce_day_statuses
                 WHERE workforce_member_id IN ({placeholders})
                   AND date >= ? AND date <= ?
+                  AND organization_id = ?
                 """,
-                [*batch, date_from, date_to],
+                [*batch, date_from, date_to, organization_id],
             ).fetchall()
         )
     return {
@@ -195,6 +202,7 @@ def _fetch_requirements(
     dates: Sequence[str],
     operational_units: Sequence[str],
 ):
+    organization_id = current_organization_id()
     if not dates or not operational_units:
         return {}
     unit_placeholders = ", ".join("?" for _ in operational_units)
@@ -205,8 +213,9 @@ def _fetch_requirements(
         SELECT * FROM workforce_requirements
         WHERE date >= ? AND date <= ?
           AND operational_unit_id IN ({unit_placeholders})
+          AND organization_id = ?
         """,
-        [min(dates), max(dates), *operational_units],
+        [min(dates), max(dates), *operational_units, organization_id],
     ).fetchall()
     return {
         (row["date"], row["operational_unit_id"]): row
@@ -234,6 +243,7 @@ def _audit_row(
         _json(after),
         reason,
         source,
+        current_organization_id(),
     )
 
 
@@ -245,6 +255,7 @@ def _persist_members(
     metrics: dict[str, float],
     chunk_size: int,
 ) -> tuple[dict[str, int], int, int, list[tuple[object, ...]]]:
+    organization_id = current_organization_id()
     identifiers = [item.external_identifier for item in parsed.members]
     existing = _fetch_members(conn, metrics, identifiers)
     insert_rows = []
@@ -270,6 +281,7 @@ def _persist_members(
                     values["source_reference"],
                     now,
                     now,
+                    organization_id,
                 )
             )
             audit_specs.append(
@@ -293,6 +305,7 @@ def _persist_members(
                 after["source_reference"],
                 now,
                 int(row["id"]),
+                organization_id,
             )
         )
         audit_specs.append(
@@ -311,8 +324,8 @@ def _persist_members(
         INSERT INTO workforce_members (
             external_identifier, display_name, role, employment_type,
             contract_start, contract_end, weekly_hours, capabilities,
-            active, source_reference, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            active, source_reference, created_at, updated_at, organization_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         insert_rows,
         chunk_size,
@@ -325,7 +338,7 @@ def _persist_members(
         SET display_name = ?, role = ?, employment_type = ?,
             contract_start = ?, contract_end = ?, weekly_hours = ?,
             capabilities = ?, active = ?, source_reference = ?, updated_at = ?
-        WHERE id = ?
+        WHERE id = ? AND organization_id = ?
         """,
         update_rows,
         chunk_size,
@@ -360,6 +373,7 @@ def _persist_statuses(
     metrics: dict[str, float],
     chunk_size: int,
 ) -> tuple[int, int, Iterable[tuple[object, ...]]]:
+    organization_id = current_organization_id()
     if not parsed.statuses:
         return 0, 0, []
     date_from = min(item.date for item in parsed.statuses)
@@ -393,6 +407,7 @@ def _persist_statuses(
                     values["source_reference"],
                     "imported",
                     now,
+                    organization_id,
                 )
             )
             continue
@@ -412,6 +427,7 @@ def _persist_statuses(
                 "imported",
                 now,
                 int(row["id"]),
+                organization_id,
             )
         )
     created_count = len(insert_rows)
@@ -423,8 +439,8 @@ def _persist_statuses(
         INSERT INTO workforce_day_statuses (
             workforce_member_id, date, status_code, availability,
             shift_code, start_time, end_time, notes, source_reference,
-            observed_or_confirmed, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            observed_or_confirmed, updated_at, organization_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         insert_rows,
         chunk_size,
@@ -437,7 +453,7 @@ def _persist_statuses(
         SET status_code = ?, availability = ?, shift_code = ?,
             start_time = ?, end_time = ?, notes = ?, source_reference = ?,
             observed_or_confirmed = ?, updated_at = ?
-        WHERE id = ?
+        WHERE id = ? AND organization_id = ?
         """,
         update_rows,
         chunk_size,
@@ -487,6 +503,7 @@ def _persist_requirements(
     metrics: dict[str, float],
     chunk_size: int,
 ) -> int:
+    organization_id = current_organization_id()
     dates = sorted({item.date for item in parsed.requirements})
     units = sorted({item.operational_unit_id for item in parsed.requirements})
     existing = _fetch_requirements(conn, metrics, dates, units)
@@ -503,6 +520,7 @@ def _persist_requirements(
                     _json(item.required_capabilities),
                     item.source,
                     1,
+                    organization_id,
                 )
             )
         else:
@@ -513,6 +531,7 @@ def _persist_requirements(
                     item.source,
                     int(row["version"]) + 1,
                     int(row["id"]),
+                    organization_id,
                 )
             )
     _executemany(
@@ -521,8 +540,8 @@ def _persist_requirements(
         """
         INSERT INTO workforce_requirements (
             date, operational_unit_id, required_resources,
-            required_capabilities, source, version
-        ) VALUES (?, ?, ?, ?, ?, ?)
+            required_capabilities, source, version, organization_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         insert_rows,
         chunk_size,
@@ -534,7 +553,7 @@ def _persist_requirements(
         UPDATE workforce_requirements
         SET required_resources = ?, required_capabilities = ?,
             source = ?, version = ?
-        WHERE id = ?
+        WHERE id = ? AND organization_id = ?
         """,
         update_rows,
         chunk_size,
@@ -558,13 +577,14 @@ def apply_import(
     now = utc_now_iso()
     persistence_started = perf_counter()
     before_commit = persistence_started
+    organization_id = current_organization_id()
 
     with db_session() as conn:
         prior = _execute(
             conn,
             timings,
-            "SELECT summary FROM workforce_imports WHERE fingerprint = ?",
-            (parsed.fingerprint,),
+            "SELECT summary FROM workforce_imports WHERE fingerprint = ? AND organization_id = ?",
+            (parsed.fingerprint, organization_id),
         ).fetchone()
         if prior:
             return WorkforceImportResult(
@@ -613,8 +633,8 @@ def apply_import(
             """
             INSERT INTO workforce_changes (
                 entity_type, entity_id, actor, timestamp, before_value,
-                after_value, reason, source
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                after_value, reason, source, organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             chain(member_audits, status_audits),
             chunk_size,
@@ -652,8 +672,9 @@ def apply_import(
             timings,
             """
             INSERT INTO workforce_imports (
-                fingerprint, original_filename, imported_at, sheets, summary
-            ) VALUES (?, ?, ?, ?, ?)
+                fingerprint, original_filename, imported_at, sheets, summary,
+                organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 parsed.fingerprint,
@@ -666,6 +687,7 @@ def apply_import(
                     ]
                 ),
                 _json(stored_summary),
+                organization_id,
             ),
         )
         timings["finalize"] = perf_counter() - finalize_started

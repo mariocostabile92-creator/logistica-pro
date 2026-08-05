@@ -18,6 +18,17 @@ def init_schema() -> None:
         )
         _ensure_column(conn, "organization_id", "TEXT")
         _ensure_column(conn, "expires_at", "TEXT")
+        owner = conn.execute(
+            "SELECT id FROM organizations ORDER BY created_at ASC, id ASC LIMIT 1"
+        ).fetchone()
+        if owner:
+            conn.execute(
+                """
+                UPDATE journal_shared_access SET organization_id=?
+                WHERE organization_id IS NULL OR organization_id='default'
+                """,
+                (owner["id"],),
+            )
         conn.execute("DROP INDEX IF EXISTS idx_journal_shared_access_active")
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_shared_access_active_org ON journal_shared_access(organization_id) WHERE status = 'active'")
 

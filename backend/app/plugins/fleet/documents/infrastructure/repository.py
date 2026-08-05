@@ -1,3 +1,4 @@
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.core.config import SETTINGS
 from app.utils.date_utils import utc_now_iso
@@ -69,10 +70,12 @@ def _select() -> str:
                a.category AS vehicle_model,
                p.contract_type, p.contract_number,
                (SELECT COUNT(*) FROM attachments att
-                WHERE att.entity_type = 'document' AND att.entity_id = d.id)
+                WHERE att.entity_type = 'document' AND att.entity_id = d.id
+                  AND att.organization_id = d.organization_id)
                     AS attachment_count,
                (SELECT MAX(att.created_at) FROM attachments att
-                WHERE att.entity_type = 'document' AND att.entity_id = d.id)
+                WHERE att.entity_type = 'document' AND att.entity_id = d.id
+                  AND att.organization_id = d.organization_id)
                     AS attachment_uploaded_at
         FROM fleet_vehicle_documents d
         JOIN fleet_assets a ON a.id = d.vehicle_id
@@ -157,10 +160,11 @@ def list_all(
 
 
 def vehicle_exists(vehicle_id: int) -> bool:
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT id FROM fleet_assets WHERE id = ?",
-            (vehicle_id,),
+            "SELECT id FROM fleet_assets WHERE id = ? AND organization_id = ?",
+            (vehicle_id, organization_id),
         ).fetchone()
     return bool(row)
 
@@ -218,9 +222,16 @@ def update(document_id: int, organization_id: str, values: dict[str, object]):
 
 def claim_legacy(organization_id: str) -> None:
     with db_session() as conn:
-        organizations = conn.execute("SELECT COUNT(*) total FROM organizations").fetchone()
-        if organizations and int(organizations["total"]) == 1:
-            conn.execute("UPDATE fleet_vehicle_documents SET organization_id=? WHERE organization_id IS NULL", (organization_id,))
+        conn.execute(
+            """
+            UPDATE fleet_vehicle_documents
+            SET organization_id = (
+                SELECT organization_id FROM fleet_assets
+                WHERE fleet_assets.id=fleet_vehicle_documents.vehicle_id
+            )
+            WHERE organization_id IS NULL
+            """
+        )
 
 
 def duplicate_exists(organization_id: str, values: dict, exclude_id: int | None = None) -> bool:

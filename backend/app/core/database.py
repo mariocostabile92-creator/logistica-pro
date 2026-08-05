@@ -233,12 +233,51 @@ def database_is_ready() -> bool:
         return False
 
 
+def _ensure_tenant_columns(conn) -> None:
+    tables = ("imports", "analyses", "operation_snapshots", "plannings")
+    if SETTINGS.database_backend == "postgresql":
+        for table in tables:
+            conn.execute(
+                f"ALTER TABLE {table} "
+                "ADD COLUMN IF NOT EXISTS organization_id TEXT"
+            )
+        return
+    for table in tables:
+        columns = {
+            row["name"]
+            for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        if "organization_id" not in columns:
+            conn.execute(
+                f"ALTER TABLE {table} ADD COLUMN organization_id TEXT"
+            )
+
+
+def claim_legacy_tenant_data() -> None:
+    with db_session() as conn:
+        owner = conn.execute(
+            "SELECT id FROM organizations ORDER BY created_at ASC, id ASC LIMIT 1"
+        ).fetchone()
+        if not owner:
+            return
+        for table in ("imports", "analyses", "operation_snapshots", "plannings"):
+            conn.execute(
+                f"""
+                UPDATE {table}
+                SET organization_id = ?
+                WHERE organization_id IS NULL OR organization_id = 'default'
+                """,
+                (owner["id"],),
+            )
+
+
 def init_db() -> None:
     with db_session() as conn:
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS imports (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT,
                 dataset_type TEXT NOT NULL,
                 original_filename TEXT NOT NULL,
                 imported_at TEXT NOT NULL,
@@ -249,6 +288,7 @@ def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS analyses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT,
                 created_at TEXT NOT NULL,
                 summary TEXT NOT NULL,
                 conflicts TEXT NOT NULL
@@ -256,6 +296,7 @@ def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS operation_snapshots (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT,
                 created_at TEXT NOT NULL,
                 planning_import_id INTEGER NOT NULL,
                 fleet_import_id INTEGER NOT NULL,
@@ -267,6 +308,7 @@ def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS plannings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT,
                 operation_date TEXT NOT NULL,
                 station TEXT,
                 source_planning_import_id INTEGER NOT NULL,
@@ -364,3 +406,4 @@ def init_db() -> None:
                 ON planning_convocations(planning_id);
             """
         )
+        _ensure_tenant_columns(conn)

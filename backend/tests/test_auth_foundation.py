@@ -128,7 +128,7 @@ def test_driver_journal_and_shared_link_validation_remain_public():
     ).status_code == 200
     assert client.get(
         "/api/plugins/fleet/v1/assets", headers=ENFORCE,
-    ).status_code == 200
+    ).status_code == 401
     assert client.get("/app/journal/", headers=ENFORCE).status_code == 200
     assert client.get(
         "/api/plugins/fleet/v1/journal/shared-access/unknown", headers=ENFORCE,

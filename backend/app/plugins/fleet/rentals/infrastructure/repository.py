@@ -1,4 +1,6 @@
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
+from app.core.tenant_schema import ensure_column
 from app.utils.date_utils import utc_now_iso
 
 
@@ -8,6 +10,7 @@ def init_schema() -> None:
             """
             CREATE TABLE IF NOT EXISTS fleet_rentals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT,
                 vehicle_id INTEGER,
                 damage_case_id INTEGER,
                 maintenance_id INTEGER,
@@ -32,6 +35,27 @@ def init_schema() -> None:
                 ON fleet_rentals(status, expected_end_date);
             """
         )
+        ensure_column(conn, "fleet_rentals", "organization_id", "TEXT")
+        owner = conn.execute(
+            "SELECT id FROM organizations ORDER BY created_at ASC, id ASC LIMIT 1"
+        ).fetchone()
+        if owner:
+            conn.execute(
+                """
+                UPDATE fleet_rentals
+                SET organization_id = COALESCE(
+                    (SELECT organization_id FROM fleet_assets
+                     WHERE fleet_assets.id=fleet_rentals.vehicle_id),
+                    ?
+                )
+                WHERE organization_id IS NULL OR organization_id='default'
+                """,
+                (owner["id"],),
+            )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_rentals_organization "
+            "ON fleet_rentals(organization_id, status)"
+        )
 
 
 def _dict(row):
@@ -52,14 +76,22 @@ def _select() -> str:
 
 
 def get(rental_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
-        row = conn.execute(f"{_select()} WHERE r.id = ?", (rental_id,)).fetchone()
+        row = conn.execute(
+            f"{_select()} WHERE r.id = ? AND r.organization_id = ?",
+            (rental_id, organization_id),
+        ).fetchone()
     return _dict(row)
 
 
 def list_all(vehicle_id: int | None = None):
-    where = "WHERE r.vehicle_id = ?" if vehicle_id else ""
-    params = (vehicle_id,) if vehicle_id else ()
+    clauses = ["r.organization_id = ?"]
+    params: list[object] = [current_organization_id()]
+    if vehicle_id:
+        clauses.append("r.vehicle_id = ?")
+        params.append(vehicle_id)
+    where = f"WHERE {' AND '.join(clauses)}"
     with db_session() as conn:
         rows = conn.execute(
             f"""
@@ -77,21 +109,33 @@ def list_all(vehicle_id: int | None = None):
 
 
 def context(vehicle_id=None, damage_case_id=None, maintenance_id=None):
+    organization_id = current_organization_id()
     with db_session() as conn:
         if maintenance_id:
             row = conn.execute(
-                "SELECT vehicle_id FROM fleet_maintenances WHERE id = ?",
-                (maintenance_id,),
+                """
+                SELECT m.vehicle_id FROM fleet_maintenances m
+                JOIN fleet_assets a ON a.id=m.vehicle_id
+                WHERE m.id = ? AND a.organization_id = ?
+                """,
+                (maintenance_id, organization_id),
             ).fetchone()
         elif damage_case_id:
             row = conn.execute(
-                "SELECT vehicle_id FROM damage_cases WHERE id = ?",
-                (damage_case_id,),
+                """
+                SELECT d.vehicle_id FROM damage_cases d
+                JOIN fleet_assets a ON a.id=d.vehicle_id
+                WHERE d.id = ? AND a.organization_id = ?
+                """,
+                (damage_case_id, organization_id),
             ).fetchone()
         elif vehicle_id:
             row = conn.execute(
-                "SELECT id AS vehicle_id FROM fleet_assets WHERE id = ?",
-                (vehicle_id,),
+                """
+                SELECT id AS vehicle_id FROM fleet_assets
+                WHERE id = ? AND organization_id = ?
+                """,
+                (vehicle_id, organization_id),
             ).fetchone()
         else:
             return {"vehicle_id": None}
@@ -100,16 +144,18 @@ def context(vehicle_id=None, damage_case_id=None, maintenance_id=None):
 
 def create(values):
     now = utc_now_iso()
+    organization_id = current_organization_id()
     with db_session() as conn:
         cursor = conn.execute(
             """
             INSERT INTO fleet_rentals (
-                vehicle_id, damage_case_id, maintenance_id, replacement_vehicle,
+                organization_id, vehicle_id, damage_case_id, maintenance_id, replacement_vehicle,
                 rental_company, contract_number, start_date, expected_end_date,
                 end_date, reason, status, notes, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                organization_id,
                 values.get("vehicle_id"), values.get("damage_case_id"),
                 values.get("maintenance_id"), values["replacement_vehicle"],
                 values["rental_company"], values.get("contract_number"),

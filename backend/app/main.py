@@ -42,7 +42,7 @@ from app.core.config import FRONTEND_DIR, SETTINGS
 from app.core.configuration.repository import (
     init_schema as init_configuration_schema,
 )
-from app.core.database import init_db
+from app.core.database import claim_legacy_tenant_data, init_db
 from app.core.runtime_storage import initialize_runtime_storage
 from app.demo.repository import init_schema as init_demo_schema
 from app.demo.router import router as demo_router
@@ -95,6 +95,7 @@ async def lifespan(app: FastAPI):
         init_db()
         init_auth_schema()
         bootstrap_user()
+        claim_legacy_tenant_data()
         init_attachment_schema()
         init_configuration_schema()
         initialize_fleet_plugin()

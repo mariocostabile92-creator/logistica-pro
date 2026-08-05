@@ -5,7 +5,7 @@ const file = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("login is a real accessible page with remember-me and no public workspaces", async () => {
   const html = await file("login.html");
-  for (const text of ["Accedi", "Email", "Password", "Ricordami", "Area amministrativa protetta"]) {
+  for (const text of ["Accedi", "Email", "Password", "Ricordami", "Area operativa protetta"]) {
     assert.match(html, new RegExp(text, "i"));
   }
   assert.doesNotMatch(html, /Planning|Workforce|Vehicle Library|Fleet Vision/);

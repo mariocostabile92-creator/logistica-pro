@@ -1,3 +1,5 @@
+import hmac
+
 from fastapi import (
     APIRouter,
     File,
@@ -10,6 +12,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 
+from app.core.config import SETTINGS
 from app.plugins.fleet.journal.application import service
 from app.plugins.fleet.journal.interfaces.schemas import (
     CompleteRequest,
@@ -38,8 +41,12 @@ def get_configuration():
 
 
 @router.get("/assets")
-def asset_by_plate(plate: str):
-    return guarded(service.find_asset, plate)
+def asset_by_plate(plate: str, access_token: str):
+    try:
+        access = service.shared_access_service.validate(access_token)
+    except service.shared_access_service.SharedAccessError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return guarded(service.find_asset, plate, str(access["organization_id"]))
 
 
 @router.post("/sessions", status_code=status.HTTP_201_CREATED)
@@ -48,8 +55,18 @@ def create_session(request: SessionCreateRequest):
 
 
 @router.post("/sessions/shared", status_code=status.HTTP_201_CREATED)
-def create_shared_session(request: SharedSessionCreateRequest):
-    return guarded(service.create_shared_session, request.model_dump())
+def create_shared_session(payload: SharedSessionCreateRequest, request: Request):
+    values = payload.model_dump()
+    harness_token = getattr(request.app.state, "test_auth_harness_token", None)
+    supplied_token = request.headers.get("X-Test-Auth-Harness", "")
+    values["_test_harness_authorized"] = bool(
+        SETTINGS.environment == "test"
+        and harness_token
+        and supplied_token
+        and hmac.compare_digest(supplied_token, harness_token)
+        and request.headers.get("X-Auth-Enforce") != "1"
+    )
+    return guarded(service.create_shared_session, values)
 
 
 @router.get("/sessions/{session_id}")

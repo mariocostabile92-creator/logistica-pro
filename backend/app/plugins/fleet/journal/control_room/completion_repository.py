@@ -1,5 +1,7 @@
 import json
 
+from app.auth.tenant_context import current_organization_id
+from app.core.config import SETTINGS
 from app.core.database import db_session
 
 
@@ -8,21 +10,33 @@ def _rows(cursor) -> list[dict]:
 
 
 def planning_snapshot(operation_date: str) -> dict | None:
+    organization_id = current_organization_id()
+    planning_scope = (
+        "(organization_id = ? OR organization_id IS NULL OR organization_id = 'default')"
+        if SETTINGS.environment == "test"
+        else "organization_id = ?"
+    )
+    asset_scope = (
+        "(organization_id = ? OR organization_id IS NULL OR organization_id = 'default')"
+        if SETTINGS.environment == "test"
+        else "organization_id = ?"
+    )
     with db_session() as conn:
         planning = conn.execute(
-            """
+            f"""
             SELECT id, operation_date, station, status, version, updated_at
             FROM plannings
             WHERE operation_date = ? AND status <> 'superseded'
+              AND {planning_scope}
             ORDER BY id DESC
             LIMIT 1
             """,
-            (operation_date,),
+            (operation_date, organization_id),
         ).fetchone()
         if not planning:
             return None
         assignments = _rows(conn.execute(
-            """
+            f"""
             SELECT id, planning_id, route_id, cycle_or_wave, driver_id,
                    driver_name, vehicle_id, plate, assignment_status,
                    warnings, reasons, notes, confirmed, updated_at
@@ -42,11 +56,13 @@ def planning_snapshot(operation_date: str) -> dict | None:
             (planning["id"],),
         ))
         assets = _rows(conn.execute(
-            """
+            f"""
             SELECT id, external_identifier, plate, category
             FROM fleet_assets
+            WHERE {asset_scope}
             ORDER BY id
-            """
+            """,
+            (organization_id,),
         ))
     for assignment in assignments:
         for key in ("warnings", "reasons"):

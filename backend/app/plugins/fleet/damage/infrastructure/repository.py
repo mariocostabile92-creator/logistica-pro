@@ -1,3 +1,4 @@
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.utils.date_utils import utc_now_iso
 
@@ -58,34 +59,48 @@ def _dict(row):
 
 
 def get_case(case_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
             """
             SELECT c.*, a.plate, a.external_identifier, a.category AS vehicle_model,
                    a.availability AS asset_availability,
                    (SELECT COUNT(*) FROM attachments att
-                    WHERE att.entity_type='damage' AND att.entity_id=c.id) AS attachment_count
+                    WHERE att.entity_type='damage' AND att.entity_id=c.id
+                      AND att.organization_id=a.organization_id) AS attachment_count
             FROM damage_cases c
             JOIN fleet_assets a ON a.id = c.vehicle_id
-            WHERE c.id = ?
+            WHERE c.id = ? AND a.organization_id = ?
             """,
-            (case_id,),
+            (case_id, organization_id),
         ).fetchone()
     return _dict(row)
 
 
 def get_by_movement(movement_id: str):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT id FROM damage_cases WHERE source_movement_id = ?",
-            (movement_id,),
+            """
+            SELECT c.id FROM damage_cases c
+            JOIN fleet_assets a ON a.id=c.vehicle_id
+            WHERE c.source_movement_id = ? AND a.organization_id = ?
+            """,
+            (movement_id, organization_id),
         ).fetchone()
     return get_case(int(row["id"])) if row else None
 
 
 def create_case(values: dict[str, object], actor: str):
     now = utc_now_iso()
+    organization_id = current_organization_id()
     with db_session() as conn:
+        owned = conn.execute(
+            "SELECT 1 FROM fleet_assets WHERE id=? AND organization_id=?",
+            (values["vehicle_id"], organization_id),
+        ).fetchone()
+        if not owned:
+            return None
         cursor = conn.execute(
             """
             INSERT INTO damage_cases (
@@ -123,8 +138,8 @@ def create_case(values: dict[str, object], actor: str):
 
 
 def list_cases(filters: dict[str, object]):
-    clauses = []
-    parameters: list[object] = []
+    clauses = ["a.organization_id = ?"]
+    parameters: list[object] = [current_organization_id()]
     for field in ("status", "severity", "vehicle_operational_status"):
         value = filters.get(field)
         if value:
@@ -157,7 +172,8 @@ def list_cases(filters: dict[str, object]):
             SELECT c.*, a.plate, a.external_identifier, a.category AS vehicle_model,
                    a.availability AS asset_availability,
                    (SELECT COUNT(*) FROM attachments att
-                    WHERE att.entity_type='damage' AND att.entity_id=c.id) AS attachment_count
+                    WHERE att.entity_type='damage' AND att.entity_id=c.id
+                      AND att.organization_id=a.organization_id) AS attachment_count
             FROM damage_cases c JOIN fleet_assets a ON a.id = c.vehicle_id
             {where}
             ORDER BY
@@ -278,26 +294,35 @@ def add_note(case_id: int, note: str, actor: str):
 
 
 def list_events(case_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
-            "SELECT * FROM damage_case_events WHERE damage_case_id = ? ORDER BY created_at, id",
-            (case_id,),
+            """
+            SELECT e.* FROM damage_case_events e
+            JOIN damage_cases c ON c.id=e.damage_case_id
+            JOIN fleet_assets a ON a.id=c.vehicle_id
+            WHERE e.damage_case_id = ? AND a.organization_id = ?
+            ORDER BY e.created_at, e.id
+            """,
+            (case_id, organization_id),
         ).fetchall()
     return [_dict(row) for row in rows]
 
 
 def open_case_operational_states(vehicle_id: int, excluding_case_id: int | None = None):
-    parameters: list[object] = [vehicle_id]
+    parameters: list[object] = [vehicle_id, current_organization_id()]
     exclusion = ""
     if excluding_case_id is not None:
-        exclusion = "AND id != ?"
+        exclusion = "AND c.id != ?"
         parameters.append(excluding_case_id)
     with db_session() as conn:
         rows = conn.execute(
             f"""
-            SELECT vehicle_operational_status
-            FROM damage_cases
-            WHERE vehicle_id = ? AND status NOT IN ('chiusa', 'annullata') {exclusion}
+            SELECT c.vehicle_operational_status
+            FROM damage_cases c
+            JOIN fleet_assets a ON a.id=c.vehicle_id
+            WHERE c.vehicle_id = ? AND a.organization_id = ?
+              AND c.status NOT IN ('chiusa', 'annullata') {exclusion}
             """,
             parameters,
         ).fetchall()
@@ -305,15 +330,19 @@ def open_case_operational_states(vehicle_id: int, excluding_case_id: int | None 
 
 
 def open_cases_for_vehicle(vehicle_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
             """
-            SELECT id, case_number, severity, status, vehicle_operational_status
-            FROM damage_cases
-            WHERE vehicle_id = ? AND status NOT IN ('chiusa', 'annullata')
-            ORDER BY occurred_at DESC, id DESC
+            SELECT c.id, c.case_number, c.severity, c.status,
+                   c.vehicle_operational_status
+            FROM damage_cases c
+            JOIN fleet_assets a ON a.id=c.vehicle_id
+            WHERE c.vehicle_id = ? AND a.organization_id = ?
+              AND c.status NOT IN ('chiusa', 'annullata')
+            ORDER BY c.occurred_at DESC, c.id DESC
             """,
-            (vehicle_id,),
+            (vehicle_id, organization_id),
         ).fetchall()
     return [_dict(row) for row in rows]
 
@@ -326,6 +355,8 @@ def record_operational_status(
     actor: str,
     origin: str,
 ):
+    if not get_case(case_id):
+        return
     now = utc_now_iso()
     with db_session() as conn:
         conn.execute(
@@ -348,6 +379,7 @@ def record_operational_status(
 
 
 def candidates():
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
             """
@@ -361,7 +393,9 @@ def candidates():
             JOIN fleet_assets a ON a.id = m.asset_id
             LEFT JOIN damage_cases c ON c.source_movement_id = m.id
             WHERE m.anomaly_present = 1 AND c.id IS NULL
+              AND m.organization_id = ? AND a.organization_id = ?
             ORDER BY m.occurred_at DESC
-            """
+            """,
+            (organization_id, organization_id),
         ).fetchall()
     return [_dict(row) for row in rows]

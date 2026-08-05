@@ -1,3 +1,4 @@
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.utils.date_utils import utc_now_iso
 
@@ -57,26 +58,32 @@ def _select() -> str:
 
 
 def get(case_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            f"{_select()} WHERE f.id = ?",
-            (case_id,),
+            f"{_select()} WHERE f.id = ? AND a.organization_id = ?",
+            (case_id, organization_id),
         ).fetchone()
     return _dict(row)
 
 
 def get_by_damage(damage_case_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            f"{_select()} WHERE f.damage_case_id = ?",
-            (damage_case_id,),
+            f"{_select()} WHERE f.damage_case_id = ? AND a.organization_id = ?",
+            (damage_case_id, organization_id),
         ).fetchone()
     return _dict(row)
 
 
 def list_all(vehicle_id: int | None = None):
-    where = "WHERE f.vehicle_id = ?" if vehicle_id else ""
-    params = (vehicle_id,) if vehicle_id else ()
+    clauses = ["a.organization_id = ?"]
+    params: list[object] = [current_organization_id()]
+    if vehicle_id:
+        clauses.append("f.vehicle_id = ?")
+        params.append(vehicle_id)
+    where = f"WHERE {' AND '.join(clauses)}"
     with db_session() as conn:
         rows = conn.execute(
             f"""
@@ -97,16 +104,18 @@ def list_all(vehicle_id: int | None = None):
 
 
 def damage_context(damage_case_id: int):
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
             """
             SELECT d.id, d.vehicle_id, d.case_number,
                    m.id AS maintenance_id
             FROM damage_cases d
+            JOIN fleet_assets a ON a.id=d.vehicle_id
             LEFT JOIN fleet_maintenances m ON m.damage_case_id = d.id
-            WHERE d.id = ?
+            WHERE d.id = ? AND a.organization_id = ?
             """,
-            (damage_case_id,),
+            (damage_case_id, organization_id),
         ).fetchone()
     return _dict(row)
 

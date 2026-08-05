@@ -1,6 +1,7 @@
 import json
 from typing import Any
 
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.utils.date_utils import utc_now_iso
 
@@ -11,16 +12,18 @@ def save_operation_snapshot(
     fleet_import_id: int,
     reserve_threshold: int,
 ) -> int:
+    organization_id = current_organization_id()
     with db_session() as conn:
         cursor = conn.execute(
             """
             INSERT INTO operation_snapshots (
-                created_at, planning_import_id, fleet_import_id,
+                organization_id, created_at, planning_import_id, fleet_import_id,
                 reserve_threshold, payload
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
+                organization_id,
                 utc_now_iso(),
                 planning_import_id,
                 fleet_import_id,
@@ -32,14 +35,17 @@ def save_operation_snapshot(
 
 
 def get_latest_operation_snapshot() -> dict[str, Any] | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
             """
             SELECT *
             FROM operation_snapshots
+            WHERE organization_id = ?
             ORDER BY id DESC
             LIMIT 1
-            """
+            """,
+            (organization_id,),
         ).fetchone()
     if row is None:
         return None

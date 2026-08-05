@@ -2,6 +2,7 @@ import json
 from enum import Enum
 from typing import Any
 
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.domain.planning_models import (
     GenerationMetadata,
@@ -27,18 +28,20 @@ def _dump(value: Any) -> str:
 
 def create_planning(bundle: PlanningBundle, actor: str = "system") -> PlanningBundle:
     planning = bundle.planning
+    organization_id = current_organization_id()
     with db_session() as conn:
         cursor = conn.execute(
             """
             INSERT INTO plannings (
-                operation_date, station, source_planning_import_id,
+                organization_id, operation_date, station, source_planning_import_id,
                 source_fleet_import_id, status, version, reserve_threshold,
                 configuration, summary, conflicts, generation_metadata,
                 created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                organization_id,
                 planning.operation_date,
                 planning.station,
                 planning.source_planning_import_id,
@@ -117,18 +120,25 @@ def _record_from_row(row) -> dict[str, Any]:
 
 
 def get_planning_record(planning_id: int) -> dict[str, Any] | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT * FROM plannings WHERE id = ?",
-            (planning_id,),
+            "SELECT * FROM plannings WHERE id = ? AND organization_id = ?",
+            (planning_id, organization_id),
         ).fetchone()
     return _record_from_row(row) if row else None
 
 
 def get_latest_planning_record() -> dict[str, Any] | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT * FROM plannings ORDER BY id DESC LIMIT 1"
+            """
+            SELECT * FROM plannings
+            WHERE organization_id = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (organization_id,),
         ).fetchone()
     return _record_from_row(row) if row else None
 
@@ -139,6 +149,7 @@ def update_planning_record(
     conflicts: list[PlanningConflict],
     generation_metadata: GenerationMetadata,
 ) -> None:
+    organization_id = current_organization_id()
     with db_session() as conn:
         conn.execute(
             """
@@ -146,7 +157,7 @@ def update_planning_record(
             SET status = ?, version = ?, reserve_threshold = ?,
                 configuration = ?, summary = ?, conflicts = ?,
                 generation_metadata = ?, updated_at = ?
-            WHERE id = ?
+            WHERE id = ? AND organization_id = ?
             """,
             (
                 planning.status.value,
@@ -158,6 +169,7 @@ def update_planning_record(
                 _dump(generation_metadata),
                 planning.updated_at,
                 planning.id,
+                organization_id,
             ),
         )
 
@@ -189,14 +201,16 @@ def save_version(
 
 
 def list_versions(planning_id: int) -> list[dict[str, object]]:
+    organization_id = current_organization_id()
     with db_session() as conn:
         rows = conn.execute(
             """
-            SELECT * FROM planning_versions
-            WHERE planning_id = ?
-            ORDER BY version ASC
+            SELECT v.* FROM planning_versions v
+            JOIN plannings p ON p.id=v.planning_id
+            WHERE v.planning_id = ? AND p.organization_id = ?
+            ORDER BY v.version ASC
             """,
-            (planning_id,),
+            (planning_id, organization_id),
         ).fetchall()
     return [
         {

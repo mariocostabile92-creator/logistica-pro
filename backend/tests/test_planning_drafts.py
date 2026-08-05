@@ -17,6 +17,7 @@ from app.domain.planning_drafts import (
     PlanningDraftVersionConflictError,
 )
 from app.main import app
+from app.auth.tenant_context import bind_organization, reset_organization
 from app.repositories.planning_draft_repository import (
     SqlPlanningDraftRepository,
 )
@@ -279,7 +280,11 @@ def test_workspace_reset_removes_drafts_without_touching_legacy_planning():
     service = _service()
     _create(service)
 
-    result = reset_workspace()
+    token = bind_organization(SCOPE.organization_id)
+    try:
+        result = reset_workspace()
+    finally:
+        reset_organization(token)
 
     assert result.idempotent is False
     assert service.current(SCOPE).state is PlanningDraftState.EMPTY

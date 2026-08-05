@@ -1,6 +1,7 @@
 import json
 from hashlib import sha256
 
+from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.plugins.fleet.domain.models import AssetEventType, availability_event_type
 from app.plugins.fleet.domain.sync_models import (
@@ -13,8 +14,16 @@ from app.utils.date_utils import utc_now_iso
 
 
 def metadata_by_asset() -> dict[int, dict[str, object]]:
+    organization_id = current_organization_id()
     with db_session() as conn:
-        rows = conn.execute("SELECT * FROM fleet_asset_metadata").fetchall()
+        rows = conn.execute(
+            """
+            SELECT m.* FROM fleet_asset_metadata m
+            JOIN fleet_assets a ON a.id=m.asset_id
+            WHERE a.organization_id=?
+            """,
+            (organization_id,),
+        ).fetchall()
     return {
         int(row["asset_id"]): {
             key: row[key]
@@ -26,9 +35,15 @@ def metadata_by_asset() -> dict[int, dict[str, object]]:
 
 
 def latest_sync() -> dict[str, object] | None:
+    organization_id = current_organization_id()
     with db_session() as conn:
         row = conn.execute(
-            "SELECT imported_at, original_filename, summary FROM fleet_sync_runs ORDER BY id DESC LIMIT 1"
+            """
+            SELECT imported_at, original_filename, summary
+            FROM fleet_sync_runs WHERE organization_id=?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (organization_id,),
         ).fetchone()
     if not row:
         return None
@@ -49,7 +64,7 @@ def _application_key(preview: FleetSyncPreview, selected_rows: list[int]) -> str
         for item in preview.items
         if item.row_id in selected_rows
     ]
-    canonical = f"{preview.fingerprint}:{_json(selected)}"
+    canonical = f"{current_organization_id()}:{preview.fingerprint}:{_json(selected)}"
     return sha256(canonical.encode()).hexdigest()
 
 
@@ -79,14 +94,16 @@ def _append_event(conn, asset_id: int, event_type: AssetEventType, actor: str, d
 
 
 def _find_asset(conn, external_identifier: str, plate: str):
+    organization_id = current_organization_id()
     return conn.execute(
         """
         SELECT * FROM fleet_assets
-        WHERE lower(external_identifier) = lower(?) OR plate = ?
+        WHERE organization_id = ?
+          AND (lower(external_identifier) = lower(?) OR plate = ?)
         ORDER BY CASE WHEN lower(external_identifier) = lower(?) THEN 0 ELSE 1 END
         LIMIT 1
         """,
-        (external_identifier, plate, external_identifier),
+        (organization_id, external_identifier, plate, external_identifier),
     ).fetchone()
 
 
@@ -200,6 +217,7 @@ def _add_document(conn, asset_id: int, proposed: dict[str, object], actor: str, 
 
 
 def _apply_item(conn, item, actor: str, now: str, seed: str) -> tuple[str, int, int]:
+    organization_id = current_organization_id()
     proposed = item.proposed
     external = str(proposed["external_identifier"])
     plate = str(proposed["plate"])
@@ -210,11 +228,11 @@ def _apply_item(conn, item, actor: str, now: str, seed: str) -> tuple[str, int, 
         cursor = conn.execute(
             """
             INSERT INTO fleet_assets (
-                external_identifier, plate, category, status, availability,
+                organization_id, external_identifier, plate, category, status, availability,
                 notes, capabilities, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (external, plate, proposed.get("category"), proposed["status"], proposed["availability"], None, "[]", now, now),
+            (organization_id, external, plate, proposed.get("category"), proposed["status"], proposed["availability"], None, "[]", now, now),
         )
         asset_id = int(cursor.lastrowid)
         events += int(_append_event(
@@ -277,14 +295,17 @@ def _apply_item(conn, item, actor: str, now: str, seed: str) -> tuple[str, int, 
 
 
 def _snapshot_rows(conn) -> list[dict[str, object]]:
+    organization_id = current_organization_id()
     rows = conn.execute(
         """
         SELECT a.*, m.observed_assigned_human_resource,
                m.observed_second_human_resource, m.vehicle_model
         FROM fleet_assets a
         LEFT JOIN fleet_asset_metadata m ON m.asset_id = a.id
+        WHERE a.organization_id = ?
         ORDER BY a.id
-        """
+        """,
+        (organization_id,),
     ).fetchall()
     legacy_status = {
         "maintenance": "manutenzione",
@@ -323,11 +344,13 @@ def apply_sync(preview: FleetSyncPreview, selected_rows: list[int], actor: str) 
         raise FleetSyncSelectionError("Conflitti, duplicati e righe invalide non possono essere applicati.")
     key = _application_key(preview, selected_rows)
     now = utc_now_iso()
+    organization_id = current_organization_id()
     with db_session() as conn:
         prior_workbook = conn.execute(
             "SELECT import_id FROM fleet_sync_runs "
-            "WHERE workbook_fingerprint = ? ORDER BY id DESC LIMIT 1",
-            (preview.fingerprint,),
+            "WHERE organization_id = ? AND workbook_fingerprint = ? "
+            "ORDER BY id DESC LIMIT 1",
+            (organization_id, preview.fingerprint),
         ).fetchone()
         selected_items = [by_id[row_id] for row_id in selected_rows]
         if prior_workbook and all(
@@ -353,7 +376,13 @@ def apply_sync(preview: FleetSyncPreview, selected_rows: list[int], actor: str) 
                     + preview.summary.possible_duplicates
                 ),
             )
-        prior = conn.execute("SELECT import_id, summary FROM fleet_sync_runs WHERE application_key = ?", (key,)).fetchone()
+        prior = conn.execute(
+            """
+            SELECT import_id, summary FROM fleet_sync_runs
+            WHERE organization_id=? AND application_key=?
+            """,
+            (organization_id, key),
+        ).fetchone()
         if prior:
             return FleetSyncResult(
                 fingerprint=preview.fingerprint,
@@ -373,12 +402,12 @@ def apply_sync(preview: FleetSyncPreview, selected_rows: list[int], actor: str) 
         cursor = conn.execute(
             """
             INSERT INTO imports (
-                dataset_type, original_filename, imported_at, sheet_name,
+                organization_id, dataset_type, original_filename, imported_at, sheet_name,
                 column_mapping, normalized_rows
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                "fleet", preview.original_filename, now, preview.selected_sheet,
+                organization_id, "fleet", preview.original_filename, now, preview.selected_sheet,
                 _json(preview.mappings), _json(snapshot),
             ),
         )
@@ -394,11 +423,11 @@ def apply_sync(preview: FleetSyncPreview, selected_rows: list[int], actor: str) 
         conn.execute(
             """
             INSERT INTO fleet_sync_runs (
-                application_key, workbook_fingerprint, original_filename,
+                organization_id, application_key, workbook_fingerprint, original_filename,
                 imported_at, import_id, summary
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (key, preview.fingerprint, preview.original_filename, now, import_id, _json(result_values)),
+            (organization_id, key, preview.fingerprint, preview.original_filename, now, import_id, _json(result_values)),
         )
     return FleetSyncResult(
         fingerprint=preview.fingerprint,

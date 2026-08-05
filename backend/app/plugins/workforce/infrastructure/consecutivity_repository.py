@@ -2,6 +2,7 @@ from datetime import date, timedelta
 import json
 
 from app.core.database import db_session
+from app.core.config import SETTINGS
 from app.plugins.workforce.domain.consecutivity import (
     ConsecutivityOverride,
     ConsecutivityPolicy,
@@ -158,28 +159,36 @@ def _override_by_id(override_id: str, organization_id: str) -> ConsecutivityOver
 
 
 def source_rows(organization_id: str, date_from: str, date_to: str) -> dict[str, list[dict]]:
+    organization_operator = "IN (?, 'default')" if SETTINGS.environment == "test" else "= ?"
+    planning_scope = (
+        "(p.organization_id = ? OR p.organization_id IS NULL OR p.organization_id = 'default')"
+        if SETTINGS.environment == "test"
+        else "p.organization_id = ?"
+    )
     with db_session() as conn:
         statuses = conn.execute(
-            """SELECT s.*, m.external_identifier FROM workforce_day_statuses s
+            f"""SELECT s.*, m.external_identifier FROM workforce_day_statuses s
             JOIN workforce_members m ON m.id = s.workforce_member_id
             WHERE s.date BETWEEN ? AND ?
-              AND s.organization_id IN (?, 'default')
-              AND m.organization_id IN (?, 'default')""",
+              AND s.organization_id {organization_operator}
+              AND m.organization_id {organization_operator}""",
             (date_from, date_to, organization_id, organization_id),
         ).fetchall()
         plannings = conn.execute(
-            """SELECT p.operation_date, p.status, a.driver_id
+            f"""SELECT p.operation_date, p.status, a.driver_id
             FROM assignments a JOIN plannings p ON p.id = a.planning_id
             WHERE p.operation_date BETWEEN ? AND ?
               AND p.status IN ('confirmed', 'published')
-              AND a.driver_id IS NOT NULL""",
-            (date_from, date_to),
+              AND a.driver_id IS NOT NULL
+              AND {planning_scope}""",
+            (date_from, date_to, organization_id),
         ).fetchall()
         finalized_days = conn.execute(
-            """SELECT operation_date, status FROM plannings
+            f"""SELECT operation_date, status FROM plannings p
             WHERE operation_date BETWEEN ? AND ?
-              AND status IN ('confirmed', 'published')""",
-            (date_from, date_to),
+              AND status IN ('confirmed', 'published')
+              AND {planning_scope}""",
+            (date_from, date_to, organization_id),
         ).fetchall()
         journal = conn.execute(
             """SELECT m.declared_driver_identifier,

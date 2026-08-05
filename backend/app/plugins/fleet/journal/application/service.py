@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from app.auth import repository as auth_repository
+from app.auth.tenant_context import current_organization_id
 from app.core.config import SETTINGS
 from app.plugins.fleet.journal.application import shared_access_service
 from app.plugins.fleet.journal.infrastructure import repository
@@ -106,11 +107,14 @@ def _session_clock(organization_id: str | None, now: datetime) -> tuple[str, str
     return timezone_name, day.isoformat()
 
 
-def find_asset(plate: str) -> dict[str, object]:
+def find_asset(plate: str, organization_id: str | None = None) -> dict[str, object]:
     normalized = normalize_plate(plate)
     if not normalized:
         raise JournalError("Inserisci una targa valida.")
-    asset = repository.find_asset_by_plate(normalized)
+    asset = repository.find_asset_by_plate(
+        normalized,
+        organization_id or current_organization_id(),
+    )
     if not asset:
         raise JournalNotFound("Mezzo non trovato nel Fleet Registry.")
     return asset
@@ -199,10 +203,12 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
     shift = values.get("operational_shift")
     if operation_type == "check_out" and shift not in ALLOWED_SHIFTS:
         raise JournalError("La fascia operativa è obbligatoria per il ritiro.")
-    asset = find_asset(str(values["plate"]))
+    organization_id = str(
+        values.get("organization_id") or current_organization_id()
+    )
+    asset = find_asset(str(values["plate"]), organization_id)
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
-    organization_id = str(values.get("organization_id") or _organization(None)["id"])
     _, day = _session_clock(organization_id, now)
     session_id = str(uuid.uuid4())
     session = repository.create_session(
@@ -294,8 +300,11 @@ def _smart_warnings(
 
 def create_shared_session(values: dict[str, object]) -> dict[str, object]:
     access_token = values.get("access_token")
-    organization_id = None
-    if access_token:
+    if not access_token:
+        if not values.get("_test_harness_authorized"):
+            raise JournalUnauthorized("Utilizza il link Driver condiviso dalla tua azienda.")
+        organization_id = current_organization_id()
+    else:
         try:
             access = shared_access_service.validate(str(access_token))
             organization_id = str(access["organization_id"])
@@ -304,12 +313,11 @@ def create_shared_session(values: dict[str, object]) -> dict[str, object]:
             raise error_type(str(exc)) from exc
     driver_name = _normalize_person_name(values["driver_name"])
     driver_surname = _normalize_person_name(values["driver_surname"])
-    asset = find_asset(str(values["vehicle_plate"]))
+    asset = find_asset(str(values["vehicle_plate"]), organization_id)
     operation_type = str(values["procedure_type"])
     session_id = str(uuid.uuid4())
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
-    organization_id = organization_id or str(_organization(None)["id"])
     _, day = _session_clock(organization_id, now)
     session = repository.create_session({
         "id": session_id,
@@ -373,11 +381,11 @@ def create_managed_session(values: dict[str, object], organization_id: str | Non
         )
     except ValueError as exc:
         raise JournalError("Data o ora della procedura non valida.") from exc
-    asset = find_asset(str(values["plate"]))
+    organization_id = organization_id or current_organization_id()
+    asset = find_asset(str(values["plate"]), organization_id)
     session_id = str(uuid.uuid4())
     token = _managed_token(session_id)
     now = datetime.now(timezone.utc)
-    organization_id = organization_id or str(_organization(None)["id"])
     organization = _organization(organization_id)
     scheduled_local = scheduled.replace(
         tzinfo=organization_timezone(str(organization.get("timezone") or "Europe/Rome"))

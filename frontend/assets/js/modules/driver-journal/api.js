@@ -8,12 +8,9 @@ async function request(path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 export const getConfiguration = () => request("/configuration");
-export const findAsset = plate => request(`/assets?plate=${encodeURIComponent(plate)}`);
-export const listAssets = async () => {
-  const response = await fetch("/api/plugins/fleet/v1/assets");
-  if (!response.ok) throw new Error("Elenco mezzi non disponibile.");
-  return response.json();
-};
+export const findAsset = (plate, accessToken) => request(
+  `/assets?plate=${encodeURIComponent(plate)}&access_token=${encodeURIComponent(accessToken || "")}`,
+);
 export const createSession = body => request("/sessions", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body) });
 export const createSharedSession = body => request("/sessions/shared", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body) });
 export const validateSharedAccess = token => request(`/shared-access/${encodeURIComponent(token)}`);
