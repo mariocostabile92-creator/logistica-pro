@@ -49,7 +49,8 @@ def init_schema() -> None:
             UPDATE demo_workspaces
             SET demo_workspace_id = organization_id || ':' || demo_workspace_id
             WHERE organization_id IS NOT NULL
-              AND demo_workspace_id NOT LIKE organization_id || ':%'
+              AND SUBSTR(demo_workspace_id, 1, LENGTH(organization_id) + 1)
+                    <> organization_id || ':'
             """
         )
         conn.execute(
