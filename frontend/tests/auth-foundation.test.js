@@ -23,6 +23,21 @@ test("frontend auth separates api state components and session orchestration", a
   assert.match(sources[3], /location\.replace\("\/app\/login\.html"\)/);
 });
 
+test("registration presents structured validation errors instead of object text", async () => {
+  const { authErrorMessage } = await import("../assets/js/auth/api.js");
+  assert.equal(authErrorMessage([{
+    type: "value_error",
+    loc: ["body", "administrator"],
+    msg: "Value error, Le password non coincidono.",
+  }]), "Le password non coincidono.");
+  assert.equal(authErrorMessage([{
+    type: "string_too_short",
+    loc: ["body", "administrator", "password"],
+    ctx: { min_length: 10 },
+  }]), "Il campo password deve contenere almeno 10 caratteri.");
+  assert.doesNotMatch(authErrorMessage([{}]), /\[object Object\]/);
+});
+
 test("administrative bootstrap waits for session before mounting workspaces", async () => {
   const [app, page, session, components] = await Promise.all([
     file("assets/js/app.js"), file("index.html"),

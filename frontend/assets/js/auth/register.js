@@ -1,4 +1,4 @@
-import { bootstrapStatus, registerOrganization } from "./api.js";
+import { bootstrapStatus, registerOrganization } from "./api.js?v=2";
 
 const form = document.getElementById("registerForm");
 const message = document.getElementById("registerMessage");
@@ -11,6 +11,11 @@ bootstrapStatus().then(({ required }) => {
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
+  if (form.password.value !== form.password_confirmation.value) {
+    message.textContent = "Le password non coincidono.";
+    form.password_confirmation.focus();
+    return;
+  }
   const submit = form.querySelector("button[type=submit]");
   submit.disabled = true;
   message.textContent = "Creazione organizzazione in corso…";
