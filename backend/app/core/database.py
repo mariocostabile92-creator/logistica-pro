@@ -20,6 +20,7 @@ _IDENTITY_TABLES = {
     "fleet_insurance_policies",
     "fleet_maintenances",
     "fleet_sync_runs",
+    "fleet_vehicle_documents",
     "imports",
     "operation_snapshots",
     "planning_events",

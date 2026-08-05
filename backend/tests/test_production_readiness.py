@@ -127,7 +127,11 @@ def test_postgres_compatibility_cursor_preserves_lastrowid():
 
 @pytest.mark.parametrize(
     "table",
-    ("fleet_maintenances", "fleet_insurance_policies"),
+    (
+        "fleet_insurance_policies",
+        "fleet_maintenances",
+        "fleet_vehicle_documents",
+    ),
 )
 def test_postgres_fleet_insert_preserves_lastrowid(table):
     query, returns_identity = _postgres_statement(
