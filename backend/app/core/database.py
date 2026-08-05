@@ -17,6 +17,7 @@ _IDENTITY_TABLES = {
     "fleet_asset_documents",
     "fleet_asset_events",
     "fleet_assets",
+    "fleet_maintenances",
     "fleet_sync_runs",
     "imports",
     "operation_snapshots",

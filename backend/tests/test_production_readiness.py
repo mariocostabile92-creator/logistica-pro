@@ -125,6 +125,16 @@ def test_postgres_compatibility_cursor_preserves_lastrowid():
     assert raw_connection.cursor_instance.parameters == ("now", "{}", "[]")
 
 
+def test_postgres_maintenance_insert_preserves_lastrowid():
+    query, returns_identity = _postgres_statement(
+        "INSERT INTO fleet_maintenances (vehicle_id, description) VALUES (?, ?)"
+    )
+
+    assert returns_identity is True
+    assert "VALUES (%s, %s)" in query
+    assert query.endswith("RETURNING id")
+
+
 def test_database_row_supports_sqlite_compatible_access():
     row = DatabaseRow(("total", "status"), (3, "ready"))
 
