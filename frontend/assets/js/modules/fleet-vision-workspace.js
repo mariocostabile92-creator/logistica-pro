@@ -1,8 +1,8 @@
-import { loadFleetVisionExcellence } from "./fleet-vision/aggregator.js?v=4";
+import { loadFleetVisionExcellence } from "./fleet-vision/aggregator.js?v=5";
 import {
   openFleetDeadlineSource, openFleetVisionSource,
-} from "./fleet-vision/navigation.js?v=3";
-import { renderFleetVisionExcellence } from "./fleet-vision/renderer.js?v=2";
+} from "./fleet-vision/navigation.js?v=4";
+import { renderFleetVisionExcellence } from "./fleet-vision/renderer.js?v=3";
 import {
   fleetVisionState, resetFleetVisionState,
 } from "./fleet-vision/state.js";

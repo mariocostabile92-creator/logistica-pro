@@ -17,11 +17,23 @@ test("filters are local and cover every requested domain", async () => {
     file("assets/js/modules/fleet-vision/state.js"),
   ]);
   for (const label of ["Tutti", "Critiche", "Documenti", "Assicurazioni",
-    "Noleggi", "Danni", "Manutenzioni", "Driver Journal", "Disponibilità"]) {
+    "Noleggi", "Danni", "Manutenzioni", "Franchigie", "Driver Journal", "Disponibilità"]) {
     assert.match(sections, new RegExp(label));
   }
   assert.match(state, /filter === "availability"/);
   assert.match(state, /filter === "alta"/);
+});
+
+test("Fleet Snapshot exposes every connected Fleet domain even without criticalities", async () => {
+  const sections = await file("assets/js/modules/fleet-vision/sections.js");
+  for (const label of ["Documenti registrati", "Polizze collegate", "Pratiche danno aperte",
+    "Franchigie aperte", "Manutenzioni aperte", "Noleggi attivi"]) {
+    assert.match(sections, new RegExp(label));
+  }
+  for (const action of ["Apri Documenti", "Apri Assicurazioni", "Apri Danni",
+    "Apri Franchigie", "Apri Manutenzioni", "Apri Noleggi"]) {
+    assert.match(sections, new RegExp(action));
+  }
 });
 
 test("record navigation carries exact identifiers when the source exposes them", async () => {
@@ -31,7 +43,7 @@ test("record navigation carries exact identifiers when the source exposes them",
   ]);
   for (const token of ["record_id", "case_number", "maintenance_number",
     "policy_number"]) assert.match(aggregator, new RegExp(token));
-  for (const token of ["caseId", "maintenanceId", "policyId"]) {
+  for (const token of ["caseId", "maintenanceId", "policyId", "franchiseId", "rentalId"]) {
     assert.match(navigation, new RegExp(token));
   }
   assert.doesNotMatch(navigation, /location\.|history\./);

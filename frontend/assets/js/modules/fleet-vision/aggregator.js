@@ -25,6 +25,10 @@ function recordFor(item, decision) {
     const entry = item.timeline?.find(event => event.module === "rentals");
     return { id: entry?.source_id, label: entry?.label || "contratto noleggio" };
   }
+  if (decision.module === "franchises") {
+    const entry = item.timeline?.find(event => event.module === "franchises");
+    return { id: entry?.source_id, label: entry?.label || "franchigia" };
+  }
   return { id: decision.evidence?.source_id, label: null };
 }
 

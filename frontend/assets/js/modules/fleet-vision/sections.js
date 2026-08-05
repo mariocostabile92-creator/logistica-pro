@@ -17,6 +17,11 @@ export function snapshotSection(summary) {
     ["unavailable", "Mezzi indisponibili", "availability"],
     ["in_maintenance", "Mezzi in manutenzione", "maintenance"],
     ["open_damages", "Pratiche danno aperte", "damage"],
+    ["open_maintenances", "Manutenzioni aperte", "maintenance"],
+    ["documents_registered", "Documenti registrati", "documents"],
+    ["insurance_policies", "Polizze collegate", "insurance"],
+    ["open_franchises", "Franchigie aperte", "franchises"],
+    ["active_rentals", "Noleggi attivi", "rentals"],
     ["missing_documents", "Documenti mancanti", "documents"],
     ["expiring_contracts", "Contratti in scadenza", "library"],
     ["expiring_insurance", "Assicurazioni in scadenza", "insurance"],
@@ -95,7 +100,8 @@ export function criticalitiesSection() {
       <div class="fve2-filters" aria-label="Filtri criticità">${[
         ["all", "Tutti"], ["alta", "Critiche"], ["documents", "Documenti"],
         ["insurance", "Assicurazioni"], ["rentals", "Noleggi"], ["damage", "Danni"],
-        ["maintenance", "Manutenzioni"], ["journal", "Driver Journal"],
+        ["maintenance", "Manutenzioni"], ["franchises", "Franchigie"],
+        ["journal", "Driver Journal"],
         ["availability", "Disponibilità"],
       ].map(([key, label]) => `<button type="button" class="${fleetVisionState.filter === key ? "active" : ""}"
         data-fve-filter="${key}" aria-pressed="${fleetVisionState.filter === key}">${label}</button>`).join("")}</div>
@@ -122,10 +128,13 @@ export function operationsSection(data) {
   const latest = key => data.items.map(item => item.latest?.[key]?.occurred_at
     || item.latest?.[key]?.opened_at).filter(Boolean).sort().at(-1);
   const rows = [
-    ["Documentazione", data.summary.missing_documents ? "Da verificare" : "Regolare", latest("use"), "documents"],
+    ["Documentazione", data.summary.missing_documents ? "Da verificare" : `${data.summary.documents_registered} registrati`, latest("use"), "documents"],
+    ["Assicurazioni", data.summary.expired_insurance || data.summary.expiring_insurance ? "Da verificare" : `${data.summary.insurance_policies} collegate`, null, "insurance"],
     ["Driver Journal", data.summary.journal_incomplete ? "Sessioni incomplete" : "Regolare", latest("use"), "journal"],
     ["Manutenzioni", data.summary.open_maintenances ? "Interventi aperti" : "Regolare", latest("maintenance"), "maintenance"],
     ["Danni", data.summary.open_damages ? "Pratiche aperte" : "Regolare", latest("damage"), "damage"],
+    ["Franchigie", data.summary.open_franchises ? "Valutazioni aperte" : "Regolare", null, "franchises"],
+    ["Noleggi", data.summary.active_rentals ? "Noleggi attivi" : "Regolare", null, "rentals"],
     ["Disponibilità", data.summary.unavailable || data.summary.in_maintenance ? "Attenzione" : "Regolare", latest("status_change"), "library"],
     ["Contratti", data.summary.expiring_contracts ? "In scadenza" : "Regolare", null, "library"],
   ];
@@ -141,7 +150,8 @@ export function quickAccessSection() {
   const links = [
     ["library", "Apri Vehicle Library"], ["documents", "Apri Documenti"],
     ["insurance", "Apri Assicurazioni"], ["rentals", "Apri Noleggi"],
-    ["damage", "Apri Danni"], ["journal", "Apri Driver Journal"],
+    ["damage", "Apri Danni"], ["franchises", "Apri Franchigie"],
+    ["maintenance", "Apri Manutenzioni"], ["journal", "Apri Driver Journal"],
     ["brain", "Apri Fleet Brain"],
   ];
   return `<section class="fve2-section fve2-quick" aria-labelledby="fveQuickTitle">

@@ -128,8 +128,10 @@ def test_postgres_compatibility_cursor_preserves_lastrowid():
 @pytest.mark.parametrize(
     "table",
     (
+        "fleet_franchise_cases",
         "fleet_insurance_policies",
         "fleet_maintenances",
+        "fleet_rentals",
         "fleet_vehicle_documents",
     ),
 )

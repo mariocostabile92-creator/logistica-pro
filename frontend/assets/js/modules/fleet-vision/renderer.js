@@ -1,7 +1,7 @@
 import {
   criticalitiesSection, operationsSection, quickAccessSection, snapshotSection,
   upcomingDeadlinesSection,
-} from "./sections.js?v=2";
+} from "./sections.js?v=3";
 import { fleetVisionState } from "./state.js";
 
 export function renderFleetVisionExcellence(root) {

@@ -99,7 +99,8 @@ def test_vision_aggregates_existing_modules_without_new_table():
     assert payload["summary"] == {
         "operational": 0, "unavailable": 1, "in_maintenance": 0,
         "open_damages": 1, "open_maintenances": 1, "active_rentals": 1,
-        "missing_documents": 1, "expired_insurance": 1,
+        "documents_registered": 1, "insurance_policies": 1,
+        "open_franchises": 1, "missing_documents": 1, "expired_insurance": 1,
         "expiring_contracts": 1, "journal_anomalies": 0,
         "decisions": 9, "high_priority_decisions": 3,
         "critical_actions": 3, "important_actions": 4,
@@ -109,9 +110,11 @@ def test_vision_aggregates_existing_modules_without_new_table():
     assert insight["contract_type"] == "lungo_termine"
     assert insight["damage_open"] == 1
     assert insight["maintenance_open"] == 1
+    assert insight["document_count"] == 1
     assert insight["missing_documents"] == 1
     assert insight["insurance"]["policy_number"] == "FVE-POL-1"
     assert insight["franchises_open"] == 1
+    assert insight["franchise_count"] == 1
     assert insight["rentals_active"] == 1
     assert insight["deadlines_imminent"] >= 1
     assert insight["insurance_expired"] == 1

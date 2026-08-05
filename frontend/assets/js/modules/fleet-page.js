@@ -82,7 +82,7 @@ async function showJournalControlRoom(options) {
 
 
 async function showFleetVisionWorkspace(options) {
-  const module = await loadFleetModule("vision", () => import("./fleet-vision-workspace.js?v=4"));
+  const module = await loadFleetModule("vision", () => import("./fleet-vision-workspace.js?v=5"));
   return module.showFleetVisionWorkspace(options);
 }
 

@@ -3,6 +3,7 @@ const eventMap = {
   maintenance: ["maintenance:open", "maintenanceId"],
   documents: ["documents:open", "documentId"],
   insurance: ["insurance:open", "policyId"],
+  franchises: ["franchise:open", "franchiseId"],
   rentals: ["rental:open", "rentalId"],
 };
 
@@ -59,6 +60,7 @@ export function directActionLabel(item) {
   if (item.module === "insurance") return `Apri polizza ${item.record_label || ""}`.trim();
   if (item.module === "documents") return "Apri Documenti";
   if (item.module === "rentals") return `Apri ${item.record_label || "contratto noleggio"}`;
+  if (item.module === "franchises") return "Apri Franchigia";
   if (item.module === "journal") return "Apri Driver Journal";
   if (item.module === "library") return "Apri scheda mezzo";
   return "Apri record originale";
