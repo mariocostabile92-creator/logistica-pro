@@ -2,6 +2,9 @@ from fastapi.testclient import TestClient
 
 from app.core.database import db_session
 from app.main import app
+from app.plugins.fleet.journal.infrastructure.shared_access_repository import (
+    init_schema as init_shared_access_schema,
+)
 
 
 client = TestClient(app)
@@ -31,6 +34,60 @@ def create_driver_session(token: str, name: str):
     })
     assert response.status_code == 201
     return response.json()
+
+
+def _legacy_row(row_id: str, token: str, created_at: str, organization_id=None):
+    with db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO journal_shared_access (
+                id, token, status, created_at, organization_id
+            ) VALUES (?, ?, 'active', ?, ?)
+            """,
+            (row_id, token, created_at, organization_id),
+        )
+
+
+def test_legacy_assignment_revokes_a_duplicate_when_owner_has_active_link():
+    with db_session() as conn:
+        conn.execute(
+            "INSERT INTO organizations (id, name, created_at) VALUES (?, ?, ?)",
+            ("owner-org", "Owner", "2026-01-01T00:00:00Z"),
+        )
+    _legacy_row("current", "token-current", "2026-02-01T00:00:00Z", "owner-org")
+    _legacy_row("legacy", "token-legacy", "2026-01-01T00:00:00Z")
+
+    init_shared_access_schema()
+
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT id, status, organization_id FROM journal_shared_access ORDER BY id"
+        ).fetchall()
+    by_id = {row["id"]: row for row in rows}
+    assert by_id["current"]["status"] == "active"
+    assert by_id["legacy"]["status"] == "revoked"
+    assert by_id["legacy"]["organization_id"] == "owner-org"
+
+
+def test_legacy_assignment_keeps_only_the_newest_active_link():
+    with db_session() as conn:
+        conn.execute(
+            "INSERT INTO organizations (id, name, created_at) VALUES (?, ?, ?)",
+            ("owner-org", "Owner", "2026-01-01T00:00:00Z"),
+        )
+    _legacy_row("older", "token-older", "2026-01-01T00:00:00Z")
+    _legacy_row("newer", "token-newer", "2026-02-01T00:00:00Z")
+
+    init_shared_access_schema()
+
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT id, status, organization_id FROM journal_shared_access ORDER BY id"
+        ).fetchall()
+    by_id = {row["id"]: row for row in rows}
+    assert by_id["newer"]["status"] == "active"
+    assert by_id["older"]["status"] == "revoked"
+    assert {row["organization_id"] for row in rows} == {"owner-org"}
 
 
 def test_single_active_link_public_validation_and_regeneration():

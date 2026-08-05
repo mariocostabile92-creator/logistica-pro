@@ -22,6 +22,7 @@ def init_schema() -> None:
             "SELECT id FROM organizations ORDER BY created_at ASC, id ASC LIMIT 1"
         ).fetchone()
         if owner:
+            _prepare_legacy_assignment(conn, str(owner["id"]))
             conn.execute(
                 """
                 UPDATE journal_shared_access SET organization_id=?
@@ -31,6 +32,38 @@ def init_schema() -> None:
             )
         conn.execute("DROP INDEX IF EXISTS idx_journal_shared_access_active")
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_journal_shared_access_active_org ON journal_shared_access(organization_id) WHERE status = 'active'")
+
+
+def _prepare_legacy_assignment(conn, organization_id: str) -> None:
+    existing = conn.execute(
+        """
+        SELECT id FROM journal_shared_access
+        WHERE organization_id=? AND status='active'
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (organization_id,),
+    ).fetchone()
+    legacy = conn.execute(
+        """
+        SELECT id FROM journal_shared_access
+        WHERE (organization_id IS NULL OR organization_id='default')
+          AND status='active'
+        ORDER BY created_at DESC, id DESC
+        """
+    ).fetchall()
+    keep_id = None if existing else (legacy[0]["id"] if legacy else None)
+    for row in legacy:
+        if row["id"] == keep_id:
+            continue
+        conn.execute(
+            """
+            UPDATE journal_shared_access
+            SET status='revoked', revoked_at=COALESCE(revoked_at, created_at)
+            WHERE id=? AND status='active'
+            """,
+            (row["id"],),
+        )
 
 
 def _ensure_column(conn, name: str, definition: str) -> None:
