@@ -40,6 +40,77 @@ def _ensure_profile_columns(conn, database_backend: str) -> None:
         )
 
 
+def _migrate_sqlite_asset_identity(conn) -> None:
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='fleet_assets'"
+    ).fetchone()
+    definition = str(row["sql"] or "").upper() if row else ""
+    if "EXTERNAL_IDENTIFIER TEXT NOT NULL UNIQUE" not in definition:
+        return
+    conn.execute("PRAGMA foreign_keys = OFF")
+    conn.execute("PRAGMA legacy_alter_table = ON")
+    conn.executescript(
+        """
+        ALTER TABLE fleet_assets RENAME TO fleet_assets_global_identity;
+        CREATE TABLE fleet_assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            organization_id TEXT,
+            external_identifier TEXT NOT NULL,
+            plate TEXT,
+            category TEXT,
+            status TEXT NOT NULL,
+            availability TEXT NOT NULL,
+            notes TEXT,
+            capabilities TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE (organization_id, external_identifier),
+            UNIQUE (organization_id, plate)
+        );
+        INSERT INTO fleet_assets (
+            id, organization_id, external_identifier, plate, category, status,
+            availability, notes, capabilities, created_at, updated_at
+        )
+        SELECT id, organization_id, external_identifier, plate, category, status,
+               availability, notes, capabilities, created_at, updated_at
+        FROM fleet_assets_global_identity;
+        DROP TABLE fleet_assets_global_identity;
+        """
+    )
+    conn.execute("PRAGMA legacy_alter_table = OFF")
+    conn.execute("PRAGMA foreign_keys = ON")
+
+
+def _ensure_asset_tenant_identity(conn, database_backend: str) -> None:
+    if database_backend == "postgresql":
+        conn.execute(
+            "ALTER TABLE fleet_assets DROP CONSTRAINT IF EXISTS "
+            "fleet_assets_external_identifier_key"
+        )
+        conn.execute(
+            "ALTER TABLE fleet_assets DROP CONSTRAINT IF EXISTS "
+            "fleet_assets_plate_key"
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_fleet_assets_org_external "
+            "ON fleet_assets(organization_id, LOWER(external_identifier))"
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_fleet_assets_org_plate "
+            "ON fleet_assets(organization_id, LOWER(plate)) WHERE plate IS NOT NULL"
+        )
+        return
+    _migrate_sqlite_asset_identity(conn)
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_fleet_assets_org_external "
+        "ON fleet_assets(organization_id, LOWER(external_identifier))"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_fleet_assets_org_plate "
+        "ON fleet_assets(organization_id, LOWER(plate)) WHERE plate IS NOT NULL"
+    )
+
+
 def _ensure_asset_tenant(conn, database_backend: str) -> None:
     if database_backend == "postgresql":
         conn.execute(
@@ -53,6 +124,9 @@ def _ensure_asset_tenant(conn, database_backend: str) -> None:
         if "organization_id" not in columns:
             conn.execute("ALTER TABLE fleet_assets ADD COLUMN organization_id TEXT")
 
+    if database_backend != "postgresql":
+        _ensure_asset_tenant_identity(conn, database_backend)
+
     owner = conn.execute(
         "SELECT id FROM organizations ORDER BY created_at ASC, id ASC LIMIT 1"
     ).fetchone()
@@ -65,6 +139,8 @@ def _ensure_asset_tenant(conn, database_backend: str) -> None:
             """,
             (owner["id"],),
         )
+    if database_backend == "postgresql":
+        _ensure_asset_tenant_identity(conn, database_backend)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_fleet_assets_organization "
         "ON fleet_assets(organization_id, external_identifier)"
@@ -78,15 +154,17 @@ def init_schema() -> None:
             CREATE TABLE IF NOT EXISTS fleet_assets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 organization_id TEXT,
-                external_identifier TEXT NOT NULL UNIQUE,
-                plate TEXT UNIQUE,
+                external_identifier TEXT NOT NULL,
+                plate TEXT,
                 category TEXT,
                 status TEXT NOT NULL,
                 availability TEXT NOT NULL,
                 notes TEXT,
                 capabilities TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                UNIQUE (organization_id, external_identifier),
+                UNIQUE (organization_id, plate)
             );
 
             CREATE TABLE IF NOT EXISTS fleet_asset_documents (

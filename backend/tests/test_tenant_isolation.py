@@ -1,4 +1,8 @@
+import io
+import json
+
 from fastapi.testclient import TestClient
+from openpyxl import Workbook
 
 from app.main import app
 
@@ -45,6 +49,18 @@ def create_asset(client: TestClient) -> dict:
     )
     assert response.status_code == 201
     return response.json()
+
+
+def fleet_identity_book() -> bytes:
+    book = Workbook()
+    sheet = book.active
+    sheet.title = "Stato parco"
+    sheet.append(["Asset ID", "Targa", "Modello", "Stato"])
+    sheet.append(["tenant-a-vehicle", "TA001AA", "Furgone", "Disponibile"])
+    output = io.BytesIO()
+    book.save(output)
+    book.close()
+    return output.getvalue()
 
 
 def test_operational_data_is_isolated_between_organizations():
@@ -95,6 +111,72 @@ def test_operational_data_is_isolated_between_organizations():
         },
     )
     assert foreign_document.status_code == 404
+
+
+def test_vehicle_identity_is_unique_inside_each_organization_only():
+    tenant_a = organization_client("Identity Tenant A", "identity-a@example.test")
+    tenant_b = organization_client("Identity Tenant B", "identity-b@example.test")
+
+    asset_a = create_asset(tenant_a)
+    asset_b = create_asset(tenant_b)
+
+    assert asset_a["id"] != asset_b["id"]
+    assert asset_a["external_identifier"] == asset_b["external_identifier"]
+    assert asset_a["plate"] == asset_b["plate"]
+    assert tenant_a.get("/api/plugins/fleet/v1/assets").json()["items"] == [asset_a]
+    assert tenant_b.get("/api/plugins/fleet/v1/assets").json()["items"] == [asset_b]
+
+    duplicate_in_tenant_b = tenant_b.post(
+        "/api/plugins/fleet/v1/assets",
+        json={
+            "external_identifier": asset_b["external_identifier"],
+            "plate": asset_b["plate"],
+            "category": "Furgone",
+            "status": "active",
+            "availability": "disponibile",
+            "notes": None,
+            "capabilities": [],
+        },
+    )
+    assert duplicate_in_tenant_b.status_code == 409
+
+
+def test_fleet_sync_can_import_an_identity_owned_by_another_organization():
+    tenant_a = organization_client("Sync Identity Tenant A", "sync-identity-a@example.test")
+    tenant_b = organization_client("Sync Identity Tenant B", "sync-identity-b@example.test")
+    asset_a = create_asset(tenant_a)
+    content = fleet_identity_book()
+    upload = {
+        "file": (
+            "tenant-fleet.xlsx",
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    }
+
+    proposal_response = tenant_b.post(
+        "/api/plugins/fleet/v1/sync/preview",
+        files=upload,
+    )
+    assert proposal_response.status_code == 200
+    proposal = proposal_response.json()
+    assert proposal["items"][0]["action"] == "NEW_ASSET"
+
+    confirmation = tenant_b.post(
+        "/api/plugins/fleet/v1/sync/confirm",
+        data={
+            "confirmed_fingerprint": proposal["fingerprint"],
+            "selected_rows": json.dumps([proposal["items"][0]["row_id"]]),
+        },
+        files=upload,
+    )
+
+    assert confirmation.status_code == 200
+    assert confirmation.json()["created_assets"] == 1
+    asset_b = tenant_b.get("/api/plugins/fleet/v1/assets").json()["items"][0]
+    assert asset_b["id"] != asset_a["id"]
+    assert asset_b["external_identifier"] == asset_a["external_identifier"]
+    assert asset_b["plate"] == asset_a["plate"]
 
 
 def test_public_journal_cannot_enumerate_an_organization_fleet():

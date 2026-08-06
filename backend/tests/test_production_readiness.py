@@ -1,5 +1,6 @@
 import json
 import re
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,9 @@ from app.core.database import (
     _postgres_statement,
 )
 from app.main import app
+from app.plugins.fleet.infrastructure.repository import (
+    _ensure_asset_tenant_identity,
+)
 
 
 PROJECT_DIR = Path(__file__).parents[2]
@@ -143,6 +147,85 @@ def test_postgres_fleet_insert_preserves_lastrowid(table):
     assert returns_identity is True
     assert "VALUES (%s)" in query
     assert query.endswith("RETURNING id")
+
+
+def test_postgres_fleet_identity_is_scoped_to_the_organization():
+    statements = []
+
+    class RecordingConnection:
+        @staticmethod
+        def execute(statement, parameters=()):
+            statements.append((" ".join(statement.split()), parameters))
+
+    _ensure_asset_tenant_identity(RecordingConnection(), "postgresql")
+
+    sql = "\n".join(statement for statement, _ in statements)
+    assert "DROP CONSTRAINT IF EXISTS fleet_assets_external_identifier_key" in sql
+    assert "DROP CONSTRAINT IF EXISTS fleet_assets_plate_key" in sql
+    assert "fleet_assets(organization_id, LOWER(external_identifier))" in sql
+    assert "fleet_assets(organization_id, LOWER(plate))" in sql
+
+
+def test_sqlite_fleet_identity_migration_preserves_data_and_references():
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.executescript(
+        """
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE fleet_assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            organization_id TEXT,
+            external_identifier TEXT NOT NULL UNIQUE,
+            plate TEXT UNIQUE,
+            category TEXT,
+            status TEXT NOT NULL,
+            availability TEXT NOT NULL,
+            notes TEXT,
+            capabilities TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE fleet_asset_children (
+            id INTEGER PRIMARY KEY,
+            asset_id INTEGER NOT NULL REFERENCES fleet_assets(id)
+        );
+        INSERT INTO fleet_assets (
+            organization_id, external_identifier, plate, status, availability,
+            capabilities, created_at, updated_at
+        ) VALUES ('org-a', 'SHARED-ASSET', 'SH001AA', 'active', 'available',
+                  '[]', '2026-08-06', '2026-08-06');
+        INSERT INTO fleet_asset_children (id, asset_id) VALUES (1, 1);
+        """
+    )
+
+    _ensure_asset_tenant_identity(connection, "sqlite")
+
+    assert connection.execute(
+        "SELECT external_identifier FROM fleet_assets WHERE id = 1"
+    ).fetchone()["external_identifier"] == "SHARED-ASSET"
+    assert connection.execute(
+        "PRAGMA foreign_key_list(fleet_asset_children)"
+    ).fetchone()["table"] == "fleet_assets"
+    connection.execute(
+        """
+        INSERT INTO fleet_assets (
+            organization_id, external_identifier, plate, status, availability,
+            capabilities, created_at, updated_at
+        ) VALUES (?, ?, ?, 'active', 'available', '[]', '2026-08-06', '2026-08-06')
+        """,
+        ("org-b", "SHARED-ASSET", "SH001AA"),
+    )
+    with pytest.raises(sqlite3.IntegrityError):
+        connection.execute(
+            """
+            INSERT INTO fleet_assets (
+                organization_id, external_identifier, plate, status, availability,
+                capabilities, created_at, updated_at
+            ) VALUES (?, ?, ?, 'active', 'available', '[]', '2026-08-06', '2026-08-06')
+            """,
+            ("org-a", "shared-asset", "sh001aa"),
+        )
+    connection.close()
 
 
 def test_database_row_supports_sqlite_compatible_access():
