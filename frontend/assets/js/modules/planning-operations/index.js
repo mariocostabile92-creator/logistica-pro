@@ -4,6 +4,7 @@ import { filteredRoutes, planningOperationsState as state } from "./state.js";
 import { userMessageForError } from "../../utils/errors.js";
 
 let root;
+let initialLoadPromise = null;
 async function load() {
   root.setAttribute("aria-busy", "true");
   try {
@@ -87,11 +88,15 @@ async function handleClick(event) {
 
 export function initPlanningOperations(element) {
   root = element;
-  if (!root || root.dataset.planningOperationsInitialized === "true") return;
+  if (!root) return Promise.resolve();
+  if (root.dataset.planningOperationsInitialized === "true") {
+    return initialLoadPromise || Promise.resolve();
+  }
   root.dataset.planningOperationsInitialized = "true";
   root.addEventListener("input", handleInput);
   root.addEventListener("change", handleChange);
   root.addEventListener("click", handleClick);
   renderOperationsLoading(root);
-  load();
+  initialLoadPromise = load();
+  return initialLoadPromise;
 }

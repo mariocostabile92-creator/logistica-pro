@@ -110,20 +110,23 @@ function initializeOnce(key, callback) {
 const WORKSPACE_PREPARERS = {
   operations: async () => {
     const [planningWorkspace] = await Promise.all([
-      import("./planning-workspace/index.js?v=2"),
+      import("./planning-workspace/index.js?v=3"),
       loadWorkspaceStyles("operations"),
     ]);
-    return () => {
-      planningWorkspace.initPlanningWorkspace();
+    return async () => {
+      await planningWorkspace.initPlanningWorkspace();
       initializeLegacyOperationsTrigger();
     };
   },
   workforce: async () => {
     const [module] = await Promise.all([
-      import("./workforce-page.js?v=6"),
+      import("./workforce-page.js?v=8"),
       loadWorkspaceStyles("workforce"),
     ]);
-    return module.initWorkforcePage;
+    return async () => {
+      module.initWorkforcePage();
+      await module.prepareWorkforceFirstPaint();
+    };
   },
   fleet: async () => {
     const [module, fleetSync] = await Promise.all([

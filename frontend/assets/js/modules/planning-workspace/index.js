@@ -26,7 +26,7 @@ import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
 } from "./conflicts.js";
-import { createPlanningWorkspaceLayout } from "./layout.js?v=2";
+import { createPlanningWorkspaceLayout } from "./layout.js?v=3";
 import {
   readinessEventType,
 } from "./readiness.js";
@@ -48,6 +48,7 @@ import { focusRelativeAction } from "./utils.js";
 
 
 let initialized = false;
+let firstPaintPromise = null;
 let state;
 let refs;
 const conflictLoader = createPlanningConflictLoader(getPlanningConflicts);
@@ -576,7 +577,7 @@ function handleLegacyKeydown(event) {
 
 
 export function initPlanningWorkspace() {
-  if (initialized) return;
+  if (initialized) return firstPaintPromise || Promise.resolve();
   initialized = true;
   const root = document.getElementById("planningWorkspaceRoot");
   state = createPlanningWorkspaceState({ planningDate: today() });
@@ -600,4 +601,6 @@ export function initPlanningWorkspace() {
       loadConflictReview();
     }
   });
+  firstPaintPromise = Promise.resolve(refs.operationsReady);
+  return firstPaintPromise;
 }

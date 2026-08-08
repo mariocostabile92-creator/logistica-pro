@@ -47,6 +47,7 @@ const TAB_ORDER = ["calendar", "coverage", "anomalies"];
 const ANOMALY_PAGE_SIZE = 25;
 
 let loaded = false;
+let firstPaintPromise = null;
 let calendarLoaded = false;
 let currentStatus = null;
 let currentData = { members: [], statuses: [], coverage: [] };
@@ -372,6 +373,7 @@ async function refresh() {
   } catch (error) {
     const disabled = isExpectedApiError(error, { statuses: [404] });
     if (disabled) {
+      byId("workforceSection").dataset.pageState = PAGE_STATES.EMPTY;
       renderViewState(byId("workforceViewState"), {
         state: "empty",
         title: "Workforce non attivo",
@@ -381,7 +383,18 @@ async function refresh() {
       setPageState(PAGE_STATES.ERROR);
       errorMessage("workforce.load", error);
     }
+    loaded = true;
   }
+}
+
+
+export function prepareWorkforceFirstPaint() {
+  if (loaded) return Promise.resolve();
+  if (firstPaintPromise) return firstPaintPromise;
+  firstPaintPromise = refresh().finally(() => {
+    firstPaintPromise = null;
+  });
+  return firstPaintPromise;
 }
 
 
@@ -548,7 +561,9 @@ export function initWorkforcePage() {
     if (loaded && currentStatus?.member_count) loadCalendar();
   });
   document.addEventListener("workspace:view-changed", (event) => {
-    if (event.detail.view === "workforce" && !loaded) refresh();
+    if (event.detail.view === "workforce" && !loaded && !firstPaintPromise) {
+      void prepareWorkforceFirstPaint();
+    }
   });
   document.addEventListener("workspace:reset-completed", () => {
     loaded = false;

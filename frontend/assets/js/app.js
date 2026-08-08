@@ -5,7 +5,7 @@ import {
   ensureWorkspaceInitialized,
   initWorkspaceLoader,
   preloadWorkspace,
-} from "./modules/workspace-loader.js?v=28";
+} from "./modules/workspace-loader.js?v=30";
 import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js?v=2";
 import { byId } from "./utils/dom.js";
 import { requireAdministrativeSession } from "./auth/session.js?v=2";
@@ -54,9 +54,12 @@ async function bootstrapAdministrativeApp() {
     retirePwaAfterHome(homeReady);
     await homeReady;
     revealAdministrativeApp();
-    const warmFleet = () => void preloadWorkspace("fleet");
-    if ("requestIdleCallback" in window) window.requestIdleCallback(warmFleet, { timeout: 1500 });
-    else window.setTimeout(warmFleet, 250);
+    const warmPrimaryWorkspaces = () => void Promise.all(
+      ["operations", "workforce", "fleet"].map(preloadWorkspace),
+    );
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(warmPrimaryWorkspaces, { timeout: 1500 });
+    } else window.setTimeout(warmPrimaryWorkspaces, 250);
   } catch (error) {
     if (error?.status !== 401) failAdministrativeBootstrap();
   }

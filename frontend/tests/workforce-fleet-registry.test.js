@@ -336,6 +336,7 @@ test("Workforce dialogs trap focus and expose accessible tabs and tables", async
 test("Workforce expected disabled state is handled without console noise", async () => {
   const source = await frontendFile("assets/js/modules/workforce-page.js");
   assert.match(source, /isExpectedApiError\(error, \{ statuses: \[404\] \}\)/);
+  assert.match(source, /dataset\.pageState = PAGE_STATES\.EMPTY/);
   assert.doesNotMatch(source, /console\.(error|warn|log)/);
   assert.doesNotMatch(source, /fetch\(/);
 });

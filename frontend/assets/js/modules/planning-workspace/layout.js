@@ -11,7 +11,7 @@ import {
   createStatusCard,
 } from "./components.js";
 import { element } from "./utils.js";
-import { initPlanningOperations } from "../planning-operations/index.js?v=2";
+import { initPlanningOperations } from "../planning-operations/index.js?v=3";
 
 
 export function createPlanningWorkspaceLayout(root) {
@@ -41,11 +41,12 @@ export function createPlanningWorkspaceLayout(root) {
   diagnostics.append(diagnosticsSummary, header, loading, content);
   shell.append(operations, diagnostics);
   root.replaceChildren(shell);
-  initPlanningOperations(operations);
+  const operationsReady = initPlanningOperations(operations);
 
   const role = (name) => root.querySelector(`[data-planning-role="${name}"]`);
   return Object.freeze({
     root,
+    operationsReady,
     loading,
     content,
     badge: role("badge"),

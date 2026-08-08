@@ -69,15 +69,31 @@ test("bootstrap defers PWA retirement until Home data settles", async () => {
 test("workspace first paints await only their current primary surface", async () => {
   const loader = await source("assets/js/modules/workspace-loader.js");
   const operations = loader.slice(loader.indexOf("operations: async"), loader.indexOf("workforce: async"));
+  const workforce = loader.slice(loader.indexOf("workforce: async"), loader.indexOf("fleet: async"));
   const fleet = loader.slice(loader.indexOf("fleet: async"), loader.indexOf("settings: async"));
   assert.match(operations, /planning-workspace\/index\.js/);
   assert.doesNotMatch(operations, /import-planning|import-fleet|operations-dashboard|onboarding/);
   assert.match(loader, /operations-legacy-trigger/);
   assert.match(loader, /if \(disclosure\.open\) void prepareLegacyOperations\(\)/);
   assert.doesNotMatch(operations, /void prepareLegacyOperations\(\)/);
+  assert.match(operations, /return async \(\)[\s\S]*await planningWorkspace\.initPlanningWorkspace\(\)/);
+  assert.match(workforce, /return async \(\)[\s\S]*module\.initWorkforcePage\(\)[\s\S]*await module\.prepareWorkforceFirstPaint\(\)/);
   assert.match(fleet, /loadWorkspaceStyles\("fleet"\)/);
   assert.match(fleet, /requestIdleCallback\(loadSecondaryStyles\)/);
   assert.match(fleet, /await module\.prepareFleetFirstPaint\(\)/);
+});
+
+test("Planning and Workforce expose finite first-paint promises", async () => {
+  const [planning, operations, layout, workforce] = await Promise.all([
+    source("assets/js/modules/planning-workspace/index.js"),
+    source("assets/js/modules/planning-operations/index.js"),
+    source("assets/js/modules/planning-workspace/layout.js"),
+    source("assets/js/modules/workforce-page.js"),
+  ]);
+  assert.match(operations, /initialLoadPromise = load\(\);[\s\S]*return initialLoadPromise;/);
+  assert.match(layout, /const operationsReady = initPlanningOperations\(operations\)/);
+  assert.match(planning, /firstPaintPromise = Promise\.resolve\(refs\.operationsReady\)/);
+  assert.match(workforce, /export function prepareWorkforceFirstPaint\(\)[\s\S]*firstPaintPromise = refresh\(\)\.finally/);
 });
 
 test("source files do not contain common UTF-8 mojibake sequences", async () => {

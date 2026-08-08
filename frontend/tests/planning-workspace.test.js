@@ -1149,6 +1149,6 @@ test("Operations exposes Planning Workspace before the closed legacy flow", asyn
   assert.ok(legacy > workspace);
   assert.match(navigation, /"planningWorkspaceSection"/);
   assert.match(navigation, /"legacyOperationsRegion"/);
-  assert.match(loader, /import\("\.\/planning-workspace\/index\.js\?v=2"\)/);
-  assert.match(loader, /planningWorkspace\.initPlanningWorkspace\(\)/);
+  assert.match(loader, /import\("\.\/planning-workspace\/index\.js\?v=3"\)/);
+  assert.match(loader, /await planningWorkspace\.initPlanningWorkspace\(\)/);
 });
