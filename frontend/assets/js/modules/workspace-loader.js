@@ -26,7 +26,7 @@ const STYLES = {
     "fleet-sync.css",
   ],
   "fleet-secondary": [
-    "damage-workspace.css?v=3",
+    "damage-workspace.css?v=4",
     "maintenance-workspace.css?v=2",
     "documents-workspace.css?v=1",
     "franchise-workspace.css?v=1",
@@ -130,7 +130,7 @@ const WORKSPACE_PREPARERS = {
   },
   fleet: async () => {
     const [module, fleetSync] = await Promise.all([
-      import("./fleet-page.js?v=24"),
+      import("./fleet-page.js?v=25"),
       import("./fleet-sync.js"),
       loadWorkspaceStyles("fleet"),
     ]);

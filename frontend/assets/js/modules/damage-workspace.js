@@ -14,6 +14,7 @@ import { createAttachmentDraft } from "./attachments/draft-uploader.js";
 import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 import { mountDamageDriverSuggestion } from "./damage-driver-suggestion.js?v=1";
+import { mountDamageVehicleSelector } from "./damage-vehicle-selector.js?v=1";
 
 const STATUS = {
   nuova: "Nuova", in_valutazione: "In valutazione",
@@ -43,10 +44,13 @@ let initialized = false;
 let selectedCaseId = null;
 let damageDraft = null;
 let driverSuggestionController = null;
+let vehicleSelectorController = null;
 
-function disposeDriverSuggestion() {
+function disposeManualControllers() {
   driverSuggestionController?.destroy();
   driverSuggestionController = null;
+  vehicleSelectorController?.destroy();
+  vehicleSelectorController = null;
 }
 
 function date(value) {
@@ -143,7 +147,7 @@ function renderCaseList() {
 }
 
 function renderNavigator() {
-  disposeDriverSuggestion();
+  disposeManualControllers();
   root.classList.remove("damage-detail-mode");
   root.querySelector("#damageMain").innerHTML = `
     ${metrics()}
@@ -172,7 +176,7 @@ function renderNavigator() {
 }
 
 function renderShell() {
-  disposeDriverSuggestion();
+  disposeManualControllers();
   root.innerHTML = `
     <header class="damage-header">
       <div><p class="eyebrow">Fleet Operations</p><h2 id="damageWorkspaceTitle">Danni</h2>
@@ -186,7 +190,7 @@ function renderShell() {
 }
 
 function renderCandidates() {
-  disposeDriverSuggestion();
+  disposeManualControllers();
   root.classList.remove("damage-detail-mode");
   root.querySelector("#damageMain").innerHTML = `
     <button type="button" class="quiet damage-back" data-damage-back>← Pratiche danno</button>
@@ -375,13 +379,18 @@ function bindDetail(caseId) {
 }
 
 function renderManual() {
-  disposeDriverSuggestion();
+  disposeManualControllers();
   root.classList.remove("damage-detail-mode");
   root.querySelector("#damageMain").innerHTML = `
     <button type="button" class="quiet damage-back" data-damage-back>← Pratiche danno</button>
     <section class="damage-manual"><p class="eyebrow">Inserimento secondario</p><h3>Nuova pratica manuale</h3>
     <form id="damageManualForm" class="damage-form">
-      <label>ID veicolo<input name="vehicle_id" type="number" min="1" required></label>
+      <label class="damage-vehicle-field">Mezzo
+        <select name="vehicle_id" required data-damage-vehicle-select aria-describedby="damageVehicleStatus" aria-busy="true" disabled>
+          <option value="">Caricamento mezzi…</option>
+        </select>
+        <small id="damageVehicleStatus" class="damage-vehicle-status" data-damage-vehicle-status role="status">Caricamento del parco mezzi…</small>
+      </label>
       <label>Data evento<input name="occurred_at" type="datetime-local" required></label>
       <section class="damage-driver-suggestion" data-damage-driver-suggestion aria-live="polite" aria-atomic="true" hidden></section>
       <label>Descrizione<textarea name="description" required></textarea></label>
@@ -391,9 +400,9 @@ function renderManual() {
       <p data-damage-create-status role="status"></p>
       <button type="submit">Crea pratica manuale</button>
     </form></section>`;
-  driverSuggestionController = mountDamageDriverSuggestion(
-    root.querySelector("#damageManualForm"),
-  );
+  const manualForm = root.querySelector("#damageManualForm");
+  vehicleSelectorController = mountDamageVehicleSelector(manualForm);
+  driverSuggestionController = mountDamageDriverSuggestion(manualForm);
   damageDraft = createAttachmentDraft(
     root.querySelector("[data-damage-attachment-draft]"),
     { title: "Foto e video del danno", accept: ".jpg,.jpeg,.png,.webp,.mp4,.mov" },
