@@ -1,10 +1,10 @@
-import { getConfiguration } from "./api.js?v=dj4";
-import { initFlow } from "./flow.js?v=dj4";
-import { initMedia } from "./media.js?v=dj5";
+import { getConfiguration } from "./api.js?v=dj6101";
+import { initFlow } from "./flow.js?v=dj6101";
+import { initMedia } from "./media.js?v=dj6101";
 import { render, renderEquipment, showError } from "./renderer.js?v=dj4";
-import { clearAccessPresentation, prepareJournalAccess } from "./session-access.js?v=dj4";
+import { clearAccessPresentation, prepareJournalAccess } from "./session-access.js?v=dj6101";
 import { resetState, state } from "./state.js?v=dj4";
-import { publicAccessToken, showPublicAccessError } from "./public-access.js?v=dj41";
+import { publicAccessToken, showPublicAccessError } from "./public-access.js?v=dj6101";
 
 async function start() {
   try {
@@ -15,11 +15,11 @@ async function start() {
     initMedia(showError);
     render();
   } catch (error) {
-    if (publicAccessToken()) {
+    if (publicAccessToken() && error.code === "INVALID_SHARED_LINK") {
       showPublicAccessError(error.message);
       return;
     }
-    showError(`Configurazione non disponibile: ${error.message}`);
+    showError(`Impossibile avviare il Giornale di bordo: ${error.message}`);
   }
 }
 

@@ -41,12 +41,15 @@ def get_configuration():
 
 
 @router.get("/assets")
-def asset_by_plate(plate: str, access_token: str):
+def assets(access_token: str, plate: str | None = None):
     try:
         access = service.shared_access_service.validate(access_token)
     except service.shared_access_service.SharedAccessError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    return guarded(service.find_asset, plate, str(access["organization_id"]))
+    organization_id = str(access["organization_id"])
+    if plate is None:
+        return guarded(service.list_assets, organization_id)
+    return guarded(service.find_asset, plate, organization_id)
 
 
 @router.post("/sessions", status_code=status.HTTP_201_CREATED)

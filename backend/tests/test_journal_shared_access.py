@@ -150,3 +150,56 @@ def test_two_drivers_share_entry_link_but_get_distinct_sessions():
         assert conn.execute(
             "SELECT COUNT(*) FROM journal_shared_access WHERE status = 'active'"
         ).fetchone()[0] == 1
+
+
+def test_public_vehicle_lookup_uses_shared_token_organization_context():
+    expected = create_asset()
+    access = client.post(f"{CONTROL}/shared-access", json={}).json()
+    with db_session() as conn:
+        conn.execute(
+            "INSERT INTO organizations (id, name, created_at) VALUES (?, ?, ?)",
+            ("foreign-journal-org", "Foreign Journal", "2026-08-08T10:00:00Z"),
+        )
+        conn.execute(
+            """
+            INSERT INTO fleet_assets (
+                organization_id, external_identifier, plate, category, status,
+                availability, capabilities, created_at, updated_at
+            ) VALUES (?, ?, ?, 'Furgone', 'active', 'available', '[]', ?, ?)
+            """,
+            (
+                "foreign-journal-org",
+                "FOREIGN-SHARED-ASSET",
+                "FOREIGN1",
+                "2026-08-08T10:00:00Z",
+                "2026-08-08T10:00:00Z",
+            ),
+        )
+
+    found = client.get(f"{JOURNAL}/assets", params={
+        "plate": "SG001AA",
+        "access_token": access["token"],
+    })
+    foreign = client.get(f"{JOURNAL}/assets", params={
+        "plate": "FOREIGN1",
+        "access_token": access["token"],
+    })
+    listed = client.get(f"{JOURNAL}/assets", params={
+        "access_token": access["token"],
+    })
+
+    assert found.status_code == 200
+    assert found.json()["id"] == expected["id"]
+    assert foreign.status_code == 404
+    assert [item["id"] for item in listed.json()["items"]] == [expected["id"]]
+
+
+def test_shared_entry_page_revalidates_and_serves_new_mobile_module_version():
+    access = client.post(f"{CONTROL}/shared-access", json={}).json()
+
+    response = client.get(access["link_path"])
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache"
+    assert "index.js?v=dj6101" in response.text
+    assert "shell.js?v=dj6101" in response.text

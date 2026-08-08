@@ -1,9 +1,35 @@
-import { createSharedSession, getSharedSession } from "./api.js?v=dj4";
+import { createSharedSession, getSharedSession, listAssets } from "./api.js?v=dj6101";
 import { state } from "./state.js?v=dj4";
 import { escapeHtml } from "../../utils/dom.js?v=dj4";
-import { preparePublicAccess } from "./public-access.js?v=dj4";
+import { preparePublicAccess } from "./public-access.js?v=dj6101";
 
 const $ = id => document.getElementById(id);
+let assetListLoadFailed = false;
+
+export const assetListNeedsRetry = () => assetListLoadFailed;
+
+export async function loadAssetSuggestions() {
+  $("assetListStatus").textContent = "Caricamento mezzi…";
+  try {
+    const response = await listAssets(state.accessToken);
+    const assets = response.items || [];
+    $("journalAssetSuggestions").innerHTML = assets.map((asset) =>
+      `<option value="${escapeHtml(asset.plate || "")}">${escapeHtml(asset.category || "Mezzo")}</option>`
+    ).join("");
+    assetListLoadFailed = false;
+    $("assetRetryButton").hidden = true;
+    $("assetListStatus").textContent = assets.length
+      ? `${assets.length} mezzi disponibili.`
+      : "Nessun mezzo disponibile.";
+    return assets;
+  } catch (error) {
+    assetListLoadFailed = true;
+    $("journalAssetSuggestions").innerHTML = "";
+    $("assetRetryButton").hidden = false;
+    $("assetListStatus").textContent = "Impossibile caricare i mezzi. Riprova.";
+    return [];
+  }
+}
 
 function showContext({ driver, plate, operation, scheduledAt = null }) {
   $("sessionContext").hidden = false;
@@ -16,8 +42,9 @@ function showContext({ driver, plate, operation, scheduledAt = null }) {
 }
 
 export async function prepareJournalAccess() {
-  await preparePublicAccess();
-  $("journalAssetSuggestions").innerHTML = "";
+  const hasPublicAccess = await preparePublicAccess();
+  if (hasPublicAccess) await loadAssetSuggestions();
+  else $("journalAssetSuggestions").innerHTML = "";
   const sessionId = new URLSearchParams(location.search).get("session");
   if (!sessionId) return;
   const session = await getSharedSession(sessionId);

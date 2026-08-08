@@ -123,6 +123,10 @@ def find_asset(plate: str, organization_id: str | None = None) -> dict[str, obje
     return asset
 
 
+def list_assets(organization_id: str) -> dict[str, list[dict[str, object]]]:
+    return {"items": repository.list_assets_for_organization(organization_id)}
+
+
 def vehicle_history(asset_id: int, organization_id: str | None = None) -> dict[str, object]:
     payload = repository.asset_history(asset_id, organization_id)
     if not payload:

@@ -194,6 +194,20 @@ def find_asset_by_plate(
     return None
 
 
+def list_assets_for_organization(organization_id: str) -> list[dict[str, object]]:
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, external_identifier, plate, category, status, availability
+            FROM fleet_assets
+            WHERE organization_id = ? AND plate IS NOT NULL
+            ORDER BY plate ASC, id ASC
+            """,
+            (organization_id,),
+        ).fetchall()
+    return [_dict(row) for row in rows]
+
+
 def create_session(values: dict[str, object]) -> dict[str, object]:
     with db_session() as conn:
         conn.execute(

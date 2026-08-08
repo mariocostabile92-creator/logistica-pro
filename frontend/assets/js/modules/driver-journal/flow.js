@@ -1,5 +1,5 @@
-import { checkSessionWarnings, completeSession, findAsset, markSessionInProgress } from "./api.js?v=dj4";
-import { createSpontaneousSession } from "./session-access.js?v=dj4";
+import { checkSessionWarnings, completeSession, findAsset, markSessionInProgress } from "./api.js?v=dj6101";
+import { assetListNeedsRetry, createSpontaneousSession, loadAssetSuggestions } from "./session-access.js?v=dj6101";
 import { state } from "./state.js?v=dj4";
 import { render, renderSummary, renderWarnings, setLoading, showError, showReceipt } from "./renderer.js?v=dj4";
 
@@ -17,7 +17,13 @@ async function validateCurrentStep() {
   }
   if (state.step === 2) {
     if (!$("plate").value.trim()) throw new Error("Inserisci la targa.");
-    state.asset = await findAsset($("plate").value, state.accessToken);
+    try {
+      state.asset = await findAsset($("plate").value, state.accessToken);
+    } catch (error) {
+      $("assetRetryButton").hidden = error.code !== "ASSET_LOAD_FAILED";
+      throw error;
+    }
+    $("assetRetryButton").hidden = true;
     $("plate").value = state.asset.plate;
     $("assetResult").hidden = false;
     $("assetResult").textContent = `Mezzo verificato: ${state.asset.plate} · ${state.asset.category || "Modello non registrato"}`;
@@ -113,6 +119,17 @@ export function initFlow() {
     } catch (error) {
       showError(error.message);
     }
+  });
+  $("assetRetryButton").addEventListener("click", () => {
+    if (assetListNeedsRetry()) {
+      void loadAssetSuggestions();
+      return;
+    }
+    $("nextButton").click();
+  });
+  $("plate").addEventListener("input", () => {
+    $("assetRetryButton").hidden = true;
+    showError("");
   });
   $("backButton").addEventListener("click", () => {
     showError("");

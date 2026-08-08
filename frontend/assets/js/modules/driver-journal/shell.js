@@ -1,4 +1,5 @@
 import { getHealth } from "../../api.js?v=5";
+import { retireLegacyServiceWorker } from "../pwa.js?v=3";
 
 
 async function checkJournalHealth() {
@@ -15,4 +16,5 @@ async function checkJournalHealth() {
 }
 
 
+retireLegacyServiceWorker();
 checkJournalHealth();

@@ -42,4 +42,4 @@ def validate_shared_access(token: str):
 
 @router.get("/app/journal/access/{token}", include_in_schema=False)
 def shared_access_page(token: str):
-    return FileResponse(JOURNAL_PAGE)
+    return FileResponse(JOURNAL_PAGE, headers={"Cache-Control": "no-cache"})
