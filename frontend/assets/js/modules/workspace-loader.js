@@ -17,8 +17,8 @@ const STYLES = {
     "workforce.css?v=5",
     "workforce-layout.css?v=3",
     "workforce-calendar.css?v=3",
-    "workforce-panel.css?v=4",
-    "workforce-responsive.css?v=5",
+    "workforce-panel.css?v=5",
+    "workforce-responsive.css?v=6",
     "workforce-foundation.css?v=2",
   ],
   fleet: [
@@ -120,7 +120,7 @@ const WORKSPACE_PREPARERS = {
   },
   workforce: async () => {
     const [module] = await Promise.all([
-      import("./workforce-page.js?v=8"),
+      import("./workforce-page.js?v=9"),
       loadWorkspaceStyles("workforce"),
     ]);
     return async () => {

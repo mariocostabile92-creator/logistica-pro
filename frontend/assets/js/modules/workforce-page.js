@@ -19,7 +19,7 @@ import {
   renderWorkforceCalendar,
   workforceCellKey,
 } from "./workforce-calendar-view.js";
-import { initWorkforceDetailPanel } from "./workforce-detail-panel.js";
+import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=2";
 import { initWorkforceImportFlow } from "./workforce-import-flow.js";
 import {
   renderWorkforceAnomalies,

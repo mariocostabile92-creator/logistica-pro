@@ -250,6 +250,36 @@ body[data-active-workspace="workforce"] .message.success {
   font-size: 14px;
 }
 
+.workforce-damage-summary {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 7px;
+  background: var(--surface-strong);
+}
+
+.workforce-damage-summary[hidden] { display: none; }
+.workforce-damage-summary h4,
+.workforce-damage-summary p { margin: 0; }
+.workforce-damage-summary-metrics {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px !important;
+}
+.workforce-damage-summary-metrics > div {
+  min-width: 0;
+  padding: 9px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 5px;
+  background: var(--surface);
+}
+.workforce-damage-summary-metrics dd { font-size: 18px; }
+.workforce-damage-summary button { justify-self: start; max-width: 100%; }
+.workforce-damage-summary-empty { display: grid; gap: 9px; }
+
 .workforce-detail-backdrop {
   display: none;
 }

@@ -208,3 +208,11 @@
     display: none;
   }
 }
+
+@media (max-width: 390px) {
+  .workforce-damage-summary { min-width: 0; padding: 12px; overflow: hidden; }
+  .workforce-damage-summary-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .workforce-damage-summary-metrics > div { padding: 7px !important; }
+  .workforce-damage-summary-metrics dt { overflow-wrap: anywhere; }
+  .workforce-damage-summary button { width: 100%; }
+}

@@ -309,6 +309,6 @@ test("API helper, workspace integration and responsive styles are wired", async 
   assert.match(loader, /damage-workspace\.css\?v=6/);
   assert.match(page, /damage-workspace\.js\?v=10/);
   assert.match(loader, /fleet-page\.js\?v=27/);
-  assert.match(app, /workspace-loader\.js\?v=36/);
-  assert.match(html, /app\.js\?v=48/);
+  assert.match(app, /workspace-loader\.js\?v=37/);
+  assert.match(html, /app\.js\?v=49/);
 });

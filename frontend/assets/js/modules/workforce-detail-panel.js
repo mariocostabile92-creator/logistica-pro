@@ -2,6 +2,7 @@ import { byId, escapeHtml } from "../utils/dom.js";
 import { workforceTimeLabel } from "./workforce-calendar-view.js";
 import { createWorkforceSurface } from "./workforce-surface.js";
 import { workforceStatusLabel } from "./workforce-view.js";
+import { createWorkforceDamageSummary } from "./workforce-damage-summary.js?v=1";
 
 
 function readableDate(value) {
@@ -18,6 +19,7 @@ function readableDate(value) {
 export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () => {} }) {
   let selectedMember = null;
   let preserveSelectionOnClose = false;
+  const damageSummary = createWorkforceDamageSummary();
 
   function clearSelection() {
     byId("workforceDesk").dataset.detailOpen = "false";
@@ -32,6 +34,7 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     byId("workforceStatusEditor").hidden = true;
     byId("workforceMemberDetail").hidden = true;
     byId("workforceMemberEditor").hidden = true;
+    damageSummary.hide();
     selectedMember = null;
   }
 
@@ -142,6 +145,7 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     byId("workforceMemberEditor").hidden = true;
     byId("workforceDesk").dataset.detailOpen = "true";
     surface.show(byId("workforceMemberEditBtn"));
+    void damageSummary.show(member);
   }
 
   byId("workforceDetailClose").addEventListener("click", surface.requestClose);
