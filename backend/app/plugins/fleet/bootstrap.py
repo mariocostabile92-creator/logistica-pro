@@ -20,6 +20,9 @@ from app.plugins.fleet.journal.infrastructure.shared_access_repository import (
 from app.plugins.fleet.journal.archive.router import router as journal_archive_router
 from app.plugins.fleet.journal.interfaces.integrity_router import router as journal_integrity_router
 from app.plugins.fleet.damage.infrastructure.repository import init_schema as init_damage_schema
+from app.plugins.fleet.damage.infrastructure.damage_policy_repository import (
+    init_schema as init_damage_policy_schema,
+)
 from app.plugins.fleet.damage.interfaces.router import router as damage_router
 from app.plugins.fleet.maintenance.infrastructure.repository import (
     init_schema as init_maintenance_schema,
@@ -57,6 +60,7 @@ def initialize_fleet_plugin() -> None:
         init_journal_schema()
         init_shared_access_schema()
         init_damage_schema()
+        init_damage_policy_schema()
         init_maintenance_schema()
         init_documents_schema()
         init_franchise_schema()
