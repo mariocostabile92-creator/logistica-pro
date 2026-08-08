@@ -1,13 +1,110 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Accedi · Operations Engine</title><link rel="stylesheet" href="./assets/css/base.css"><link rel="stylesheet" href="./assets/css/auth.css?v=4"></head>
-<body><main class="auth-page"><section class="auth-card" aria-labelledby="loginTitle">
-  <p class="eyebrow">Operations Engine</p><h1 id="loginTitle">Accedi</h1>
-  <p>Area operativa protetta.</p>
-  <form id="loginForm" class="auth-form"><label>Email<input name="email" type="email" autocomplete="username" required></label>
-    <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
-    <label class="auth-remember"><input name="remember" type="checkbox"> Ricordami su questo dispositivo</label>
-    <button type="submit">Accedi</button><p id="loginMessage" class="auth-message" role="status" aria-live="polite"></p></form>
-  <div class="auth-divider" aria-hidden="true"><span>oppure</span></div>
-  <div class="auth-register-cta"><p><strong>Non hai ancora un'organizzazione?</strong><br><span>Crea lo spazio operativo della tua azienda.</span></p>
-    <a class="button auth-secondary-button" href="./register.html">Crea organizzazione · Private Beta</a></div>
-</section></main><script type="module" src="./assets/js/auth/login.js?v=2"></script></body></html>
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#14201d">
+  <title>Accedi · Operations Engine</title>
+  <link rel="stylesheet" href="./assets/css/base.css">
+  <link rel="stylesheet" href="./assets/css/auth.css?v=5">
+</head>
+<body>
+  <main class="auth-page auth-login-page">
+    <section class="auth-card auth-login-shell" aria-labelledby="loginTitle">
+      <aside class="auth-brand-panel">
+        <div class="auth-brand-lockup">
+          <span class="auth-brand-mark" aria-hidden="true">OE</span>
+          <div>
+            <strong>Operations Engine</strong>
+            <span>Private Beta</span>
+          </div>
+        </div>
+
+        <div class="auth-brand-message">
+          <p class="auth-brand-kicker">Workspace operativo</p>
+          <h2>Ogni decisione operativa, nello stesso posto.</h2>
+          <p>
+            Operazioni, persone e mezzi in un ambiente protetto,
+            costruito per il lavoro quotidiano.
+          </p>
+        </div>
+
+        <ul class="auth-brand-signals" aria-label="Funzioni principali">
+          <li><span aria-hidden="true">01</span>Dati operativi</li>
+          <li><span aria-hidden="true">02</span>Risorse coordinate</li>
+          <li><span aria-hidden="true">03</span>Controllo centralizzato</li>
+        </ul>
+
+        <p class="auth-brand-security">
+          <span aria-hidden="true">●</span>
+          Accesso protetto e dati separati per organizzazione
+        </p>
+      </aside>
+
+      <div class="auth-login-panel">
+        <div class="auth-mobile-brand" aria-hidden="true">
+          <span class="auth-brand-mark">OE</span>
+          <strong>Operations Engine</strong>
+        </div>
+
+        <header class="auth-login-heading">
+          <p class="eyebrow">Area riservata</p>
+          <h1 id="loginTitle">Bentornato</h1>
+          <p>Accedi al workspace della tua organizzazione.</p>
+        </header>
+
+        <form id="loginForm" class="auth-form auth-login-form">
+          <label>
+            <span>Email aziendale</span>
+            <input
+              name="email"
+              type="email"
+              inputmode="email"
+              autocomplete="username"
+              placeholder="nome@azienda.it"
+              required
+            >
+          </label>
+          <label>
+            <span>Password</span>
+            <input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Inserisci la password"
+              required
+            >
+          </label>
+          <label class="auth-remember">
+            <input name="remember" type="checkbox">
+            <span>Ricordami su questo dispositivo</span>
+          </label>
+          <button type="submit" class="auth-login-submit">
+            <span>Accedi al workspace</span>
+            <span aria-hidden="true">→</span>
+          </button>
+          <p id="loginMessage" class="auth-message" role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="auth-divider" aria-hidden="true"><span>oppure</span></div>
+
+        <div class="auth-register-cta">
+          <div class="auth-register-copy">
+            <span class="auth-register-icon" aria-hidden="true">+</span>
+            <p>
+              <strong>Nuova organizzazione</strong>
+              <span>Crea uno spazio operativo separato per la tua azienda.</span>
+            </p>
+          </div>
+          <a class="button auth-secondary-button" href="./register.html">
+            <span>Crea organizzazione</span>
+            <span aria-hidden="true">→</span>
+          </a>
+          <small>Accesso Private Beta</small>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./assets/js/auth/login.js?v=2"></script>
+</body>
+</html>

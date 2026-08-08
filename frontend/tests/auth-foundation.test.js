@@ -5,7 +5,10 @@ const file = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("login is a real accessible page with remember-me and no public workspaces", async () => {
   const html = await file("login.html");
-  for (const text of ["Accedi", "Email", "Password", "Ricordami", "Area operativa protetta"]) {
+  for (const text of [
+    "Bentornato", "Email aziendale", "Password", "Ricordami",
+    "Accedi al workspace", "Crea organizzazione",
+  ]) {
     assert.match(html, new RegExp(text, "i"));
   }
   assert.doesNotMatch(html, /Planning|Workforce|Vehicle Library|Fleet Vision/);
@@ -53,7 +56,10 @@ test("administrative bootstrap waits for session before mounting workspaces", as
 test("login and session UI are responsive and use the existing design tokens", async () => {
   const css = await file("assets/css/auth.css");
   assert.match(css, /var\(--surface\)/);
-  assert.match(css, /@media\(max-width:480px\)/);
-  assert.match(css, /width:min\(100%,440px\)/);
+  assert.match(css, /@media \(max-width: 480px\)/);
+  assert.match(css, /width: min\(100%, 440px\)/);
+  assert.match(css, /\.auth-login-shell[\s\S]*?grid-template-columns/);
+  assert.match(css, /\.auth-card a\.button\.auth-secondary-button[\s\S]*?background: var\(--accent-dark\)/);
+  assert.doesNotMatch(css, /var\(--primary\)/);
   assert.doesNotMatch(css, /width:(?:390|768|1440)px/);
 });
