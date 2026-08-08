@@ -2,11 +2,14 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from app.plugins.fleet.journal.control_room import completion_repository
+from app.plugins.fleet.journal.control_room.planning_vehicle_adapter import (
+    assignment_is_active,
+    fleet_asset_for_assignment,
+    index_fleet_assets_by_plate,
+)
 from app.plugins.fleet.journal.domain.operational_day import operational_bounds, organization_timezone
-from app.utils.text_normalizer import normalize_plate
 
 
-ACTIVE_ASSIGNMENTS = {"proposed", "confirmed", "warning", "manually_changed"}
 COMPLETED = {"completed", "con_anomalia"}
 EXCEPTION_EVENT_TYPES = {
     "route_aborted", "route_cancelled", "driver_absent", "driver_removed",
@@ -20,7 +23,7 @@ def _identity(value: object) -> str:
 
 
 def _assignment_exception(assignment: dict, events: list[dict]) -> str | None:
-    if assignment["assignment_status"] not in ACTIVE_ASSIGNMENTS:
+    if not assignment_is_active(assignment):
         return f"assignment_{assignment['assignment_status']}"
     if not assignment.get("driver_id") and not assignment.get("driver_name"):
         return "driver_removed"
@@ -148,7 +151,7 @@ def journal_completion(context: dict, procedures: list[dict], now: datetime | No
     if current.tzinfo is None:
         current = current.replace(tzinfo=timezone.utc)
     current = current.astimezone(zone)
-    assets = {normalize_plate(str(item.get("plate") or "")): item for item in snapshot["assets"] if item.get("plate")}
+    assets = index_fleet_assets_by_plate(snapshot["assets"])
     drivers: dict[str, dict] = {}
     exceptions = []
     for assignment in snapshot["assignments"]:
@@ -163,7 +166,7 @@ def journal_completion(context: dict, procedures: list[dict], now: datetime | No
             continue
         if not driver_key or driver_key in drivers:
             continue
-        asset = assets.get(normalize_plate(str(assignment.get("plate") or "")))
+        asset = fleet_asset_for_assignment(assignment, assets)
         drivers[driver_key] = {
             "driver_key": driver_key,
             "driver_id": assignment.get("driver_id"),

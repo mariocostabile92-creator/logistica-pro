@@ -9,26 +9,41 @@ def _rows(cursor) -> list[dict]:
     return [dict(row) for row in cursor.fetchall()]
 
 
-def planning_snapshot(operation_date: str) -> dict | None:
-    organization_id = current_organization_id()
-    planning_scope = (
+def _scope(allow_test_legacy: bool) -> str:
+    return (
         "(organization_id = ? OR organization_id IS NULL OR organization_id = 'default')"
-        if SETTINGS.environment == "test"
+        if SETTINGS.environment == "test" and allow_test_legacy
         else "organization_id = ?"
     )
-    asset_scope = (
-        "(organization_id = ? OR organization_id IS NULL OR organization_id = 'default')"
-        if SETTINGS.environment == "test"
-        else "organization_id = ?"
+
+
+def _planning_snapshot(
+    operation_date: str,
+    organization_id: str,
+    *,
+    authoritative_only: bool,
+    allow_test_legacy: bool,
+) -> dict | None:
+    planning_scope = _scope(allow_test_legacy)
+    asset_scope = _scope(allow_test_legacy)
+    status_clause = (
+        "status IN ('published', 'confirmed')"
+        if authoritative_only
+        else "status <> 'superseded'"
+    )
+    order = (
+        "CASE status WHEN 'published' THEN 0 ELSE 1 END, id DESC"
+        if authoritative_only
+        else "id DESC"
     )
     with db_session() as conn:
         planning = conn.execute(
             f"""
             SELECT id, operation_date, station, status, version, updated_at
             FROM plannings
-            WHERE operation_date = ? AND status <> 'superseded'
+            WHERE operation_date = ? AND {status_clause}
               AND {planning_scope}
-            ORDER BY id DESC
+            ORDER BY {order}
             LIMIT 1
             """,
             (operation_date, organization_id),
@@ -75,3 +90,28 @@ def planning_snapshot(operation_date: str) -> dict | None:
         "events": events,
         "assets": assets,
     }
+
+
+def planning_snapshot(
+    operation_date: str,
+    organization_id: str | None = None,
+) -> dict | None:
+    explicit_organization = organization_id is not None
+    return _planning_snapshot(
+        operation_date,
+        organization_id or current_organization_id(),
+        authoritative_only=False,
+        allow_test_legacy=not explicit_organization,
+    )
+
+
+def authoritative_planning_snapshot(
+    operation_date: str,
+    organization_id: str,
+) -> dict | None:
+    return _planning_snapshot(
+        operation_date,
+        organization_id,
+        authoritative_only=True,
+        allow_test_legacy=False,
+    )
