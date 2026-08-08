@@ -7,12 +7,13 @@ import {
   listDamageCandidates,
   listDamageCases,
   updateDamageCase,
-} from "../api.js?v=5";
+} from "../api.js?v=6";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js?v=2";
 import { createAttachmentDraft } from "./attachments/draft-uploader.js";
 import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 import { openOperationalStatusControl } from "./operational-status-control.js";
+import { mountDamageDriverSuggestion } from "./damage-driver-suggestion.js?v=1";
 
 const STATUS = {
   nuova: "Nuova", in_valutazione: "In valutazione",
@@ -41,6 +42,12 @@ const filters = {
 let initialized = false;
 let selectedCaseId = null;
 let damageDraft = null;
+let driverSuggestionController = null;
+
+function disposeDriverSuggestion() {
+  driverSuggestionController?.destroy();
+  driverSuggestionController = null;
+}
 
 function date(value) {
   return value ? new Date(value).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" }) : "—";
@@ -136,6 +143,7 @@ function renderCaseList() {
 }
 
 function renderNavigator() {
+  disposeDriverSuggestion();
   root.classList.remove("damage-detail-mode");
   root.querySelector("#damageMain").innerHTML = `
     ${metrics()}
@@ -164,6 +172,7 @@ function renderNavigator() {
 }
 
 function renderShell() {
+  disposeDriverSuggestion();
   root.innerHTML = `
     <header class="damage-header">
       <div><p class="eyebrow">Fleet Operations</p><h2 id="damageWorkspaceTitle">Danni</h2>
@@ -177,6 +186,7 @@ function renderShell() {
 }
 
 function renderCandidates() {
+  disposeDriverSuggestion();
   root.classList.remove("damage-detail-mode");
   root.querySelector("#damageMain").innerHTML = `
     <button type="button" class="quiet damage-back" data-damage-back>← Pratiche danno</button>
@@ -365,6 +375,7 @@ function bindDetail(caseId) {
 }
 
 function renderManual() {
+  disposeDriverSuggestion();
   root.classList.remove("damage-detail-mode");
   root.querySelector("#damageMain").innerHTML = `
     <button type="button" class="quiet damage-back" data-damage-back>← Pratiche danno</button>
@@ -372,6 +383,7 @@ function renderManual() {
     <form id="damageManualForm" class="damage-form">
       <label>ID veicolo<input name="vehicle_id" type="number" min="1" required></label>
       <label>Data evento<input name="occurred_at" type="datetime-local" required></label>
+      <section class="damage-driver-suggestion" data-damage-driver-suggestion aria-live="polite" aria-atomic="true" hidden></section>
       <label>Descrizione<textarea name="description" required></textarea></label>
       <label>Motivazione inserimento manuale<textarea name="manual_reason" required></textarea></label>
       <label>Gravità<select name="severity"><option value="bassa">Bassa</option><option value="media" selected>Media</option><option value="alta">Alta</option><option value="critica">Critica</option></select></label>
@@ -379,6 +391,9 @@ function renderManual() {
       <p data-damage-create-status role="status"></p>
       <button type="submit">Crea pratica manuale</button>
     </form></section>`;
+  driverSuggestionController = mountDamageDriverSuggestion(
+    root.querySelector("#damageManualForm"),
+  );
   damageDraft = createAttachmentDraft(
     root.querySelector("[data-damage-attachment-draft]"),
     { title: "Foto e video del danno", accept: ".jpg,.jpeg,.png,.webp,.mp4,.mov" },
@@ -454,10 +469,7 @@ export async function showDamageWorkspace(options = {}) {
     const submit = event.target.querySelector("[type='submit']");
     if (submit.disabled) return;
     submit.disabled = true;
-    const values = formValues(event.target);
-    values.vehicle_id = Number(values.vehicle_id);
-    values.origin = "manual";
-    values.vehicle_operational_status = "disponibile";
+    const values = buildManualDamagePayload(formValues(event.target));
     try {
       const created = await saveEntityWithAttachments({
         draft: damageDraft,
@@ -471,4 +483,13 @@ export async function showDamageWorkspace(options = {}) {
       submit.disabled = false;
     }
   });
+}
+
+export function buildManualDamagePayload(values) {
+  return {
+    ...values,
+    vehicle_id: Number(values.vehicle_id),
+    origin: "manual",
+    vehicle_operational_status: "disponibile",
+  };
 }

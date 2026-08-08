@@ -35,6 +35,29 @@
 .damage-form label { display: grid; gap: 5px; min-width: 0; }
 .damage-form textarea { min-height: 90px; resize: vertical; }
 .damage-form button { align-self: end; }
+.damage-driver-suggestion {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  overflow-wrap: anywhere;
+}
+.damage-driver-suggestion[data-state="loading"] { color: var(--text-muted); }
+.damage-driver-suggestion[data-state="error"] { border-left-color: var(--warning); }
+.damage-driver-suggestion p { margin: 0; }
+.damage-driver-suggestion .eyebrow { margin-bottom: 6px; }
+.damage-driver-suggestion-name { display: block; font-size: 16px; }
+.damage-driver-suggestion-source { margin-top: 5px !important; font-size: 12px; }
+.damage-driver-suggestion-note,
+.damage-driver-suggestion-message { margin-top: 5px !important; color: var(--text-muted); font-size: 12px; }
+.damage-driver-conflict { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.damage-driver-conflict div { min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); }
+.damage-driver-conflict span,
+.damage-driver-conflict strong { display: block; }
+.damage-driver-conflict span { color: var(--text-muted); font-size: 11px; }
 .damage-media { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .damage-media img { width: 100%; aspect-ratio: 4 / 3; border-radius: 6px; object-fit: cover; }
 .damage-timeline { display: grid; gap: 12px; margin: 0; padding-left: 22px; border-left: 2px solid var(--border); list-style: none; }
@@ -62,6 +85,8 @@
   .damage-case-card, .damage-form, .damage-candidates dl, .damage-detail-grid dl { grid-template-columns: 1fr; }
   .damage-filters { margin-right: -12px; padding-right: 12px; }
   .damage-media { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .damage-driver-suggestion { padding: 11px 12px; }
+  .damage-driver-conflict { grid-template-columns: 1fr; }
 }
 
 /* Professional case navigator */

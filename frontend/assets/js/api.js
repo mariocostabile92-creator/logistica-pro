@@ -174,6 +174,21 @@ export async function getDamageCase(caseId) {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases/${caseId}`));
 }
 
+export async function getDamageDriverSuggestion(
+  vehicleId,
+  operationalDate,
+  { signal } = {},
+) {
+  const query = new URLSearchParams({
+    vehicle_id: String(vehicleId),
+    operational_date: operationalDate,
+  });
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/damage-cases/driver-suggestion?${query}`,
+    { signal },
+  ));
+}
+
 export async function listDamageCandidates() {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-candidates`));
 }
