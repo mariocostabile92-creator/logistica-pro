@@ -279,16 +279,13 @@ async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId)
   renderFleetLoading();
   const response = await listFleetAssets();
   state.fleetPlugin.assets = response.items;
-  const latestSync = await refreshSyncSummary(
-    response.items.length > 0 && document.body.dataset.workspaceState !== "DEMO",
-  );
   renderFilteredFleet();
   const latestAssetUpdate = response.items.reduce(
     (latest, item) => !latest || item.updated_at > latest ? item.updated_at : latest,
     "",
   );
   byId("fleetPluginTimestamp").textContent = fleetTimestamp(
-    latestSync?.imported_at || latestFleetImportAt || latestAssetUpdate,
+    latestFleetImportAt || latestAssetUpdate,
   );
   document.dispatchEvent(new CustomEvent("fleet:registry-loaded", {
     detail: { assetCount: response.items.length },
@@ -301,6 +298,15 @@ async function refreshFleet(selectedAssetId = state.fleetPlugin.selectedAssetId)
     renderFleetTree(response.items);
   }
   loaded = true;
+  void refreshSyncSummary(
+    response.items.length > 0 && document.body.dataset.workspaceState !== "DEMO",
+  ).then((latestSync) => {
+    if (latestSync?.imported_at) {
+      byId("fleetPluginTimestamp").textContent = fleetTimestamp(latestSync.imported_at);
+    }
+  }).catch((error) => {
+    reportUnexpectedError("fleet.sync-summary", error);
+  });
 }
 
 

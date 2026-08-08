@@ -1,10 +1,11 @@
 import { getHealth } from "./api.js?v=5";
 import { initMissionControl } from "./modules/mission-control.js?v=7";
-import { initViewNavigation } from "./modules/view-navigation.js?v=5";
+import { initViewNavigation } from "./modules/view-navigation.js?v=7";
 import {
   ensureWorkspaceInitialized,
   initWorkspaceLoader,
-} from "./modules/workspace-loader.js?v=27";
+  preloadWorkspace,
+} from "./modules/workspace-loader.js?v=28";
 import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js?v=2";
 import { byId } from "./utils/dom.js";
 import { requireAdministrativeSession } from "./auth/session.js?v=2";
@@ -45,10 +46,17 @@ async function bootstrapAdministrativeApp() {
     const homeReady = initMissionControl();
     initWorkspaceLifecycle();
     initWorkspaceLoader();
-    initViewNavigation({ loadWorkspace: ensureWorkspaceInitialized });
-    revealAdministrativeApp();
+    initViewNavigation({
+      loadWorkspace: ensureWorkspaceInitialized,
+      prepareWorkspace: preloadWorkspace,
+    });
     checkHealth();
     retirePwaAfterHome(homeReady);
+    await homeReady;
+    revealAdministrativeApp();
+    const warmFleet = () => void preloadWorkspace("fleet");
+    if ("requestIdleCallback" in window) window.requestIdleCallback(warmFleet, { timeout: 1500 });
+    else window.setTimeout(warmFleet, 250);
   } catch (error) {
     if (error?.status !== 401) failAdministrativeBootstrap();
   }

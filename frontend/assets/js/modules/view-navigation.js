@@ -18,6 +18,7 @@ const WORKSPACE_SECTIONS = {
 
 const deferredSections = new Map();
 let initializeWorkspace = async () => false;
+let preloadWorkspace = async () => false;
 let navigationVersion = 0;
 let initialized = false;
 
@@ -104,14 +105,26 @@ async function navigate(view, targetId = null) {
   const startedAt = globalThis.performance?.now?.() || 0;
   const version = ++navigationVersion;
   const selectedView = normalizedWorkspace(view);
-  showWorkspace(selectedView);
+  attachWorkspaceSections(selectedView);
+  setNavigationPending(selectedView, true);
   if (startedAt) {
     document.body.dataset.navigationFeedbackMs = String(
       Math.round(performance.now() - startedAt),
     );
   }
-  await initializeWorkspace(selectedView);
+  try {
+    await initializeWorkspace(selectedView);
+  } catch (error) {
+    if (version === navigationVersion) {
+      document.body.dataset.navigationErrorView = selectedView;
+      document.body.dataset.navigationError = error?.name || "WorkspaceError";
+    }
+    return;
+  } finally {
+    if (version === navigationVersion) setNavigationPending(selectedView, false);
+  }
   if (version !== navigationVersion) return;
+  showWorkspace(selectedView);
   announceWorkspace(selectedView);
   if (startedAt) {
     document.body.dataset.navigationReadyMs = String(Math.round(performance.now() - startedAt));
@@ -124,19 +137,40 @@ async function navigate(view, targetId = null) {
 function handleNavigationClick(event) {
   const button = event.target.closest("[data-workspace-view]");
   if (!button) return;
-  navigate(button.dataset.workspaceView);
+  void navigate(button.dataset.workspaceView);
 }
 
 
-export function initViewNavigation({ loadWorkspace } = {}) {
+function handleNavigationIntent(event) {
+  const button = event.target.closest?.("[data-workspace-view]");
+  if (!button) return;
+  void preloadWorkspace(button.dataset.workspaceView);
+}
+
+
+export function initViewNavigation({ loadWorkspace, prepareWorkspace } = {}) {
   if (initialized) return;
   initialized = true;
   if (loadWorkspace) initializeWorkspace = loadWorkspace;
+  if (prepareWorkspace) preloadWorkspace = prepareWorkspace;
   prepareDeferredSections();
   document.addEventListener("click", handleNavigationClick);
+  document.addEventListener("pointerover", handleNavigationIntent, { passive: true });
+  document.addEventListener("focusin", handleNavigationIntent);
   document.addEventListener("workspace:navigate", (event) => {
-    navigate(event.detail.view, event.detail.targetId || null);
+    void navigate(event.detail.view, event.detail.targetId || null);
   });
   showWorkspace("home");
   announceWorkspace("home");
+}
+
+
+function setNavigationPending(view, pending) {
+  document.body.toggleAttribute("data-navigation-pending", pending);
+  document.body.dataset.navigationTarget = pending ? view : "";
+  document.querySelectorAll("[data-workspace-view]").forEach((button) => {
+    const targeted = pending && button.dataset.workspaceView === view;
+    button.toggleAttribute("data-loading", targeted);
+    button.setAttribute("aria-busy", String(targeted));
+  });
 }

@@ -22,7 +22,7 @@ test("administrative first paint contains only the definitive Home surface", asy
 test("bootstrap reveals the initialized app atomically and provides a finite error state", async () => {
   const app = await source("assets/js/app.js");
   const bootstrap = await source("assets/js/modules/app-bootstrap.js");
-  assert.match(app, /await requireAdministrativeSession\(\)[\s\S]*const homeReady = initMissionControl\(\)[\s\S]*initViewNavigation[\s\S]*revealAdministrativeApp\(\)/);
+  assert.match(app, /await requireAdministrativeSession\(\)[\s\S]*const homeReady = initMissionControl\(\)[\s\S]*initViewNavigation[\s\S]*await homeReady;[\s\S]*revealAdministrativeApp\(\)/);
   assert.doesNotMatch(bootstrap, /await frame\(\)|requestAnimationFrame/);
   assert.match(bootstrap, /header\.hidden = false[\s\S]*main\.hidden = false[\s\S]*shell\.hidden = true/);
   assert.match(bootstrap, /dataset\.appState = "failed"/);
@@ -77,6 +77,7 @@ test("workspace first paints await only their current primary surface", async ()
   assert.doesNotMatch(operations, /void prepareLegacyOperations\(\)/);
   assert.match(fleet, /loadWorkspaceStyles\("fleet"\)/);
   assert.match(fleet, /requestIdleCallback\(loadSecondaryStyles\)/);
+  assert.match(fleet, /await module\.prepareFleetFirstPaint\(\)/);
 });
 
 test("source files do not contain common UTF-8 mojibake sequences", async () => {

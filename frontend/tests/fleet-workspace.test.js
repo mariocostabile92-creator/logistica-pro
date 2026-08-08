@@ -125,7 +125,8 @@ test("Fleet detail and Excel update are native dialogs with a responsive registr
   assert.match(html, /id="fleetAssetPlate"[\s\S]*id="fleetAssetDriver"[\s\S]*id="fleetAssetAvailability"[\s\S]*id="fleetAssetNote"/);
   assert.match(page, /filterFleetAssets\(state\.fleetPlugin\.assets, searchTerm\)/);
   assert.match(page, /response\.items\.length > 0 && document\.body\.dataset\.workspaceState !== "DEMO"/);
-  assert.match(page, /latestSync\?\.imported_at \|\| latestFleetImportAt \|\| latestAssetUpdate/);
+  assert.match(page, /latestFleetImportAt \|\| latestAssetUpdate/);
+  assert.match(page, /refreshSyncSummary\([\s\S]*?\)\.then\(\(latestSync\)/);
   assert.match(page, /new Blob/);
   assert.match(page, /now\.getFullYear\(\)[\s\S]*now\.getMonth\(\) \+ 1[\s\S]*now\.getDate\(\)/);
   assert.match(sync, /if \(!panel\.open\) panel\.showModal\(\)/);

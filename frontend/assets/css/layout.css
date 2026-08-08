@@ -57,7 +57,8 @@
   background: #2a3532;
 }
 
-.workspace-tab.active {
+.workspace-tab.active,
+.workspace-tab.active:hover:not(:disabled) {
   background: #f7faf8;
   color: #173d35;
   box-shadow: var(--shadow-sm);

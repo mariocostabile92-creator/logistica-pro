@@ -127,14 +127,14 @@ const WORKSPACE_PREPARERS = {
   },
   fleet: async () => {
     const [module, fleetSync] = await Promise.all([
-      import("./fleet-page.js?v=22"),
+      import("./fleet-page.js?v=23"),
       import("./fleet-sync.js"),
       loadWorkspaceStyles("fleet"),
     ]);
-    return () => {
+    return async () => {
       module.initFleetPage();
       initializeOnce("fleet-sync", fleetSync.initFleetSync);
-      module.prepareFleetFirstPaint();
+      await module.prepareFleetFirstPaint();
       const loadSecondaryStyles = () => void loadWorkspaceStyles("fleet-secondary");
       if ("requestIdleCallback" in window) window.requestIdleCallback(loadSecondaryStyles);
       else queueMicrotask(loadSecondaryStyles);
@@ -161,6 +161,13 @@ async function prepareWorkspace(view) {
   if (!WORKSPACE_PREPARERS[view] || initialized.has(view)) return null;
   if (!prepared.has(view)) prepared.set(view, WORKSPACE_PREPARERS[view]());
   return prepared.get(view);
+}
+
+
+export async function preloadWorkspace(view) {
+  if (!WORKSPACE_PREPARERS[view] || initialized.has(view)) return false;
+  await prepareWorkspace(view);
+  return true;
 }
 
 

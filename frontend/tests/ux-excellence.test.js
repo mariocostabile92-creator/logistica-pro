@@ -16,7 +16,10 @@ const frontendFile = (path) => readFile(
 
 
 test("primary navigation is administrative and routes Journal through Fleet", async () => {
-  const html = await frontendFile("index.html");
+  const [html, layout] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/css/layout.css"),
+  ]);
   const navigation = html.match(
     /<nav class="workspace-tabs"[\s\S]*?<\/nav>/,
   )?.[0] || "";
@@ -38,6 +41,7 @@ test("primary navigation is administrative and routes Journal through Fleet", as
   assert.match(fleet, /Vehicle Library/);
   assert.doesNotMatch(navigation, /settings|getting-started/i);
   assert.match(html, /id="configurationNavBtn"/);
+  assert.match(layout, /\.workspace-tab\.active,[\s\S]*\.workspace-tab\.active:hover:not\(:disabled\)/);
 });
 
 
