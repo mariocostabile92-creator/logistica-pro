@@ -3,7 +3,10 @@ import json
 from app.auth.tenant_context import current_organization_id
 from app.core.config import SETTINGS
 from app.core.database import db_session
-from app.plugins.workforce.domain.models import WorkforceImportResult
+from app.plugins.workforce.domain.models import (
+    WorkforceImportResult,
+    WorkforceMember,
+)
 from app.plugins.workforce.infrastructure.records import (
     change_from_row,
     member_from_row,
@@ -25,6 +28,24 @@ def list_members(organization_id: str | None = None):
         rows = conn.execute(
             f"SELECT * FROM workforce_members WHERE {clause} ORDER BY display_name, id",
             parameters,
+        ).fetchall()
+    return [member_from_row(row) for row in rows]
+
+
+def find_members_by_external_identifier(
+    organization_id: str,
+    external_identifier: str,
+) -> list[WorkforceMember]:
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM workforce_members
+            WHERE organization_id = ?
+              AND LOWER(TRIM(external_identifier)) = LOWER(TRIM(?))
+            ORDER BY id
+            """,
+            (organization_id, external_identifier),
         ).fetchall()
     return [member_from_row(row) for row in rows]
 
