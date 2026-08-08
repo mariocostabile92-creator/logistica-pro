@@ -110,7 +110,7 @@ function initializeOnce(key, callback) {
 const WORKSPACE_PREPARERS = {
   operations: async () => {
     const [planningWorkspace] = await Promise.all([
-      import("./planning-workspace/index.js?v=3"),
+      import("./planning-workspace/index.js?v=4"),
       loadWorkspaceStyles("operations"),
     ]);
     return async () => {

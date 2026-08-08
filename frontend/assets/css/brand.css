@@ -1,0 +1,149 @@
+.oe-brand,
+.oe-workspace-brand {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.oe-brand img,
+.oe-workspace-brand img {
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.oe-brand-logo {
+  width: auto;
+  height: auto;
+}
+
+.oe-brand-mark {
+  width: 22px;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+.oe-header-brand {
+  min-width: 126px;
+  min-height: 46px;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 9px;
+  background: #f7faf8;
+  text-decoration: none;
+}
+
+.oe-header-brand picture,
+.oe-header-brand img {
+  display: block;
+}
+
+.oe-header-brand img {
+  width: auto;
+  height: 34px;
+}
+
+.oe-auth-brand {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 300px);
+  justify-content: center;
+  padding: 14px 18px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 14px;
+  background: #f7faf8;
+}
+
+.oe-auth-brand .oe-brand-logo {
+  width: 100%;
+  max-width: 264px;
+}
+
+.oe-auth-brand-light {
+  margin: 0 auto 1.25rem;
+  border-color: var(--border);
+  background: var(--surface-subtle);
+}
+
+.oe-auth-mobile-brand {
+  display: none;
+  width: min(100%, 250px);
+  margin: 0 auto 2rem;
+}
+
+.oe-workspace-brand {
+  gap: 7px;
+}
+
+.oe-workspace-brand .oe-brand-mark {
+  width: 21px;
+}
+
+.operations-home-hero .oe-workspace-brand .oe-brand-mark {
+  width: 28px;
+}
+
+.fleet-sidebar-heading .oe-workspace-brand {
+  align-items: flex-start;
+}
+
+.fleet-sidebar-heading .oe-workspace-brand .oe-brand-mark {
+  width: 24px;
+  margin-top: 1px;
+}
+
+.oe-loading-mark {
+  display: block;
+  width: 52px;
+  height: 38px;
+  flex: 0 0 52px;
+  object-fit: contain;
+}
+
+.journal-product-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.journal-product-brand .oe-brand-mark {
+  width: 34px;
+}
+
+.offline-brand {
+  margin-bottom: 1.1rem;
+}
+
+@media (max-width: 860px) {
+  .fleet-sidebar-heading .oe-workspace-brand .oe-brand-mark {
+    width: 28px;
+  }
+}
+
+@media (max-width: 700px) {
+  .oe-auth-mobile-brand {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 620px) {
+  .oe-header-brand {
+    min-width: 48px;
+    min-height: 40px;
+    padding: 5px 7px;
+  }
+
+  .oe-header-brand img {
+    width: 38px;
+    height: 28px;
+  }
+
+  .oe-workspace-brand {
+    gap: 6px;
+  }
+
+  .oe-workspace-brand .oe-brand-mark {
+    width: 20px;
+  }
+}

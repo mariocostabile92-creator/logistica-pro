@@ -49,7 +49,8 @@ test("visible branding uses Operations Engine", async () => {
   const html = await frontendFile("index.html");
 
   assert.match(html, /<title>Operations Engine<\/title>/);
-  assert.match(html, /<h1>Operations Engine<\/h1>/);
+  assert.match(html, /class="product-brand oe-header-brand"[\s\S]*operations-engine-logo\.png\?v=1[\s\S]*alt="Operations Engine"/);
+  assert.doesNotMatch(html, /<h1>Operations Engine<\/h1>/);
   assert.doesNotMatch(html, /<h1>DSP Operations OS<\/h1>/);
 });
 

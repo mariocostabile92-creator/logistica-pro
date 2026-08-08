@@ -9,11 +9,30 @@ function textBlock(role, className) {
 }
 
 
+function brandedEyebrow(text) {
+  const eyebrow = element("p", { className: "eyebrow oe-workspace-brand" });
+  eyebrow.append(
+    element("img", {
+      className: "oe-brand-mark",
+      attributes: {
+        src: "/app/assets/brand/operations-engine-mark.png?v=1",
+        width: "192",
+        height: "134",
+        alt: "",
+        "aria-hidden": "true",
+      },
+    }),
+    element("span", { text }),
+  );
+  return eyebrow;
+}
+
+
 export function createPlanningHeader() {
   const header = element("header", { className: "planning-workspace-header" });
   const heading = element("div", { className: "planning-workspace-heading" });
   heading.append(
-    element("p", { className: "eyebrow", text: "Pianificazione operativa" }),
+    brandedEyebrow("Pianificazione operativa"),
     element("h2", {
       text: "Planning operativo",
       attributes: { id: "planningWorkspaceTitle" },
