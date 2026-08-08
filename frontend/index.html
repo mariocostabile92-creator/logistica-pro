@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="./assets/brand/operations-engine-mark-192.png?v=1" />
   <link rel="manifest" href="./manifest.webmanifest?v=3" />
   <link rel="stylesheet" href="./assets/css/base.css?v=34" />
-  <link rel="stylesheet" href="./assets/css/brand.css?v=1" />
+  <link rel="stylesheet" href="./assets/css/brand.css?v=2" />
   <link rel="stylesheet" href="./assets/css/layout.css?v=35" />
   <link rel="stylesheet" href="./assets/css/components.css?v=34" />
   <link rel="stylesheet" href="./assets/css/mission-control.css?v=34" />
@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="./assets/css/responsive.css?v=34" />
   <link rel="stylesheet" href="./assets/css/auth.css?v=34" />
   <link rel="stylesheet" href="./assets/css/auth-header-responsive.css?v=34" />
+  <link rel="stylesheet" href="./assets/css/onboarding.css?v=1" />
 </head>
 <body data-home-state="loading" data-planning-state="loading" data-app-state="bootstrapping">
   <div id="appBootstrapShell" class="app-bootstrap-shell" role="status" aria-live="polite">
@@ -150,7 +151,7 @@
     >
       <header class="operations-home-hero">
         <div>
-          <p class="eyebrow oe-workspace-brand"><img class="oe-brand-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Giornata operativa</span></p>
+          <p class="eyebrow oe-workspace-eyebrow"><img class="oe-workspace-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Giornata operativa</span></p>
           <h2 id="missionControlTitle"><span id="operationsHomeGreeting">Buongiorno</span></h2>
           <time id="operationsHomeDate">Data in aggiornamento</time>
         </div>
@@ -747,7 +748,7 @@
     >
       <div class="section-heading workforce-toolbar">
         <div>
-          <p class="eyebrow oe-workspace-brand"><img class="oe-brand-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Workforce</span></p>
+          <p class="eyebrow oe-workspace-eyebrow"><img class="oe-workspace-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Workforce</span></p>
           <h2 id="workforceTitle">Workforce</h2>
           <p id="workforceTimestamp" class="section-note">
             Preparazione delle persone convocabili per il Planning Driver.
@@ -1157,8 +1158,8 @@
       <div class="fleet-workspace-layout">
       <aside id="fleetWorkspaceSidebar" class="fleet-workspace-sidebar" aria-label="Esplora Fleet">
         <div class="fleet-sidebar-heading">
-          <div class="oe-workspace-brand">
-            <img class="oe-brand-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" />
+          <div class="oe-workspace-eyebrow">
+            <img class="oe-workspace-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" />
             <div><p class="eyebrow">Workspace</p><strong>Fleet</strong></div>
           </div>
           <button id="fleetSidebarClose" class="quiet" type="button" aria-label="Chiudi navigazione">&times;</button>
@@ -1559,7 +1560,7 @@
     >
       <div id="organizationSettings" class="organization-settings">
         <header class="organization-settings-header">
-          <div><p class="eyebrow oe-workspace-brand"><img class="oe-brand-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Organization</span></p><h2>Organization Settings</h2><p id="organizationSettingsStatus" class="section-note">Caricamento organizzazione…</p></div>
+          <div><p class="eyebrow oe-workspace-eyebrow"><img class="oe-workspace-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Organization</span></p><h2>Organization Settings</h2><p id="organizationSettingsStatus" class="section-note">Caricamento organizzazione…</p></div>
         </header>
         <nav id="organizationSettingsTabs" class="organization-tabs" aria-label="Sezioni organizzazione">
           <button type="button" class="active" data-organization-tab="general">Generale</button>
@@ -1678,120 +1679,144 @@
       aria-labelledby="learnTitle"
       hidden
     >
-      <header class="getting-started-header">
-        <p class="eyebrow">Operations Academy</p>
-        <h2 id="learnTitle">Learn</h2>
-        <p class="section-note">
-          Concetti e passaggi essenziali per lavorare con Operations Engine.
-        </p>
-      </header>
-
-      <nav class="learn-index" aria-label="Indice Learn">
-        <a href="#whatIsTitle">Panoramica</a>
-        <a href="#workflowTitle">Workflow</a>
-        <a href="#learnImportTitle">Import</a>
-        <a href="#learnPlanningTitle">Planning</a>
-        <a href="#learnFleetTitle">Fleet</a>
-        <a href="#learnBriefingTitle">Briefing</a>
-        <a href="#faqTitle">FAQ</a>
-      </nav>
-
-      <div class="getting-started-grid">
-        <section class="getting-started-block" aria-labelledby="whatIsTitle">
-          <h3 id="whatIsTitle">Cos'è Operations Engine</h3>
-          <p>
-            Operations Engine è un motore operativo configurabile che normalizza
-            dati, prepara il planning e rende leggibili readiness e criticità.
-            Non impone un workflow aziendale e mantiene separati Core, Adapter e Plugin.
+      <div class="learn-shell">
+        <header class="learn-hero">
+          <p class="eyebrow oe-workspace-eyebrow"><img class="oe-workspace-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Operations Academy</span></p>
+          <h2 id="learnTitle">Learn</h2>
+          <p class="section-note">
+            Concetti e passaggi essenziali per lavorare con Operations Engine.
           </p>
-        </section>
 
-        <section class="getting-started-block" aria-labelledby="howWorksTitle">
-          <h3 id="howWorksTitle">Come funziona</h3>
-          <p>
-            Il sistema importa i dati operativi, riconosce le colonne, normalizza
-            risorse e asset e genera una proposta di planning verificabile prima
-            della conferma.
-          </p>
-        </section>
+          <nav class="learn-index" aria-label="Indice Learn">
+            <a href="#whatIsTitle">Panoramica</a>
+            <a href="#workflowTitle">Workflow</a>
+            <a href="#learnImportTitle">Import</a>
+            <a href="#learnPlanningTitle">Planning</a>
+            <a href="#learnFleetTitle">Fleet</a>
+            <a href="#learnBriefingTitle">Briefing</a>
+            <a href="#faqTitle">FAQ</a>
+          </nav>
+        </header>
 
-        <section class="getting-started-block" aria-labelledby="workflowTitle">
-          <h3 id="workflowTitle">Workflow consigliato</h3>
-          <ol>
-            <li>Importa il Planning giornaliero e controlla il mapping.</li>
-            <li>Importa lo stato del parco mezzi e verifica i dati riconosciuti.</li>
-            <li>Genera il primo Planning e controlla assegnazioni e criticità.</li>
-            <li>Calcola lo stato operativo e verifica la readiness.</li>
-          </ol>
-        </section>
+        <div class="learn-content">
+          <section class="learn-section" aria-labelledby="learnOverviewHeading">
+            <header class="learn-section-heading">
+              <p class="eyebrow">Panoramica</p>
+              <h3 id="learnOverviewHeading">Le basi di Operations Engine</h3>
+            </header>
+            <div class="learn-card-grid learn-overview-grid">
+              <article class="learn-card" aria-labelledby="whatIsTitle">
+                <h4 id="whatIsTitle">Cos'è Operations Engine</h4>
+                <p>
+                  Operations Engine è un motore operativo configurabile che normalizza
+                  dati, prepara il planning e rende leggibili readiness e criticità.
+                  Non impone un workflow aziendale e mantiene separati Core, Adapter e Plugin.
+                </p>
+              </article>
+              <article class="learn-card" aria-labelledby="howWorksTitle">
+                <h4 id="howWorksTitle">Come funziona</h4>
+                <p>
+                  Il sistema importa i dati operativi, riconosce le colonne, normalizza
+                  risorse e asset e genera una proposta di planning verificabile prima
+                  della conferma.
+                </p>
+              </article>
+            </div>
+          </section>
 
-        <section class="getting-started-block" aria-labelledby="learnImportTitle">
-          <p class="eyebrow">Dati</p>
-          <h3 id="learnImportTitle">Import dei dati</h3>
-          <p>
-            Carica Planning e Fleet, controlla il mapping proposto e conferma
-            soltanto i dati riconosciuti.
-          </p>
-        </section>
+          <section class="learn-section learn-workflow-section" aria-labelledby="workflowTitle">
+            <header class="learn-section-heading">
+              <p class="eyebrow">Workflow consigliato</p>
+              <h3 id="workflowTitle">Dai dati alla readiness operativa</h3>
+            </header>
+            <ol class="learn-workflow">
+              <li><span class="learn-step-number">01</span><div><strong>Importa il Planning</strong><p>Importa il Planning giornaliero e controlla il mapping.</p></div></li>
+              <li><span class="learn-step-number">02</span><div><strong>Importa il parco mezzi</strong><p>Importa lo stato del parco mezzi e verifica i dati riconosciuti.</p></div></li>
+              <li><span class="learn-step-number">03</span><div><strong>Genera il Planning</strong><p>Genera il primo Planning e controlla assegnazioni e criticità.</p></div></li>
+              <li><span class="learn-step-number">04</span><div><strong>Verifica la readiness</strong><p>Calcola lo stato operativo e verifica la readiness.</p></div></li>
+            </ol>
+          </section>
 
-        <section class="getting-started-block" aria-labelledby="learnPlanningTitle">
-          <p class="eyebrow">Operations</p>
-          <h3 id="learnPlanningTitle">Planning</h3>
-          <p>
-            Genera una proposta, verifica assegnazioni e criticità, poi conferma
-            esplicitamente le decisioni operative.
-          </p>
-        </section>
+          <section class="learn-section" aria-labelledby="learnImportTitle">
+            <header class="learn-section-heading">
+              <p class="eyebrow">Dati</p>
+              <h3 id="learnImportTitle">Import dei dati</h3>
+            </header>
+            <div class="learn-card learn-data-card">
+              <p>
+                Carica Planning e Fleet, controlla il mapping proposto e conferma
+                soltanto i dati riconosciuti.
+              </p>
+            </div>
+          </section>
 
-        <section class="getting-started-block" aria-labelledby="learnFleetTitle">
-          <p class="eyebrow">Asset</p>
-          <h3 id="learnFleetTitle">Fleet</h3>
-          <p>
-            Consulta disponibilità, capability, documenti e cronologia degli
-            Asset senza mescolare il loro ciclo di vita con il Planning.
-          </p>
-        </section>
+          <section class="learn-section" aria-labelledby="learnOperationsHeading">
+            <header class="learn-section-heading">
+              <p class="eyebrow">Operations</p>
+              <h3 id="learnOperationsHeading">Workspace operativi</h3>
+            </header>
+            <div class="learn-card-grid learn-operations-grid">
+              <article class="learn-card" aria-labelledby="learnPlanningTitle">
+                <p class="eyebrow">Operations</p>
+                <h4 id="learnPlanningTitle">Planning</h4>
+                <p>
+                  Genera una proposta, verifica assegnazioni e criticità, poi conferma
+                  esplicitamente le decisioni operative.
+                </p>
+              </article>
+              <article class="learn-card" aria-labelledby="learnFleetTitle">
+                <p class="eyebrow">Asset</p>
+                <h4 id="learnFleetTitle">Fleet</h4>
+                <p>
+                  Consulta disponibilità, capability, documenti e cronologia degli
+                  Asset senza mescolare il loro ciclo di vita con il Planning.
+                </p>
+              </article>
+              <article class="learn-card" aria-labelledby="learnBriefingTitle">
+                <p class="eyebrow">Home</p>
+                <h4 id="learnBriefingTitle">Briefing operativo</h4>
+                <p>
+                  Leggi ciò che richiede attenzione, verifica le fonti e apri la
+                  schermata pertinente prima di prendere una decisione.
+                </p>
+              </article>
+            </div>
+          </section>
 
-        <section class="getting-started-block" aria-labelledby="learnBriefingTitle">
-          <p class="eyebrow">Home</p>
-          <h3 id="learnBriefingTitle">Briefing operativo</h3>
-          <p>
-            Leggi ciò che richiede attenzione, verifica le fonti e apri la
-            schermata pertinente prima di prendere una decisione.
-          </p>
-        </section>
-
-        <section
-          class="getting-started-block getting-started-faq"
-          aria-labelledby="faqTitle"
-        >
-          <h3 id="faqTitle">FAQ iniziale</h3>
-          <details>
-            <summary>Quali file posso importare?</summary>
-            <p>Planning e Fleet accettano file XLSX, XLS e CSV.</p>
-          </details>
-          <details>
-            <summary>Devo usare nomi colonna precisi?</summary>
-            <p>
-              No. Il sistema propone un mapping e segnala le colonne che richiedono
-              conferma.
-            </p>
-          </details>
-          <details>
-            <summary>Il Planning modifica automaticamente i dati?</summary>
-            <p>
-              No. Le decisioni restano verificabili e le modifiche operative
-              richiedono un'azione esplicita.
-            </p>
-          </details>
-          <details>
-            <summary>Dove controllo gli Asset?</summary>
-            <p>
-              La sezione Fleet mostra registry, disponibilità, capability,
-              documenti e cronologia.
-            </p>
-          </details>
-        </section>
+          <section class="learn-section getting-started-faq" aria-labelledby="faqTitle">
+            <header class="learn-section-heading">
+              <p class="eyebrow">Supporto</p>
+              <h3 id="faqTitle">FAQ iniziale</h3>
+            </header>
+            <div class="learn-faq-list">
+              <details>
+                <summary>Quali file posso importare?</summary>
+                <p>Planning e Fleet accettano file XLSX, XLS e CSV.</p>
+              </details>
+              <details>
+                <summary>Devo usare nomi colonna precisi?</summary>
+                <p>
+                  No. Il sistema propone un mapping e segnala le colonne che richiedono
+                  conferma.
+                </p>
+              </details>
+              <details>
+                <summary>Il Planning modifica automaticamente i dati?</summary>
+                <p>
+                  No. Le decisioni restano verificabili e le modifiche operative
+                  richiedono un'azione esplicita.
+                </p>
+              </details>
+              <details>
+                <summary>Dove controllo gli Asset?</summary>
+                <p>
+                  La sezione Fleet mostra registry, disponibilità, capability,
+                  documenti e cronologia.
+                </p>
+              </details>
+            </div>
+          </section>
+        </div>
       </div>
     </section>
 
@@ -2162,6 +2187,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="./assets/js/app.js?v=43"></script>
+  <script type="module" src="./assets/js/app.js?v=44"></script>
 </body>
 </html>

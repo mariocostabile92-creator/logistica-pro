@@ -10,10 +10,10 @@ function textBlock(role, className) {
 
 
 function brandedEyebrow(text) {
-  const eyebrow = element("p", { className: "eyebrow oe-workspace-brand" });
+  const eyebrow = element("p", { className: "eyebrow oe-workspace-eyebrow" });
   eyebrow.append(
     element("img", {
-      className: "oe-brand-mark",
+      className: "oe-workspace-mark",
       attributes: {
         src: "/app/assets/brand/operations-engine-mark.png?v=1",
         width: "192",

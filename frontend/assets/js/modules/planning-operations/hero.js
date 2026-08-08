@@ -22,7 +22,7 @@ export function renderHero(payload) {
           : "Il piano è pronto per la pubblicazione.";
   return `
     <header class="planning-ops-hero">
-      <div><p class="eyebrow oe-workspace-brand"><img class="oe-brand-mark" src="/app/assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true"><span>Cabina di regia Dispatcher</span></p><h2>Piano operativo</h2><p>${sentence}</p></div>
+      <div><p class="eyebrow oe-workspace-eyebrow"><img class="oe-workspace-mark" src="/app/assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true"><span>Cabina di regia Dispatcher</span></p><h2>Piano operativo</h2><p>${sentence}</p></div>
       <dl><div><dt>Data</dt><dd>${planning?.operation_date || "Non disponibile"}</dd></div>
       <div><dt>Station</dt><dd>${planning?.station || "Tutte"}</dd></div>
       <div><dt>Stato</dt><dd><span class="planning-ops-status">${STATUS[payload.lifecycle.state] || "Nessun piano"}</span></dd></div>

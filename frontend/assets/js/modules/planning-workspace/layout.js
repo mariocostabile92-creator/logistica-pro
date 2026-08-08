@@ -9,9 +9,9 @@ import {
   createPlanningPublication,
   createReadinessCard,
   createStatusCard,
-} from "./components.js?v=brand1";
+} from "./components.js?v=brand2";
 import { element } from "./utils.js";
-import { initPlanningOperations } from "../planning-operations/index.js?v=4";
+import { initPlanningOperations } from "../planning-operations/index.js?v=5";
 
 
 export function createPlanningWorkspaceLayout(root) {

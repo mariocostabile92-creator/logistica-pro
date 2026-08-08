@@ -40,11 +40,16 @@ test("header, shell and primary workspaces use the official shared brand", async
   ]);
   assert.match(html, /class="product-brand oe-header-brand"[\s\S]*operations-engine-logo\.png\?v=1/);
   assert.match(html, /appBootstrapShell[\s\S]*class="oe-loading-mark"[\s\S]*operations-engine-mark\.png\?v=1/);
-  for (const label of ["Giornata operativa", "Workforce", "Workspace", "Organization"]) {
-    assert.match(html, new RegExp(`oe-workspace-brand[\\s\\S]{0,300}${label}`));
+  for (const label of ["Giornata operativa", "Workforce", "Workspace", "Organization", "Operations Academy"]) {
+    assert.match(html, new RegExp(`oe-workspace-eyebrow[\\s\\S]{0,300}${label}`));
   }
   assert.match(css, /\.oe-header-brand/);
-  assert.match(css, /\.oe-workspace-brand/);
+  assert.match(css, /\.oe-header-brand img\s*\{[\s\S]*height: 38px/);
+  assert.match(css, /\.oe-workspace-eyebrow\s*\{[\s\S]*gap: 6px/);
+  assert.match(css, /\.oe-workspace-mark\s*\{[\s\S]*width: 16px/);
+  assert.doesNotMatch(css, /operations-home-hero[\s\S]{0,120}oe-workspace-mark/);
+  assert.doesNotMatch(css, /fleet-sidebar-heading[\s\S]{0,120}oe-workspace-mark/);
+  assert.doesNotMatch(html, /oe-workspace-brand/);
   assert.match(css, /@media \(max-width: 620px\)/);
   assert.doesNotMatch(css, /filter\s*:|animation\s*:/);
 });
@@ -56,7 +61,8 @@ test("Planning keeps the same mark in loading and definitive first paints", asyn
     source("assets/js/modules/planning-workspace/components.js"),
   ]);
   for (const content of [loading, hero, components]) {
-    assert.match(content, /oe-workspace-brand/);
+    assert.match(content, /oe-workspace-eyebrow/);
+    assert.match(content, /oe-workspace-mark/);
     assert.match(content, /operations-engine-mark\.png\?v=1/);
   }
 });
@@ -68,7 +74,7 @@ test("authentication and standalone pages expose one coherent accessible identit
   ];
   for (const path of pages) {
     const html = await source(path);
-    assert.match(html, /brand\.css\?v=1/);
+    assert.match(html, /brand\.css\?v=2/);
     assert.match(html, /operations-engine-(?:logo|mark)\.png\?v=1/);
     assert.match(html, /operations-engine-mark-(?:16|32)\.png\?v=1/);
     assert.doesNotMatch(html, /(?:src|href)="https?:\/\//);
@@ -104,10 +110,11 @@ test("brand cache busting reaches the app and lazy Planning loaders", async () =
     source("assets/js/modules/planning-workspace/layout.js"),
     source("assets/js/modules/planning-operations/index.js"),
   ]);
-  assert.match(html, /brand\.css\?v=1/);
-  assert.match(html, /app\.js\?v=43/);
-  assert.match(app, /workspace-loader\.js\?v=31/);
-  assert.match(loader, /planning-workspace\/index\.js\?v=4/);
-  assert.match(layout, /components\.js\?v=brand1/);
-  assert.match(operations, /renderer\.js\?v=brand1/);
+  assert.match(html, /brand\.css\?v=2/);
+  assert.match(html, /onboarding\.css\?v=1/);
+  assert.match(html, /app\.js\?v=44/);
+  assert.match(app, /workspace-loader\.js\?v=32/);
+  assert.match(loader, /planning-workspace\/index\.js\?v=5/);
+  assert.match(layout, /components\.js\?v=brand2/);
+  assert.match(operations, /renderer\.js\?v=brand2/);
 });

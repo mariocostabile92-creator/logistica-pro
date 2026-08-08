@@ -1,5 +1,5 @@
 import { renderForecast } from "./forecast.js";
-import { renderHero } from "./hero.js?v=brand1";
+import { renderHero } from "./hero.js?v=brand2";
 import { renderKpis } from "./kpi.js";
 import { renderRoutes } from "./routes.js";
 import { escapeHtml } from "../../utils/dom.js";
@@ -7,7 +7,7 @@ import { planningDriverOptions } from "../workforce-consecutivity/planning-adapt
 
 export function renderOperationsLoading(root) {
   root.innerHTML = `<section class="planning-ops-loading" aria-label="Caricamento Piano operativo">
-    <div><p class="eyebrow oe-workspace-brand"><img class="oe-brand-mark" src="/app/assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true"><span>Cabina di regia Dispatcher</span></p><h2>Piano operativo</h2><p>Caricamento dei dati principali…</p></div>
+    <div><p class="eyebrow oe-workspace-eyebrow"><img class="oe-workspace-mark" src="/app/assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true"><span>Cabina di regia Dispatcher</span></p><h2>Piano operativo</h2><p>Caricamento dei dati principali…</p></div>
     <div class="planning-ops-loading-kpis" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
   </section>`;
 }

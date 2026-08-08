@@ -161,10 +161,22 @@ test("Configuration values are hidden behind accessible disclosures", async () =
 
 
 test("Learn provides compact internal navigation for core topics", async () => {
-  const html = await frontendFile("index.html");
+  const [html, css] = await Promise.all([
+    frontendFile("index.html"),
+    frontendFile("assets/css/onboarding.css"),
+  ]);
+  const learnSection = html.match(/id="gettingStartedSection"[\s\S]*?<template id="demoWorkspaceTemplate"/)?.[0] || "";
 
   assert.match(html, /<h2 id="learnTitle">Learn<\/h2>/);
+  assert.match(html, /class="learn-hero"/);
+  assert.match(html, /oe-workspace-eyebrow[\s\S]{0,300}Operations Academy/);
   assert.match(html, /class="learn-index"/);
+  for (const anchor of [
+    "#whatIsTitle", "#workflowTitle", "#learnImportTitle",
+    "#learnPlanningTitle", "#learnFleetTitle", "#learnBriefingTitle", "#faqTitle",
+  ]) {
+    assert.match(html, new RegExp(`href="${anchor}"`));
+  }
   for (const topic of [
     "Import dei dati",
     "Planning",
@@ -174,6 +186,13 @@ test("Learn provides compact internal navigation for core topics", async () => {
   ]) {
     assert.match(html, new RegExp(topic));
   }
+  assert.equal((learnSection.match(/class="learn-step-number"/g) || []).length, 4);
+  assert.match(html, /class="learn-card-grid learn-operations-grid"/);
+  assert.equal((learnSection.match(/<details>/g) || []).length, 4);
+  assert.match(css, /\.learn-shell\s*\{[\s\S]*width: min\(1160px, 100%\)/);
+  assert.match(css, /\.learn-workflow\s*\{[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.getting-started-faq summary:focus-visible/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*\.learn-overview-grid/);
 });
 
 
