@@ -7,6 +7,13 @@ from app.plugins.fleet.damage.application import (
     driver_attribution_service,
     operational_status_service,
 )
+from app.plugins.fleet.damage.application.driver_suggestion_resolver import (
+    resolve_driver_suggestion,
+)
+from app.plugins.fleet.damage.domain.driver_suggestion import (
+    DriverSuggestionCandidate,
+    DriverSuggestionStatus,
+)
 from app.plugins.fleet.damage.domain.rules import (
     ORIGINS,
     SEVERITIES,
@@ -115,6 +122,50 @@ def get_case(case_id: int):
 
 def list_candidates():
     return {"items": repository.candidates()}
+
+
+def _suggestion_candidate(candidate: DriverSuggestionCandidate | None):
+    if candidate is None:
+        return None
+    return {
+        "workforce_member_id": candidate.workforce_member_id,
+        "external_identifier": candidate.external_identifier,
+        "display_name": candidate.display_name,
+    }
+
+
+def suggest_driver(
+    vehicle_id: int,
+    operational_date: str,
+    organization_id: str,
+):
+    try:
+        get_asset(vehicle_id)
+    except AssetNotFoundError as exc:
+        raise DamageNotFound("Veicolo non trovato.") from exc
+    resolution = resolve_driver_suggestion(
+        organization_id=organization_id,
+        vehicle_id=vehicle_id,
+        operational_date=operational_date,
+    )
+    if resolution.status is DriverSuggestionStatus.INVALID:
+        raise DamageError("Parametri del suggerimento driver non validi.")
+    driver = None
+    if resolution.status is DriverSuggestionStatus.MATCH:
+        driver = {
+            "workforce_member_id": resolution.workforce_member_id,
+            "external_identifier": resolution.external_identifier,
+            "display_name": resolution.display_name,
+        }
+    return {
+        "status": resolution.status.value,
+        "conflict": resolution.conflict,
+        "driver": driver,
+        "source": resolution.source,
+        "evidence": list(resolution.evidence),
+        "journal_driver": _suggestion_candidate(resolution.journal_driver),
+        "planning_driver": _suggestion_candidate(resolution.planning_driver),
+    }
 
 
 def create_case(

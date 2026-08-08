@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -38,6 +39,22 @@ class DamageDriverAttributionResponse(BaseModel):
     attributed_at: str
     attributed_by: str
     reason: str | None = None
+
+
+class DamageDriverSuggestionCandidateResponse(BaseModel):
+    workforce_member_id: int
+    external_identifier: str
+    display_name: str
+
+
+class DamageDriverSuggestionResponse(BaseModel):
+    status: Literal["MATCH", "NOT_FOUND", "AMBIGUOUS", "CONFLICT"]
+    conflict: bool = False
+    driver: DamageDriverSuggestionCandidateResponse | None = None
+    source: Literal["journal", "planning"] | None = None
+    evidence: list[str] = Field(default_factory=list)
+    journal_driver: DamageDriverSuggestionCandidateResponse | None = None
+    planning_driver: DamageDriverSuggestionCandidateResponse | None = None
 
 
 class DamageUpdateRequest(BaseModel):

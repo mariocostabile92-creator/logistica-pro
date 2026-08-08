@@ -1,8 +1,11 @@
+from datetime import date
+
 from fastapi import APIRouter, HTTPException, Query, Request, status
 
 from app.plugins.fleet.damage.application import service
 from app.plugins.fleet.damage.interfaces.schemas import (
     DamageCreateRequest,
+    DamageDriverSuggestionResponse,
     DamageNoteRequest,
     DamageStatusRequest,
     DamageUpdateRequest,
@@ -36,6 +39,23 @@ def damage_cases(
         "driver": driver, "date_from": date_from, "date_to": date_to,
         "search": search,
     })
+
+
+@router.get(
+    "/damage-cases/driver-suggestion",
+    response_model=DamageDriverSuggestionResponse,
+)
+def damage_driver_suggestion(
+    request: Request,
+    vehicle_id: int = Query(gt=0),
+    operational_date: date = Query(),
+):
+    return guarded(
+        service.suggest_driver,
+        vehicle_id,
+        operational_date.isoformat(),
+        str(request.state.user.organization_id),
+    )
 
 
 @router.get("/damage-cases/{case_id}")
