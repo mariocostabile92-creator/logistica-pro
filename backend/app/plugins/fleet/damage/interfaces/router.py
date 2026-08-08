@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 
 from app.plugins.fleet.damage.application import service
 from app.plugins.fleet.damage.interfaces.schemas import (
@@ -44,10 +44,15 @@ def damage_case(case_id: int):
 
 
 @router.post("/damage-cases", status_code=status.HTTP_201_CREATED)
-def create_damage_case(request: DamageCreateRequest):
-    values = request.model_dump(mode="json")
+def create_damage_case(payload: DamageCreateRequest, request: Request):
+    values = payload.model_dump(mode="json")
     actor = str(values.pop("actor"))
-    return guarded(service.create_case, values, actor)
+    return guarded(
+        service.create_case,
+        values,
+        actor,
+        str(request.state.user.id),
+    )
 
 
 @router.patch("/damage-cases/{case_id}")

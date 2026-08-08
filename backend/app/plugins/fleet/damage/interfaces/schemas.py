@@ -30,6 +30,16 @@ class DamageCreateRequest(BaseModel):
     _actor = field_validator("actor")(required)
 
 
+class DamageDriverAttributionResponse(BaseModel):
+    workforce_member_id: int
+    external_identifier_snapshot: str
+    name_snapshot: str
+    source: str
+    attributed_at: str
+    attributed_by: str
+    reason: str | None = None
+
+
 class DamageUpdateRequest(BaseModel):
     description: str | None = Field(default=None, max_length=4000)
     severity: str | None = None

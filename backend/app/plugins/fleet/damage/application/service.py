@@ -2,16 +2,29 @@ import sqlite3
 from decimal import Decimal
 
 from app.plugins.fleet.application.asset_service import AssetNotFoundError, get_asset
-from app.plugins.fleet.damage.application import operational_status_service
+from app.auth.tenant_context import current_organization_id
+from app.plugins.fleet.damage.application import (
+    driver_attribution_service,
+    operational_status_service,
+)
 from app.plugins.fleet.damage.domain.rules import (
     ORIGINS,
     SEVERITIES,
     VEHICLE_STATUSES,
     validate_transition,
 )
+from app.plugins.fleet.damage.domain.driver_attribution import (
+    DamageDriverAttributionRejected,
+)
 from app.plugins.fleet.damage.infrastructure import repository
 from app.plugins.fleet.journal.infrastructure import repository as journal_repository
 from app.plugins.fleet.insurance.application.service import policy_for_vehicle
+from app.plugins.workforce.application.driver_identity_resolver import (
+    resolve_driver_identity,
+)
+from app.plugins.workforce.domain.driver_identity import (
+    DriverIdentityResolutionStatus,
+)
 
 
 class DamageError(ValueError):
@@ -39,6 +52,21 @@ def _serialize(item):
     if not item:
         return item
     result = dict(item)
+    result["driver_attribution"] = (
+        {
+            "workforce_member_id": result["driver_workforce_member_id"],
+            "external_identifier_snapshot": result[
+                "driver_external_identifier_snapshot"
+            ],
+            "name_snapshot": result["driver_name_snapshot"],
+            "source": result["driver_attribution_source"],
+            "attributed_at": result["driver_attributed_at"],
+            "attributed_by": result["driver_attributed_by"],
+            "reason": result["driver_attribution_reason"],
+        }
+        if result.get("driver_workforce_member_id") is not None
+        else None
+    )
     for field in ("estimated_cost", "final_cost"):
         result[field] = _money(result.get(field))
     result["estimated_cost_eur"] = (
@@ -89,7 +117,11 @@ def list_candidates():
     return {"items": repository.candidates()}
 
 
-def create_case(values: dict[str, object], actor: str):
+def create_case(
+    values: dict[str, object],
+    actor: str,
+    attribution_actor: str | None = None,
+):
     origin = str(values["origin"])
     if origin not in ORIGINS:
         raise DamageError("Origine pratica non valida.")
@@ -127,10 +159,25 @@ def create_case(values: dict[str, object], actor: str):
         values["declared_driver"] = movement["declared_driver_identifier"]
         values["occurred_at"] = movement["occurred_at"]
         values["description"] = movement["anomaly_description"] or values["description"]
+        identity = resolve_driver_identity(
+            organization_id=current_organization_id(),
+            driver_identifier=movement["declared_driver_identifier"],
+            source="journal",
+        )
+        if identity.status is DriverIdentityResolutionStatus.MATCH:
+            values["driver_attribution"] = (
+                driver_attribution_service.from_identity_resolution(
+                    identity,
+                    actor=attribution_actor or actor,
+                    reason="Attribuzione automatica dalla movimentazione Journal.",
+                )
+            )
     for field in ("estimated_cost", "final_cost"):
         values[field] = _money(values.get(field))
     try:
         created = repository.create_case(values, actor)
+    except DamageDriverAttributionRejected as exc:
+        raise DamageError(str(exc)) from exc
     except sqlite3.IntegrityError as exc:
         raise DamageConflict("Esiste già una pratica per questa anomalia.") from exc
     effective, warning = operational_status_service.automatic_for_severity(

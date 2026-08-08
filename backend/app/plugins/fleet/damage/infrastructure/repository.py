@@ -1,6 +1,23 @@
+import json
+
 from app.auth.tenant_context import current_organization_id
-from app.core.database import db_session
+from app.core.database import PostgresConnection, db_session
+from app.plugins.fleet.damage.domain.driver_attribution import (
+    CanonicalDamageDriverAttribution,
+    DamageDriverAttributionRejected,
+)
 from app.utils.date_utils import utc_now_iso
+
+
+DRIVER_ATTRIBUTION_COLUMNS = {
+    "driver_workforce_member_id": "INTEGER",
+    "driver_external_identifier_snapshot": "TEXT",
+    "driver_name_snapshot": "TEXT",
+    "driver_attribution_source": "TEXT",
+    "driver_attributed_at": "TEXT",
+    "driver_attributed_by": "TEXT",
+    "driver_attribution_reason": "TEXT",
+}
 
 
 def init_schema() -> None:
@@ -29,6 +46,13 @@ def init_schema() -> None:
                 final_cost TEXT,
                 expected_deductible TEXT,
                 applied_deductible TEXT,
+                driver_workforce_member_id INTEGER,
+                driver_external_identifier_snapshot TEXT,
+                driver_name_snapshot TEXT,
+                driver_attribution_source TEXT,
+                driver_attributed_at TEXT,
+                driver_attributed_by TEXT,
+                driver_attribution_reason TEXT,
                 FOREIGN KEY (vehicle_id) REFERENCES fleet_assets(id),
                 FOREIGN KEY (source_movement_id) REFERENCES asset_movements(id),
                 UNIQUE (source_movement_id)
@@ -52,10 +76,89 @@ def init_schema() -> None:
                 ON damage_case_events(damage_case_id, created_at);
             """
         )
+        _ensure_driver_attribution_columns(conn)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_damage_driver "
+            "ON damage_cases(driver_workforce_member_id, occurred_at)"
+        )
+
+
+def _ensure_driver_attribution_columns(conn) -> None:
+    if isinstance(conn, PostgresConnection):
+        rows = conn.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = ?",
+            ("damage_cases",),
+        ).fetchall()
+        existing = {row["column_name"] for row in rows}
+    else:
+        existing = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(damage_cases)").fetchall()
+        }
+    for name, definition in DRIVER_ATTRIBUTION_COLUMNS.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE damage_cases ADD COLUMN {name} {definition}")
 
 
 def _dict(row):
     return {key: row[key] for key in row.keys()} if row else None
+
+
+def _canonical_member(conn, organization_id: str, workforce_member_id: int):
+    return conn.execute(
+        """
+        SELECT id, external_identifier, display_name
+        FROM workforce_members
+        WHERE id = ? AND organization_id = ?
+        """,
+        (workforce_member_id, organization_id),
+    ).fetchone()
+
+
+def _attribution_values(conn, organization_id: str, attribution, now: str):
+    if attribution is None:
+        return (None, None, None, None, None, None, None)
+    member = _canonical_member(
+        conn, organization_id, attribution.workforce_member_id
+    )
+    if not member:
+        raise DamageDriverAttributionRejected(
+            "Il Workforce member non appartiene all'organizzazione della pratica."
+        )
+    return (
+        int(member["id"]),
+        str(member["external_identifier"]),
+        str(member["display_name"]),
+        attribution.source.value,
+        now,
+        attribution.attributed_by,
+        attribution.reason,
+    )
+
+
+def _record_driver_attribution_event(
+    conn,
+    case_id: int,
+    attribution: CanonicalDamageDriverAttribution,
+    now: str,
+) -> None:
+    note = json.dumps(
+        {
+            "workforce_member_id": attribution.workforce_member_id,
+            "source": attribution.source.value,
+            "reason": attribution.reason,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    conn.execute(
+        """
+        INSERT INTO damage_case_events
+            (damage_case_id, event_type, note, created_at, actor)
+        VALUES (?, 'damage_driver_attributed', ?, ?, ?)
+        """,
+        (case_id, note, now, attribution.attributed_by),
+    )
 
 
 def get_case(case_id: int):
@@ -101,14 +204,25 @@ def create_case(values: dict[str, object], actor: str):
         ).fetchone()
         if not owned:
             return None
+        attribution = values.get("driver_attribution")
+        attribution_values = _attribution_values(
+            conn, organization_id, attribution, now
+        )
         cursor = conn.execute(
             """
             INSERT INTO damage_cases (
                 case_number, vehicle_id, source_movement_id, source_document_id,
                 declared_driver, occurred_at, created_at, updated_at, origin,
                 manual_reason, description, severity, status,
-                vehicle_operational_status, repair_shop, estimated_cost, final_cost
-            ) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'nuova', ?, ?, ?, ?)
+                vehicle_operational_status, repair_shop, estimated_cost, final_cost,
+                driver_workforce_member_id, driver_external_identifier_snapshot,
+                driver_name_snapshot, driver_attribution_source,
+                driver_attributed_at, driver_attributed_by,
+                driver_attribution_reason
+            ) VALUES (
+                NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'nuova', ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?
+            )
             """,
             (
                 values["vehicle_id"], values.get("source_movement_id"),
@@ -118,6 +232,7 @@ def create_case(values: dict[str, object], actor: str):
                 values["severity"], values["vehicle_operational_status"],
                 values.get("repair_shop"), values.get("estimated_cost"),
                 values.get("final_cost"),
+                *attribution_values,
             ),
         )
         case_id = int(cursor.lastrowid)
@@ -134,6 +249,46 @@ def create_case(values: dict[str, object], actor: str):
             """,
             (case_id, values.get("manual_reason") or "Pratica creata", now, actor),
         )
+        if attribution is not None:
+            _record_driver_attribution_event(conn, case_id, attribution, now)
+    return get_case(case_id)
+
+
+def attribute_driver(
+    case_id: int,
+    attribution: CanonicalDamageDriverAttribution,
+):
+    organization_id = current_organization_id()
+    now = utc_now_iso()
+    with db_session() as conn:
+        owned_case = conn.execute(
+            """
+            SELECT c.id
+            FROM damage_cases c
+            JOIN fleet_assets a ON a.id = c.vehicle_id
+            WHERE c.id = ? AND a.organization_id = ?
+            """,
+            (case_id, organization_id),
+        ).fetchone()
+        if not owned_case:
+            return None
+        fields = _attribution_values(conn, organization_id, attribution, now)
+        conn.execute(
+            """
+            UPDATE damage_cases
+            SET driver_workforce_member_id = ?,
+                driver_external_identifier_snapshot = ?,
+                driver_name_snapshot = ?,
+                driver_attribution_source = ?,
+                driver_attributed_at = ?,
+                driver_attributed_by = ?,
+                driver_attribution_reason = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (*fields, now, case_id),
+        )
+        _record_driver_attribution_event(conn, case_id, attribution, now)
     return get_case(case_id)
 
 
