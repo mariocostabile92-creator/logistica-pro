@@ -304,8 +304,17 @@ def list_cases(filters: dict[str, object]):
         clauses.append("UPPER(a.plate) LIKE ?")
         parameters.append(f"%{str(filters['plate']).upper()}%")
     if filters.get("driver"):
-        clauses.append("LOWER(c.declared_driver) LIKE ?")
-        parameters.append(f"%{str(filters['driver']).lower()}%")
+        clauses.append(
+            "(LOWER(COALESCE(c.driver_name_snapshot,'')) LIKE ? OR "
+            "LOWER(COALESCE(c.declared_driver,'')) LIKE ?)"
+        )
+        term = f"%{str(filters['driver']).lower()}%"
+        parameters.extend([term, term])
+    if filters.get("workforce_member_id") is not None:
+        clauses.append("c.driver_workforce_member_id = ?")
+        parameters.append(int(filters["workforce_member_id"]))
+    if filters.get("driver_unassigned"):
+        clauses.append("c.driver_workforce_member_id IS NULL")
     if filters.get("date_from"):
         clauses.append("c.occurred_at >= ?")
         parameters.append(filters["date_from"])
@@ -317,9 +326,10 @@ def list_cases(filters: dict[str, object]):
         clauses.append(
             "(LOWER(c.case_number) LIKE ? OR LOWER(COALESCE(a.plate,'')) LIKE ? "
             "OR LOWER(COALESCE(c.declared_driver,'')) LIKE ? OR "
+            "LOWER(COALESCE(c.driver_name_snapshot,'')) LIKE ? OR "
             "LOWER(c.description) LIKE ? OR LOWER(COALESCE(c.repair_shop,'')) LIKE ?)"
         )
-        parameters.extend([term] * 5)
+        parameters.extend([term] * 6)
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     with db_session() as conn:
         rows = conn.execute(

@@ -14,6 +14,16 @@ import { createAttachmentDraft } from "./attachments/draft-uploader.js";
 import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 import { openOperationalStatusControl } from "./operational-status-control.js";
 import { mountDamageDriverSuggestion } from "./damage-driver-suggestion.js?v=2";
+import {
+  ALL_DRIVERS,
+  damageDriverEmptyMessage,
+  damageDriverHistoryMarkup,
+  damageDriverOptionsMarkup,
+  damageDriverQuery,
+  loadDamageDriverDirectory,
+  normalizeDamageDriverFilter,
+  selectedDamageDriver,
+} from "./damage-driver-history.js?v=1";
 import { mountDamageVehicleSelector } from "./damage-vehicle-selector.js?v=1";
 
 const STATUS = {
@@ -38,8 +48,10 @@ let candidates = [];
 let query = "";
 const filters = {
   plate: "", status: "all", severity: "all", stopped: "all",
-  origin: "all", attachments: "all",
+  origin: "all", attachments: "all", driver: ALL_DRIVERS,
 };
+let driverMembers = null;
+let driverHistorySummary = { total_cases: 0, open_cases: 0, closed_cases: 0 };
 let initialized = false;
 let selectedCaseId = null;
 let damageDraft = null;
@@ -85,15 +97,27 @@ function formValues(form) {
 function attributedDriverName(item) {
   return item.driver_attribution?.name_snapshot
     || item.driver_name_snapshot
-    || item.declared_driver
     || null;
 }
 
+function searchableDriverName(item) {
+  return attributedDriverName(item) || item.declared_driver || null;
+}
+
 async function refresh() {
-  [allCases, candidates] = await Promise.all([
-    listDamageCases().then((response) => response.items),
+  if (driverMembers === null) driverMembers = await loadDamageDriverDirectory();
+  filters.driver = normalizeDamageDriverFilter(filters.driver, driverMembers);
+  const [casesResponse, candidateResponse] = await Promise.all([
+    listDamageCases(damageDriverQuery(filters.driver)),
     listDamageCandidates().then((response) => response.items),
   ]);
+  allCases = casesResponse.items;
+  driverHistorySummary = casesResponse.summary || {
+    total_cases: allCases.length,
+    open_cases: allCases.filter((item) => !CLOSED.has(item.status)).length,
+    closed_cases: allCases.filter((item) => CLOSED.has(item.status)).length,
+  };
+  candidates = candidateResponse;
 }
 
 export function sortDamageCases(items) {
@@ -112,7 +136,7 @@ function filteredCases() {
   const term = query.trim().toLocaleLowerCase("it-IT");
   return sortDamageCases(allCases.filter((item) => {
     const textMatch = !term || [
-      item.case_number, item.plate, attributedDriverName(item), item.description, item.repair_shop,
+      item.case_number, item.plate, searchableDriverName(item), item.description, item.repair_shop,
     ].some((value) => String(value || "").toLocaleLowerCase("it-IT").includes(term));
     const stopped = ["indisponibile", "in_manutenzione", "in_officina"].includes(
       item.asset_availability || item.vehicle_operational_status,
@@ -145,7 +169,7 @@ function caseCard(item) {
     <button type="button" class="damage-case-card severity-${item.severity} ${Number(item.id) === Number(selectedCaseId) ? "selected" : ""}"
       data-damage-case="${item.id}" aria-current="${Number(item.id) === Number(selectedCaseId) ? "true" : "false"}">
       <span class="damage-case-identity"><strong>${escapeHtml(item.case_number)}</strong><small>${escapeHtml(item.vehicle_model || item.external_identifier || "Veicolo")}</small></span>
-      <span class="damage-case-plate"><strong>${escapeHtml(item.plate || item.external_identifier)}</strong><small>${escapeHtml(attributedDriverName(item) || "Driver non dichiarato")}</small></span>
+      <span class="damage-case-plate"><strong>${escapeHtml(item.plate || item.external_identifier)}</strong><small>Driver · ${escapeHtml(attributedDriverName(item) || "Driver non attribuito")}</small></span>
       <span class="damage-case-date"><small>Data</small><strong>${escapeHtml(date(item.occurred_at))}</strong></span>
       <span class="damage-case-status">${STATUS[item.status]}</span>
       <span class="damage-case-severity severity-${item.severity}">${SEVERITY[item.severity]}</span>
@@ -165,7 +189,7 @@ function renderCaseList() {
   root.querySelector("#damageResultCount").textContent = `${visible.length} risultati`;
   list.innerHTML = visible.length
     ? visible.map(caseCard).join("")
-    : `<div class="damage-empty">${allCases.length ? "Nessun risultato per i filtri selezionati." : "Nessuna pratica danno. Le nuove anomalie Journal compariranno qui."}</div>`;
+    : `<div class="damage-empty">${damageDriverEmptyMessage(filters.driver) || (allCases.length ? "Nessun risultato per i filtri selezionati." : "Nessuna pratica danno. Le nuove anomalie Journal compariranno qui.")}</div>`;
 }
 
 function renderNavigator() {
@@ -173,10 +197,15 @@ function renderNavigator() {
   root.classList.remove("damage-detail-mode");
   root.querySelector("#damageMain").innerHTML = `
     ${metrics()}
+    ${damageDriverHistoryMarkup(
+      selectedDamageDriver(driverMembers || [], filters.driver),
+      driverHistorySummary,
+    )}
     <div class="damage-tools">
       <label><span class="visually-hidden">Cerca pratiche</span><input id="damageSearch" type="search" placeholder="Cerca numero pratica, targa, driver o descrizione" value="${escapeHtml(query)}"></label>
       <div class="damage-filters" aria-label="Filtri pratiche">
         <label>Targa<input data-damage-filter="plate" value="${escapeHtml(filters.plate)}" placeholder="Tutte"></label>
+        <label>Driver<select data-damage-filter="driver">${damageDriverOptionsMarkup(driverMembers || [], filters.driver)}</select></label>
         <label>Stato<select data-damage-filter="status"><option value="all">Tutti</option>${Object.entries(STATUS).map(([value,label]) => `<option value="${value}" ${filters.status === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
         <label>Gravità<select data-damage-filter="severity"><option value="all">Tutte</option>${Object.entries(SEVERITY).map(([value,label]) => `<option value="${value}" ${filters.severity === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
         <label>Mezzo fermo<select data-damage-filter="stopped"><option value="all">Tutti</option><option value="yes">Sì</option><option value="no">No</option></select></label>
@@ -455,6 +484,7 @@ export async function showDamageWorkspace(options = {}) {
   document.getElementById("franchiseWorkspace").hidden = true;
   document.getElementById("insuranceWorkspace").hidden = true;
   document.getElementById("rentalWorkspace").hidden = true;
+  if (options.driverId != null) filters.driver = String(options.driverId);
   await refresh();
   renderShell();
   root.hidden = false;
@@ -470,16 +500,20 @@ export async function showDamageWorkspace(options = {}) {
     else return;
     renderCaseList();
   });
-  root.addEventListener("change", (event) => {
+  root.addEventListener("change", async (event) => {
     const key = event.target.dataset.damageFilter;
     if (!key || key === "plate") return;
     filters[key] = event.target.value;
-    renderCaseList();
+    if (key === "driver") {
+      await refresh();
+      renderNavigator();
+    } else renderCaseList();
   });
   root.addEventListener("click", async (event) => {
     if (event.target.closest("[data-damage-reset]")) {
       query = "";
-      Object.assign(filters, { plate: "", status: "all", severity: "all", stopped: "all", origin: "all", attachments: "all" });
+      Object.assign(filters, { plate: "", status: "all", severity: "all", stopped: "all", origin: "all", attachments: "all", driver: ALL_DRIVERS });
+      await refresh();
       renderNavigator();
       return;
     }

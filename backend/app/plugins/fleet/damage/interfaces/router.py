@@ -29,6 +29,8 @@ def damage_cases(
     vehicle_status: str | None = None,
     plate: str | None = None,
     driver: str | None = None,
+    workforce_member_id: int | None = Query(default=None, gt=0),
+    driver_unassigned: bool = False,
     date_from: str | None = None,
     date_to: str | None = None,
     search: str | None = None,
@@ -37,7 +39,8 @@ def damage_cases(
         "status": status_value, "severity": severity,
         "vehicle_operational_status": vehicle_status, "plate": plate,
         "driver": driver, "date_from": date_from, "date_to": date_to,
-        "search": search,
+        "search": search, "workforce_member_id": workforce_member_id,
+        "driver_unassigned": driver_unassigned,
     })
 
 

@@ -111,7 +111,22 @@ def _serialize(item):
 
 
 def list_cases(filters):
-    return {"items": [_serialize(item) for item in repository.list_cases(filters)]}
+    workforce_member_id = filters.get("workforce_member_id")
+    if workforce_member_id is not None and workforce_repository.get_member(
+        int(workforce_member_id)
+    ) is None:
+        items = []
+    else:
+        items = [_serialize(item) for item in repository.list_cases(filters)]
+    closed = sum(item["status"] in {"chiusa", "annullata"} for item in items)
+    return {
+        "items": items,
+        "summary": {
+            "total_cases": len(items),
+            "open_cases": len(items) - closed,
+            "closed_cases": closed,
+        },
+    }
 
 
 def get_case(case_id: int):
