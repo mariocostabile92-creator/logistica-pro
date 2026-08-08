@@ -83,7 +83,7 @@ test("damage workflow uses API persistence and accessible controls", async () =>
   assert.match(css, /grid-template-columns: minmax\(300px, 360px\) minmax\(0, 1fr\)/);
   assert.match(css, /@media \(max-width: 900px\)/);
   assert.match(css, /\.damage-case-card\.selected/);
-  assert.match(loader, /damage-workspace\.css\?v=6/);
+  assert.match(loader, /damage-workspace\.css\?v=7/);
   assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
   assert.match(module, /attachment_count/);
   assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);

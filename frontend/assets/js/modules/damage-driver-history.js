@@ -1,5 +1,6 @@
 import { listWorkforceMembers } from "../api.js?v=6";
 import { escapeHtml } from "../utils/dom.js";
+import { damagePolicySummaryMarkup } from "./damage-policy.js?v=1";
 
 export const ALL_DRIVERS = "all";
 export const UNASSIGNED_DRIVER = "unassigned";
@@ -46,7 +47,7 @@ export function selectedDamageDriver(members, selected) {
   ) || null;
 }
 
-export function damageDriverHistoryMarkup(driver, summary) {
+export function damageDriverHistoryMarkup(driver, summary, policyState = null) {
   if (!driver) return "";
   return `<section class="damage-driver-history" aria-label="Storico driver">
     <div><p class="eyebrow">Storico driver</p><h3>${escapeHtml(driver.display_name)}</h3></div>
@@ -55,6 +56,7 @@ export function damageDriverHistoryMarkup(driver, summary) {
       <div><dt>Aperte</dt><dd>${Number(summary?.open_cases || 0)}</dd></div>
       <div><dt>Chiuse</dt><dd>${Number(summary?.closed_cases || 0)}</dd></div>
     </dl>
+    ${driver.unassigned ? "" : damagePolicySummaryMarkup(policyState)}
   </section>`;
 }
 

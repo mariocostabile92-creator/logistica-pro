@@ -265,6 +265,119 @@
   text-align: center;
 }
 
+.damage-policy-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 48px rgb(14 35 32 / 24%);
+}
+
+.damage-policy-dialog::backdrop {
+  background: rgb(14 35 32 / 58%);
+}
+
+.damage-policy-form {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.damage-policy-form header,
+.damage-policy-form footer {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.damage-policy-form label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.damage-policy-form input,
+.damage-policy-form select {
+  width: 100%;
+  min-width: 0;
+}
+
+.damage-policy-form .damage-policy-toggle {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.damage-policy-form .damage-policy-toggle input {
+  width: auto;
+}
+
+.damage-policy-help,
+.damage-policy-status,
+.damage-policy-period,
+.damage-policy-notice {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.damage-policy-status[data-state="success"] { color: var(--stable-text); }
+.damage-policy-status[data-state="error"] { color: var(--danger); }
+
+.damage-policy-summary {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-strong);
+}
+
+.damage-policy-summary.is-disabled {
+  color: var(--text-muted);
+}
+
+.damage-policy-summary dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.damage-policy-summary dl > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.damage-policy-summary dt {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.damage-policy-summary dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.damage-policy-notice {
+  padding: 9px 10px;
+  border-left: 3px solid var(--warning);
+  background: var(--attention-bg);
+  color: var(--attention-text);
+}
+
 .damage-mobile-back {
   display: none;
   margin-bottom: 10px;
@@ -308,9 +421,35 @@
   .damage-workspace.damage-detail-mode .damage-tools {
     display: none;
   }
+
+  .damage-policy-summary dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 480px) {
+  .damage-policy-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .damage-policy-form {
+    padding: 16px;
+  }
+
+  .damage-policy-form footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .damage-policy-form footer button {
+    width: 100%;
+  }
+
+  .damage-policy-summary dl {
+    grid-template-columns: 1fr;
+  }
+
   .damage-case-navigator {
     padding: 10px;
     border-right: 0;

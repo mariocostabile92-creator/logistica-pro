@@ -306,9 +306,9 @@ test("API helper, workspace integration and responsive styles are wired", async 
   assert.match(css, /\.damage-driver-attribution[\s\S]*?min-width: 0/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*?\.damage-driver-confirm \{ width: 100%/);
   assert.doesNotMatch(css, /width:\s*(?:1440|390)px/);
-  assert.match(loader, /damage-workspace\.css\?v=6/);
-  assert.match(page, /damage-workspace\.js\?v=10/);
-  assert.match(loader, /fleet-page\.js\?v=27/);
-  assert.match(app, /workspace-loader\.js\?v=37/);
-  assert.match(html, /app\.js\?v=49/);
+  assert.match(loader, /damage-workspace\.css\?v=7/);
+  assert.match(page, /damage-workspace\.js\?v=11/);
+  assert.match(loader, /fleet-page\.js\?v=28/);
+  assert.match(app, /workspace-loader\.js\?v=38/);
+  assert.match(html, /app\.js\?v=50/);
 });

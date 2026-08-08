@@ -112,8 +112,8 @@ test("brand cache busting reaches the app and lazy Planning loaders", async () =
   ]);
   assert.match(html, /brand\.css\?v=2/);
   assert.match(html, /onboarding\.css\?v=1/);
-  assert.match(html, /app\.js\?v=49/);
-  assert.match(app, /workspace-loader\.js\?v=37/);
+  assert.match(html, /app\.js\?v=50/);
+  assert.match(app, /workspace-loader\.js\?v=38/);
   assert.match(loader, /planning-workspace\/index\.js\?v=5/);
   assert.match(layout, /components\.js\?v=brand2/);
   assert.match(operations, /renderer\.js\?v=brand2/);

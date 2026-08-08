@@ -2,7 +2,9 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.plugins.fleet.damage.domain.damage_policy import DamageCountingPeriod
 
 
 def required(value: str) -> str:
@@ -65,6 +67,34 @@ class DamageDriverSuggestionResponse(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     journal_driver: DamageDriverSuggestionCandidateResponse | None = None
     planning_driver: DamageDriverSuggestionCandidateResponse | None = None
+
+
+class DamagePolicyUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+    free_events_count: int = Field(ge=0)
+    counting_period: DamageCountingPeriod
+
+
+class DamagePolicyResponse(BaseModel):
+    enabled: bool
+    free_events_count: int
+    counting_period: DamageCountingPeriod
+    updated_at: str | None = None
+
+
+class DamageDriverPolicyStateResponse(BaseModel):
+    policy_enabled: bool
+    total_attributed_cases: int
+    countable_cases: int
+    free_events_count: int
+    free_events_used: int
+    events_over_threshold: int
+    next_event_is_over_threshold: bool
+    counting_period: DamageCountingPeriod
+    period_start: str | None = None
+    period_end: str | None = None
 
 
 class DamageUpdateRequest(BaseModel):

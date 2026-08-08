@@ -189,6 +189,27 @@ export async function getDamageDriverSuggestion(
   ));
 }
 
+export async function getDamagePolicy() {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases/policy`));
+}
+
+export async function updateDamagePolicy(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-cases/policy`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+export async function getDamageDriverPolicyState(workforceMemberId, referenceDate = null) {
+  const query = new URLSearchParams();
+  if (referenceDate) query.set("reference_date", referenceDate);
+  const suffix = query.size ? `?${query}` : "";
+  return parseResponse(await fetch(
+    `${API_BASE}/api/fleet/damage-cases/drivers/${workforceMemberId}/policy-state${suffix}`,
+  ));
+}
+
 export async function listDamageCandidates() {
   return parseResponse(await fetch(`${API_BASE}/api/fleet/damage-candidates`));
 }

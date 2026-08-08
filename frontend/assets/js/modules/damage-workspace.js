@@ -3,11 +3,12 @@ import {
   changeDamageCaseStatus,
   createDamageCase,
   getDamageCase,
+  getDamageDriverPolicyState,
   ensureFranchiseCase,
   listDamageCandidates,
   listDamageCases,
   updateDamageCase,
-} from "../api.js?v=6";
+} from "../api.js?v=7";
 import { escapeHtml } from "../utils/dom.js";
 import { mountAttachments } from "./attachments/component.js?v=2";
 import { createAttachmentDraft } from "./attachments/draft-uploader.js";
@@ -25,6 +26,10 @@ import {
   selectedDamageDriver,
 } from "./damage-driver-history.js?v=1";
 import { mountDamageVehicleSelector } from "./damage-vehicle-selector.js?v=1";
+import {
+  damagePolicyDialogMarkup,
+  mountDamagePolicy,
+} from "./damage-policy.js?v=1";
 
 const STATUS = {
   nuova: "Nuova", in_valutazione: "In valutazione",
@@ -52,11 +57,13 @@ const filters = {
 };
 let driverMembers = null;
 let driverHistorySummary = { total_cases: 0, open_cases: 0, closed_cases: 0 };
+let driverPolicyState = null;
 let initialized = false;
 let selectedCaseId = null;
 let damageDraft = null;
 let driverSuggestionController = null;
 let vehicleSelectorController = null;
+let damagePolicyController = null;
 
 function disposeManualControllers() {
   driverSuggestionController?.destroy();
@@ -107,9 +114,14 @@ function searchableDriverName(item) {
 async function refresh() {
   if (driverMembers === null) driverMembers = await loadDamageDriverDirectory();
   filters.driver = normalizeDamageDriverFilter(filters.driver, driverMembers);
-  const [casesResponse, candidateResponse] = await Promise.all([
+  const selectedMemberId = Number(filters.driver);
+  const policyStateRequest = Number.isInteger(selectedMemberId) && selectedMemberId > 0
+    ? getDamageDriverPolicyState(selectedMemberId).catch(() => ({ policy_load_error: true }))
+    : Promise.resolve(null);
+  const [casesResponse, candidateResponse, policyState] = await Promise.all([
     listDamageCases(damageDriverQuery(filters.driver)),
     listDamageCandidates().then((response) => response.items),
+    policyStateRequest,
   ]);
   allCases = casesResponse.items;
   driverHistorySummary = casesResponse.summary || {
@@ -118,6 +130,7 @@ async function refresh() {
     closed_cases: allCases.filter((item) => CLOSED.has(item.status)).length,
   };
   candidates = candidateResponse;
+  driverPolicyState = policyState;
 }
 
 export function sortDamageCases(items) {
@@ -200,6 +213,7 @@ function renderNavigator() {
     ${damageDriverHistoryMarkup(
       selectedDamageDriver(driverMembers || [], filters.driver),
       driverHistorySummary,
+      driverPolicyState,
     )}
     <div class="damage-tools">
       <label><span class="visually-hidden">Cerca pratiche</span><input id="damageSearch" type="search" placeholder="Cerca numero pratica, targa, driver o descrizione" value="${escapeHtml(query)}"></label>
@@ -227,16 +241,20 @@ function renderNavigator() {
 }
 
 function renderShell() {
+  damagePolicyController?.destroy();
+  damagePolicyController = null;
   disposeManualControllers();
   root.innerHTML = `
     <header class="damage-header">
       <div><p class="eyebrow">Fleet Operations</p><h2 id="damageWorkspaceTitle">Danni</h2>
       <p class="section-note">Gestione delle pratiche danno del parco mezzi</p></div>
       <div class="damage-actions">
+        <button type="button" class="secondary" data-damage-policy-open>Policy danni</button>
         <button type="button" data-damage-view="candidates">Anomalie da gestire <span class="count-badge">${candidates.length}</span></button>
         <button type="button" class="secondary" data-damage-manual>Nuova pratica danno</button>
       </div>
-    </header><div id="damageMain"></div>`;
+    </header><div id="damageMain"></div>${damagePolicyDialogMarkup()}`;
+  damagePolicyController = mountDamagePolicy(root);
   renderNavigator();
 }
 

@@ -1,12 +1,23 @@
 from datetime import date
+import json
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 
+from app.auth import repository as auth_repository
+from app.auth.permission_service import has_permission
 from app.plugins.fleet.damage.application import service
+from app.plugins.fleet.damage.application import (
+    damage_counter_service,
+    damage_policy_service,
+)
+from app.plugins.fleet.damage.domain.damage_policy import DamagePolicy
 from app.plugins.fleet.damage.interfaces.schemas import (
     DamageCreateRequest,
+    DamageDriverPolicyStateResponse,
     DamageDriverSuggestionResponse,
     DamageNoteRequest,
+    DamagePolicyResponse,
+    DamagePolicyUpdateRequest,
     DamageStatusRequest,
     DamageUpdateRequest,
     ManualOperationalStatusRequest,
@@ -20,6 +31,23 @@ def guarded(call, *args):
         return call(*args)
     except service.DamageError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+def _policy_payload(policy: DamagePolicy) -> dict:
+    return policy.model_dump(
+        mode="json",
+        include={"enabled", "free_events_count", "counting_period", "updated_at"},
+    )
+
+
+def _require_policy_write(request: Request):
+    user = request.state.user
+    if not has_permission(user.role, "admin:write"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permesso di configurazione richiesto.",
+        )
+    return user
 
 
 @router.get("/damage-cases")
@@ -59,6 +87,62 @@ def damage_driver_suggestion(
         operational_date.isoformat(),
         str(request.state.user.organization_id),
     )
+
+
+@router.get(
+    "/damage-cases/policy",
+    response_model=DamagePolicyResponse,
+)
+def get_damage_policy(request: Request):
+    policy = damage_policy_service.current_policy(
+        str(request.state.user.organization_id)
+    )
+    return _policy_payload(policy)
+
+
+@router.put(
+    "/damage-cases/policy",
+    response_model=DamagePolicyResponse,
+)
+def update_damage_policy(payload: DamagePolicyUpdateRequest, request: Request):
+    actor = _require_policy_write(request)
+    organization_id = str(actor.organization_id)
+    previous = damage_policy_service.current_policy(organization_id)
+    saved = damage_policy_service.save_policy(DamagePolicy(
+        organization_id=organization_id,
+        **payload.model_dump(),
+    ))
+    auth_repository.record_audit(
+        actor,
+        "damage_policy_changed",
+        json.dumps(
+            {"old": _policy_payload(previous), "new": _policy_payload(saved)},
+            ensure_ascii=False,
+            sort_keys=True,
+        ),
+        status.HTTP_200_OK,
+    )
+    return _policy_payload(saved)
+
+
+@router.get(
+    "/damage-cases/drivers/{workforce_member_id}/policy-state",
+    response_model=DamageDriverPolicyStateResponse,
+)
+def damage_driver_policy_state(
+    workforce_member_id: int,
+    request: Request,
+    reference_date: date | None = None,
+):
+    try:
+        state = damage_counter_service.driver_policy_state(
+            str(request.state.user.organization_id),
+            workforce_member_id,
+            reference_date,
+        )
+    except damage_counter_service.DamagePolicyDriverNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return state.model_dump(mode="json", exclude={"workforce_member_id"})
 
 
 @router.get("/damage-cases/{case_id}")
