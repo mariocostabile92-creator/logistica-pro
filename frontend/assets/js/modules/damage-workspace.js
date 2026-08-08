@@ -13,7 +13,7 @@ import { mountAttachments } from "./attachments/component.js?v=2";
 import { createAttachmentDraft } from "./attachments/draft-uploader.js";
 import { saveEntityWithAttachments } from "./attachments/entity-adapter.js";
 import { openOperationalStatusControl } from "./operational-status-control.js";
-import { mountDamageDriverSuggestion } from "./damage-driver-suggestion.js?v=1";
+import { mountDamageDriverSuggestion } from "./damage-driver-suggestion.js?v=2";
 import { mountDamageVehicleSelector } from "./damage-vehicle-selector.js?v=1";
 
 const STATUS = {
@@ -63,8 +63,30 @@ function money(value) {
     : new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(value);
 }
 
+const DRIVER_SOURCE = { journal: "Journal", planning: "Planning", manual: "Manuale" };
+
+export function damageDriverAttributionMarkup(attribution) {
+  if (!attribution) {
+    return '<div class="damage-driver-unassigned">Driver non attribuito</div>';
+  }
+  return `<dl class="damage-driver-attribution">
+    <div><dt>Driver</dt><dd>${escapeHtml(attribution.name_snapshot || "Non disponibile")}</dd></div>
+    <div><dt>Fonte</dt><dd>${escapeHtml(DRIVER_SOURCE[attribution.source] || "Non classificata")}</dd></div>
+    <div><dt>Attribuito il</dt><dd>${escapeHtml(date(attribution.attributed_at))}</dd></div>
+    <div><dt>Attribuito da</dt><dd>${escapeHtml(attribution.attributed_by || "Non disponibile")}</dd></div>
+    ${attribution.reason ? `<div><dt>Motivo</dt><dd>${escapeHtml(attribution.reason)}</dd></div>` : ""}
+  </dl>`;
+}
+
 function formValues(form) {
   return Object.fromEntries(new FormData(form).entries());
+}
+
+function attributedDriverName(item) {
+  return item.driver_attribution?.name_snapshot
+    || item.driver_name_snapshot
+    || item.declared_driver
+    || null;
 }
 
 async function refresh() {
@@ -90,7 +112,7 @@ function filteredCases() {
   const term = query.trim().toLocaleLowerCase("it-IT");
   return sortDamageCases(allCases.filter((item) => {
     const textMatch = !term || [
-      item.case_number, item.plate, item.declared_driver, item.description, item.repair_shop,
+      item.case_number, item.plate, attributedDriverName(item), item.description, item.repair_shop,
     ].some((value) => String(value || "").toLocaleLowerCase("it-IT").includes(term));
     const stopped = ["indisponibile", "in_manutenzione", "in_officina"].includes(
       item.asset_availability || item.vehicle_operational_status,
@@ -123,7 +145,7 @@ function caseCard(item) {
     <button type="button" class="damage-case-card severity-${item.severity} ${Number(item.id) === Number(selectedCaseId) ? "selected" : ""}"
       data-damage-case="${item.id}" aria-current="${Number(item.id) === Number(selectedCaseId) ? "true" : "false"}">
       <span class="damage-case-identity"><strong>${escapeHtml(item.case_number)}</strong><small>${escapeHtml(item.vehicle_model || item.external_identifier || "Veicolo")}</small></span>
-      <span class="damage-case-plate"><strong>${escapeHtml(item.plate || item.external_identifier)}</strong><small>${escapeHtml(item.declared_driver || "Driver non dichiarato")}</small></span>
+      <span class="damage-case-plate"><strong>${escapeHtml(item.plate || item.external_identifier)}</strong><small>${escapeHtml(attributedDriverName(item) || "Driver non dichiarato")}</small></span>
       <span class="damage-case-date"><small>Data</small><strong>${escapeHtml(date(item.occurred_at))}</strong></span>
       <span class="damage-case-status">${STATUS[item.status]}</span>
       <span class="damage-case-severity severity-${item.severity}">${SEVERITY[item.severity]}</span>
@@ -233,9 +255,10 @@ async function renderDetail(caseId) {
       <section><h4>Identità pratica ed evento di origine</h4><dl>
         <div><dt>Origine</dt><dd>${escapeHtml(item.origin)}</dd></div>
         <div><dt>Documento</dt><dd>${escapeHtml(item.source_document_id || "Manuale")}</dd></div>
-        <div><dt>Driver</dt><dd>${escapeHtml(item.declared_driver || "—")}</dd></div>
+        <div><dt>Driver</dt><dd>${escapeHtml(attributedDriverName(item) || "—")}</dd></div>
         <div><dt>Data evento</dt><dd>${escapeHtml(date(item.occurred_at))}</dd></div>
       </dl></section>
+      <section><h4>Driver attribuito</h4>${damageDriverAttributionMarkup(item.driver_attribution)}</section>
       <section><h4>Descrizione</h4><p>${escapeHtml(item.description)}</p></section>
       <section><h4>Profilo contrattuale del mezzo</h4><dl>
         <div><dt>Tipo contratto</dt><dd>${escapeHtml({
@@ -478,7 +501,10 @@ export async function showDamageWorkspace(options = {}) {
     const submit = event.target.querySelector("[type='submit']");
     if (submit.disabled) return;
     submit.disabled = true;
-    const values = buildManualDamagePayload(formValues(event.target));
+    const values = buildManualDamagePayload(
+      formValues(event.target),
+      driverSuggestionController?.getConfirmedAttribution(),
+    );
     try {
       const created = await saveEntityWithAttachments({
         draft: damageDraft,
@@ -494,11 +520,20 @@ export async function showDamageWorkspace(options = {}) {
   });
 }
 
-export function buildManualDamagePayload(values) {
-  return {
+export function buildManualDamagePayload(values, confirmedAttribution = null) {
+  const payload = {
     ...values,
     vehicle_id: Number(values.vehicle_id),
     origin: "manual",
     vehicle_operational_status: "disponibile",
   };
+  if (
+    Number.isInteger(Number(confirmedAttribution?.workforce_member_id))
+    && Number(confirmedAttribution?.workforce_member_id) > 0
+    && ["journal", "planning"].includes(confirmedAttribution?.attribution_source)
+  ) {
+    payload.workforce_member_id = Number(confirmedAttribution.workforce_member_id);
+    payload.attribution_source = confirmedAttribution.attribution_source;
+  }
+  return payload;
 }

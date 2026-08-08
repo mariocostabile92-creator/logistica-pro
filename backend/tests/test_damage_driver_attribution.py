@@ -98,20 +98,29 @@ def _journal_case(driver_identifier: str) -> dict:
     return response.json()
 
 
-def _manual_case() -> dict:
-    vehicle = _asset("AT020TR")
-    response = client.post(
+def _manual_response(
+    extra: dict | None = None,
+    plate: str = "AT020TR",
+):
+    vehicle = _asset(plate)
+    payload = {
+        "vehicle_id": vehicle["id"],
+        "occurred_at": "2026-08-08T11:00:00Z",
+        "origin": "manual",
+        "manual_reason": "Segnalazione Fleet Manager",
+        "description": "Danno rilevato in deposito",
+        "severity": "media",
+        "vehicle_operational_status": "disponibile",
+    }
+    payload.update(extra or {})
+    return client.post(
         f"{DAMAGE}/damage-cases",
-        json={
-            "vehicle_id": vehicle["id"],
-            "occurred_at": "2026-08-08T11:00:00Z",
-            "origin": "manual",
-            "manual_reason": "Segnalazione Fleet Manager",
-            "description": "Danno rilevato in deposito",
-            "severity": "media",
-            "vehicle_operational_status": "disponibile",
-        },
+        json=payload,
     )
+
+
+def _manual_case(extra: dict | None = None, plate: str = "AT020TR") -> dict:
+    response = _manual_response(extra, plate)
     assert response.status_code == 201
     return response.json()
 
@@ -173,6 +182,91 @@ def test_manual_and_existing_legacy_cases_remain_readable_without_attribution():
     assert reread.status_code == 200
     assert reread.json()["id"] == case["id"]
     assert reread.json()["driver_attribution"] is None
+
+
+def test_manual_case_confirmed_from_journal_persists_server_attribution_and_audit():
+    member_id = _member("DRV-CONFIRMED-J", "Mario Rossi")
+
+    case = _manual_case({
+        "workforce_member_id": member_id,
+        "attribution_source": "journal",
+        "declared_driver": "Nome inviato dal client da non usare come snapshot",
+        "actor": "actor-inviato-dal-client",
+    })
+
+    assert case["driver_workforce_member_id"] == member_id
+    assert case["driver_external_identifier_snapshot"] == "DRV-CONFIRMED-J"
+    assert case["driver_name_snapshot"] == "Mario Rossi"
+    assert case["driver_attribution_source"] == "journal"
+    assert case["driver_attributed_by"] == "test-harness-administrator"
+    assert case["driver_attribution"] == {
+        "workforce_member_id": member_id,
+        "external_identifier_snapshot": "DRV-CONFIRMED-J",
+        "name_snapshot": "Mario Rossi",
+        "source": "journal",
+        "attributed_at": case["driver_attributed_at"],
+        "attributed_by": "test-harness-administrator",
+        "reason": "Conferma esplicita del suggerimento driver.",
+    }
+    event = next(
+        item for item in case["events"]
+        if item["event_type"] == "damage_driver_attributed"
+    )
+    assert event["actor"] == "test-harness-administrator"
+    assert json.loads(event["note"]) == {
+        "reason": "Conferma esplicita del suggerimento driver.",
+        "source": "journal",
+        "workforce_member_id": member_id,
+    }
+
+
+def test_manual_case_confirmed_from_planning_preserves_source():
+    member_id = _member("DRV-CONFIRMED-P", "Giulia Bianchi")
+
+    case = _manual_case({
+        "workforce_member_id": member_id,
+        "attribution_source": "planning",
+    })
+
+    assert case["driver_workforce_member_id"] == member_id
+    assert case["driver_name_snapshot"] == "Giulia Bianchi"
+    assert case["driver_attribution_source"] == "planning"
+
+
+def test_manual_confirmation_rejects_foreign_or_unknown_workforce_member():
+    foreign_member_id = _member(
+        "DRV-FOREIGN",
+        "Driver altra azienda",
+        "other-organization",
+    )
+
+    foreign = _manual_response({
+        "workforce_member_id": foreign_member_id,
+        "attribution_source": "journal",
+    }, "AT021TR")
+    unknown = _manual_response({
+        "workforce_member_id": 999999,
+        "attribution_source": "planning",
+    }, "AT022TR")
+
+    assert foreign.status_code == 422
+    assert unknown.status_code == 422
+    assert "organizzazione corrente" in foreign.json()["detail"]
+    assert "organizzazione corrente" in unknown.json()["detail"]
+
+
+def test_manual_confirmation_requires_member_and_source_together():
+    member_id = _member("DRV-INCOMPLETE", "Driver Incompleto")
+
+    missing_source = _manual_response({
+        "workforce_member_id": member_id,
+    }, "AT023TR")
+    missing_member = _manual_response({
+        "attribution_source": "journal",
+    }, "AT024TR")
+
+    assert missing_source.status_code == 422
+    assert missing_member.status_code == 422
 
 
 def test_internal_attribution_rejects_driver_from_another_organization():

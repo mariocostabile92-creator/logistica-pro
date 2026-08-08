@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 def required(value: str) -> str:
@@ -26,9 +26,19 @@ class DamageCreateRequest(BaseModel):
     estimated_cost: Decimal | None = Field(default=None, ge=0)
     final_cost: Decimal | None = Field(default=None, ge=0)
     actor: str = "fleet_manager"
+    workforce_member_id: int | None = Field(default=None, gt=0)
+    attribution_source: Literal["journal", "planning"] | None = None
 
     _description = field_validator("description")(required)
     _actor = field_validator("actor")(required)
+
+    @model_validator(mode="after")
+    def complete_driver_attribution(self):
+        if (self.workforce_member_id is None) != (self.attribution_source is None):
+            raise ValueError(
+                "Driver e fonte attribuzione devono essere confermati insieme."
+            )
+        return self
 
 
 class DamageDriverAttributionResponse(BaseModel):

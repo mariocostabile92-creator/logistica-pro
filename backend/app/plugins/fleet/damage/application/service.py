@@ -32,6 +32,7 @@ from app.plugins.workforce.application.driver_identity_resolver import (
 from app.plugins.workforce.domain.driver_identity import (
     DriverIdentityResolutionStatus,
 )
+from app.plugins.workforce.infrastructure import read_repository as workforce_repository
 
 
 class DamageError(ValueError):
@@ -173,6 +174,8 @@ def create_case(
     actor: str,
     attribution_actor: str | None = None,
 ):
+    workforce_member_id = values.pop("workforce_member_id", None)
+    attribution_source = values.pop("attribution_source", None)
     origin = str(values["origin"])
     if origin not in ORIGINS:
         raise DamageError("Origine pratica non valida.")
@@ -193,7 +196,28 @@ def create_case(
             raise DamageError("Una pratica manuale non può riferire una movimentazione.")
         if not values.get("manual_reason"):
             raise DamageError("La pratica manuale richiede una motivazione.")
+        if workforce_member_id is not None:
+            member = workforce_repository.get_member(int(workforce_member_id))
+            if member is None:
+                raise DamageError(
+                    "Driver Workforce non trovato nell'organizzazione corrente."
+                )
+            try:
+                values["driver_attribution"] = (
+                    driver_attribution_service.from_workforce_member(
+                        member,
+                        source=str(attribution_source),
+                        actor=attribution_actor or actor,
+                        reason="Conferma esplicita del suggerimento driver.",
+                    )
+                )
+            except driver_attribution_service.DamageDriverAttributionInvalid as exc:
+                raise DamageError(str(exc)) from exc
     else:
+        if workforce_member_id is not None or attribution_source is not None:
+            raise DamageError(
+                "La conferma driver esplicita è disponibile solo per pratiche manuali."
+            )
         if not movement_id:
             raise DamageError("La pratica da Journal richiede la movimentazione di origine.")
         if repository.get_by_movement(str(movement_id)):

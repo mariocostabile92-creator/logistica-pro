@@ -82,12 +82,8 @@ def attribute_driver(
     actor: str,
     reason: str | None = None,
 ):
-    if not isinstance(member, WorkforceMember):
-        raise DamageDriverAttributionInvalid(
-            "L'attribuzione definitiva richiede un Workforce member canonico."
-        )
-    command = _command(
-        workforce_member_id=member.workforce_member_id,
+    command = from_workforce_member(
+        member,
         source=source,
         actor=actor,
         reason=reason,
@@ -99,3 +95,22 @@ def attribute_driver(
     if not updated:
         raise DamageDriverAttributionNotFound("Pratica danno non trovata.")
     return updated
+
+
+def from_workforce_member(
+    member: WorkforceMember,
+    *,
+    source: str,
+    actor: str,
+    reason: str | None = None,
+) -> CanonicalDamageDriverAttribution:
+    if not isinstance(member, WorkforceMember):
+        raise DamageDriverAttributionInvalid(
+            "L'attribuzione definitiva richiede un Workforce member canonico."
+        )
+    return _command(
+        workforce_member_id=member.workforce_member_id,
+        source=source,
+        actor=actor,
+        reason=reason,
+    )

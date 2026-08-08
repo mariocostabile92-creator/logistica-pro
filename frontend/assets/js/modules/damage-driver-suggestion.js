@@ -28,13 +28,17 @@ export function damageDriverSuggestionMarkup(state) {
   if (!result) return "";
   if (result.status === "MATCH") {
     const journal = result.source === "journal";
+    const confirmed = Boolean(state.confirmed);
     return `
       <p class="eyebrow">${journal ? "Driver associato" : "Driver suggerito"}</p>
       <strong class="damage-driver-suggestion-name">${escapeHtml(result.driver?.display_name || "Driver non disponibile")}</strong>
       <p class="damage-driver-suggestion-source">Fonte: <strong>${journal ? "Journal" : "Planning"}</strong></p>
       <p class="damage-driver-suggestion-note">${journal
         ? "Rilevato dal Giornale di Bordo"
-        : "Associato al mezzo nella pianificazione della giornata"}</p>`;
+        : "Associato al mezzo nella pianificazione della giornata"}</p>
+      ${confirmed
+        ? '<p class="damage-driver-confirmed" role="status">Driver confermato</p>'
+        : '<button type="button" class="secondary damage-driver-confirm" data-damage-driver-confirm>Conferma driver</button>'}`;
   }
   if (result.status === "CONFLICT") {
     return `
@@ -100,6 +104,7 @@ export function createDamageDriverSuggestionController({
         workforceMemberId: result.driver?.workforce_member_id || null,
         source: result.source || null,
         status: result.status,
+        confirmed: null,
       });
     } catch (error) {
       if (version !== requestVersion || error?.name === "AbortError") return state;
@@ -116,7 +121,33 @@ export function createDamageDriverSuggestionController({
     state = EMPTY_STATE;
   };
 
-  return { update, destroy, getState: () => state };
+  const confirm = () => {
+    const driver = state.result?.driver;
+    const source = state.result?.source;
+    if (
+      state.phase !== "ready"
+      || state.result?.status !== "MATCH"
+      || !Number.isInteger(Number(driver?.workforce_member_id))
+      || Number(driver?.workforce_member_id) <= 0
+      || !["journal", "planning"].includes(source)
+    ) return null;
+    const confirmed = {
+      workforce_member_id: Number(driver.workforce_member_id),
+      attribution_source: source,
+      display_name: String(driver.display_name || "").trim(),
+    };
+    publish({ ...state, confirmed });
+    return confirmed;
+  };
+
+  const getConfirmedAttribution = () => state.confirmed
+    ? {
+      workforce_member_id: state.confirmed.workforce_member_id,
+      attribution_source: state.confirmed.attribution_source,
+    }
+    : null;
+
+  return { update, confirm, destroy, getConfirmedAttribution, getState: () => state };
 }
 
 
@@ -139,12 +170,17 @@ export function mountDamageDriverSuggestion(form) {
   };
   form.addEventListener("input", listener);
   form.addEventListener("change", listener);
+  const confirmListener = (event) => {
+    if (event.target.closest("[data-damage-driver-confirm]")) controller.confirm();
+  };
+  container.addEventListener("click", confirmListener);
   void update();
   return {
     ...controller,
     destroy() {
       form.removeEventListener("input", listener);
       form.removeEventListener("change", listener);
+      container.removeEventListener("click", confirmListener);
       controller.destroy();
     },
   };

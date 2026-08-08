@@ -7,7 +7,10 @@ import {
   damageDriverSuggestionMarkup,
   operationalDateFromInput,
 } from "../assets/js/modules/damage-driver-suggestion.js";
-import { buildManualDamagePayload } from "../assets/js/modules/damage-workspace.js";
+import {
+  buildManualDamagePayload,
+  damageDriverAttributionMarkup,
+} from "../assets/js/modules/damage-workspace.js";
 
 
 const file = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -64,6 +67,30 @@ test("MATCH planning renders suggested driver and Planning source", () => {
 });
 
 
+test("MATCH Journal and Planning require explicit confirmation", async () => {
+  for (const source of ["journal", "planning"]) {
+    const controller = createDamageDriverSuggestionController({
+      requestSuggestion: async () => match("Mario Rossi", source, 17),
+    });
+    await controller.update({ vehicleId: 42, occurredAt: "2026-08-08T18:30" });
+    assert.match(damageDriverSuggestionMarkup(controller.getState()), /Conferma driver/);
+
+    const confirmed = controller.confirm();
+
+    assert.deepEqual(confirmed, {
+      workforce_member_id: 17,
+      attribution_source: source,
+      display_name: "Mario Rossi",
+    });
+    assert.deepEqual(controller.getConfirmedAttribution(), {
+      workforce_member_id: 17,
+      attribution_source: source,
+    });
+    assert.match(damageDriverSuggestionMarkup(controller.getState()), /Driver confermato/);
+  }
+});
+
+
 test("NOT_FOUND and AMBIGUOUS render neutral explanatory states", () => {
   const notFound = damageDriverSuggestionMarkup({
     phase: "ready",
@@ -98,6 +125,22 @@ test("CONFLICT renders Journal and Planning drivers without selecting either", (
 });
 
 
+test("CONFLICT never creates an automatic confirmation", async () => {
+  const controller = createDamageDriverSuggestionController({
+    requestSuggestion: async () => ({
+      status: "CONFLICT",
+      conflict: true,
+      journal_driver: { workforce_member_id: 1, display_name: "Mario Rossi" },
+      planning_driver: { workforce_member_id: 2, display_name: "Luca Bianchi" },
+    }),
+  });
+  await controller.update({ vehicleId: 42, occurredAt: "2026-08-08T18:30" });
+
+  assert.equal(controller.confirm(), null);
+  assert.equal(controller.getConfirmedAttribution(), null);
+});
+
+
 test("changing vehicle or date resets and requests the new combination", async () => {
   const calls = [];
   const phases = [];
@@ -110,11 +153,20 @@ test("changing vehicle or date resets and requests the new combination", async (
   });
 
   await controller.update({ vehicleId: 1, occurredAt: "2026-08-08T08:00" });
+  controller.confirm();
+  assert.ok(controller.getConfirmedAttribution());
   await controller.update({ vehicleId: 2, occurredAt: "2026-08-08T08:00" });
+  assert.equal(controller.getConfirmedAttribution(), null);
+  controller.confirm();
   await controller.update({ vehicleId: 2, occurredAt: "2026-08-09T08:00" });
+  assert.equal(controller.getConfirmedAttribution(), null);
 
   assert.deepEqual(calls, [[1, "2026-08-08"], [2, "2026-08-08"], [2, "2026-08-09"]]);
-  assert.deepEqual(phases, ["loading", "ready", "loading", "ready", "loading", "ready"]);
+  assert.deepEqual(phases, [
+    "loading", "ready", "ready",
+    "loading", "ready", "ready",
+    "loading", "ready",
+  ]);
 });
 
 
@@ -189,6 +241,49 @@ test("manual damage payload remains unchanged and excludes suggestion identity",
 });
 
 
+test("manual payload includes only confirmed canonical driver data", () => {
+  const values = {
+    vehicle_id: "7",
+    occurred_at: "2026-08-08T10:30",
+    description: "Graffio",
+    manual_reason: "Controllo deposito",
+    severity: "media",
+  };
+  const payload = buildManualDamagePayload(values, {
+    workforce_member_id: 33,
+    attribution_source: "journal",
+    display_name: "Nome solo visuale",
+    external_identifier: "DRV-33",
+  });
+
+  assert.equal(payload.workforce_member_id, 33);
+  assert.equal(payload.attribution_source, "journal");
+  assert.equal("display_name" in payload, false);
+  assert.equal("external_identifier" in payload, false);
+});
+
+
+test("damage detail presents attribution without technical identifiers", () => {
+  const attributed = damageDriverAttributionMarkup({
+    workforce_member_id: 33,
+    external_identifier_snapshot: "source-technical-id",
+    name_snapshot: "Alessandro Facchetti",
+    source: "journal",
+    attributed_at: "2026-08-08T18:15:00Z",
+    attributed_by: "Mario Costabile",
+    reason: "Conferma esplicita",
+  });
+  const empty = damageDriverAttributionMarkup(null);
+
+  assert.match(attributed, /Alessandro Facchetti/);
+  assert.match(attributed, /Journal/);
+  assert.match(attributed, /Mario Costabile/);
+  assert.match(attributed, /Conferma esplicita/);
+  assert.doesNotMatch(attributed, /source-technical-id|workforce_member_id|33/);
+  assert.match(empty, /Driver non attribuito/);
+});
+
+
 test("API helper, workspace integration and responsive styles are wired", async () => {
   const [api, workspace, css, loader, page, app, html] = await Promise.all([
     file("assets/js/api.js"),
@@ -207,9 +302,13 @@ test("API helper, workspace integration and responsive styles are wired", async 
   assert.match(css, /\.damage-driver-suggestion[\s\S]*?grid-column: 1 \/ -1/);
   assert.match(css, /\.damage-driver-conflict[\s\S]*?minmax\(0, 1fr\)/);
   assert.match(css, /@media \(max-width: 480px\)[\s\S]*?\.damage-driver-conflict \{ grid-template-columns: 1fr/);
-  assert.match(loader, /damage-workspace\.css\?v=4/);
-  assert.match(page, /damage-workspace\.js\?v=8/);
-  assert.match(loader, /fleet-page\.js\?v=25/);
-  assert.match(app, /workspace-loader\.js\?v=34/);
-  assert.match(html, /app\.js\?v=46/);
+  assert.match(css, /\.damage-driver-confirm[\s\S]*?margin-top/);
+  assert.match(css, /\.damage-driver-attribution[\s\S]*?min-width: 0/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*?\.damage-driver-confirm \{ width: 100%/);
+  assert.doesNotMatch(css, /width:\s*(?:1440|390)px/);
+  assert.match(loader, /damage-workspace\.css\?v=5/);
+  assert.match(page, /damage-workspace\.js\?v=9/);
+  assert.match(loader, /fleet-page\.js\?v=26/);
+  assert.match(app, /workspace-loader\.js\?v=35/);
+  assert.match(html, /app\.js\?v=47/);
 });
