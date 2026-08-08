@@ -198,6 +198,15 @@ def test_completed_shared_movement_is_resolved_by_journal_suggestion():
             (created["session_id"],),
         ).fetchone()
     assert movement["declared_driver_identifier"] == "source-67c5d028b9c784bf"
+    room_response = client.get(
+        "/api/fleet/journal-control-room",
+        params={"search": "Alban"},
+    )
+    assert room_response.status_code == 200, room_response.text
+    assert room_response.json()["total"] == 1
+    room_item = room_response.json()["items"][0]
+    assert room_item["driver_display_name"] == "Alban Beqiraj"
+    assert room_item["declared_driver_identifier"] == "source-67c5d028b9c784bf"
     identity = resolve_driver_identity(
         organization_id=ORGANIZATION_ID,
         driver_identifier=movement["declared_driver_identifier"],

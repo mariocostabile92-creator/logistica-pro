@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../utils/dom.js";
+import { driverDisplayName } from "./driver-display.js";
 
 export const operationLabel = value =>
   value === "check_out" ? "Presa in carico" : "Rientro";
@@ -37,7 +38,7 @@ export function journalCard(item, selectedId) {
     data-jcr-id="${escapeHtml(item.id)}" aria-pressed="${selectedId === item.id}">
     <header><strong>${escapeHtml(item.plate_snapshot)}</strong>
       <span class="jcr-status status-${status.tone}"><b aria-hidden="true">${status.marker}</b>${escapeHtml(status.label)}</span></header>
-    <dl><div><dt>Driver</dt><dd>${escapeHtml(item.declared_driver_identifier)}</dd></div>
+    <dl><div><dt>Driver</dt><dd>${escapeHtml(driverDisplayName(item))}</dd></div>
       <div><dt>Procedura</dt><dd>${escapeHtml(operationLabel(item.operation_type))}</dd></div>
       <div><dt>Data</dt><dd>${escapeHtml(occurred.date)}</dd></div>
       <div><dt>Ora</dt><dd>${escapeHtml(occurred.time)}</dd></div></dl>

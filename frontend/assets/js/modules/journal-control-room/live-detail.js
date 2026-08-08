@@ -1,6 +1,7 @@
 import { escapeHtml } from "../../utils/dom.js";
 import { facts, infoSection, operationLabel, procedureDateParts } from "./components.js";
 import { liveStatusPresentation } from "./live-overview.js";
+import { driverDisplayName } from "./driver-display.js";
 
 const liveTimeline = item => {
   const events = [
@@ -16,7 +17,7 @@ export function journalLiveDetail(item) {
   if (!item) return `<div class="view-state"><strong>Seleziona un driver</strong><p>Apri una procedura per monitorarne l'avanzamento.</p></div>`;
   const status = liveStatusPresentation(item);
   return `<button type="button" class="quiet jcr-back" data-jcr-back>← Torna alla lista</button>
-    <header class="jcr-detail-hero"><div><p class="eyebrow">Monitoraggio live</p><h3>${escapeHtml(item.declared_driver_identifier)}</h3></div>
+    <header class="jcr-detail-hero"><div><p class="eyebrow">Monitoraggio live</p><h3>${escapeHtml(driverDisplayName(item))}</h3></div>
       <span class="jcr-status status-${status.tone}"><b aria-hidden="true">${status.marker}</b>${escapeHtml(status.label)}</span></header>
     <div class="jcr-live-detail-layout">
       ${infoSection("Stato corrente", "jcr-live-status", facts([

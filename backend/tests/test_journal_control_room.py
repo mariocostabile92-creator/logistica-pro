@@ -295,10 +295,53 @@ def test_shared_link_session_normalization_lifecycle_completion_and_histories():
     item = next(entry for entry in room["items"] if entry["id"] == movement["id"])
     assert item["origin"] == "Shared link"
     assert item["declared_driver_identifier"] == "Mario Rossi"
+    assert item["driver_display_name"] == "Mario Rossi"
     assert item["status"] == "completed"
     assert client.get(CONTROL, params={"search": "mario rossi"}).json()["total"] == 1
     history = client.get(f"{JOURNAL}/vehicles/{vehicle['id']}/history").json()
     assert history["movements"][0]["declared_driver_identifier"] == "Mario Rossi"
+
+
+def test_canonical_shared_driver_is_presented_and_searched_by_readable_name():
+    with db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO workforce_members (
+                organization_id, external_identifier, display_name, role,
+                capabilities, active, source_reference, created_at, updated_at
+            ) VALUES (
+                'test-organization', 'source-3acf08730cb8c7a0',
+                'Alessandro Facchetti', 'driver', '[]', 1,
+                'journal-display-test', '2026-08-08T10:00:00+00:00',
+                '2026-08-08T10:00:00+00:00'
+            )
+            """
+        )
+    vehicle = asset()
+    opened = create_shared(
+        vehicle,
+        name="Alessandro",
+        surname="Facchetti",
+    )
+    live_item = next(
+        entry for entry in client.get(CONTROL).json()["items"]
+        if entry["id"] == opened["session_id"]
+    )
+    assert live_item["declared_driver_identifier"] == "source-3acf08730cb8c7a0"
+    assert live_item["driver_display_name"] == "Alessandro Facchetti"
+    movement = complete({"id": opened["session_id"], "token": opened["token"]})
+
+    item = next(
+        entry for entry in client.get(CONTROL).json()["items"]
+        if entry["id"] == movement["id"]
+    )
+    assert item["declared_driver_identifier"] == "source-3acf08730cb8c7a0"
+    assert item["driver_display_name"] == "Alessandro Facchetti"
+    searched = client.get(CONTROL, params={"search": "Alessandro"}).json()
+    assert searched["total"] == 1
+    assert searched["items"][0]["id"] == movement["id"]
+    filtered = client.get(CONTROL, params={"driver": "Facchetti"}).json()
+    assert filtered["total"] == 1
 
 
 def test_shared_link_smart_warnings_are_non_blocking_and_persisted():

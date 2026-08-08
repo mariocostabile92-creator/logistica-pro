@@ -45,6 +45,46 @@ test("Control Room is a live driver overview with a concise monitoring detail", 
   assert.doesNotMatch(liveDetail, /Dotazioni e checklist|Carburante|Pulizia|Avvisi Smart/);
 });
 
+test("canonical driver identifiers remain internal in cards and live monitoring", async () => {
+  const [{ journalLiveCard }, { journalLiveDetail }, { driverDisplayName }] = await Promise.all([
+    import(new URL("../assets/js/modules/journal-control-room/live-overview.js", import.meta.url)),
+    import(new URL("../assets/js/modules/journal-control-room/live-detail.js", import.meta.url)),
+    import(new URL("../assets/js/modules/journal-control-room/driver-display.js", import.meta.url)),
+  ]);
+  const item = {
+    id: "session-1",
+    declared_driver_identifier: "source-3acf08730cb8c7a0",
+    driver_name: "Alessandro",
+    driver_surname: "Facchetti",
+    plate_snapshot: "GC298NZ",
+    vehicle_model: "Iveco Daily",
+    status: "opened",
+    operation_type: "check_out",
+    origin: "Shared link",
+    created_at: "2026-08-08T08:00:00+00:00",
+    opened_at: "2026-08-08T08:05:00+00:00",
+    occurred_at: "2026-08-08T08:05:00+00:00",
+    operational_date: "2026-08-08",
+    media: [],
+    anomaly_present: false,
+    incomplete: true,
+    is_late: false,
+  };
+  const presentation = journalLiveCard(item, item.id) + journalLiveDetail(item);
+  assert.match(presentation, /Alessandro Facchetti/);
+  assert.doesNotMatch(presentation, /source-3acf08730cb8c7a0/);
+  assert.equal(driverDisplayName({
+    declared_driver_identifier: "Mario Rossi",
+  }), "Mario Rossi");
+  assert.equal(driverDisplayName({
+    driver_display_name: "Giulia Bianchi",
+    declared_driver_identifier: "source-workforce-id",
+  }), "Giulia Bianchi");
+  assert.equal(driverDisplayName({
+    declared_driver_identifier: "source-not-for-display",
+  }), "Driver non disponibile");
+});
+
 test("Control Room and complete Archive detail link Vehicle Library and Damage", async () => {
   const [renderer, fleet, module, archiveDetail] = await Promise.all([
     file("assets/js/modules/vehicle-dossier/renderer.js"),

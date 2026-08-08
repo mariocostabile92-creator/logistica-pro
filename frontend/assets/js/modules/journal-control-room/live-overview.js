@@ -1,5 +1,6 @@
 import { escapeHtml } from "../../utils/dom.js";
 import { operationLabel, procedureDateParts } from "./components.js";
+import { driverDisplayName } from "./driver-display.js";
 import {
   liveCardPriority, liveKpiDefinitions, statusPresentation,
 } from "./live-status-presenter.js";
@@ -20,7 +21,7 @@ export function journalLiveCard(item, selectedId) {
   });
   return `<button type="button" class="jcr-item jcr-live-item status-${status.tone} priority-${priority.tone} ${selectedId === item.id ? "active" : ""}"
     data-jcr-id="${escapeHtml(item.id)}" aria-pressed="${selectedId === item.id}">
-    <header><div><strong>${escapeHtml(item.declared_driver_identifier)}</strong><small>${escapeHtml(item.plate_snapshot)} · ${escapeHtml(item.vehicle_model || "Modello non registrato")}</small></div>
+    <header><div><strong>${escapeHtml(driverDisplayName(item))}</strong><small>${escapeHtml(item.plate_snapshot)} · ${escapeHtml(item.vehicle_model || "Modello non registrato")}</small></div>
       <span class="jcr-status status-${status.tone}"><b aria-hidden="true">${status.marker}</b>${escapeHtml(status.label)}</span></header>
     <div class="jcr-live-signals">${item.is_late ? '<strong class="jcr-signal signal-late">In ritardo</strong>' : ""}
       ${item.anomaly_present ? '<strong class="jcr-signal signal-anomaly">Anomalia presente</strong>' : ""}</div>

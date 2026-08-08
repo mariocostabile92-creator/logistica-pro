@@ -3,6 +3,7 @@ import { operationLabel, procedureDateParts } from "../journal-control-room/comp
 import {
   liveCardPriority, statusPresentation,
 } from "../journal-control-room/live-status-presenter.js";
+import { driverDisplayName } from "../journal-control-room/driver-display.js";
 
 export function dailyTimeline(items, selectedId) {
   if (!items.length) return `<div class="jcr-empty"><strong>Nessuna procedura</strong><p>Non ci sono registrazioni per il giorno e i filtri selezionati.</p></div>`;
@@ -14,7 +15,7 @@ export function dailyTimeline(items, selectedId) {
       <time datetime="${escapeHtml(item.occurred_at)}"><strong>${escapeHtml(occurred.time)}</strong><small>${escapeHtml(occurred.date)}</small></time>
       <span class="gdb-timeline-node" aria-hidden="true"></span>
       <article class="${selectedId === item.id ? "active" : ""}">
-        <header><div><strong>${escapeHtml(item.declared_driver_identifier)}</strong><small>${escapeHtml(item.plate_snapshot)} · ${escapeHtml(item.vehicle_model || "Modello non registrato")}</small></div>
+        <header><div><strong>${escapeHtml(driverDisplayName(item))}</strong><small>${escapeHtml(item.plate_snapshot)} · ${escapeHtml(item.vehicle_model || "Modello non registrato")}</small></div>
           <span class="jcr-status status-${status.tone}">${escapeHtml(status.label)}</span></header>
         <p class="gdb-timeline-procedure">${escapeHtml(operationLabel(item.operation_type))}</p>
         <div class="gdb-timeline-signals">${item.is_late ? '<b class="signal-late">In ritardo</b>' : ""}

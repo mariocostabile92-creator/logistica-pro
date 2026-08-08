@@ -42,6 +42,27 @@ def _is_late(item: dict, timezone_name: str) -> bool:
     return scheduled < datetime.now(ZoneInfo(timezone_name))
 
 
+def _driver_display_name(item: dict) -> str:
+    visual_name = " ".join(
+        str(item.get(key) or "").strip()
+        for key in ("driver_name", "driver_surname")
+        if str(item.get(key) or "").strip()
+    )
+    if visual_name:
+        return visual_name
+    workforce_name = str(
+        item.get("workforce_driver_display_name")
+        or item.get("display_name")
+        or ""
+    ).strip()
+    if workforce_name:
+        return workforce_name
+    legacy_identifier = str(item.get("declared_driver_identifier") or "").strip()
+    if legacy_identifier.casefold().startswith(("source-", "workforce-")):
+        return "Driver non disponibile"
+    return legacy_identifier or "Driver non disponibile"
+
+
 def _present(
     item: dict, can_delete_media: bool = False, timezone_name: str = "Europe/Rome"
 ) -> dict:
@@ -57,6 +78,7 @@ def _present(
     movement_id = None if incomplete else item["id"]
     return {
         **item,
+        "driver_display_name": _driver_display_name(item),
         "occurred_at": occurred_at,
         "anomaly_present": anomaly,
         "status": status,
@@ -85,8 +107,9 @@ def _matches(item: dict, filters: dict, today: date) -> bool:
     search = str(filters.get("search") or "").casefold().strip()
     if search:
         haystack = " ".join(str(item.get(key) or "") for key in (
-            "id", "declared_driver_identifier", "plate_snapshot", "occurred_at",
-            "anomaly_description", "operational_note",
+            "id", "driver_display_name", "declared_driver_identifier",
+            "plate_snapshot", "occurred_at", "anomaly_description",
+            "operational_note",
         )).casefold()
         if search not in haystack:
             return False
@@ -94,8 +117,12 @@ def _matches(item: dict, filters: dict, today: date) -> bool:
     if plate and plate not in str(item.get("plate_snapshot") or "").casefold():
         return False
     driver = str(filters.get("driver") or "").casefold().strip()
-    if driver and driver not in str(item.get("declared_driver_identifier") or "").casefold():
-        return False
+    if driver:
+        driver_values = " ".join(str(item.get(key) or "") for key in (
+            "driver_display_name", "declared_driver_identifier",
+        )).casefold()
+        if driver not in driver_values:
+            return False
     operation = filters.get("operation_type")
     if operation and item.get("operation_type") != operation:
         return False

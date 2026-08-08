@@ -1,6 +1,7 @@
 import { escapeHtml } from "../../utils/dom.js";
 import { facts, infoSection, operationLabel, procedureDateParts, statusPresentation, warningsSection } from "./components.js";
 import { journalMediaSection } from "./media-section.js";
+import { driverDisplayName } from "./driver-display.js";
 
 function equipmentSection(item) {
   if (!item.equipment.length) return `<div class="jcr-empty">Nessuna dotazione registrata.</div>`;
@@ -43,7 +44,7 @@ export function journalArchiveDetail(item) {
       <span class="jcr-status status-${status.tone}"><b aria-hidden="true">${status.marker}</b>${escapeHtml(status.label)}</span></header>
     <div class="jcr-detail-layout jcr-archive-full-detail">
       ${infoSection("Identificazione", "jcr-identification", facts([
-        ["Driver", item.declared_driver_identifier], ["Targa", item.plate_snapshot],
+        ["Driver", driverDisplayName(item)], ["Targa", item.plate_snapshot],
         ["Modello", item.vehicle_model || "Non registrato"], ["Procedura", operationLabel(item.operation_type)],
         ["Data operativa", occurred.date], ["Data e ora reali", occurred.full],
         ["Origine", item.origin], ["ID documento", item.operational_document_id || "Non disponibile"],
