@@ -50,6 +50,24 @@ def find_members_by_external_identifier(
     return [member_from_row(row) for row in rows]
 
 
+def find_members_by_display_name(
+    organization_id: str,
+    display_name: str,
+) -> list[WorkforceMember]:
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM workforce_members
+            WHERE organization_id = ?
+              AND LOWER(TRIM(display_name)) = LOWER(TRIM(?))
+            ORDER BY id
+            """,
+            (organization_id, display_name),
+        ).fetchall()
+    return [member_from_row(row) for row in rows]
+
+
 def imported_result(fingerprint: str) -> WorkforceImportResult | None:
     organization_id = current_organization_id()
     with db_session() as conn:

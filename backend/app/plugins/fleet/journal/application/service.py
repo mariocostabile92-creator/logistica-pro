@@ -11,6 +11,9 @@ from app.auth import repository as auth_repository
 from app.auth.tenant_context import current_organization_id
 from app.core.config import SETTINGS
 from app.plugins.fleet.journal.application import shared_access_service
+from app.plugins.fleet.journal.application.shared_driver_identity import (
+    resolve_shared_driver_identity,
+)
 from app.plugins.fleet.journal.infrastructure import repository
 from app.plugins.fleet.journal.infrastructure.storage import media_storage
 from app.plugins.fleet.journal.domain.operational_day import operational_date, organization_timezone
@@ -313,6 +316,11 @@ def create_shared_session(values: dict[str, object]) -> dict[str, object]:
             raise error_type(str(exc)) from exc
     driver_name = _normalize_person_name(values["driver_name"])
     driver_surname = _normalize_person_name(values["driver_surname"])
+    driver_display_name = f"{driver_name} {driver_surname}"
+    driver_identity = resolve_shared_driver_identity(
+        organization_id,
+        driver_display_name,
+    )
     asset = find_asset(str(values["vehicle_plate"]), organization_id)
     operation_type = str(values["procedure_type"])
     session_id = str(uuid.uuid4())
@@ -325,7 +333,7 @@ def create_shared_session(values: dict[str, object]) -> dict[str, object]:
         "operation_type": operation_type,
         "asset_id": asset["id"],
         "plate_snapshot": asset["plate"],
-        "declared_driver_identifier": f"{driver_name} {driver_surname}",
+        "declared_driver_identifier": driver_identity.persisted_identifier,
         "operational_shift": (
             "morning" if now.hour < 14 else "evening"
         ) if operation_type == "check_out" else None,
