@@ -17,7 +17,7 @@ const STYLES = {
     "workforce.css?v=5",
     "workforce-layout.css?v=3",
     "workforce-calendar.css?v=3",
-    "workforce-panel.css?v=3",
+    "workforce-panel.css?v=4",
     "workforce-responsive.css?v=5",
     "workforce-foundation.css?v=2",
   ],

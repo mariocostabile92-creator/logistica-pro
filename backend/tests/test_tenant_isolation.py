@@ -1,5 +1,6 @@
 import io
 import json
+from datetime import date
 
 from fastapi.testclient import TestClient
 from openpyxl import Workbook
@@ -57,6 +58,30 @@ def fleet_identity_book() -> bytes:
     sheet.title = "Stato parco"
     sheet.append(["Asset ID", "Targa", "Modello", "Stato"])
     sheet.append(["tenant-a-vehicle", "TA001AA", "Furgone", "Disponibile"])
+    output = io.BytesIO()
+    book.save(output)
+    book.close()
+    return output.getvalue()
+
+
+def workforce_planning_book() -> bytes:
+    book = Workbook()
+    members = book.active
+    members.title = "Anagrafiche e contratti"
+    members.append([
+        "Matricola", "Nome Cognome", "Ruolo", "Tipo contratto",
+        "Inizio contratto", "Fine contratto", "Ore settimanali",
+    ])
+    members.append([
+        "SHARED-DRIVER", "Driver Condiviso", "courier", "full-time",
+        "2026-01-01", "2026-12-31", 40,
+    ])
+    shifts = book.create_sheet("Turni settimanali")
+    shifts.append(["Matricola", "Nome Cognome", date(2026, 8, 8)])
+    shifts.append(["SHARED-DRIVER", "Driver Condiviso", "S1"])
+    requirements = book.create_sheet("Fabbisogno")
+    requirements.append(["Data", "Sede", "Fabbisogno"])
+    requirements.append(["2026-08-08", "DLO2", 1])
     output = io.BytesIO()
     book.save(output)
     book.close()
@@ -177,6 +202,43 @@ def test_fleet_sync_can_import_an_identity_owned_by_another_organization():
     assert asset_b["id"] != asset_a["id"]
     assert asset_b["external_identifier"] == asset_a["external_identifier"]
     assert asset_b["plate"] == asset_a["plate"]
+
+
+def test_workforce_import_is_independent_for_each_organization():
+    tenant_a = organization_client("Workforce Tenant A", "workforce-a@example.test")
+    tenant_b = organization_client("Workforce Tenant B", "workforce-b@example.test")
+    content = workforce_planning_book()
+
+    def apply_import(client: TestClient):
+        upload = {
+            "file": (
+                "shared-planning.xlsx",
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        }
+        preview = client.post(
+            "/api/plugins/workforce/v1/import/preview",
+            files=upload,
+        )
+        assert preview.status_code == 200
+        return client.post(
+            "/api/plugins/workforce/v1/import",
+            data={"confirmed_fingerprint": preview.json()["fingerprint"]},
+            files=upload,
+        )
+
+    first = apply_import(tenant_a)
+    second = apply_import(tenant_b)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["members_created"] == 1
+    assert second.json()["members_created"] == 1
+    member_a = tenant_a.get("/api/plugins/workforce/v1/members").json()["items"][0]
+    member_b = tenant_b.get("/api/plugins/workforce/v1/members").json()["items"][0]
+    assert member_a["workforce_member_id"] != member_b["workforce_member_id"]
+    assert member_a["external_identifier"] == member_b["external_identifier"]
 
 
 def test_public_journal_cannot_enumerate_an_organization_fleet():

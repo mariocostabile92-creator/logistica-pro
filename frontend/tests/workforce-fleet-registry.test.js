@@ -270,6 +270,10 @@ test("Workforce layout is bounded, wide and responsive", async () => {
   assert.match(calendar, /position: sticky/);
   assert.match(calendar, /\.workforce-day-list/);
   assert.match(panel, /\.workforce-detail-panel/);
+  assert.match(
+    panel,
+    /\.workforce-overlay-backdrop:hover:not\(:disabled\)[\s\S]*?background: rgb\(18 29 26 \/ 58%\)/,
+  );
   assert.match(responsive, /@media \(max-width: 1180px\)/);
   assert.match(responsive, /@media \(max-width: 720px\)/);
   assert.match(responsive, /@media \(max-width: 620px\)/);

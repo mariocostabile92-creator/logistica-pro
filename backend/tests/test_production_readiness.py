@@ -20,6 +20,9 @@ from app.main import app
 from app.plugins.fleet.infrastructure.repository import (
     _ensure_asset_tenant_identity,
 )
+from app.plugins.workforce.infrastructure.schema import (
+    _ensure_scoped_uniqueness,
+)
 
 
 PROJECT_DIR = Path(__file__).parents[2]
@@ -164,6 +167,28 @@ def test_postgres_fleet_identity_is_scoped_to_the_organization():
     assert "DROP CONSTRAINT IF EXISTS fleet_assets_plate_key" in sql
     assert "fleet_assets(organization_id, LOWER(external_identifier))" in sql
     assert "fleet_assets(organization_id, LOWER(plate))" in sql
+
+
+def test_postgres_workforce_identity_is_scoped_to_the_organization():
+    statements = []
+
+    class RecordingConnection:
+        @staticmethod
+        def execute(statement, parameters=()):
+            statements.append((" ".join(statement.split()), parameters))
+
+    _ensure_scoped_uniqueness(RecordingConnection(), "postgresql")
+
+    sql = "\n".join(statement for statement, _ in statements)
+    assert "workforce_members_external_identifier_key" in sql
+    assert "workforce_imports_fingerprint_key" in sql
+    assert "workforce_requirements_date_operational_unit_id_key" in sql
+    assert "workforce_members(organization_id, LOWER(external_identifier))" in sql
+    assert "workforce_imports(organization_id, fingerprint)" in sql
+    assert (
+        "workforce_requirements(organization_id, date, operational_unit_id)"
+        in sql
+    )
 
 
 def test_sqlite_fleet_identity_migration_preserves_data_and_references():

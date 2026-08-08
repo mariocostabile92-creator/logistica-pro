@@ -18,6 +18,163 @@ SCOPED_COLUMNS = {
 }
 
 
+def _sqlite_table_definition(conn, table: str) -> str:
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table,),
+    ).fetchone()
+    return str(row["sql"] or "").upper() if row else ""
+
+
+def _migrate_sqlite_scoped_uniqueness(conn) -> None:
+    legacy_members = (
+        "EXTERNAL_IDENTIFIER TEXT NOT NULL UNIQUE"
+        in _sqlite_table_definition(conn, "workforce_members")
+    )
+    legacy_imports = (
+        "FINGERPRINT TEXT NOT NULL UNIQUE"
+        in _sqlite_table_definition(conn, "workforce_imports")
+    )
+    legacy_requirements = (
+        "UNIQUE (DATE, OPERATIONAL_UNIT_ID)"
+        in _sqlite_table_definition(conn, "workforce_requirements")
+    )
+    if not any((legacy_members, legacy_imports, legacy_requirements)):
+        return
+
+    conn.execute("PRAGMA foreign_keys = OFF")
+    conn.execute("PRAGMA legacy_alter_table = ON")
+    try:
+        if legacy_members:
+            conn.executescript(
+                """
+                ALTER TABLE workforce_members RENAME TO workforce_members_global_identity;
+                CREATE TABLE workforce_members (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    external_identifier TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    role TEXT,
+                    employment_type TEXT,
+                    contract_start TEXT,
+                    contract_end TEXT,
+                    weekly_hours REAL,
+                    capabilities TEXT NOT NULL,
+                    active INTEGER NOT NULL,
+                    source_reference TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    first_name TEXT,
+                    last_name TEXT,
+                    station TEXT,
+                    operational_notes TEXT,
+                    is_reserve INTEGER NOT NULL DEFAULT 0,
+                    organization_id TEXT NOT NULL DEFAULT 'default',
+                    UNIQUE (organization_id, external_identifier)
+                );
+                INSERT INTO workforce_members (
+                    id, external_identifier, display_name, role, employment_type,
+                    contract_start, contract_end, weekly_hours, capabilities,
+                    active, source_reference, created_at, updated_at, first_name,
+                    last_name, station, operational_notes, is_reserve,
+                    organization_id
+                )
+                SELECT id, external_identifier, display_name, role, employment_type,
+                       contract_start, contract_end, weekly_hours, capabilities,
+                       active, source_reference, created_at, updated_at, first_name,
+                       last_name, station, operational_notes, is_reserve,
+                       organization_id
+                FROM workforce_members_global_identity;
+                DROP TABLE workforce_members_global_identity;
+                """
+            )
+        if legacy_imports:
+            conn.executescript(
+                """
+                ALTER TABLE workforce_imports RENAME TO workforce_imports_global_fingerprint;
+                CREATE TABLE workforce_imports (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    fingerprint TEXT NOT NULL,
+                    original_filename TEXT NOT NULL,
+                    imported_at TEXT NOT NULL,
+                    sheets TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    organization_id TEXT NOT NULL DEFAULT 'default',
+                    UNIQUE (organization_id, fingerprint)
+                );
+                INSERT INTO workforce_imports (
+                    id, fingerprint, original_filename, imported_at, sheets,
+                    summary, organization_id
+                )
+                SELECT id, fingerprint, original_filename, imported_at, sheets,
+                       summary, organization_id
+                FROM workforce_imports_global_fingerprint;
+                DROP TABLE workforce_imports_global_fingerprint;
+                """
+            )
+        if legacy_requirements:
+            conn.executescript(
+                """
+                ALTER TABLE workforce_requirements RENAME TO workforce_requirements_global_identity;
+                CREATE TABLE workforce_requirements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL,
+                    operational_unit_id TEXT NOT NULL,
+                    required_resources INTEGER NOT NULL,
+                    required_capabilities TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    version INTEGER NOT NULL,
+                    organization_id TEXT NOT NULL DEFAULT 'default',
+                    UNIQUE (organization_id, date, operational_unit_id)
+                );
+                INSERT INTO workforce_requirements (
+                    id, date, operational_unit_id, required_resources,
+                    required_capabilities, source, version, organization_id
+                )
+                SELECT id, date, operational_unit_id, required_resources,
+                       required_capabilities, source, version, organization_id
+                FROM workforce_requirements_global_identity;
+                DROP TABLE workforce_requirements_global_identity;
+                """
+            )
+    finally:
+        conn.execute("PRAGMA legacy_alter_table = OFF")
+        conn.execute("PRAGMA foreign_keys = ON")
+
+
+def _ensure_scoped_uniqueness(conn, database_backend: str | None = None) -> None:
+    is_postgres = (
+        database_backend == "postgresql" or isinstance(conn, PostgresConnection)
+    )
+    if is_postgres:
+        conn.execute(
+            "ALTER TABLE workforce_members DROP CONSTRAINT IF EXISTS "
+            "workforce_members_external_identifier_key"
+        )
+        conn.execute(
+            "ALTER TABLE workforce_imports DROP CONSTRAINT IF EXISTS "
+            "workforce_imports_fingerprint_key"
+        )
+        conn.execute(
+            "ALTER TABLE workforce_requirements DROP CONSTRAINT IF EXISTS "
+            "workforce_requirements_date_operational_unit_id_key"
+        )
+    else:
+        _migrate_sqlite_scoped_uniqueness(conn)
+
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_members_org_external "
+        "ON workforce_members(organization_id, LOWER(external_identifier))"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_imports_org_fingerprint "
+        "ON workforce_imports(organization_id, fingerprint)"
+    )
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_requirements_org_identity "
+        "ON workforce_requirements(organization_id, date, operational_unit_id)"
+    )
+
+
 def _ensure_profile_columns(conn) -> None:
     if isinstance(conn, PostgresConnection):
         rows = conn.execute(
@@ -59,16 +216,18 @@ def init_schema() -> None:
             """
             CREATE TABLE IF NOT EXISTS workforce_imports (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                fingerprint TEXT NOT NULL UNIQUE,
+                fingerprint TEXT NOT NULL,
                 original_filename TEXT NOT NULL,
                 imported_at TEXT NOT NULL,
                 sheets TEXT NOT NULL,
-                summary TEXT NOT NULL
+                summary TEXT NOT NULL,
+                organization_id TEXT NOT NULL DEFAULT 'default',
+                UNIQUE (organization_id, fingerprint)
             );
 
             CREATE TABLE IF NOT EXISTS workforce_members (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                external_identifier TEXT NOT NULL UNIQUE,
+                external_identifier TEXT NOT NULL,
                 display_name TEXT NOT NULL,
                 role TEXT,
                 employment_type TEXT,
@@ -79,7 +238,9 @@ def init_schema() -> None:
                 active INTEGER NOT NULL,
                 source_reference TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                organization_id TEXT NOT NULL DEFAULT 'default',
+                UNIQUE (organization_id, external_identifier)
             );
 
             CREATE TABLE IF NOT EXISTS workforce_day_statuses (
@@ -95,6 +256,7 @@ def init_schema() -> None:
                 source_reference TEXT NOT NULL,
                 observed_or_confirmed TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
+                organization_id TEXT NOT NULL DEFAULT 'default',
                 FOREIGN KEY (workforce_member_id) REFERENCES workforce_members(id)
                     ON DELETE CASCADE,
                 UNIQUE (workforce_member_id, date)
@@ -108,7 +270,8 @@ def init_schema() -> None:
                 required_capabilities TEXT NOT NULL,
                 source TEXT NOT NULL,
                 version INTEGER NOT NULL,
-                UNIQUE (date, operational_unit_id)
+                organization_id TEXT NOT NULL DEFAULT 'default',
+                UNIQUE (organization_id, date, operational_unit_id)
             );
 
             CREATE TABLE IF NOT EXISTS workforce_changes (
@@ -120,7 +283,8 @@ def init_schema() -> None:
                 before_value TEXT,
                 after_value TEXT NOT NULL,
                 reason TEXT NOT NULL,
-                source TEXT NOT NULL
+                source TEXT NOT NULL,
+                organization_id TEXT NOT NULL DEFAULT 'default'
             );
 
             CREATE INDEX IF NOT EXISTS idx_workforce_status_date
@@ -184,3 +348,4 @@ def init_schema() -> None:
                     f"UPDATE {table} SET organization_id = ? WHERE organization_id = 'default'",
                     (organization_id,),
                 )
+        _ensure_scoped_uniqueness(conn)
