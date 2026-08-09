@@ -1153,6 +1153,30 @@
       aria-labelledby="dspWorkspaceTitle"
       hidden
     >
+      <nav class="dsp-area-tabs" role="tablist" aria-label="Aree DSP">
+        <button
+          id="dspOperationsTab"
+          class="dsp-area-tab active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="dspOperationsPanel"
+          tabindex="0"
+          data-dsp-area="operations"
+        >Operatività</button>
+        <button
+          id="dspQualityTab"
+          class="dsp-area-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="dspQualityPanel"
+          tabindex="-1"
+          data-dsp-area="quality"
+        >Qualità</button>
+      </nav>
+
+      <div id="dspOperationsPanel" class="dsp-area-panel" role="tabpanel" aria-labelledby="dspOperationsTab">
       <header class="section-heading dsp-workspace-header">
         <div>
           <p class="eyebrow oe-workspace-eyebrow"><img class="oe-workspace-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Controllo giornaliero</span></p>
@@ -1209,6 +1233,17 @@
           </div>
           <div id="dspBoardRows"></div>
         </div>
+      </div>
+      </div>
+
+      <div
+        id="dspQualityPanel"
+        class="dsp-area-panel"
+        role="tabpanel"
+        aria-labelledby="dspQualityTab"
+        hidden
+      >
+        <div id="dspQualityRoot" class="dsp-quality-root"></div>
       </div>
     </section>
 
