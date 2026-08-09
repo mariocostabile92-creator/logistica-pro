@@ -47,10 +47,44 @@ class FleetProjection(BaseModel):
     operational_status: str | None = None
 
 
+JournalProcedureStatus = Literal[
+    "completed",
+    "missing",
+    "pending",
+    "not_expected",
+    "unknown",
+]
+
+
+class JournalProjection(BaseModel):
+    available: bool = True
+    check_out_status: JournalProcedureStatus = "unknown"
+    check_in_status: JournalProcedureStatus = "unknown"
+    in_progress: bool = False
+    anomaly: bool = False
+    partial: bool = False
+
+
+class DamageProjection(BaseModel):
+    available: bool = True
+    open_cases_count: int = 0
+    highest_severity: str | None = None
+    vehicle_blocked: bool = False
+    relevant_case_ids: list[int] = Field(default_factory=list)
+    partial: bool = False
+
+
 AttentionCode = Literal[
     "DRIVER_WITHOUT_VEHICLE",
     "DRIVER_NOT_AVAILABLE",
     "VEHICLE_NOT_AVAILABLE",
+    "JOURNAL_CHECKOUT_MISSING",
+    "JOURNAL_CHECKIN_MISSING",
+    "JOURNAL_ANOMALY",
+    "JOURNAL_IN_PROGRESS",
+    "OPEN_DAMAGE_CASE",
+    "VEHICLE_BLOCKED_BY_DAMAGE",
+    "HIGH_SEVERITY_DAMAGE",
 ]
 
 
@@ -62,6 +96,8 @@ class OperationalRow(BaseModel):
     vehicle: VehicleProjection
     workforce: WorkforceProjection
     fleet: FleetProjection
+    journal: JournalProjection = Field(default_factory=JournalProjection)
+    damage: DamageProjection = Field(default_factory=DamageProjection)
     attention_codes: list[AttentionCode] = Field(default_factory=list)
 
 
@@ -72,15 +108,17 @@ class OperationalSignal(BaseModel):
     workforce_member_id: int | None = None
     fleet_asset_id: int | None = None
     message: str
-    source: Literal["planning", "workforce", "fleet"]
+    source: Literal["planning", "workforce", "fleet", "journal", "damage"]
 
 
 class DailyOperationsSnapshot(BaseModel):
     operation_date: str
     generated_at: str
     planning: PlanningMetadata
-    sources: dict[Literal["planning", "workforce", "fleet"], SourceMetadata]
+    sources: dict[
+        Literal["planning", "workforce", "fleet", "journal", "damage"],
+        SourceMetadata,
+    ]
     rows: list[OperationalRow] = Field(default_factory=list)
     signals: list[OperationalSignal] = Field(default_factory=list)
     partial: bool = False
-

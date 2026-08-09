@@ -6,6 +6,9 @@ from app.plugins.dsp_workspace.domain.models import (
     SourceMetadata,
 )
 from app.plugins.dsp_workspace.application.row_builder import build_operational_rows
+from app.plugins.dsp_workspace.application.operational_signals import (
+    apply_operational_projections,
+)
 from app.plugins.dsp_workspace.infrastructure import repository
 from app.plugins.workforce.application.availability_service import (
     foundation_snapshot,
@@ -41,6 +44,7 @@ def daily_operations_snapshot(
     *,
     operation_date: str,
     organization_id: str,
+    now: datetime | None = None,
 ) -> DailyOperationsSnapshot:
     day = date.fromisoformat(operation_date).isoformat()
     organization_id = str(organization_id or "").strip()
@@ -127,6 +131,75 @@ def daily_operations_snapshot(
         workforce_drivers=workforce_drivers,
         fleet_assets=fleet_assets,
     )
+
+    asset_ids = [
+        row.vehicle.fleet_asset_id
+        for row in built.rows
+        if row.vehicle.fleet_asset_id is not None
+    ]
+    workforce_member_ids = [
+        row.driver.workforce_member_id
+        for row in built.rows
+        if row.driver.workforce_member_id is not None
+    ]
+
+    journal_fetched_at = _now()
+    journal_records: list[dict] = []
+    clock = {"timezone": "Europe/Rome", "operational_day_start_hour": 4}
+    try:
+        clock = repository.organization_clock(organization_id)
+        journal_records = repository.compact_journal_records(
+            day,
+            organization_id,
+            asset_ids,
+        )
+        sources["journal"] = _source(
+            available=True,
+            status="available",
+            fetched_at=journal_fetched_at,
+        )
+    except Exception as exc:
+        sources["journal"] = _source(
+            available=False,
+            status="unavailable",
+            fetched_at=journal_fetched_at,
+            partial=True,
+            error=_safe_error(exc),
+        )
+
+    damage_fetched_at = _now()
+    damage_cases: list[dict] = []
+    try:
+        damage_cases = repository.compact_open_damage_cases(
+            organization_id,
+            asset_ids,
+            workforce_member_ids,
+        )
+        sources["damage"] = _source(
+            available=True,
+            status="available",
+            fetched_at=damage_fetched_at,
+        )
+    except Exception as exc:
+        sources["damage"] = _source(
+            available=False,
+            status="unavailable",
+            fetched_at=damage_fetched_at,
+            partial=True,
+            error=_safe_error(exc),
+        )
+
+    operational = apply_operational_projections(
+        rows=built.rows,
+        journal_records=journal_records,
+        damage_cases=damage_cases,
+        operation_date=day,
+        timezone_name=str(clock["timezone"]),
+        operational_day_start_hour=int(clock["operational_day_start_hour"]),
+        journal_available=sources["journal"].available,
+        damage_available=sources["damage"].available,
+        now=now,
+    )
     if built.unresolved_drivers and sources["workforce"].available:
         sources["workforce"] = sources["workforce"].model_copy(update={
             "status": "partial_unresolved_identity",
@@ -137,13 +210,23 @@ def daily_operations_snapshot(
             "status": "partial_unresolved_identity",
             "partial": True,
         })
+    if operational.journal_partial_rows and sources["journal"].available:
+        sources["journal"] = sources["journal"].model_copy(update={
+            "status": "partial_unresolved_correlation",
+            "partial": True,
+        })
+    if operational.damage_partial_rows and sources["damage"].available:
+        sources["damage"] = sources["damage"].model_copy(update={
+            "status": "partial_unresolved_correlation",
+            "partial": True,
+        })
 
     return DailyOperationsSnapshot(
         operation_date=day,
         generated_at=_now(),
         planning=planning,
         sources=sources,
-        rows=built.rows,
-        signals=built.signals,
+        rows=operational.rows,
+        signals=[*built.signals, *operational.signals],
         partial=any(item.partial for item in sources.values()),
     )

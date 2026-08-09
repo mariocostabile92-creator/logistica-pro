@@ -5,6 +5,13 @@ const SIGNAL_LABELS = Object.freeze({
   DRIVER_WITHOUT_VEHICLE: "Mezzo non assegnato",
   DRIVER_NOT_AVAILABLE: "Driver non disponibile",
   VEHICLE_NOT_AVAILABLE: "Mezzo non disponibile",
+  JOURNAL_CHECKOUT_MISSING: "Presa in carico mancante",
+  JOURNAL_CHECKIN_MISSING: "Rientro mancante",
+  JOURNAL_ANOMALY: "Anomalia Giornale di bordo",
+  JOURNAL_IN_PROGRESS: "Giornale in compilazione",
+  OPEN_DAMAGE_CASE: "Pratica danno aperta",
+  VEHICLE_BLOCKED_BY_DAMAGE: "Mezzo fermo per danno",
+  HIGH_SEVERITY_DAMAGE: "Danno ad alta gravità",
 });
 
 const STATUS_LABELS = Object.freeze({
@@ -58,6 +65,67 @@ function signalMarkup(signals) {
 }
 
 
+function procedureLabel(operation, status) {
+  const labels = {
+    check_out: {
+      completed: "Presa in carico completata",
+      missing: "Presa in carico mancante",
+      pending: "Presa in carico attesa",
+      not_expected: "Presa in carico non prevista",
+      unknown: "Presa in carico da verificare",
+    },
+    check_in: {
+      completed: "Rientro completato",
+      missing: "Rientro mancante",
+      pending: "Rientro atteso",
+      not_expected: "Rientro non previsto",
+      unknown: "Rientro da verificare",
+    },
+  };
+  return labels[operation]?.[status] || labels[operation].unknown;
+}
+
+
+function journalMarkup(journal = {}) {
+  if (journal.available === false) {
+    return "<strong>Non disponibile</strong><small>La board resta operativa</small>";
+  }
+  if (journal.partial) {
+    return "<strong>Da verificare</strong><small>Correlazione non certa</small>";
+  }
+  const detail = [
+    procedureLabel("check_in", journal.check_in_status),
+    journal.anomaly ? "Anomalia presente" : null,
+    journal.in_progress ? "Procedura in compilazione" : null,
+  ].filter(Boolean).join(" · ");
+  return `
+    <strong>${escapeHtml(procedureLabel("check_out", journal.check_out_status))}</strong>
+    <small>${escapeHtml(detail)}</small>
+  `;
+}
+
+
+function damageMarkup(damage = {}) {
+  if (damage.available === false) {
+    return "<strong>Non disponibile</strong><small>La board resta operativa</small>";
+  }
+  if (damage.partial && !damage.open_cases_count) {
+    return "<strong>Da verificare</strong><small>Correlazione non certa</small>";
+  }
+  if (!damage.open_cases_count) {
+    return '<strong>Nessuna criticità</strong><small>Nessuna pratica aperta</small>';
+  }
+  const count = damage.open_cases_count === 1
+    ? "1 pratica aperta"
+    : `${damage.open_cases_count} pratiche aperte`;
+  const detail = [
+    damage.vehicle_blocked ? "Mezzo fermo" : null,
+    damage.highest_severity ? `Gravità ${damage.highest_severity}` : null,
+  ].filter(Boolean).join(" · ");
+  return `<strong>${escapeHtml(count)}</strong><small>${escapeHtml(detail)}</small>`;
+}
+
+
 export function rowMarkup(row) {
   const route = row.route || "Non assegnata";
   const wave = row.wave ? ` · ${row.wave}` : "";
@@ -97,6 +165,14 @@ export function rowMarkup(row) {
         ${row.fleet?.availability && row.fleet.availability !== fleetState
           ? `<small>${escapeHtml(statusLabel(row.fleet.availability))}</small>` : ""}
       </div>
+      <div class="dsp-source-state dsp-journal-state">
+        <span class="dsp-mobile-label">Journal</span>
+        ${journalMarkup(row.journal)}
+      </div>
+      <div class="dsp-source-state dsp-damage-state">
+        <span class="dsp-mobile-label">Danni</span>
+        ${damageMarkup(row.damage)}
+      </div>
     </article>
   `;
 }
@@ -104,7 +180,13 @@ export function rowMarkup(row) {
 
 export function partialMessages(sources = {}) {
   return Object.entries(sources).flatMap(([source, metadata]) => {
-    const label = { planning: "Planning", workforce: "Workforce", fleet: "Fleet" }[source] || source;
+    const label = {
+      planning: "Planning",
+      workforce: "Workforce",
+      fleet: "Fleet",
+      journal: "Journal",
+      damage: "Danni",
+    }[source] || source;
     if (!metadata?.available) return [`Stato ${label} temporaneamente non disponibile.`];
     if (metadata.partial) return [`Dati ${label} parzialmente disponibili.`];
     return [];

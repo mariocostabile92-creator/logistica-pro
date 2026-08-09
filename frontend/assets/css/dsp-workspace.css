@@ -122,13 +122,15 @@
 .dsp-board-row {
   display: grid;
   grid-template-columns:
-    minmax(150px, 1.3fr)
-    minmax(130px, 1.1fr)
-    minmax(160px, 1.35fr)
-    minmax(105px, 0.8fr)
-    minmax(145px, 1.1fr)
-    minmax(125px, 0.9fr);
-  gap: 14px;
+    minmax(120px, 1.2fr)
+    minmax(105px, 1fr)
+    minmax(145px, 1.35fr)
+    minmax(85px, 0.7fr)
+    minmax(105px, 1fr)
+    minmax(95px, 0.85fr)
+    minmax(115px, 1fr)
+    minmax(105px, 0.9fr);
+  gap: 10px;
   align-items: center;
 }
 
@@ -229,7 +231,7 @@
   margin-top: 18px;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1120px) {
   .dsp-toolbar {
     grid-template-columns: 1fr 1fr;
   }
@@ -346,4 +348,3 @@
     padding-top: 3px;
   }
 }
-

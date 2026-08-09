@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import datetime, timezone
 
 import pytest
 from starlette.testclient import TestClient
@@ -151,6 +152,123 @@ def _snapshot(organization_id: str = "org-a"):
         operation_date=DAY,
         organization_id=organization_id,
     )
+
+
+def _snapshot_at(hour: int, organization_id: str = "org-a"):
+    return daily_operations_snapshot(
+        operation_date=DAY,
+        organization_id=organization_id,
+        now=datetime(2026, 8, 9, hour, 0, tzinfo=timezone.utc),
+    )
+
+
+def _journal_session(
+    organization_id: str,
+    asset_id: int,
+    driver_identifier: str,
+    operation_type: str,
+    *,
+    session_id: str,
+    lifecycle_status: str = "generated",
+    completed: bool = False,
+    anomaly: bool = False,
+) -> None:
+    with db_session() as conn:
+        asset = conn.execute(
+            "SELECT plate FROM fleet_assets WHERE id = ?", (asset_id,)
+        ).fetchone()
+        conn.execute(
+            """
+            INSERT INTO journal_sessions (
+                id, token_hash, operation_type, asset_id, plate_snapshot,
+                declared_driver_identifier, operational_shift, status,
+                created_at, expires_at, completed_at, organization_id,
+                source, lifecycle_status, scheduled_at, operational_date
+            ) VALUES (?, ?, ?, ?, ?, ?, 'morning', ?, ?, ?, ?, ?,
+                      'control_room', ?, ?, ?)
+            """,
+            (
+                session_id,
+                f"hash-{session_id}",
+                operation_type,
+                asset_id,
+                asset["plate"],
+                driver_identifier,
+                "completed" if completed else "open",
+                NOW,
+                f"{DAY}T23:00:00+00:00",
+                NOW if completed else None,
+                organization_id,
+                "completed" if completed else lifecycle_status,
+                f"{DAY}T06:00:00+00:00",
+                DAY,
+            ),
+        )
+        if completed:
+            conn.execute(
+                """
+                INSERT INTO asset_movements (
+                    id, session_id, schema_version, organization_id,
+                    operational_unit_id, asset_id, plate_snapshot,
+                    declared_driver_identifier, operation_type,
+                    operational_shift, occurred_at, timezone, odometer_km,
+                    fuel_percentage, cleanliness_status, anomaly_present,
+                    anomaly_description, operational_note,
+                    client_submission_id, created_at
+                ) VALUES (?, ?, '1.0', ?, 'DLO1', ?, ?, ?, ?, 'morning',
+                          ?, 'Europe/Rome', 1000, 75, 'compliant', ?, ?, NULL,
+                          ?, ?)
+                """,
+                (
+                    f"movement-{session_id}",
+                    session_id,
+                    organization_id,
+                    asset_id,
+                    asset["plate"],
+                    driver_identifier,
+                    operation_type,
+                    NOW,
+                    int(anomaly),
+                    "Spia accesa" if anomaly else None,
+                    f"submission-{session_id}",
+                    NOW,
+                ),
+            )
+
+
+def _damage_case(
+    asset_id: int,
+    *,
+    case_id: int,
+    member_id: int | None = None,
+    status: str = "nuova",
+    severity: str = "media",
+    vehicle_status: str = "disponibile",
+) -> None:
+    with db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO damage_cases (
+                id, case_number, vehicle_id, occurred_at, created_at,
+                updated_at, origin, manual_reason, description, severity,
+                status, vehicle_operational_status,
+                driver_workforce_member_id
+            ) VALUES (?, ?, ?, ?, ?, ?, 'manual', 'test', 'Danno test',
+                      ?, ?, ?, ?)
+            """,
+            (
+                case_id,
+                f"DMG-{case_id}",
+                asset_id,
+                NOW,
+                NOW,
+                NOW,
+                severity,
+                status,
+                vehicle_status,
+                member_id,
+            ),
+        )
 
 
 def _standard_data(
@@ -416,3 +534,177 @@ def test_planning_failure_returns_a_valid_partial_snapshot(monkeypatch):
     assert result.sources["planning"].available is False
     assert result.sources["planning"].partial is True
     assert result.partial is True
+
+
+def test_journal_completed_checkout_is_projected_by_driver_and_asset():
+    _, asset_id, _ = _standard_data()
+    _journal_session(
+        "org-a", asset_id, "DRV-1", "check_out",
+        session_id="checkout-complete", completed=True,
+    )
+    row = _snapshot_at(18).rows[0]
+    assert row.journal.check_out_status == "completed"
+    assert "JOURNAL_CHECKOUT_MISSING" not in row.attention_codes
+
+
+def test_journal_missing_checkout_and_checkin_follow_completion_clock():
+    _standard_data()
+    row = _snapshot_at(18).rows[0]
+    assert row.journal.check_out_status == "missing"
+    assert row.journal.check_in_status == "missing"
+    assert "JOURNAL_CHECKOUT_MISSING" in row.attention_codes
+    assert "JOURNAL_CHECKIN_MISSING" in row.attention_codes
+
+
+def test_journal_in_progress_is_an_info_signal():
+    _, asset_id, _ = _standard_data()
+    _journal_session(
+        "org-a", asset_id, "DRV-1", "check_out",
+        session_id="checkout-progress", lifecycle_status="in_progress",
+    )
+    result = _snapshot_at(8)
+    assert result.rows[0].journal.in_progress is True
+    signal = next(item for item in result.signals if item.code == "JOURNAL_IN_PROGRESS")
+    assert signal.severity == "info"
+
+
+def test_journal_anomaly_is_projected_without_loading_payloads():
+    _, asset_id, _ = _standard_data()
+    _journal_session(
+        "org-a", asset_id, "DRV-1", "check_out",
+        session_id="checkout-anomaly", completed=True, anomaly=True,
+    )
+    result = _snapshot_at(8)
+    assert result.rows[0].journal.anomaly is True
+    assert any(item.code == "JOURNAL_ANOMALY" for item in result.signals)
+
+
+def test_journal_same_driver_on_different_vehicle_does_not_correlate():
+    _standard_data()
+    other_asset = _asset("org-a", "BB002BB")
+    _journal_session(
+        "org-a", other_asset, "DRV-1", "check_out",
+        session_id="other-vehicle", completed=True,
+    )
+    row = _snapshot_at(18).rows[0]
+    assert row.journal.check_out_status == "missing"
+
+
+def test_journal_same_asset_with_unmatched_identity_is_unknown_and_partial():
+    _, asset_id, _ = _standard_data()
+    _journal_session(
+        "org-a", asset_id, "Legacy Driver Name", "check_out",
+        session_id="legacy-identity", completed=True,
+    )
+    result = _snapshot_at(18)
+    row = result.rows[0]
+    assert row.journal.check_out_status == "unknown"
+    assert row.journal.check_in_status == "unknown"
+    assert row.journal.partial is True
+    assert result.sources["journal"].partial is True
+    assert not any(item.source == "journal" for item in result.signals)
+
+
+def test_journal_cross_organization_is_excluded():
+    _standard_data("org-a")
+    _member("org-b", "DRV-1", "Other Driver")
+    other_asset = _asset("org-b", "AA001AA")
+    _journal_session(
+        "org-b", other_asset, "DRV-1", "check_out",
+        session_id="other-tenant", completed=True,
+    )
+    row = _snapshot_at(18, "org-a").rows[0]
+    assert row.journal.check_out_status == "missing"
+
+
+def test_open_damage_case_high_severity_and_vehicle_block_are_projected():
+    member_id, asset_id, _ = _standard_data()
+    _damage_case(
+        asset_id,
+        case_id=701,
+        member_id=member_id,
+        severity="critica",
+        vehicle_status="fermo",
+    )
+    result = _snapshot_at(8)
+    row = result.rows[0]
+    assert row.damage.open_cases_count == 1
+    assert row.damage.highest_severity == "critica"
+    assert row.damage.vehicle_blocked is True
+    assert {
+        "OPEN_DAMAGE_CASE", "HIGH_SEVERITY_DAMAGE", "VEHICLE_BLOCKED_BY_DAMAGE",
+    }.issubset(set(row.attention_codes))
+
+
+def test_closed_damage_case_does_not_generate_open_signal():
+    member_id, asset_id, _ = _standard_data()
+    _damage_case(asset_id, case_id=702, member_id=member_id, status="chiusa")
+    row = _snapshot_at(8).rows[0]
+    assert row.damage.open_cases_count == 0
+    assert "OPEN_DAMAGE_CASE" not in row.attention_codes
+
+
+def test_damage_cross_organization_is_excluded():
+    _standard_data("org-a")
+    other_member = _member("org-b", "DRV-1", "Other Driver")
+    other_asset = _asset("org-b", "AA001AA")
+    _damage_case(other_asset, case_id=703, member_id=other_member, severity="critica")
+    row = _snapshot_at(8, "org-a").rows[0]
+    assert row.damage.open_cases_count == 0
+
+
+@pytest.mark.parametrize(
+    ("source", "target"),
+    [
+        ("journal", "compact_journal_records"),
+        ("damage", "compact_open_damage_cases"),
+    ],
+)
+def test_operational_source_failure_keeps_board_partial(monkeypatch, source, target):
+    _standard_data()
+    monkeypatch.setattr(
+        f"app.plugins.dsp_workspace.application.service.repository.{target}",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("down")),
+    )
+    result = _snapshot_at(8)
+    assert len(result.rows) == 1
+    assert result.sources[source].available is False
+    assert result.partial is True
+
+
+def test_snapshot_does_not_modify_journal_or_damage():
+    member_id, asset_id, _ = _standard_data()
+    _journal_session(
+        "org-a", asset_id, "DRV-1", "check_out",
+        session_id="read-only", lifecycle_status="in_progress",
+    )
+    _damage_case(asset_id, case_id=704, member_id=member_id)
+    tables = (
+        "journal_sessions", "asset_movements", "damage_cases", "damage_case_events",
+    )
+    before = {table: deepcopy(_table_rows(table)) for table in tables}
+    _snapshot_at(18)
+    assert {table: _table_rows(table) for table in tables} == before
+
+
+def test_new_operational_signals_have_deterministic_order():
+    member_id, asset_id, _ = _standard_data()
+    _journal_session(
+        "org-a", asset_id, "DRV-1", "check_out",
+        session_id="ordered", completed=True, anomaly=True,
+    )
+    _damage_case(
+        asset_id, case_id=705, member_id=member_id,
+        severity="alta", vehicle_status="fermo",
+    )
+    codes = [
+        item.code for item in _snapshot_at(18).signals
+        if item.source in {"journal", "damage"}
+    ]
+    assert codes == [
+        "JOURNAL_CHECKIN_MISSING",
+        "JOURNAL_ANOMALY",
+        "OPEN_DAMAGE_CASE",
+        "VEHICLE_BLOCKED_BY_DAMAGE",
+        "HIGH_SEVERITY_DAMAGE",
+    ]
