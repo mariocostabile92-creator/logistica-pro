@@ -1,3 +1,9 @@
+import {
+  applySuggestionReviewEvent,
+  createSuggestionReviewState,
+} from "./suggestion-review.js?v=1";
+
+
 export function createIdentitySourceState() {
   return {
     phase: "idle",
@@ -8,11 +14,21 @@ export function createIdentitySourceState() {
     error: null,
     bucket: "suggested",
     selection: { sheet: "", transporterColumn: "", driverColumn: "" },
+    review: createSuggestionReviewState(),
   };
 }
 
 
 export function applyIdentitySourceEvent(state, event) {
+  if (event.type.startsWith("suggestion-review-")) {
+    return {
+      ...state,
+      review: applySuggestionReviewEvent(
+        state.review || createSuggestionReviewState(),
+        event,
+      ),
+    };
+  }
   switch (event.type) {
     case "identity-source-preview-started":
       return {
@@ -34,6 +50,7 @@ export function applyIdentitySourceEvent(state, event) {
           transporterColumn: event.preview.source?.transporter_column || state.selection.transporterColumn,
           driverColumn: event.preview.source?.driver_column || state.selection.driverColumn,
         },
+        review: createSuggestionReviewState(),
         error: null,
       };
     case "identity-source-preview-failed":
@@ -75,4 +92,3 @@ export function validateIdentitySourceFile(file) {
   if (!/\.(xlsx|csv)$/i.test(file.name || "")) return "Sono supportati soltanto file .xlsx e .csv.";
   return null;
 }
-

@@ -10,6 +10,7 @@ export function createReconciliationState() {
     phase: "idle",
     data: null,
     filter: "unmapped",
+    sourceUnresolvedIds: [],
     search: "",
     activeExternalId: null,
     error: null,
@@ -25,7 +26,18 @@ export function createReconciliationState() {
 
 
 export function applyReconciliationEvent(state, event) {
-  if (event.type.startsWith("identity-source-")) {
+  if (event.type === "suggestion-review-unresolved-handoff") {
+    return {
+      ...state,
+      filter: "source-unresolved",
+      sourceUnresolvedIds: event.externalIds || [],
+      identitySource: applyIdentitySourceEvent(
+        state.identitySource || createIdentitySourceState(),
+        { type: "suggestion-review-closed" },
+      ),
+    };
+  }
+  if (event.type.startsWith("identity-source-") || event.type.startsWith("suggestion-review-")) {
     return {
       ...state,
       identitySource: applyIdentitySourceEvent(
@@ -58,7 +70,11 @@ export function applyReconciliationEvent(state, event) {
     case "reconciliation-failed":
       return { ...state, phase: "error", error: event.message };
     case "reconciliation-filter-changed":
-      return { ...state, filter: event.filter };
+      return {
+        ...state,
+        filter: event.filter,
+        sourceUnresolvedIds: event.filter === "source-unresolved" ? state.sourceUnresolvedIds : [],
+      };
     case "reconciliation-search-changed":
       return { ...state, search: event.search };
     case "reconciliation-row-opened":

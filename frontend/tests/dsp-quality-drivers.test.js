@@ -272,10 +272,10 @@ test("cache busting reaches the DSP shell and Q7 Driver module", async () => {
     source("assets/js/modules/dsp-quality/index.js"),
     source("assets/js/modules/dsp-quality/presenter.js"),
   ]);
-  assert.match(loader, /dsp-shell\/index\.js\?v=9/);
-  assert.match(shell, /dsp-quality\/index\.js\?v=9/);
-  assert.match(controller, /presenter\.js\?v=8/);
-  assert.match(presenter, /drivers-presenter\.js\?v=3/);
+  assert.match(loader, /dsp-shell\/index\.js\?v=13/);
+  assert.match(shell, /dsp-quality\/index\.js\?v=13/);
+  assert.match(controller, /presenter\.js\?v=9/);
+  assert.match(presenter, /drivers-presenter\.js\?v=4/);
 });
 
 test("Driver UI has accessible sort row and mapping semantics", () => {

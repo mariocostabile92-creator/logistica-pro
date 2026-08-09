@@ -1,4 +1,4 @@
-import { identitySourceMarkup } from "./identity-source-presenter.js?v=1";
+import { identitySourceMarkup } from "./identity-source-presenter.js?v=2";
 
 
 const escapeHtml = value => String(value ?? "")
@@ -16,15 +16,19 @@ const STATUS_LABELS = {
 };
 
 
-export function filterReconciliationRows(rows = [], filter = "all", search = "") {
+export function filterReconciliationRows(rows = [], filter = "all", search = "", sourceUnresolvedIds = []) {
   const expected = {
     matched: "MATCHED",
     unmapped: "UNMAPPED",
     ambiguous: "AMBIGUOUS",
   }[filter] || null;
   const needle = String(search || "").trim().toLocaleLowerCase("it");
+  const unresolved = new Set(sourceUnresolvedIds);
   return rows.filter(row => (
     (!expected || row.mapping_status === expected)
+    && (filter !== "source-unresolved" || (
+      unresolved.has(row.transporter_external_id) && row.mapping_status === "UNMAPPED"
+    ))
     && (!needle || `${row.transporter_external_id} ${row.workforce_display_name || ""}`
       .toLocaleLowerCase("it").includes(needle))
   ));
@@ -117,6 +121,7 @@ function listMarkup(state) {
     state.data?.rows || [],
     state.filter,
     state.search,
+    state.sourceUnresolvedIds,
   );
   if (!rows.length) {
     return '<p class="dsp-quality-reconciliation-empty" role="status">Nessuna associazione corrisponde ai filtri.</p>';
@@ -154,11 +159,11 @@ export function reconciliationMarkup(state = {}) {
       <div class="dsp-quality-reconciliation-controls">
         <div role="group" aria-label="Filtra associazioni">${[["all", "Tutti"], ["unmapped", "Da associare"], ["matched", "Associati"], ["ambiguous", "Ambigui"]].map(([key, label]) => `
           <button type="button" data-quality-reconciliation-filter="${key}" aria-pressed="${state.filter === key}" class="${state.filter === key ? "active" : ""}">${label}</button>
-        `).join("")}</div>
+        `).join("")}${state.sourceUnresolvedIds?.length ? `<button type="button" data-quality-reconciliation-filter="source-unresolved" aria-pressed="${state.filter === "source-unresolved"}" class="${state.filter === "source-unresolved" ? "active" : ""}>Non trovati fonte (${state.sourceUnresolvedIds.length})</button>` : ""}</div>
         <label>Ricerca<input type="search" data-quality-reconciliation-search value="${escapeHtml(state.search)}" placeholder="Transporter ID o driver" /></label>
       </div>
       ${listMarkup(state)}
-      ${associationPanel(active, state)}
+      ${state.identitySource?.review?.open ? "" : associationPanel(active, state)}
     </section>
   `;
 }

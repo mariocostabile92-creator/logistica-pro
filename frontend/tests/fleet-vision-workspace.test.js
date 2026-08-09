@@ -78,8 +78,8 @@ test("Fleet Vision replaces the skeleton with a contextual retry state on API fa
   assert.match(sections, /Nessuna criticità operativa rilevata/);
   assert.doesNotMatch(page, /stylesheet[^>]+fleet-vision-workspace\.css/);
   assert.match(loader, /fleet-vision-workspace\.css\?v=3/);
-  assert.match(page, /app\.js\?v=68/);
-  assert.match(app, /workspace-loader\.js\?v=68/);
+  assert.match(page, /app\.js\?v=72/);
+  assert.match(app, /workspace-loader\.js\?v=72/);
   assert.match(loader, /fleet-page\.js\?v=29/);
   assert.match(fleet, /fleet-vision-workspace\.js\?v=5/);
 });

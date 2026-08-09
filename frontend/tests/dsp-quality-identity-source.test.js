@@ -137,15 +137,25 @@ test("no silent or automatic apply copy exists", () => {
 });
 
 
-test("suggestion requires an individual confirmation", () => {
+test("suggestions enter the individual review workflow", () => {
   const html = identitySourceMarkup(availableState());
-  assert.match(html, /data-quality-source-confirm="A-SUGGEST"/);
-  assert.match(html, />Conferma</);
+  assert.match(html, /data-quality-suggestion-review-open/);
+  assert.match(html, /Rivedi suggerimenti/);
 });
 
 
 test("suggestion offers choose another driver", () => {
-  assert.match(identitySourceMarkup(availableState()), /data-quality-source-choose="A-SUGGEST"[\s\S]*Scegli altro/);
+  assert.match(identitySourceMarkup(availableState({
+    review: {
+      open: true,
+      scorecardId: "week-45",
+      queue: [preview.rows[1]],
+      currentIndex: 0,
+      confirmed: [],
+      skipped: [],
+      candidates: [],
+    },
+  })), /data-quality-review-choose[\s\S]*Scegli altro/);
 });
 
 
@@ -198,8 +208,7 @@ test("source apply refreshes Q7 drivers", async () => {
 
 test("mapping stays delegated to existing Q8 PUT for history-wide identity", async () => {
   const controller = await source("assets/js/modules/dsp-quality/index.js");
-  assert.match(controller, /confirmIdentitySuggestion[\s\S]*confirmMapping\(\)/);
-  assert.match(controller, /putTransporterMapping/);
+  assert.match(controller, /confirmSuggestionReview[\s\S]*putTransporterMapping/);
 });
 
 

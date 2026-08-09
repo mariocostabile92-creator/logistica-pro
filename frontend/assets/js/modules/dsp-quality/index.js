@@ -15,13 +15,17 @@ import {
   searchQualityWorkforceCandidates,
 } from "./api.js?v=7";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
-import { validateIdentitySourceFile } from "./identity-source.js?v=1";
-import { renderDspQuality } from "./presenter.js?v=8";
+import { validateIdentitySourceFile } from "./identity-source.js?v=2";
+import { renderDspQuality } from "./presenter.js?v=9";
+import {
+  currentSuggestion,
+  isReviewShortcutTarget,
+} from "./suggestion-review.js?v=1";
 import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=7";
+} from "./state.js?v=8";
 
 
 let initialized = false;
@@ -41,6 +45,8 @@ let reconciliationRequestController = null;
 let candidateRequestController = null;
 let candidateTimer = null;
 let identitySourceRequestController = null;
+let reviewCandidateRequestController = null;
+let reviewCandidateTimer = null;
 
 
 function commit(event) {
@@ -207,10 +213,10 @@ async function loadMappingHistory(externalId) {
 }
 
 
-async function loadReconciliation({ keepFilter = false, advanceAfter = null } = {}) {
+async function loadReconciliation({ keepFilter = false, advanceAfter = null, silent = false } = {}) {
   reconciliationRequestController?.abort();
   reconciliationRequestController = new AbortController();
-  commit({ type: "reconciliation-started" });
+  if (!silent) commit({ type: "reconciliation-started" });
   try {
     const data = await getTransporterReconciliation({
       scorecardId: state.selectedScorecardId,
@@ -228,10 +234,12 @@ async function loadReconciliation({ keepFilter = false, advanceAfter = null } = 
     return data;
   } catch (error) {
     if (error?.name === "AbortError") return null;
-    commit({
-      type: "reconciliation-failed",
-      message: "Impossibile caricare le associazioni Transporter.",
-    });
+    if (!silent) {
+      commit({
+        type: "reconciliation-failed",
+        message: "Impossibile caricare le associazioni Transporter.",
+      });
+    }
     return null;
   }
 }
@@ -239,6 +247,138 @@ async function loadReconciliation({ keepFilter = false, advanceAfter = null } = 
 
 function identitySourceState() {
   return state.drivers?.reconciliation?.identitySource || {};
+}
+
+
+function suggestionReviewState() {
+  return identitySourceState().review || {};
+}
+
+
+function focusSuggestionReview() {
+  requestAnimationFrame(() => {
+    const review = suggestionReviewState();
+    const target = review.chooserOpen
+      ? root.querySelector("[data-quality-review-search]")
+      : root.querySelector("[data-quality-review-confirm]")
+        || root.querySelector("[data-quality-review-close]");
+    target?.focus();
+  });
+}
+
+
+function openSuggestionReview() {
+  const source = identitySourceState();
+  if (!source.preview?.rows?.some(row => row.status === "SUGGESTED")) return;
+  commit({
+    type: "suggestion-review-opened",
+    preview: source.preview,
+    scorecardId: state.selectedScorecardId,
+  });
+  focusSuggestionReview();
+}
+
+
+function closeSuggestionReview() {
+  commit({ type: "suggestion-review-closed" });
+  requestAnimationFrame(() => root.querySelector("[data-quality-suggestion-review-open]")?.focus());
+}
+
+
+function skipSuggestionReview() {
+  const review = suggestionReviewState();
+  if (!review.open || review.saving || !currentSuggestion(review)) return;
+  commit({ type: "suggestion-review-skipped" });
+  focusSuggestionReview();
+}
+
+
+async function loadReviewCandidates(query) {
+  reviewCandidateRequestController?.abort();
+  if (query.trim().length < 2) return;
+  reviewCandidateRequestController = new AbortController();
+  try {
+    const result = await searchQualityWorkforceCandidates(query, {
+      signal: reviewCandidateRequestController.signal,
+    });
+    if (suggestionReviewState().candidateSearch === query) {
+      commit({ type: "suggestion-review-candidates-completed", items: result.items || [] });
+      focusSuggestionReview();
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({ type: "suggestion-review-candidates-failed", message: "Ricerca Workforce non disponibile." });
+  }
+}
+
+
+function chooseAnotherReviewCandidate() {
+  const row = currentSuggestion(suggestionReviewState());
+  if (!row) return;
+  const query = row.source_driver_value || "";
+  commit({ type: "suggestion-review-choose-opened", search: query });
+  if (query.trim().length >= 2) void loadReviewCandidates(query);
+  focusSuggestionReview();
+}
+
+
+async function confirmSuggestionReview(workforceMemberId) {
+  const review = suggestionReviewState();
+  const suggestion = currentSuggestion(review);
+  const canonicalId = Number(workforceMemberId);
+  if (!suggestion || !Number.isInteger(canonicalId) || canonicalId <= 0 || review.saving) return false;
+  if (review.scorecardId !== state.selectedScorecardId) {
+    commit({
+      type: "suggestion-review-conflict",
+      message: "La scorecard selezionata è cambiata. Riapri la revisione.",
+    });
+    return false;
+  }
+  const reconciliation = state.drivers?.reconciliation || {};
+  const mapping = (reconciliation.data?.rows || []).find(
+    row => row.transporter_external_id === suggestion.transporter_external_id,
+  );
+  if (!mapping || mapping.mapping_status !== "UNMAPPED") {
+    commit({
+      type: "suggestion-review-conflict",
+      message: "L’associazione è cambiata. Ricarica il suggerimento.",
+    });
+    return false;
+  }
+  commit({ type: "suggestion-review-saving" });
+  try {
+    await putTransporterMapping(suggestion.transporter_external_id, {
+      workforce_member_id: canonicalId,
+      expected_updated_at: mapping.updated_at || null,
+    }, {
+      scorecardId: state.selectedScorecardId,
+    });
+    commit({ type: "suggestion-review-confirmed" });
+    await Promise.all([
+      loadDrivers({ force: true }),
+      loadReconciliation({ keepFilter: true, silent: true }),
+    ]);
+    focusSuggestionReview();
+    return true;
+  } catch (error) {
+    commit({
+      type: error?.status === 409 ? "suggestion-review-conflict" : "suggestion-review-failed",
+      message: error?.status === 409
+        ? "L’associazione è cambiata. Ricarica il suggerimento."
+        : mappingErrorMessage(error),
+    });
+    focusSuggestionReview();
+    return false;
+  }
+}
+
+
+function handoffUnresolvedSuggestions() {
+  const unresolved = (identitySourceState().preview?.rows || [])
+    .filter(row => row.status === "UNRESOLVED")
+    .map(row => row.transporter_external_id);
+  commit({ type: "suggestion-review-unresolved-handoff", externalIds: unresolved });
+  requestAnimationFrame(() => root.querySelector("[data-quality-reconciliation-filter='source-unresolved']")?.focus());
 }
 
 
@@ -374,33 +514,6 @@ async function confirmMapping() {
 }
 
 
-async function confirmIdentitySuggestion(externalId) {
-  const source = identitySourceState();
-  const row = (source.preview?.rows || []).find(
-    item => item.transporter_external_id === externalId && item.status === "SUGGESTED",
-  );
-  if (!row?.proposed_workforce_member_id) return;
-  commit({ type: "reconciliation-row-opened", externalId });
-  commit({
-    type: "candidate-selected",
-    candidate: {
-      workforce_member_id: row.proposed_workforce_member_id,
-      display_name: row.proposed_display_name,
-      active: true,
-    },
-  });
-  const saved = await confirmMapping();
-  if (saved) await analyzeIdentitySource();
-}
-
-
-function chooseDifferentIdentity(externalId) {
-  commit({ type: "reconciliation-row-opened", externalId });
-  void loadMappingHistory(externalId);
-  requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
-}
-
-
 async function removeMapping() {
   const reconciliation = state.drivers?.reconciliation || {};
   const row = activeReconciliationRow();
@@ -490,12 +603,31 @@ function bindEvents() {
     if (event.target.closest("[data-quality-identity-analyze]")) void analyzeIdentitySource({ selection: identitySourceState().selection });
     if (event.target.closest("[data-quality-identity-apply]")) void applyExactIdentitySource();
     if (event.target.closest("[data-quality-identity-reset]")) commit({ type: "identity-source-reset" });
+    if (event.target.closest("[data-quality-suggestion-review-open]")) openSuggestionReview();
+    if (event.target.closest("[data-quality-review-close]")) closeSuggestionReview();
+    if (event.target.closest("[data-quality-review-confirm]")) {
+      const suggestion = currentSuggestion(suggestionReviewState());
+      void confirmSuggestionReview(suggestion?.proposed_workforce_member_id);
+    }
+    if (event.target.closest("[data-quality-review-skip]")) skipSuggestionReview();
+    if (event.target.closest("[data-quality-review-choose]")) chooseAnotherReviewCandidate();
+    if (event.target.closest("[data-quality-review-choose-close]")) {
+      commit({ type: "suggestion-review-choose-closed" });
+      focusSuggestionReview();
+    }
+    if (event.target.closest("[data-quality-review-confirm-selected]")) {
+      void confirmSuggestionReview(suggestionReviewState().currentSelection?.workforce_member_id);
+    }
+    if (event.target.closest("[data-quality-review-unresolved]")) handoffUnresolvedSuggestions();
+    const reviewCandidateId = Number(event.target.closest("[data-quality-review-candidate]")?.dataset.qualityReviewCandidate);
+    if (Number.isInteger(reviewCandidateId) && reviewCandidateId > 0) {
+      const candidate = (suggestionReviewState().candidates || []).find(
+        item => item.workforce_member_id === reviewCandidateId,
+      );
+      if (candidate) commit({ type: "suggestion-review-candidate-selected", candidate });
+    }
     const identityBucket = event.target.closest("[data-quality-identity-bucket]")?.dataset.qualityIdentityBucket;
     if (identityBucket) commit({ type: "identity-source-bucket-changed", bucket: identityBucket });
-    const suggestionId = event.target.closest("[data-quality-source-confirm]")?.dataset.qualitySourceConfirm;
-    if (suggestionId) void confirmIdentitySuggestion(suggestionId);
-    const chooseId = event.target.closest("[data-quality-source-choose]")?.dataset.qualitySourceChoose;
-    if (chooseId) chooseDifferentIdentity(chooseId);
     const reconciliationExternalId = event.target.closest("[data-quality-reconciliation-row]")?.dataset.qualityReconciliationRow;
     if (reconciliationExternalId) {
       if (!state.drivers?.reconciliation?.open) {
@@ -603,8 +735,58 @@ function bindEvents() {
       candidateTimer = setTimeout(() => void loadCandidates(query), 250);
       requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
     }
+    if (event.target.matches("[data-quality-review-search]")) {
+      const query = event.target.value;
+      commit({ type: "suggestion-review-search-changed", search: query });
+      clearTimeout(reviewCandidateTimer);
+      reviewCandidateTimer = setTimeout(() => void loadReviewCandidates(query), 250);
+      requestAnimationFrame(() => {
+        const input = root.querySelector("[data-quality-review-search]");
+        input?.focus();
+        input?.setSelectionRange?.(query.length, query.length);
+      });
+    }
   });
   root.addEventListener("keydown", (event) => {
+    const review = suggestionReviewState();
+    if (review.open) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (review.chooserOpen) {
+          commit({ type: "suggestion-review-choose-closed" });
+          focusSuggestionReview();
+        } else closeSuggestionReview();
+        return;
+      }
+      if (review.chooserOpen && event.target.matches("[data-quality-review-search]")) {
+        if (event.key === "ArrowDown" && review.candidates.length) {
+          event.preventDefault();
+          root.querySelector("[data-quality-review-candidate]")?.focus();
+        }
+        if (event.key === "Enter" && review.candidates.length) {
+          event.preventDefault();
+          commit({ type: "suggestion-review-candidate-selected", candidate: review.candidates[0] });
+        }
+        return;
+      }
+      if (isReviewShortcutTarget(event.target)) return;
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const suggestion = currentSuggestion(review);
+        void confirmSuggestionReview(suggestion?.proposed_workforce_member_id);
+        return;
+      }
+      if (event.key.toLocaleLowerCase("it") === "s") {
+        event.preventDefault();
+        skipSuggestionReview();
+        return;
+      }
+      if (event.key.toLocaleLowerCase("it") === "e") {
+        event.preventDefault();
+        chooseAnotherReviewCandidate();
+        return;
+      }
+    }
     if (event.key === "Escape" && state.drivers?.reconciliation?.activeExternalId) {
       event.preventDefault();
       commit({ type: "reconciliation-row-closed" });

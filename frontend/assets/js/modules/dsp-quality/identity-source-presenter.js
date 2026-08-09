@@ -1,4 +1,5 @@
 import { identityRowsForBucket } from "./identity-source.js?v=1";
+import { suggestionReviewMarkup } from "./suggestion-review-presenter.js?v=1";
 
 
 const escapeHtml = value => String(value ?? "")
@@ -51,18 +52,12 @@ function coverageMarkup(coverage = {}) {
 
 
 function rowMarkup(row) {
-  const action = row.status === "SUGGESTED" ? `
-    <div class="dsp-quality-source-row-actions">
-      <button type="button" class="primary" data-quality-source-confirm="${escapeHtml(row.transporter_external_id)}">Conferma</button>
-      <button type="button" class="secondary" data-quality-source-choose="${escapeHtml(row.transporter_external_id)}">Scegli altro</button>
-    </div>` : "";
   return `
     <article class="dsp-quality-source-row" data-source-status="${escapeHtml(row.status)}">
       <div><span>T-ID</span><strong>${escapeHtml(row.transporter_external_id)}</strong></div>
       <div><span>Fonte</span><strong>${escapeHtml(row.source_driver_value || "Non disponibile")}</strong></div>
       <div><span>Possibile Workforce</span><strong>${escapeHtml(row.proposed_display_name || "Non trovato")}</strong></div>
       <div><span>Stato</span><strong>${escapeHtml(row.status)}</strong><small>${escapeHtml(row.reason)}</small></div>
-      ${action}
     </article>
   `;
 }
@@ -78,6 +73,13 @@ function previewMarkup(state) {
     ["unresolved", "Non trovate", preview.coverage?.unresolved || 0],
     ["conflict", "Conflitti", preview.coverage?.conflicts || 0],
   ];
+  const suggestions = Number(preview.coverage?.suggestions || 0);
+  const rowsMarkup = state.bucket === "suggested"
+    ? `<div class="dsp-quality-source-review-entry">
+        <div><strong>${escapeHtml(suggestions)} da verificare</strong><span>Rivedi una corrispondenza alla volta con conferma umana.</span></div>
+        <button type="button" class="primary" data-quality-suggestion-review-open ${suggestions ? "" : "disabled"}>Rivedi suggerimenti</button>
+      </div>`
+    : `<div class="dsp-quality-source-rows">${rows.length ? rows.map(rowMarkup).join("") : '<p class="dsp-quality-reconciliation-neutral">Nessuna evidenza in questa categoria.</p>'}</div>`;
   return `
     <div class="dsp-quality-source-detection">
       <div><span>File</span><strong>${escapeHtml(source.filename)}</strong></div>
@@ -91,7 +93,7 @@ function previewMarkup(state) {
       <button type="button" data-quality-identity-bucket="${key}" aria-pressed="${state.bucket === key}" class="${state.bucket === key ? "active" : ""}">${label} (${count})</button>
     `).join("")}</div>
     ${preview.coverage?.exact_matches ? `<button type="button" class="primary dsp-quality-source-apply" data-quality-identity-apply>Applica ${escapeHtml(preview.coverage.exact_matches)} associazioni certe</button>` : ""}
-    <div class="dsp-quality-source-rows">${rows.length ? rows.map(rowMarkup).join("") : '<p class="dsp-quality-reconciliation-neutral">Nessuna evidenza in questa categoria.</p>'}</div>
+    ${rowsMarkup}
   `;
 }
 
@@ -113,6 +115,7 @@ export function identitySourceMarkup(state = {}) {
       ${state.phase === "loading" ? '<p role="status">Analisi della fonte in corso…</p>' : ""}
       ${state.phase === "schema" ? schemaSelection(state) : ""}
       ${["available", "applying", "applied"].includes(state.phase) && state.preview?.valid ? previewMarkup(state) : ""}
+      ${suggestionReviewMarkup(state.review, state.preview)}
       ${state.phase === "applied" ? `<p class="dsp-quality-source-success" role="status">${escapeHtml(state.result?.applied || 0)} associazioni applicate. ${escapeHtml(state.result?.already_verified || 0)} già verificate.</p>` : ""}
       ${state.error ? `<p class="dsp-quality-reconciliation-error" role="alert">${escapeHtml(state.error)}</p>` : ""}
       <p class="dsp-quality-source-manual">Non hai un file? <strong>Associa manualmente</strong> dalla lista sotto.</p>
