@@ -42,6 +42,16 @@ export async function getLatestQualityScorecard(
 }
 
 
+export async function getLatestQualityMetrics(
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/scorecards/latest/metrics`,
+    { method: "GET", signal },
+  ));
+}
+
+
 export async function importQualityScorecard(
   { file, previewToken, expectedAction },
   { signal, fetcher = globalThis.fetch } = {},

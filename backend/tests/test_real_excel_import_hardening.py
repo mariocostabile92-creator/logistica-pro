@@ -429,6 +429,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
         and not path.startswith("/api/planning/operations")
         and path not in {
             "/api/dsp-quality/scorecards/latest",
+            "/api/dsp-quality/scorecards/latest/metrics",
             "/api/planning/readiness",
             "/api/planning/conflicts",
             "/api/planning/timeline",

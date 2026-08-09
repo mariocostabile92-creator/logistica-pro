@@ -2,6 +2,7 @@ import {
   formatQualityFileSize,
   qualityActionLabel,
 } from "./import.js";
+import { qualityMetricsMarkup } from "./metrics-presenter.js?v=3";
 
 
 const escapeHtml = value => String(value ?? "")
@@ -231,9 +232,7 @@ function persistedOverview(latest) {
 
 export function qualityAvailableMarkup(view) {
   const section = view.section || "overview";
-  const placeholder = section === "metrics"
-    ? "Analisi metriche disponibile nel prossimo step."
-    : "Performance driver disponibile nel prossimo step.";
+  const placeholder = "Performance driver disponibile nel prossimo step.";
   return shell(`
     <div class="dsp-quality-available-heading">
       ${view.notice ? `<p class="dsp-quality-notice" role="status">${escapeHtml(view.notice)}</p>` : ""}
@@ -242,9 +241,9 @@ export function qualityAvailableMarkup(view) {
     <section class="dsp-quality-scorecard-shell" aria-label="Ultima scorecard attiva">
       ${persistedSectionTabs(section)}
       <div class="dsp-quality-section-panel" role="tabpanel">
-        ${section === "overview" ? persistedOverview(view.latest) : `
-          <div class="dsp-quality-placeholder"><strong>${section === "metrics" ? "Metriche" : "Driver"}</strong><span>${placeholder}</span></div>
-        `}
+        ${section === "overview" ? persistedOverview(view.latest) : section === "metrics"
+          ? qualityMetricsMarkup(view.metrics)
+          : `<div class="dsp-quality-placeholder"><strong>Driver</strong><span>${placeholder}</span></div>`}
       </div>
     </section>
   `);

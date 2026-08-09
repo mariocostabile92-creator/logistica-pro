@@ -15,6 +15,8 @@ from app.plugins.dsp_quality.application.preview_service import (
 )
 from app.plugins.dsp_quality.application.read_models import QualityLatestOverview
 from app.plugins.dsp_quality.application.read_service import get_latest_scorecard
+from app.plugins.dsp_quality.application.metrics_read_models import QualityLatestMetrics
+from app.plugins.dsp_quality.application.metrics_read_service import get_latest_metrics
 
 
 router = APIRouter(prefix="/api/dsp-quality", tags=["dsp-quality"])
@@ -61,6 +63,12 @@ def _guard(call, **kwargs):
 def latest_scorecard(request: Request):
     _require_read_permission(request)
     return get_latest_scorecard(request.state.user.organization_id)
+
+
+@router.get("/scorecards/latest/metrics", response_model=QualityLatestMetrics)
+def latest_scorecard_metrics(request: Request):
+    _require_read_permission(request)
+    return get_latest_metrics(request.state.user.organization_id)
 
 
 @router.post("/scorecards/preview", response_model=QualityImportPreview)

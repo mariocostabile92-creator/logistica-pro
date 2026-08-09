@@ -1,16 +1,17 @@
 import { can } from "../../auth/state.js";
 import {
+  getLatestQualityMetrics,
   getLatestQualityScorecard,
   importQualityScorecard,
   previewQualityScorecard,
-} from "./api.js?v=2";
+} from "./api.js?v=3";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
-import { renderDspQuality } from "./presenter.js?v=2";
+import { renderDspQuality } from "./presenter.js?v=3";
 import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=2";
+} from "./state.js?v=3";
 
 
 let initialized = false;
@@ -20,6 +21,8 @@ let requestVersion = 0;
 let requestController = null;
 let latestRequestVersion = 0;
 let latestRequestController = null;
+let metricsRequestVersion = 0;
+let metricsRequestController = null;
 
 
 function commit(event) {
@@ -50,6 +53,24 @@ async function loadLatest({ notice = null } = {}) {
       });
     }
     return null;
+  }
+}
+
+
+async function loadMetrics({ force = false } = {}) {
+  if (!force && ["loading", "available"].includes(state.metrics?.phase)) return;
+  const version = ++metricsRequestVersion;
+  metricsRequestController?.abort();
+  metricsRequestController = new AbortController();
+  commit({ type: "metrics-started" });
+  try {
+    const data = await getLatestQualityMetrics({ signal: metricsRequestController.signal });
+    if (version === metricsRequestVersion) commit({ type: "metrics-completed", data });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    if (version === metricsRequestVersion) {
+      commit({ type: "metrics-failed", message: "Impossibile caricare le metriche. Riprova." });
+    }
   }
 }
 
@@ -106,12 +127,28 @@ function bindEvents() {
     if (event.target.closest("[data-quality-import-open]")) commit({ type: "import-opened" });
     if (event.target.closest("[data-quality-back]")) commit({ type: "latest-restored" });
     if (event.target.closest("[data-quality-retry]")) void loadLatest();
+    if (event.target.closest("[data-quality-metrics-retry]")) void loadMetrics({ force: true });
+    const metricFilter = event.target.closest("[data-quality-metrics-filter]")?.dataset.qualityMetricsFilter;
+    if (metricFilter) commit({ type: "metrics-filter-changed", filter: metricFilter });
     if (event.target.closest("[data-quality-overview]")) commit({ type: "overview-opened" });
     const section = event.target.closest("[data-quality-section]")?.dataset.qualitySection;
-    if (section) commit({ type: "section-changed", section });
+    if (section) {
+      commit({ type: "section-changed", section });
+      if (section === "metrics") void loadMetrics();
+    }
   });
   root.addEventListener("change", (event) => {
     if (event.target.matches("[data-quality-file]")) void analyze(selectedFile(event.target));
+  });
+  root.addEventListener("input", (event) => {
+    if (event.target.matches("[data-quality-metrics-search]")) {
+      commit({ type: "metrics-search-changed", search: event.target.value });
+      requestAnimationFrame(() => {
+        const input = root.querySelector("[data-quality-metrics-search]");
+        input?.focus();
+        input?.setSelectionRange?.(state.metrics.search.length, state.metrics.search.length);
+      });
+    }
   });
   root.addEventListener("dragover", (event) => {
     const zone = event.target.closest("[data-quality-dropzone]");

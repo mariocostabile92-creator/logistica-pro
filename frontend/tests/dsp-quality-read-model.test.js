@@ -197,9 +197,10 @@ test("read-only view does not expose import CTA", () => {
   assert.doesNotMatch(markup, /Importa nuova scorecard/);
 });
 
-test("Metriche remains the approved Q5 placeholder", () => {
+test("Metriche hands off to the Q6 lazy loading state", () => {
   const markup = qualityAvailableMarkup(availableView({ section: "metrics" }));
-  assert.match(markup, /Analisi metriche disponibile nel prossimo step\./);
+  assert.match(markup, /Caricamento metriche/);
+  assert.doesNotMatch(markup, /Analisi metriche disponibile nel prossimo step\./);
   assert.doesNotMatch(markup, /canvas|chart|trend/i);
 });
 

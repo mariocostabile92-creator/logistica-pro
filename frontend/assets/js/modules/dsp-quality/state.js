@@ -10,6 +10,13 @@ export function createDspQualityState({ canImport = false } = {}) {
     section: "overview",
     overviewVisible: false,
     notice: null,
+    metrics: {
+      phase: "idle",
+      data: null,
+      error: null,
+      filter: "all",
+      search: "",
+    },
   };
 }
 
@@ -17,7 +24,12 @@ export function createDspQualityState({ canImport = false } = {}) {
 export function applyDspQualityEvent(state, event) {
   switch (event.type) {
     case "latest-started":
-      return { ...state, phase: "loading", error: null };
+      return {
+        ...state,
+        phase: "loading",
+        error: null,
+        metrics: { ...state.metrics, phase: "idle", data: null, error: null },
+      };
     case "latest-completed":
       return {
         ...state,
@@ -28,6 +40,7 @@ export function applyDspQualityEvent(state, event) {
         error: null,
         notice: event.notice || null,
         section: "overview",
+        metrics: { ...state.metrics, phase: "idle", data: null, error: null, filter: "all", search: "" },
       };
     case "latest-failed":
       return { ...state, phase: "error", error: event.message, notice: null };
@@ -53,6 +66,16 @@ export function applyDspQualityEvent(state, event) {
       return { ...state, overviewVisible: true, section: "overview" };
     case "section-changed":
       return { ...state, section: event.section };
+    case "metrics-started":
+      return { ...state, metrics: { ...state.metrics, phase: "loading", error: null } };
+    case "metrics-completed":
+      return { ...state, metrics: { ...state.metrics, phase: "available", data: event.data, error: null } };
+    case "metrics-failed":
+      return { ...state, metrics: { ...state.metrics, phase: "error", error: event.message } };
+    case "metrics-filter-changed":
+      return { ...state, metrics: { ...state.metrics, filter: event.filter } };
+    case "metrics-search-changed":
+      return { ...state, metrics: { ...state.metrics, search: event.search } };
     case "reset":
       return {
         ...createDspQualityState({ canImport: state.canImport }),
