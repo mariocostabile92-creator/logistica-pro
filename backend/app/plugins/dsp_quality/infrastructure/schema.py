@@ -1,5 +1,5 @@
 from app.core.database import db_session
-from app.core.tenant_schema import ensure_column
+from app.core.tenant_schema import ensure_column, ensure_postgresql_bigint
 from app.plugins.dsp_quality.domain.metric_catalog import METRIC_DEFINITIONS
 
 
@@ -16,7 +16,7 @@ def init_schema() -> None:
                 reported_year INTEGER NOT NULL,
                 reported_week INTEGER NOT NULL,
                 geography TEXT,
-                attachment_entity_id INTEGER,
+                attachment_entity_id BIGINT,
                 active_revision_id TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
@@ -232,7 +232,12 @@ def init_schema() -> None:
             conn,
             "dsp_quality_scorecards",
             "attachment_entity_id",
-            "INTEGER",
+            "BIGINT",
+        )
+        ensure_postgresql_bigint(
+            conn,
+            "dsp_quality_scorecards",
+            "attachment_entity_id",
         )
         ensure_column(
             conn,

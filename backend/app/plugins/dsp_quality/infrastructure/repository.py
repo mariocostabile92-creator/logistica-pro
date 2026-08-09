@@ -21,6 +21,8 @@ def _id() -> str:
 
 
 def _attachment_entity_id(scorecard_id: str) -> int:
+    # The Attachment Engine uses numeric entity ids. Keep this deterministic
+    # surrogate inside PostgreSQL's positive signed BIGINT range.
     value = int.from_bytes(hashlib.sha256(scorecard_id.encode("utf-8")).digest()[:8], "big")
     return (value & ((1 << 63) - 1)) or 1
 

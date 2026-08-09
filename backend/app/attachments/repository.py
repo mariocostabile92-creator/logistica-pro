@@ -1,5 +1,6 @@
 from app.core.database import db_session
 from app.core.config import SETTINGS
+from app.core.tenant_schema import ensure_postgresql_bigint
 
 
 def _ensure_column(conn, table: str, column: str, definition: str) -> None:
@@ -22,7 +23,7 @@ def init_schema() -> None:
             CREATE TABLE IF NOT EXISTS attachments (
                 id TEXT PRIMARY KEY,
                 entity_type TEXT NOT NULL,
-                entity_id INTEGER NOT NULL,
+                entity_id BIGINT NOT NULL,
                 original_filename TEXT NOT NULL,
                 stored_filename TEXT NOT NULL UNIQUE,
                 mime_type TEXT NOT NULL,
@@ -48,6 +49,7 @@ def init_schema() -> None:
             """
         )
         _ensure_column(conn, "attachments", "organization_id", "TEXT")
+        ensure_postgresql_bigint(conn, "attachments", "entity_id")
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_attachments_org_entity "
             "ON attachments(organization_id, entity_type, entity_id, created_at)"

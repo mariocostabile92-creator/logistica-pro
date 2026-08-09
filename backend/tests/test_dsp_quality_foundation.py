@@ -99,9 +99,11 @@ def test_real_week47_fixture_preserves_confirmed_source_values():
     ("raw", "value_type", "state", "numeric", "text"),
     [
         ("97.64%", QualityValueType.PERCENTAGE, QualityValueState.PRESENT, Decimal("97.64"), None),
+        ("0.02%", QualityValueType.PERCENTAGE, QualityValueState.PRESENT, Decimal("0.02"), None),
         ("1355", QualityValueType.DPMO, QualityValueState.PRESENT, Decimal("1355"), None),
         ("0", QualityValueType.COUNT, QualityValueState.PRESENT, Decimal("0"), None),
         ("45.41", QualityValueType.SCORE, QualityValueState.PRESENT, Decimal("45.41"), None),
+        ("56.01", QualityValueType.SCORE, QualityValueState.PRESENT, Decimal("56.01"), None),
         ("None", QualityValueType.COMPLIANCE_STATE, QualityValueState.PRESENT, None, "None"),
         ("-", QualityValueType.PERCENTAGE, QualityValueState.NOT_AVAILABLE, None, None),
         ("", QualityValueType.PERCENTAGE, QualityValueState.MISSING, None, None),

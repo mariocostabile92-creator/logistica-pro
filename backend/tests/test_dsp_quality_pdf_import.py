@@ -1,13 +1,17 @@
+import struct
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.attachments import repository as attachment_repository
+from app.attachments import service as attachment_service
 from app.auth.domain import Role
 from app.auth.password_service import hash_password
 from app.auth.repository import create_user
 from app.core.database import db_session
+from app.core import tenant_schema
 from app.main import app
 from app.plugins.dsp_quality.application.import_contract import (
     QualityImportDocument,
@@ -31,6 +35,9 @@ from app.plugins.dsp_quality.infrastructure.adapters import AmazonScorecardPdfAd
 
 REAL_PDF_PATH = (
     Path.home() / "Downloads" / "IT-PROF-DLO2-Week47-DSP-Scorecard-3.0.pdf"
+)
+WEEK45_PDF_PATH = (
+    Path.home() / "Downloads" / "IT-PROF-DLO2-Week45-DSP-Scorecard-3.0 (1).pdf"
 )
 FOUNDATION_FIXTURE = Path(__file__).parent / "fixtures" / "dsp_quality_week47.json"
 
@@ -354,6 +361,204 @@ def test_confirm_create_noop_and_new_revision_preserve_source_and_history():
         ).fetchone()["count"]
     assert [row["source_page"] for row in standard_pages] == [7]
     assert workforce_count == 0
+
+
+def test_quality_attachment_entity_id_uses_deterministic_signed_bigint_contract():
+    scorecard_id = "00000000-0000-0000-0000-000000000001"
+
+    entity_id = repository._attachment_entity_id(scorecard_id)
+
+    assert entity_id == 8_845_554_376_707_389_133
+    assert entity_id == repository._attachment_entity_id(scorecard_id)
+    assert entity_id > 2_147_483_647
+    assert entity_id <= 9_223_372_036_854_775_807
+    with pytest.raises(struct.error):
+        struct.pack("!i", entity_id)
+    assert struct.unpack("!q", struct.pack("!q", entity_id))[0] == entity_id
+
+
+def test_real_week45_import_persists_scorecard_decimals_transporters_and_attachment():
+    if not WEEK45_PDF_PATH.is_file():
+        pytest.skip(f"Real Week 45 scorecard not available: {WEEK45_PDF_PATH}")
+    source = QualitySourceInput(
+        filename=WEEK45_PDF_PATH.name,
+        content=WEEK45_PDF_PATH.read_bytes(),
+        media_type="application/pdf",
+    )
+    preview = preview_scorecard_import(
+        organization_id="quality-week45-org",
+        source=source,
+    )
+
+    assert preview.valid is True
+    assert preview.identity.dsp_identifier == "PROF"
+    assert preview.identity.station == "DLO2"
+    assert preview.identity.reported_week == 45
+    assert preview.identity.reported_year == 2025
+    assert str(preview.identity.overall_score) == "56.01"
+    assert preview.identity.overall_standing == "Fair"
+    assert preview.identity.rank == 4
+    assert preview.counts.dsp_metrics_count == 18
+    assert preview.counts.transporter_rows_count == 146
+    assert preview.counts.focus_areas_count == 3
+    assert preview.counts.standards_count == 13
+    assert preview.counts.working_hours_exception_count == 0
+    result = confirm_scorecard_import(
+        organization_id="quality-week45-org",
+        source=source,
+        preview_token=preview.preview_token,
+        imported_by="quality-admin",
+        expected_action=QualityImportAction.CREATE,
+    )
+
+    entity_id = repository.scorecard_attachment_entity_id(
+        "quality-week45-org",
+        result.scorecard_id,
+    )
+    observations = repository.list_metric_observations(result.revision_id)
+    overall = next(item for item in observations if item["metric_key"] == "overall_score")
+    assert result.action is QualityImportAction.CREATE
+    assert result.transporter_rows == 146
+    assert len(repository.list_transporter_rows(result.revision_id)) == 146
+    assert overall["normalized_numeric_value"] == "56.01"
+    assert 1 <= entity_id <= 9_223_372_036_854_775_807
+    assert len(attachment_repository.list_for_entity(
+        "quality_scorecard",
+        entity_id,
+        "quality-week45-org",
+    )) == 1
+
+
+def test_import_failure_rolls_back_all_quality_rows_before_attachment_upload(monkeypatch):
+    document = foundation_document()
+    source = QualitySourceInput(
+        filename=document.revision.source_filename,
+        content=b"%PDF-1.4\nquality rollback fixture\n%%EOF",
+        media_type="application/pdf",
+    )
+    preview = preview_scorecard_import(
+        organization_id="quality-rollback-org",
+        source=source,
+        adapters=[DocumentAdapter(document)],
+    )
+    original_snapshot = repository._mapping_snapshot
+    calls = 0
+
+    def fail_after_first_transporter(conn, organization_id, external_id):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("forced persistence failure")
+        return original_snapshot(conn, organization_id, external_id)
+
+    uploads = []
+    monkeypatch.setattr(repository, "_mapping_snapshot", fail_after_first_transporter)
+    monkeypatch.setattr(
+        attachment_service,
+        "upload",
+        lambda *args, **kwargs: uploads.append((args, kwargs)),
+    )
+
+    with pytest.raises(RuntimeError, match="forced persistence failure"):
+        confirm_scorecard_import(
+            organization_id="quality-rollback-org",
+            source=source,
+            preview_token=preview.preview_token,
+            imported_by="quality-admin",
+            adapters=[DocumentAdapter(document)],
+        )
+
+    assert table_count("dsp_quality_scorecards") == 0
+    assert table_count("dsp_quality_scorecard_versions") == 0
+    assert table_count("dsp_quality_metric_observations") == 0
+    assert table_count("dsp_quality_transporter_rows") == 0
+    assert table_count("dsp_quality_transporter_observations") == 0
+    assert table_count("attachments") == 0
+    assert uploads == []
+
+
+class _SchemaCursor:
+    def __init__(self, row):
+        self.row = row
+
+    def fetchone(self):
+        return self.row
+
+
+class _SchemaConnection:
+    def __init__(self):
+        self.data_type = "integer"
+        self.statements = []
+
+    def execute(self, statement, parameters=()):
+        normalized = " ".join(statement.split())
+        self.statements.append((normalized, parameters))
+        if "information_schema.columns" in normalized:
+            return _SchemaCursor({"data_type": self.data_type})
+        if "TYPE BIGINT" in normalized:
+            self.data_type = "bigint"
+        return _SchemaCursor(None)
+
+
+@pytest.mark.parametrize(
+    ("table", "column"),
+    [
+        ("dsp_quality_scorecards", "attachment_entity_id"),
+        ("attachments", "entity_id"),
+    ],
+)
+def test_existing_postgresql_integer_columns_are_widened_once(
+    monkeypatch,
+    table,
+    column,
+):
+    connection = _SchemaConnection()
+    monkeypatch.setattr(
+        tenant_schema,
+        "SETTINGS",
+        SimpleNamespace(database_backend="postgresql"),
+    )
+
+    tenant_schema.ensure_postgresql_bigint(connection, table, column)
+    tenant_schema.ensure_postgresql_bigint(connection, table, column)
+
+    migrations = [
+        statement
+        for statement, _ in connection.statements
+        if "ALTER COLUMN" in statement
+    ]
+    assert migrations == [
+        f"ALTER TABLE {table} ALTER COLUMN {column} "
+        f"TYPE BIGINT USING {column}::BIGINT"
+    ]
+
+
+def test_new_database_schema_uses_bigint_for_quality_attachment_links():
+    root = Path(__file__).parents[1] / "app"
+    quality_schema = (
+        root / "plugins" / "dsp_quality" / "infrastructure" / "schema.py"
+    ).read_text(encoding="utf-8")
+    attachment_schema = (root / "attachments" / "repository.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "attachment_entity_id BIGINT" in quality_schema
+    assert "entity_id BIGINT NOT NULL" in attachment_schema
+    assert "ensure_postgresql_bigint" in quality_schema
+    assert "ensure_postgresql_bigint" in attachment_schema
+    with db_session() as conn:
+        quality_columns = {
+            row["name"]: row["type"]
+            for row in conn.execute(
+                "PRAGMA table_info(dsp_quality_scorecards)"
+            ).fetchall()
+        }
+        attachment_columns = {
+            row["name"]: row["type"]
+            for row in conn.execute("PRAGMA table_info(attachments)").fetchall()
+        }
+    assert quality_columns["attachment_entity_id"] == "BIGINT"
+    assert attachment_columns["entity_id"] == "BIGINT"
 
 
 def test_confirm_rejects_tampered_stale_and_cross_org_preview_tokens():
