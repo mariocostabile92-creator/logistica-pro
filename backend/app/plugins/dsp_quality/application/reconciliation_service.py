@@ -1,4 +1,4 @@
-from app.plugins.dsp_quality.application.drivers_read_service import get_latest_drivers
+from app.plugins.dsp_quality.application.drivers_read_service import get_drivers
 from app.plugins.dsp_quality.application.mapping_service import (
     MappingConflictError,
     reconcile_transporter_identity,
@@ -22,8 +22,12 @@ class ReconciliationNotFoundError(ValueError):
     pass
 
 
-def _exact_transporter(organization_id: str, external_id: str):
-    snapshot = get_latest_drivers(organization_id)
+def _exact_transporter(
+    organization_id: str,
+    external_id: str,
+    scorecard_id: str | None = None,
+):
+    snapshot = get_drivers(organization_id, scorecard_id)
     match = next(
         (row for row in snapshot.rows if row.transporter_external_id == external_id),
         None,
@@ -35,8 +39,11 @@ def _exact_transporter(organization_id: str, external_id: str):
     return match
 
 
-def reconciliation_state(organization_id: str) -> ReconciliationState:
-    snapshot = get_latest_drivers(organization_id)
+def reconciliation_state(
+    organization_id: str,
+    scorecard_id: str | None = None,
+) -> ReconciliationState:
+    snapshot = get_drivers(organization_id, scorecard_id)
     if not snapshot.available:
         return ReconciliationState(available=False)
     metadata = reconciliation_repository.identity_metadata(
@@ -66,6 +73,7 @@ def reconciliation_state(organization_id: str) -> ReconciliationState:
         ))
     return ReconciliationState(
         available=True,
+        scorecard_id=scorecard_id,
         week=snapshot.current_period.week,
         year=snapshot.current_period.year,
         summary=ReconciliationSummary(**snapshot.summary.model_dump()),
@@ -106,8 +114,9 @@ def put_mapping(
     workforce_member_id: int,
     actor: str,
     expected_updated_at: str | None,
+    scorecard_id: str | None = None,
 ) -> MappingWriteResult:
-    _exact_transporter(organization_id, external_id)
+    _exact_transporter(organization_id, external_id, scorecard_id)
     row = reconcile_transporter_identity(
         organization_id=organization_id,
         external_id=external_id,
@@ -132,8 +141,9 @@ def delete_mapping(
     external_id: str,
     actor: str,
     expected_updated_at: str,
+    scorecard_id: str | None = None,
 ) -> MappingWriteResult:
-    _exact_transporter(organization_id, external_id)
+    _exact_transporter(organization_id, external_id, scorecard_id)
     row = remove_transporter_identity(
         organization_id=organization_id,
         external_id=external_id,
@@ -151,8 +161,12 @@ def delete_mapping(
     )
 
 
-def mapping_history(organization_id: str, external_id: str) -> MappingHistory:
-    _exact_transporter(organization_id, external_id)
+def mapping_history(
+    organization_id: str,
+    external_id: str,
+    scorecard_id: str | None = None,
+) -> MappingHistory:
+    _exact_transporter(organization_id, external_id, scorecard_id)
     return MappingHistory(
         transporter_external_id=external_id,
         items=[

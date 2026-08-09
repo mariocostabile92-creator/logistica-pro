@@ -14,11 +14,16 @@ from app.plugins.dsp_quality.application.preview_service import (
     preview_scorecard_import,
 )
 from app.plugins.dsp_quality.application.read_models import QualityLatestOverview
-from app.plugins.dsp_quality.application.read_service import get_latest_scorecard
+from app.plugins.dsp_quality.application.read_service import get_latest_scorecard, get_scorecard
 from app.plugins.dsp_quality.application.metrics_read_models import QualityLatestMetrics
-from app.plugins.dsp_quality.application.metrics_read_service import get_latest_metrics
+from app.plugins.dsp_quality.application.metrics_read_service import get_latest_metrics, get_metrics
 from app.plugins.dsp_quality.application.drivers_read_models import QualityLatestDrivers
-from app.plugins.dsp_quality.application.drivers_read_service import get_latest_drivers
+from app.plugins.dsp_quality.application.drivers_read_service import get_latest_drivers, get_drivers
+from app.plugins.dsp_quality.application.history_models import QualityScorecardHistory
+from app.plugins.dsp_quality.application.history_service import (
+    ensure_scorecard,
+    get_scorecard_history,
+)
 from app.plugins.dsp_quality.application.mapping_service import (
     MappingConflictError,
     MappingNotFoundError,
@@ -81,6 +86,12 @@ def _guard(call, **kwargs):
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
+@router.get("/scorecards", response_model=QualityScorecardHistory)
+def scorecard_history(request: Request):
+    _require_read_permission(request)
+    return get_scorecard_history(request.state.user.organization_id)
+
+
 @router.get("/scorecards/latest", response_model=QualityLatestOverview)
 def latest_scorecard(request: Request):
     _require_read_permission(request)
@@ -99,13 +110,51 @@ def latest_scorecard_drivers(request: Request):
     return get_latest_drivers(request.state.user.organization_id)
 
 
+@router.get("/scorecards/{scorecard_id}", response_model=QualityLatestOverview)
+def selected_scorecard(scorecard_id: str, request: Request):
+    _require_read_permission(request)
+    try:
+        ensure_scorecard(request.state.user.organization_id, scorecard_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return get_scorecard(request.state.user.organization_id, scorecard_id)
+
+
+@router.get("/scorecards/{scorecard_id}/metrics", response_model=QualityLatestMetrics)
+def selected_scorecard_metrics(scorecard_id: str, request: Request):
+    _require_read_permission(request)
+    try:
+        ensure_scorecard(request.state.user.organization_id, scorecard_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return get_metrics(request.state.user.organization_id, scorecard_id)
+
+
+@router.get("/scorecards/{scorecard_id}/drivers", response_model=QualityLatestDrivers)
+def selected_scorecard_drivers(scorecard_id: str, request: Request):
+    _require_read_permission(request)
+    try:
+        ensure_scorecard(request.state.user.organization_id, scorecard_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return get_drivers(request.state.user.organization_id, scorecard_id)
+
+
 @router.get(
     "/transporter-mappings/reconciliation",
     response_model=ReconciliationState,
 )
-def transporter_mapping_reconciliation(request: Request):
+def transporter_mapping_reconciliation(
+    request: Request,
+    scorecard_id: str | None = Query(default=None),
+):
     _require_read_permission(request)
-    return reconciliation_state(request.state.user.organization_id)
+    if scorecard_id:
+        try:
+            ensure_scorecard(request.state.user.organization_id, scorecard_id)
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return reconciliation_state(request.state.user.organization_id, scorecard_id)
 
 
 @router.get(
@@ -130,6 +179,8 @@ def _mapping_error(exc: Exception) -> HTTPException:
         return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, (MappingNotFoundError, ReconciliationNotFoundError)):
         return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, LookupError):
+        return HTTPException(status_code=404, detail=str(exc))
     return HTTPException(status_code=422, detail=str(exc))
 
 
@@ -141,6 +192,7 @@ def put_transporter_mapping(
     transporter_external_id: str,
     payload: MappingWriteRequest,
     request: Request,
+    scorecard_id: str | None = Query(default=None),
 ):
     _require_import_permission(request)
     try:
@@ -153,6 +205,7 @@ def put_transporter_mapping(
                 payload.expected_updated_at.isoformat()
                 if payload.expected_updated_at else None
             ),
+            scorecard_id=scorecard_id,
         )
     except (ValueError, ReconciliationNotFoundError) as exc:
         raise _mapping_error(exc) from exc
@@ -166,6 +219,7 @@ def delete_transporter_mapping(
     transporter_external_id: str,
     payload: MappingRemoveRequest,
     request: Request,
+    scorecard_id: str | None = Query(default=None),
 ):
     _require_import_permission(request)
     try:
@@ -174,6 +228,7 @@ def delete_transporter_mapping(
             external_id=transporter_external_id,
             actor=request.state.user.id,
             expected_updated_at=payload.expected_updated_at.isoformat(),
+            scorecard_id=scorecard_id,
         )
     except (ValueError, ReconciliationNotFoundError) as exc:
         raise _mapping_error(exc) from exc
@@ -186,12 +241,14 @@ def delete_transporter_mapping(
 def transporter_mapping_history(
     transporter_external_id: str,
     request: Request,
+    scorecard_id: str | None = Query(default=None),
 ):
     _require_read_permission(request)
     try:
         return mapping_history(
             request.state.user.organization_id,
             transporter_external_id,
+            scorecard_id,
         )
     except ReconciliationNotFoundError as exc:
         raise _mapping_error(exc) from exc

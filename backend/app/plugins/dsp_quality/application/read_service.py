@@ -15,11 +15,14 @@ from app.plugins.dsp_quality.infrastructure import read_repository
 logger = logging.getLogger(__name__)
 
 
-def get_latest_scorecard(organization_id: str) -> QualityLatestOverview:
+def get_scorecard(
+    organization_id: str,
+    scorecard_id: str | None = None,
+) -> QualityLatestOverview:
     organization_id = organization_id.strip()
     if not organization_id:
         raise ValueError("Organization is required.")
-    record = read_repository.latest_scorecard_overview(organization_id)
+    record = read_repository.scorecard_overview(organization_id, scorecard_id)
     if not record:
         return QualityLatestOverview(available=False)
 
@@ -56,6 +59,8 @@ def get_latest_scorecard(organization_id: str) -> QualityLatestOverview:
             rank_wow_declared=main["rank_wow_declared"],
             overall_score=main["overall_score"],
             overall_standing=main["overall_standing"],
+            active_number=main["active_revision_number"],
+            revision_count=main["revision_count"],
         ),
         sections=[
             QualityLatestSection(
@@ -76,3 +81,7 @@ def get_latest_scorecard(organization_id: str) -> QualityLatestOverview:
             effective_to=main["standard_effective_to"],
         ),
     )
+
+
+def get_latest_scorecard(organization_id: str) -> QualityLatestOverview:
+    return get_scorecard(organization_id)

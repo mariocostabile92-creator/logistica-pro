@@ -1,23 +1,24 @@
 import { can } from "../../auth/state.js";
 import {
   deleteTransporterMapping,
-  getLatestQualityDrivers,
-  getLatestQualityMetrics,
-  getLatestQualityScorecard,
+  getQualityDrivers,
+  getQualityMetrics,
+  getQualityScorecard,
+  getQualityScorecardHistory,
   getTransporterMappingHistory,
   getTransporterReconciliation,
   importQualityScorecard,
   previewQualityScorecard,
   putTransporterMapping,
   searchQualityWorkforceCandidates,
-} from "./api.js?v=5";
+} from "./api.js?v=6";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
-import { renderDspQuality } from "./presenter.js?v=6";
+import { renderDspQuality } from "./presenter.js?v=7";
 import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=5";
+} from "./state.js?v=6";
 
 
 let initialized = false;
@@ -27,6 +28,8 @@ let requestVersion = 0;
 let requestController = null;
 let latestRequestVersion = 0;
 let latestRequestController = null;
+let historyRequestVersion = 0;
+let historyRequestController = null;
 let metricsRequestVersion = 0;
 let metricsRequestController = null;
 let driversRequestVersion = 0;
@@ -42,25 +45,82 @@ function commit(event) {
 }
 
 
-async function loadLatest({ notice = null } = {}) {
+async function loadLatest({ scorecardId = state.selectedScorecardId, notice = null } = {}) {
+  if (!scorecardId) return null;
   const version = ++latestRequestVersion;
   latestRequestController?.abort();
   latestRequestController = new AbortController();
   commit({ type: "latest-started" });
   try {
-    const latest = await getLatestQualityScorecard({
+    const latest = await getQualityScorecard(scorecardId, {
       signal: latestRequestController.signal,
     });
-    if (version === latestRequestVersion) {
+    if (version === latestRequestVersion && scorecardId === state.selectedScorecardId) {
       commit({ type: "latest-completed", latest, notice });
+      if (state.section === "metrics") void loadMetrics();
+      if (state.section === "drivers") void loadDrivers();
     }
     return latest;
   } catch (error) {
     if (error?.name === "AbortError") return null;
-    if (version === latestRequestVersion) {
+    if (error?.status === 404 && version === latestRequestVersion && scorecardId === state.selectedScorecardId) {
+      await loadHistory({
+        excludedScorecardId: scorecardId,
+        notice: "La scorecard selezionata non è più disponibile. È stata aperta la più recente.",
+      });
+    } else if (version === latestRequestVersion && scorecardId === state.selectedScorecardId) {
       commit({
         type: "latest-failed",
-        message: "Impossibile caricare l'ultima scorecard. Riprova.",
+        message: "Impossibile caricare la scorecard selezionata. Riprova.",
+      });
+    }
+    return null;
+  }
+}
+
+
+function selectedFromHistory(items, preferredScorecardId = null) {
+  const candidates = [preferredScorecardId, state.selectedScorecardId];
+  return candidates.find(candidate => items.some(item => item.scorecard_id === candidate))
+    || items[0]?.scorecard_id
+    || null;
+}
+
+
+async function loadHistory({
+  preferredScorecardId = null,
+  excludedScorecardId = null,
+  notice = null,
+} = {}) {
+  const version = ++historyRequestVersion;
+  historyRequestController?.abort();
+  historyRequestController = new AbortController();
+  commit({ type: "scorecard-history-started" });
+  try {
+    const history = await getQualityScorecardHistory({
+      signal: historyRequestController.signal,
+    });
+    if (version !== historyRequestVersion) return null;
+    const items = (history.items || []).filter(
+      item => item.scorecard_id !== excludedScorecardId,
+    );
+    const selectedScorecardId = selectedFromHistory(items, preferredScorecardId);
+    commit({
+      type: "scorecard-history-completed",
+      items,
+      selectedScorecardId,
+      notice,
+    });
+    if (selectedScorecardId) {
+      await loadLatest({ scorecardId: selectedScorecardId, notice });
+    }
+    return history;
+  } catch (error) {
+    if (error?.name === "AbortError") return null;
+    if (version === historyRequestVersion) {
+      commit({
+        type: "scorecard-history-failed",
+        message: "Impossibile caricare lo storico Quality.",
       });
     }
     return null;
@@ -69,14 +129,16 @@ async function loadLatest({ notice = null } = {}) {
 
 
 async function loadMetrics({ force = false } = {}) {
+  const scorecardId = state.selectedScorecardId;
+  if (!scorecardId) return;
   if (!force && ["loading", "available"].includes(state.metrics?.phase)) return;
   const version = ++metricsRequestVersion;
   metricsRequestController?.abort();
   metricsRequestController = new AbortController();
   commit({ type: "metrics-started" });
   try {
-    const data = await getLatestQualityMetrics({ signal: metricsRequestController.signal });
-    if (version === metricsRequestVersion) commit({ type: "metrics-completed", data });
+    const data = await getQualityMetrics(scorecardId, { signal: metricsRequestController.signal });
+    if (version === metricsRequestVersion && scorecardId === state.selectedScorecardId) commit({ type: "metrics-completed", data });
   } catch (error) {
     if (error?.name === "AbortError") return;
     if (version === metricsRequestVersion) {
@@ -87,14 +149,16 @@ async function loadMetrics({ force = false } = {}) {
 
 
 async function loadDrivers({ force = false } = {}) {
+  const scorecardId = state.selectedScorecardId;
+  if (!scorecardId) return;
   if (!force && ["loading", "available"].includes(state.drivers?.phase)) return;
   const version = ++driversRequestVersion;
   driversRequestController?.abort();
   driversRequestController = new AbortController();
   commit({ type: "drivers-started" });
   try {
-    const data = await getLatestQualityDrivers({ signal: driversRequestController.signal });
-    if (version === driversRequestVersion) commit({ type: "drivers-completed", data });
+    const data = await getQualityDrivers(scorecardId, { signal: driversRequestController.signal });
+    if (version === driversRequestVersion && scorecardId === state.selectedScorecardId) commit({ type: "drivers-completed", data });
   } catch (error) {
     if (error?.name === "AbortError") return;
     if (version === driversRequestVersion) {
@@ -127,7 +191,9 @@ function nextUnmapped(data, currentExternalId) {
 async function loadMappingHistory(externalId) {
   if (!externalId) return;
   try {
-    const result = await getTransporterMappingHistory(externalId);
+    const result = await getTransporterMappingHistory(externalId, {
+      scorecardId: state.selectedScorecardId,
+    });
     if (state.drivers?.reconciliation?.activeExternalId === externalId) {
       commit({ type: "history-completed", items: result.items || [] });
     }
@@ -143,6 +209,7 @@ async function loadReconciliation({ keepFilter = false, advanceAfter = null } = 
   commit({ type: "reconciliation-started" });
   try {
     const data = await getTransporterReconciliation({
+      scorecardId: state.selectedScorecardId,
       signal: reconciliationRequestController.signal,
     });
     const activeExternalId = advanceAfter ? nextUnmapped(data, advanceAfter) : undefined;
@@ -211,6 +278,8 @@ async function confirmMapping() {
     await putTransporterMapping(row.transporter_external_id, {
       workforce_member_id: candidate.workforce_member_id,
       expected_updated_at: row.updated_at || null,
+    }, {
+      scorecardId: state.selectedScorecardId,
     });
     await Promise.all([
       loadDrivers({ force: true }),
@@ -234,7 +303,9 @@ async function removeMapping() {
   if (!row?.updated_at || reconciliation.mutationPhase === "loading") return;
   commit({ type: "mapping-started" });
   try {
-    await deleteTransporterMapping(row.transporter_external_id, row.updated_at);
+    await deleteTransporterMapping(row.transporter_external_id, row.updated_at, {
+      scorecardId: state.selectedScorecardId,
+    });
     await Promise.all([
       loadDrivers({ force: true }),
       loadReconciliation({ keepFilter: true, advanceAfter: row.transporter_external_id }),
@@ -281,7 +352,10 @@ async function confirmImport() {
       expectedAction: state.preview.idempotency?.action || null,
     });
     commit({ type: "import-completed", result });
-    await loadLatest({ notice: "Scorecard importata" });
+    await loadHistory({
+      preferredScorecardId: result.scorecard_id,
+      notice: "Scorecard importata",
+    });
   } catch (error) {
     const message = qualityErrorMessage(error, "import");
     if (message) commit({ type: "import-failed", message });
@@ -301,7 +375,7 @@ function bindEvents() {
     if (event.target.closest("[data-quality-reset]")) commit({ type: "reset" });
     if (event.target.closest("[data-quality-import-open]")) commit({ type: "import-opened" });
     if (event.target.closest("[data-quality-back]")) commit({ type: "latest-restored" });
-    if (event.target.closest("[data-quality-retry]")) void loadLatest();
+    if (event.target.closest("[data-quality-retry]")) void loadHistory();
     if (event.target.closest("[data-quality-metrics-retry]")) void loadMetrics({ force: true });
     if (event.target.closest("[data-quality-drivers-retry]")) void loadDrivers({ force: true });
     if (event.target.closest("[data-quality-reconciliation-open]")) void openReconciliation();
@@ -363,6 +437,18 @@ function bindEvents() {
   });
   root.addEventListener("change", (event) => {
     if (event.target.matches("[data-quality-file]")) void analyze(selectedFile(event.target));
+    if (event.target.matches("[data-quality-scorecard-select]")) {
+      const scorecardId = event.target.value || null;
+      if (!scorecardId || scorecardId === state.selectedScorecardId) return;
+      latestRequestController?.abort();
+      metricsRequestController?.abort();
+      driversRequestController?.abort();
+      reconciliationRequestController?.abort();
+      commit({ type: "scorecard-selection-changed", scorecardId });
+      void loadLatest({ scorecardId }).finally(() => {
+        requestAnimationFrame(() => root.querySelector("[data-quality-scorecard-select]")?.focus());
+      });
+    }
   });
   root.addEventListener("input", (event) => {
     if (event.target.matches("[data-quality-metrics-search]")) {
@@ -441,5 +527,5 @@ export function initDspQuality() {
   state = createDspQualityState({ canImport: can("admin:write") });
   bindEvents();
   renderDspQuality(root, deriveDspQualityView(state));
-  void loadLatest();
+  void loadHistory();
 }

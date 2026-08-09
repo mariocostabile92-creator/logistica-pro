@@ -127,8 +127,14 @@ def _metric_item(
     )
 
 
-def get_latest_drivers(organization_id: str) -> QualityLatestDrivers:
-    snapshot = drivers_repository.latest_drivers_snapshot(organization_id.strip())
+def get_drivers(
+    organization_id: str,
+    scorecard_id: str | None = None,
+) -> QualityLatestDrivers:
+    snapshot = drivers_repository.drivers_snapshot(
+        organization_id.strip(),
+        scorecard_id,
+    )
     if not snapshot:
         return QualityLatestDrivers(available=False)
 
@@ -188,3 +194,7 @@ def get_latest_drivers(organization_id: str) -> QualityLatestDrivers:
         summary=summary,
         rows=rows,
     )
+
+
+def get_latest_drivers(organization_id: str) -> QualityLatestDrivers:
+    return get_drivers(organization_id)

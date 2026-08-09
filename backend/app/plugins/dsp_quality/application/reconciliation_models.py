@@ -27,6 +27,7 @@ class ReconciliationRow(BaseModel):
 
 class ReconciliationState(BaseModel):
     available: bool
+    scorecard_id: str | None = None
     week: int | None = None
     year: int | None = None
     summary: ReconciliationSummary = Field(default_factory=ReconciliationSummary)
@@ -78,4 +79,3 @@ class WorkforceCandidate(BaseModel):
 
 class WorkforceCandidateList(BaseModel):
     items: list[WorkforceCandidate] = Field(default_factory=list)
-

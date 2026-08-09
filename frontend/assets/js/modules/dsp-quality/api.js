@@ -42,11 +42,43 @@ export async function getLatestQualityScorecard(
 }
 
 
+export async function getQualityScorecardHistory(
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/scorecards`,
+    { method: "GET", signal },
+  ));
+}
+
+
+export async function getQualityScorecard(
+  scorecardId,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/scorecards/${encodeURIComponent(scorecardId)}`,
+    { method: "GET", signal },
+  ));
+}
+
+
 export async function getLatestQualityMetrics(
   { signal, fetcher = globalThis.fetch } = {},
 ) {
   return parseQualityResponse(await fetcher(
     `${API_BASE}/api/dsp-quality/scorecards/latest/metrics`,
+    { method: "GET", signal },
+  ));
+}
+
+
+export async function getQualityMetrics(
+  scorecardId,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/scorecards/${encodeURIComponent(scorecardId)}/metrics`,
     { method: "GET", signal },
   ));
 }
@@ -62,11 +94,25 @@ export async function getLatestQualityDrivers(
 }
 
 
-export async function getTransporterReconciliation(
+export async function getQualityDrivers(
+  scorecardId,
   { signal, fetcher = globalThis.fetch } = {},
 ) {
   return parseQualityResponse(await fetcher(
-    `${API_BASE}/api/dsp-quality/transporter-mappings/reconciliation`,
+    `${API_BASE}/api/dsp-quality/scorecards/${encodeURIComponent(scorecardId)}/drivers`,
+    { method: "GET", signal },
+  ));
+}
+
+
+export async function getTransporterReconciliation(
+  { scorecardId = null, signal, fetcher = globalThis.fetch } = {},
+) {
+  const params = new URLSearchParams();
+  if (scorecardId) params.set("scorecard_id", scorecardId);
+  const query = params.size ? `?${params}` : "";
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/transporter-mappings/reconciliation${query}`,
     { method: "GET", signal },
   ));
 }
@@ -87,10 +133,13 @@ export async function searchQualityWorkforceCandidates(
 export async function putTransporterMapping(
   transporterExternalId,
   payload,
-  { signal, fetcher = globalThis.fetch } = {},
+  { scorecardId = null, signal, fetcher = globalThis.fetch } = {},
 ) {
+  const params = new URLSearchParams();
+  if (scorecardId) params.set("scorecard_id", scorecardId);
+  const query = params.size ? `?${params}` : "";
   return parseQualityResponse(await fetcher(
-    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}`,
+    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}${query}`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -104,10 +153,13 @@ export async function putTransporterMapping(
 export async function deleteTransporterMapping(
   transporterExternalId,
   expectedUpdatedAt,
-  { signal, fetcher = globalThis.fetch } = {},
+  { scorecardId = null, signal, fetcher = globalThis.fetch } = {},
 ) {
+  const params = new URLSearchParams();
+  if (scorecardId) params.set("scorecard_id", scorecardId);
+  const query = params.size ? `?${params}` : "";
   return parseQualityResponse(await fetcher(
-    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}`,
+    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}${query}`,
     {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -120,10 +172,13 @@ export async function deleteTransporterMapping(
 
 export async function getTransporterMappingHistory(
   transporterExternalId,
-  { signal, fetcher = globalThis.fetch } = {},
+  { scorecardId = null, signal, fetcher = globalThis.fetch } = {},
 ) {
+  const params = new URLSearchParams();
+  if (scorecardId) params.set("scorecard_id", scorecardId);
+  const query = params.size ? `?${params}` : "";
   return parseQualityResponse(await fetcher(
-    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}/history`,
+    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}/history${query}`,
     { method: "GET", signal },
   ));
 }

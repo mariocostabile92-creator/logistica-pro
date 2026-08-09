@@ -164,6 +164,34 @@ function persistedSectionTabs(section) {
 }
 
 
+function scorecardHistorySelector(view) {
+  const items = view.history?.items || [];
+  if (!items.length) return "";
+  const timelines = new Set(items.map(item => `${item.dsp_identifier}|${item.station}`));
+  const showContext = timelines.size > 1;
+  const selected = items.find(item => item.scorecard_id === view.selectedScorecardId) || items[0];
+  const options = items.map(item => {
+    const period = `Week ${item.reported_week} · ${item.reported_year}`;
+    const label = showContext
+      ? `${item.dsp_identifier} · ${item.station} · ${period}`
+      : period;
+    return `<option value="${escapeHtml(item.scorecard_id)}" ${item.scorecard_id === view.selectedScorecardId ? "selected" : ""}>${escapeHtml(label)}</option>`;
+  }).join("");
+  return `
+    <section class="dsp-quality-history-selector" aria-labelledby="qualityHistoryLabel">
+      <label id="qualityHistoryLabel" for="qualityScorecardSelect">Settimana</label>
+      <select id="qualityScorecardSelect" data-quality-scorecard-select aria-describedby="qualityHistoryContext">
+        ${options}
+      </select>
+      <p id="qualityHistoryContext">
+        <strong>${value(selected?.dsp_identifier)}</strong>
+        <span>${value(selected?.station)} · ${items.length} scorecard disponibili</span>
+      </p>
+    </section>
+  `;
+}
+
+
 function persistedOverview(latest) {
   const scorecard = latest.scorecard || {};
   const revision = latest.revision || {};
@@ -224,6 +252,7 @@ function persistedOverview(latest) {
           <div><dt>File</dt><dd>${value(revision.source_filename)}</dd></div>
           <div><dt>Importata</dt><dd>${importedAt(revision.imported_at)}</dd></div>
           <div><dt>Template</dt><dd>${value(revision.detected_template_version)}</dd></div>
+          <div><dt>Revisione attiva</dt><dd>${value(revision.active_number, "1")} di ${value(revision.revision_count, "1")}</dd></div>
         </dl>
       </section>
     </article>
@@ -239,9 +268,11 @@ export function qualityAvailableMarkup(view) {
       ${view.canImport ? '<button type="button" class="secondary" data-quality-import-open>Importa nuova scorecard</button>' : ""}
     </div>
     <section class="dsp-quality-scorecard-shell" aria-label="Ultima scorecard attiva">
+      ${scorecardHistorySelector(view)}
       ${persistedSectionTabs(section)}
       <div class="dsp-quality-section-panel" role="tabpanel">
-        ${section === "overview" ? persistedOverview(view.latest) : section === "metrics"
+        ${!view.latest ? '<div class="dsp-quality-selection-loading" role="status" aria-live="polite">Caricamento settimana selezionata…</div>'
+          : section === "overview" ? persistedOverview(view.latest) : section === "metrics"
           ? qualityMetricsMarkup(view.metrics)
           : qualityDriversMarkup(view.drivers)}
       </div>

@@ -170,17 +170,34 @@ def test_mapping_counts_are_aggregated_without_returning_rows():
     result = persist()
     with db_session() as conn:
         rows = conn.execute(
-            "SELECT id FROM dsp_quality_transporter_rows WHERE revision_id = ? ORDER BY row_index",
+            "SELECT transporter_external_id FROM dsp_quality_transporter_rows WHERE revision_id = ? ORDER BY row_index",
             (result.revision_id,),
         ).fetchall()
-        conn.execute(
-            "UPDATE dsp_quality_transporter_rows SET mapping_status = 'MATCHED' WHERE id = ?",
-            (rows[0]["id"],),
-        )
-        conn.execute(
-            "UPDATE dsp_quality_transporter_rows SET mapping_status = 'AMBIGUOUS' WHERE id = ?",
-            (rows[1]["id"],),
-        )
+        member_id = conn.execute(
+            """
+            INSERT INTO workforce_members (
+              external_identifier, display_name, station, employment_type,
+              capabilities, active, source_reference, created_at, updated_at,
+              organization_id
+            ) VALUES ('quality-read-member', 'Quality Driver', 'DLO2',
+              'full_time', '[]', 1, 'quality-test', '2026-08-09T10:00:00Z',
+              '2026-08-09T10:00:00Z', 'quality-read-org')
+            """
+        ).lastrowid
+        for identity_id, row, status, workforce_member_id in (
+            ("identity-matched", rows[0], "MATCHED", member_id),
+            ("identity-ambiguous", rows[1], "AMBIGUOUS", None),
+        ):
+            conn.execute(
+                """
+                INSERT INTO workforce_external_identities (
+                  id, organization_id, source, external_id, workforce_member_id,
+                  status, created_at, updated_at
+                ) VALUES (?, 'quality-read-org', 'amazon_transporter', ?, ?, ?,
+                  '2026-08-09T10:00:00Z', '2026-08-09T10:00:00Z')
+                """,
+                (identity_id, row["transporter_external_id"], workforce_member_id, status),
+            )
 
     counts = get_latest_scorecard("quality-read-org").counts
 

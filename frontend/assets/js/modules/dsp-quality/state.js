@@ -9,6 +9,8 @@ export function createDspQualityState({ canImport = false } = {}) {
     phase: "loading",
     canImport,
     latest: null,
+    history: { phase: "idle", items: [], error: null },
+    selectedScorecardId: null,
     file: null,
     preview: null,
     result: null,
@@ -56,10 +58,52 @@ export function applyDspQualityEvent(state, event) {
     };
   }
   switch (event.type) {
+    case "scorecard-history-started":
+      return {
+        ...state,
+        phase: state.latest ? state.phase : "loading",
+        history: { ...state.history, phase: "loading", error: null },
+      };
+    case "scorecard-history-completed":
+      return {
+        ...state,
+        phase: event.items?.length ? state.phase : "empty",
+        history: { phase: "available", items: event.items || [], error: null },
+        selectedScorecardId: event.selectedScorecardId || null,
+        notice: event.notice || state.notice,
+      };
+    case "scorecard-history-failed":
+      return {
+        ...state,
+        phase: state.latest ? state.phase : "error",
+        history: { ...state.history, phase: "error", error: event.message },
+        error: state.latest ? state.error : event.message,
+      };
+    case "scorecard-selection-changed":
+      return {
+        ...state,
+        phase: state.history?.items?.length ? "available" : "loading",
+        latest: null,
+        selectedScorecardId: event.scorecardId,
+        notice: event.notice || null,
+        error: null,
+        metrics: { ...state.metrics, phase: "idle", data: null, error: null, filter: "all", search: "" },
+        drivers: {
+          ...state.drivers,
+          phase: "idle",
+          data: null,
+          error: null,
+          filter: "all",
+          search: "",
+          sort: { key: "row_index", direction: "asc" },
+          selectedRowId: null,
+          reconciliation: createReconciliationState(),
+        },
+      };
     case "latest-started":
       return {
         ...state,
-        phase: "loading",
+        phase: state.history?.items?.length ? "available" : "loading",
         error: null,
         metrics: { ...state.metrics, phase: "idle", data: null, error: null },
         drivers: { ...state.drivers, phase: "idle", data: null, error: null, selectedRowId: null, reconciliation: createReconciliationState() },
@@ -73,7 +117,7 @@ export function applyDspQualityEvent(state, event) {
         preview: null,
         error: null,
         notice: event.notice || null,
-        section: "overview",
+        section: state.section || "overview",
         metrics: { ...state.metrics, phase: "idle", data: null, error: null, filter: "all", search: "" },
         drivers: {
           ...state.drivers,
@@ -142,6 +186,8 @@ export function applyDspQualityEvent(state, event) {
         ...createDspQualityState({ canImport: state.canImport }),
         phase: state.latest?.available ? "available" : "empty",
         latest: state.latest,
+        history: state.history,
+        selectedScorecardId: state.selectedScorecardId,
       };
     default:
       return state;

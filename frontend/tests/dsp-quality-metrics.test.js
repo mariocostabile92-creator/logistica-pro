@@ -243,7 +243,7 @@ test("metrics endpoint is lazy and requested only on metrics tab", async () => {
   ]);
   assert.match(api, /scorecards\/latest\/metrics/);
   assert.match(controller, /section === "metrics"[\s\S]*loadMetrics/);
-  assert.doesNotMatch(controller, /loadLatest[\s\S]{0,120}getLatestQualityMetrics/);
+  assert.doesNotMatch(controller, /loadLatest[\s\S]{0,120}getQualityMetrics/);
 });
 
 test("mobile 390 layout is one column with bounded controls", async () => {

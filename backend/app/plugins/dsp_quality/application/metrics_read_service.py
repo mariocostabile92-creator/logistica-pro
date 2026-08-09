@@ -112,8 +112,11 @@ def _effective_status(status: QualityMetricStatus) -> str:
     return "NO_STANDARD"
 
 
-def get_latest_metrics(organization_id: str) -> QualityLatestMetrics:
-    snapshot = metrics_repository.latest_metrics_snapshot(organization_id)
+def get_metrics(
+    organization_id: str,
+    scorecard_id: str | None = None,
+) -> QualityLatestMetrics:
+    snapshot = metrics_repository.metrics_snapshot(organization_id, scorecard_id)
     if not snapshot:
         return QualityLatestMetrics(available=False)
 
@@ -219,3 +222,6 @@ def get_latest_metrics(organization_id: str) -> QualityLatestMetrics:
         metrics=metrics,
     )
 
+
+def get_latest_metrics(organization_id: str) -> QualityLatestMetrics:
+    return get_metrics(organization_id)

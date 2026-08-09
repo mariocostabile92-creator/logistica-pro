@@ -73,8 +73,13 @@ def _metric_rows(conn, revision_id: str | None) -> list[dict]:
     return [_dict(row) for row in rows]
 
 
-def latest_metrics_snapshot(organization_id: str) -> dict | None:
+def metrics_snapshot(
+    organization_id: str,
+    scorecard_id: str | None = None,
+) -> dict | None:
     """Load current and comparable previous DSP metrics with four batch queries."""
+    selected_clause = "AND s.id = ?" if scorecard_id else ""
+    parameters = (organization_id, scorecard_id) if scorecard_id else (organization_id,)
     with db_session() as conn:
         current = conn.execute(
             f"""
@@ -92,6 +97,7 @@ def latest_metrics_snapshot(organization_id: str) -> dict | None:
             FROM dsp_quality_scorecards s
             {_REVISION_JOIN}
             WHERE s.organization_id = ?
+              {selected_clause}
             ORDER BY
               s.reported_year DESC,
               s.reported_week DESC,
@@ -99,7 +105,7 @@ def latest_metrics_snapshot(organization_id: str) -> dict | None:
               s.id DESC
             LIMIT 1
             """,
-            (organization_id,),
+            parameters,
         ).fetchone()
         if not current:
             return None
@@ -158,3 +164,6 @@ def latest_metrics_snapshot(organization_id: str) -> dict | None:
         ),
     }
 
+
+def latest_metrics_snapshot(organization_id: str) -> dict | None:
+    return metrics_snapshot(organization_id)

@@ -5,11 +5,16 @@ def _dict(row) -> dict | None:
     return {key: row[key] for key in row.keys()} if row else None
 
 
-def latest_scorecard_overview(organization_id: str) -> dict | None:
+def scorecard_overview(
+    organization_id: str,
+    scorecard_id: str | None = None,
+) -> dict | None:
     """Return one persisted overview using a fixed, organization-scoped query set."""
+    selected_clause = "AND s.id = ?" if scorecard_id else ""
+    parameters = (organization_id, scorecard_id) if scorecard_id else (organization_id,)
     with db_session() as conn:
         main = conn.execute(
-            """
+            f"""
             SELECT
                 s.id AS scorecard_id,
                 s.organization_id,
@@ -29,6 +34,22 @@ def latest_scorecard_overview(organization_id: str) -> dict | None:
                 r.rank_wow_declared,
                 r.overall_score,
                 r.overall_standing,
+                (
+                  SELECT COUNT(*)
+                  FROM dsp_quality_scorecard_versions revisions
+                  WHERE revisions.organization_id = s.organization_id
+                    AND revisions.scorecard_id = s.id
+                ) AS revision_count,
+                (
+                  SELECT COUNT(*)
+                  FROM dsp_quality_scorecard_versions revisions
+                  WHERE revisions.organization_id = s.organization_id
+                    AND revisions.scorecard_id = s.id
+                    AND (
+                      revisions.imported_at < r.imported_at
+                      OR (revisions.imported_at = r.imported_at AND revisions.id <= r.id)
+                    )
+                ) AS active_revision_number,
                 r.standard_set_id,
                 ss.provider AS standard_provider,
                 ss.detected_source_version AS standard_version,
@@ -61,6 +82,7 @@ def latest_scorecard_overview(organization_id: str) -> dict | None:
             LEFT JOIN dsp_quality_standard_sets ss
               ON ss.id = r.standard_set_id
             WHERE s.organization_id = ?
+              {selected_clause}
             ORDER BY
               s.reported_year DESC,
               s.reported_week DESC,
@@ -68,7 +90,7 @@ def latest_scorecard_overview(organization_id: str) -> dict | None:
               s.id DESC
             LIMIT 1
             """,
-            (organization_id,),
+            parameters,
         ).fetchone()
         if not main:
             return None
@@ -101,14 +123,31 @@ def latest_scorecard_overview(organization_id: str) -> dict | None:
                WHERE revision_id = ?) AS transporter_rows,
               (SELECT COUNT(*) FROM dsp_quality_working_hour_exceptions
                WHERE revision_id = ?) AS working_hour_exceptions,
-              (SELECT COUNT(*) FROM dsp_quality_transporter_rows
-               WHERE revision_id = ? AND mapping_status = 'MATCHED') AS mapped_transporters,
-              (SELECT COUNT(*) FROM dsp_quality_transporter_rows
-               WHERE revision_id = ? AND mapping_status = 'UNMAPPED') AS unmapped_transporters,
-              (SELECT COUNT(*) FROM dsp_quality_transporter_rows
-               WHERE revision_id = ? AND mapping_status = 'AMBIGUOUS') AS ambiguous_transporters
+              COALESCE(SUM(CASE
+                WHEN identity_map.status = 'MATCHED' AND member.id IS NOT NULL THEN 1
+                ELSE 0
+              END), 0) AS mapped_transporters,
+              COALESCE(SUM(CASE
+                WHEN identity_map.status = 'AMBIGUOUS' THEN 0
+                WHEN identity_map.status = 'MATCHED' AND member.id IS NOT NULL THEN 0
+                ELSE 1
+              END), 0) AS unmapped_transporters,
+              COALESCE(SUM(CASE WHEN identity_map.status = 'AMBIGUOUS' THEN 1 ELSE 0 END), 0)
+                AS ambiguous_transporters
+            FROM dsp_quality_transporter_rows transporter
+            JOIN dsp_quality_scorecard_versions revision
+              ON revision.id = transporter.revision_id
+             AND revision.organization_id = ?
+            LEFT JOIN workforce_external_identities identity_map
+              ON identity_map.organization_id = revision.organization_id
+             AND identity_map.source = 'amazon_transporter'
+             AND identity_map.external_id = transporter.transporter_external_id
+            LEFT JOIN workforce_members member
+              ON member.id = identity_map.workforce_member_id
+             AND member.organization_id = revision.organization_id
+            WHERE transporter.revision_id = ?
             """,
-            (revision_id, revision_id, revision_id, revision_id, revision_id, revision_id),
+            (revision_id, revision_id, revision_id, organization_id, revision_id),
         ).fetchone()
 
     main_data = _dict(main)
@@ -122,3 +161,7 @@ def latest_scorecard_overview(organization_id: str) -> dict | None:
             or main_data["requested_active_revision_id"] != main_data["revision_id"]
         ),
     }
+
+
+def latest_scorecard_overview(organization_id: str) -> dict | None:
+    return scorecard_overview(organization_id)

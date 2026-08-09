@@ -24,6 +24,8 @@ class QualityLatestRevision(BaseModel):
     rank_wow_declared: int | None = None
     overall_score: Decimal | None = None
     overall_standing: str | None = None
+    active_number: int = Field(default=1, ge=1)
+    revision_count: int = Field(default=1, ge=1)
 
 
 class QualityLatestSection(BaseModel):

@@ -261,8 +261,8 @@ test("drivers endpoint client is read-only GET", async () => {
 test("drivers endpoint is lazy and requested only on Driver tab", async () => {
   const controller = await source("assets/js/modules/dsp-quality/index.js");
   assert.match(controller, /section === "drivers"[\s\S]*loadDrivers/);
-  assert.match(controller, /getLatestQualityDrivers/);
-  assert.doesNotMatch(controller, /loadLatest[\s\S]{0,120}getLatestQualityDrivers/);
+  assert.match(controller, /getQualityDrivers/);
+  assert.doesNotMatch(controller, /loadLatest[\s\S]{0,120}getQualityDrivers/);
 });
 
 test("cache busting reaches the DSP shell and Q7 Driver module", async () => {
@@ -272,9 +272,9 @@ test("cache busting reaches the DSP shell and Q7 Driver module", async () => {
     source("assets/js/modules/dsp-quality/index.js"),
     source("assets/js/modules/dsp-quality/presenter.js"),
   ]);
-  assert.match(loader, /dsp-shell\/index\.js\?v=6/);
-  assert.match(shell, /dsp-quality\/index\.js\?v=6/);
-  assert.match(controller, /presenter\.js\?v=6/);
+  assert.match(loader, /dsp-shell\/index\.js\?v=8/);
+  assert.match(shell, /dsp-quality\/index\.js\?v=8/);
+  assert.match(controller, /presenter\.js\?v=7/);
   assert.match(presenter, /drivers-presenter\.js\?v=2/);
 });
 

@@ -170,10 +170,10 @@ test("source traceability includes filename import time and template", () => {
   assert.doesNotMatch(markup, /fingerprint/i);
 });
 
-test("post-import controller reloads latest instead of retaining preview truth", async () => {
+test("post-import controller reloads history and selects the imported scorecard", async () => {
   const controller = await source("assets/js/modules/dsp-quality/index.js");
-  assert.match(controller, /commit\(\{ type: "import-completed", result \}\);[\s\S]*await loadLatest\(\{ notice: "Scorecard importata" \}\)/);
-  assert.match(controller, /getLatestQualityScorecard/);
+  assert.match(controller, /commit\(\{ type: "import-completed", result \}\);[\s\S]*await loadHistory\(\{[\s\S]*preferredScorecardId: result\.scorecard_id/);
+  assert.match(controller, /getQualityScorecardHistory/);
 });
 
 test("latest load failure exposes a discrete retry", () => {
@@ -182,9 +182,9 @@ test("latest load failure exposes a discrete retry", () => {
   assert.match(markup, /data-quality-retry>Riprova/);
 });
 
-test("retry action calls latest loader", async () => {
+test("retry action reloads scorecard history", async () => {
   const controller = await source("assets/js/modules/dsp-quality/index.js");
-  assert.match(controller, /data-quality-retry[\s\S]*void loadLatest\(\)/);
+  assert.match(controller, /data-quality-retry[\s\S]*void loadHistory\(\)/);
 });
 
 test("existing scorecard keeps secondary import CTA for writers", () => {
