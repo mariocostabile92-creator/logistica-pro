@@ -1,5 +1,4 @@
 import { identityRowsForBucket } from "./identity-source.js?v=1";
-import { suggestionReviewMarkup } from "./suggestion-review-presenter.js?v=1";
 
 
 const escapeHtml = value => String(value ?? "")
@@ -118,7 +117,7 @@ export function identitySourceMarkup(state = {}) {
       ${state.phase === "loading" ? '<p role="status">Analisi della fonte in corso…</p>' : ""}
       ${state.phase === "schema" ? schemaSelection(state) : ""}
       ${["available", "applying", "applied"].includes(state.phase) && state.preview?.valid ? previewMarkup(state) : ""}
-      ${suggestionReviewMarkup(state.review, state.preview)}
+      <div data-quality-suggestion-review-host hidden></div>
       ${state.phase === "applied" ? `<p class="dsp-quality-source-success" role="status">${escapeHtml(state.result?.applied || 0)} associazioni applicate. ${escapeHtml(state.result?.already_verified || 0)} già verificate.</p>` : ""}
       ${state.error ? `<p class="dsp-quality-reconciliation-error" role="alert">${escapeHtml(state.error)}</p>` : ""}
       <p class="dsp-quality-source-manual">Non hai un file? <strong>Associa manualmente</strong> dalla lista sotto.</p>

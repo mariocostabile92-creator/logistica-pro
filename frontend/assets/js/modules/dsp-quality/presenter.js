@@ -3,7 +3,8 @@ import {
   qualityActionLabel,
 } from "./import.js";
 import { qualityMetricsMarkup } from "./metrics-presenter.js?v=3";
-import { qualityDriversMarkup } from "./drivers-presenter.js?v=5";
+import { qualityDriversMarkup } from "./drivers-presenter.js?v=6";
+import { mountSuggestionReview } from "./suggestion-review-presenter.js?v=2";
 
 
 const escapeHtml = value => String(value ?? "")
@@ -373,4 +374,6 @@ export function renderDspQuality(root, view) {
       <div class="dsp-quality-error-state" role="alert"><strong>Scorecard non disponibile</strong><span>${escapeHtml(view.error || "Operazione non riuscita.")}</span></div>
       ${view.canImport ? '<button type="button" data-quality-pick>Seleziona un altro PDF</button>' : ""}
     `);
+  const identitySource = view.drivers?.reconciliation?.identitySource || {};
+  mountSuggestionReview(root, identitySource.review, identitySource.preview);
 }

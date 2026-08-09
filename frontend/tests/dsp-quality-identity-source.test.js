@@ -13,6 +13,7 @@ import {
   validateIdentitySourceFile,
 } from "../assets/js/modules/dsp-quality/identity-source.js";
 import { identitySourceMarkup } from "../assets/js/modules/dsp-quality/identity-source-presenter.js";
+import { suggestionReviewMarkup } from "../assets/js/modules/dsp-quality/suggestion-review-presenter.js";
 
 
 const source = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -145,7 +146,7 @@ test("suggestions enter the individual review workflow", () => {
 
 
 test("suggestion offers choose another driver", () => {
-  assert.match(identitySourceMarkup(availableState({
+  const state = availableState({
     review: {
       open: true,
       scorecardId: "week-45",
@@ -155,7 +156,8 @@ test("suggestion offers choose another driver", () => {
       skipped: [],
       candidates: [],
     },
-  })), /data-quality-review-choose[\s\S]*Scegli altro/);
+  });
+  assert.match(suggestionReviewMarkup(state.review, state.preview), /data-quality-review-choose[\s\S]*Scegli altro/);
 });
 
 

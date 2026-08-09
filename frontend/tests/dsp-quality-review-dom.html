@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="it">
+<head><meta charset="utf-8"><title>DSP.Q8.6 DOM integration</title></head>
+<body>
+  <main id="workspace"></main>
+  <script type="module">
+    import { identitySourceMarkup } from "../assets/js/modules/dsp-quality/identity-source-presenter.js";
+    import { applySuggestionReviewEvent, createSuggestionReviewState } from "../assets/js/modules/dsp-quality/suggestion-review.js";
+    import { mountSuggestionReview } from "../assets/js/modules/dsp-quality/suggestion-review-presenter.js";
+
+    const suggested = Array.from({ length: 128 }, (_, index) => ({
+      transporter_external_id: `TID-${String(index + 1).padStart(3, "0")}`,
+      source_driver_value: index === 0 ? "Alban Beqiraj" : `Driver ${index + 1}`,
+      proposed_workforce_member_id: index + 1,
+      proposed_display_name: index === 0 ? "Alban Beqiraj" : `Driver ${index + 1}`,
+      evidence_source: "NAME_SUGGESTION",
+      status: "SUGGESTED",
+    }));
+    const unresolved = Array.from({ length: 25 }, (_, index) => ({
+      transporter_external_id: `MISSING-${index + 1}`,
+      source_driver_value: `Non trovato ${index + 1}`,
+      status: "UNRESOLVED",
+    }));
+    const preview = {
+      valid: true,
+      source: { filename: "Planning.xlsx", sheet: "Planning", transporter_column: "T-ID", driver_column: "drivers", rows_detected: 142 },
+      coverage: { quality_transporters: 153, suggestions: 128, unresolved: 25, conflicts: 0 },
+      rows: [...suggested, ...unresolved],
+    };
+    const workspace = document.querySelector("#workspace");
+    let review = createSuggestionReviewState();
+    let putCalls = 0;
+
+    function render() {
+      workspace.innerHTML = identitySourceMarkup({ phase: "available", preview, bucket: "suggested", review });
+      mountSuggestionReview(workspace, review, preview);
+      workspace.dataset.putCalls = String(putCalls);
+    }
+
+    workspace.addEventListener("click", event => {
+      if (event.target.closest("[data-quality-suggestion-review-open]")) {
+        review = applySuggestionReviewEvent(review, { type: "suggestion-review-opened", preview, scorecardId: "week-46" });
+        render();
+        return;
+      }
+      if (event.target.closest("[data-quality-review-confirm]")) {
+        putCalls += 1;
+        review = applySuggestionReviewEvent(review, { type: "suggestion-review-confirmed" });
+        render();
+        return;
+      }
+      if (event.target.closest("[data-quality-review-close]")) {
+        review = applySuggestionReviewEvent(review, { type: "suggestion-review-closed" });
+        render();
+      }
+    });
+    render();
+    window.__q86 = { get putCalls() { return putCalls; } };
+  </script>
+</body>
+</html>

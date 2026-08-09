@@ -101,3 +101,13 @@ export function suggestionReviewMarkup(state = {}, preview = {}) {
     </section>
   `;
 }
+
+
+export function mountSuggestionReview(root, state = {}, preview = {}) {
+  const host = root?.querySelector?.("[data-quality-suggestion-review-host]");
+  if (!host) return false;
+  const markup = suggestionReviewMarkup(state, preview);
+  host.innerHTML = markup;
+  host.hidden = !markup;
+  return Boolean(markup);
+}

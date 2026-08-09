@@ -1,4 +1,4 @@
-import { identitySourceMarkup } from "./identity-source-presenter.js?v=3";
+import { identitySourceMarkup } from "./identity-source-presenter.js?v=4";
 
 
 const escapeHtml = value => String(value ?? "")

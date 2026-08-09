@@ -16,8 +16,8 @@ import {
 } from "./api.js?v=7";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
 import { validateIdentitySourceFile } from "./identity-source.js?v=2";
-import { renderDspQuality } from "./presenter.js?v=10";
-import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=9";
+import { renderDspQuality } from "./presenter.js?v=11";
+import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=10";
 import {
   currentSuggestion,
   isReviewShortcutTarget,
