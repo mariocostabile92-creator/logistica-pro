@@ -15,9 +15,12 @@ import {
   searchQualityWorkforceCandidates,
 } from "./api.js?v=7";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
-import { validateIdentitySourceFile } from "./identity-source.js?v=2";
-import { renderDspQuality } from "./presenter.js?v=11";
-import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=10";
+import {
+  mapWithConcurrency,
+  validateIdentitySourceFile,
+} from "./identity-source.js?v=3";
+import { renderDspQuality } from "./presenter.js?v=12";
+import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=11";
 import {
   currentSuggestion,
   isReviewShortcutTarget,
@@ -26,7 +29,7 @@ import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=8";
+} from "./state.js?v=9";
 
 
 let initialized = false;
@@ -261,6 +264,40 @@ function identitySourceState() {
 }
 
 
+function identitySuggestion(externalId) {
+  return (identitySourceState().preview?.rows || []).find(row => (
+    row.transporter_external_id === externalId && row.status === "SUGGESTED"
+  )) || null;
+}
+
+
+function reconciliationMapping(externalId) {
+  return (state.drivers?.reconciliation?.data?.rows || []).find(
+    row => row.transporter_external_id === externalId,
+  ) || null;
+}
+
+
+function safeInlineSuggestion(externalId) {
+  const suggestion = identitySuggestion(externalId);
+  const mapping = reconciliationMapping(externalId);
+  return suggestion
+    && Number.isInteger(Number(suggestion.proposed_workforce_member_id))
+    && Number(suggestion.proposed_workforce_member_id) > 0
+    && mapping?.mapping_status === "UNMAPPED"
+    && !mapping?.workforce_member_id
+    ? { suggestion, mapping }
+    : null;
+}
+
+
+function safeSelectedSuggestions() {
+  return (identitySourceState().selectedSuggestionIds || [])
+    .map(externalId => safeInlineSuggestion(externalId))
+    .filter(Boolean);
+}
+
+
 function suggestionReviewState() {
   return identitySourceState().review || {};
 }
@@ -381,6 +418,77 @@ async function confirmSuggestionReview(workforceMemberId) {
     focusSuggestionReview();
     return false;
   }
+}
+
+
+async function refreshInlineMappingSurfaces() {
+  await Promise.all([
+    loadDrivers({ force: true }),
+    loadReconciliation({ keepFilter: true, silent: true }),
+  ]);
+}
+
+
+async function confirmInlineSuggestion(externalId) {
+  const source = identitySourceState();
+  const match = safeInlineSuggestion(externalId);
+  if (!match || source.bulkSaving || source.savingSuggestionIds?.includes(externalId)) return false;
+  commit({ type: "identity-source-suggestion-saving", externalId });
+  try {
+    await putTransporterMapping(externalId, {
+      workforce_member_id: Number(match.suggestion.proposed_workforce_member_id),
+      expected_updated_at: match.mapping.updated_at || null,
+    }, {
+      scorecardId: state.selectedScorecardId,
+    });
+    commit({ type: "identity-source-suggestion-confirmed", externalId });
+    await refreshInlineMappingSurfaces();
+    return true;
+  } catch {
+    commit({ type: "identity-source-suggestion-failed", externalId });
+    return false;
+  }
+}
+
+
+function chooseInlineSuggestionCandidate(externalId) {
+  if (!identitySuggestion(externalId) || !reconciliationMapping(externalId)) return;
+  commit({ type: "reconciliation-row-opened", externalId });
+  void loadMappingHistory(externalId);
+  requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
+}
+
+
+function openInlineBulkConfirmation() {
+  if (!safeSelectedSuggestions().length || identitySourceState().bulkSaving) return;
+  commit({ type: "identity-source-bulk-dialog-opened" });
+  requestAnimationFrame(() => root.querySelector("[data-quality-suggestion-bulk-final]")?.focus());
+}
+
+
+async function confirmInlineBulkSuggestions() {
+  const selected = safeSelectedSuggestions();
+  if (!selected.length || identitySourceState().bulkSaving) return;
+  const externalIds = selected.map(item => item.suggestion.transporter_external_id);
+  commit({ type: "identity-source-bulk-started", externalIds });
+  const results = await mapWithConcurrency(selected, 4, async ({ suggestion, mapping }) => {
+    const externalId = suggestion.transporter_external_id;
+    try {
+      await putTransporterMapping(externalId, {
+        workforce_member_id: Number(suggestion.proposed_workforce_member_id),
+        expected_updated_at: mapping.updated_at || null,
+      }, {
+        scorecardId: state.selectedScorecardId,
+      });
+      return { externalId, confirmed: true };
+    } catch {
+      return { externalId, confirmed: false };
+    }
+  });
+  const confirmedIds = results.filter(item => item.confirmed).map(item => item.externalId);
+  const failedIds = results.filter(item => !item.confirmed).map(item => item.externalId);
+  commit({ type: "identity-source-bulk-completed", confirmedIds, failedIds });
+  await refreshInlineMappingSurfaces();
 }
 
 
@@ -617,6 +725,17 @@ function bindEvents() {
     if (event.target.closest("[data-quality-identity-analyze]")) void analyzeIdentitySource({ selection: identitySourceState().selection });
     if (event.target.closest("[data-quality-identity-apply]")) void applyExactIdentitySource();
     if (event.target.closest("[data-quality-identity-reset]")) commit({ type: "identity-source-reset" });
+    const inlineConfirmId = event.target.closest("[data-quality-suggestion-confirm]")?.dataset.qualitySuggestionConfirm;
+    if (inlineConfirmId) void confirmInlineSuggestion(inlineConfirmId);
+    const inlineChooseId = event.target.closest("[data-quality-suggestion-choose]")?.dataset.qualitySuggestionChoose;
+    if (inlineChooseId) chooseInlineSuggestionCandidate(inlineChooseId);
+    if (event.target.closest("[data-quality-suggestion-bulk-open]")) openInlineBulkConfirmation();
+    if (event.target.closest("[data-quality-suggestion-bulk-cancel]")) {
+      commit({ type: "identity-source-bulk-dialog-closed" });
+    }
+    if (event.target.closest("[data-quality-suggestion-bulk-final]")) {
+      void confirmInlineBulkSuggestions();
+    }
     if (event.target.closest("[data-quality-suggestion-review-open]")) {
       event.preventDefault();
       openSuggestionReview();
@@ -710,6 +829,26 @@ function bindEvents() {
         type: "identity-source-selection-changed",
         field: event.target.dataset.qualityIdentitySelection,
         value: event.target.value,
+      });
+    }
+    if (event.target.matches("[data-quality-suggestion-select]")) {
+      const externalId = event.target.dataset.qualitySuggestionSelect;
+      if (safeInlineSuggestion(externalId)) {
+        commit({
+          type: "identity-source-suggestion-selection-changed",
+          externalId,
+          selected: event.target.checked,
+        });
+      }
+    }
+    if (event.target.matches("[data-quality-suggestion-select-all]")) {
+      const externalIds = (identitySourceState().preview?.rows || [])
+        .map(row => row.transporter_external_id)
+        .filter(externalId => safeInlineSuggestion(externalId));
+      commit({
+        type: "identity-source-suggestion-visible-selection-changed",
+        externalIds,
+        selected: event.target.checked,
       });
     }
     if (event.target.matches("[data-quality-scorecard-select]")) {

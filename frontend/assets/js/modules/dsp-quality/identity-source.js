@@ -14,6 +14,13 @@ export function createIdentitySourceState() {
     error: null,
     bucket: "suggested",
     selection: { sheet: "", transporterColumn: "", driverColumn: "" },
+    selectedSuggestionIds: [],
+    savingSuggestionIds: [],
+    confirmedSuggestionIds: [],
+    failedSuggestionIds: [],
+    bulkSaving: false,
+    bulkDialogOpen: false,
+    bulkResult: null,
     review: createSuggestionReviewState(),
   };
 }
@@ -62,6 +69,67 @@ export function applyIdentitySourceEvent(state, event) {
       };
     case "identity-source-bucket-changed":
       return { ...state, bucket: event.bucket };
+    case "identity-source-suggestion-selection-changed":
+      return {
+        ...state,
+        selectedSuggestionIds: event.selected
+          ? [...new Set([...state.selectedSuggestionIds, event.externalId])]
+          : state.selectedSuggestionIds.filter(item => item !== event.externalId),
+        bulkResult: null,
+      };
+    case "identity-source-suggestion-visible-selection-changed":
+      return {
+        ...state,
+        selectedSuggestionIds: event.selected ? [...new Set(event.externalIds || [])] : [],
+        bulkResult: null,
+      };
+    case "identity-source-suggestion-saving":
+      return {
+        ...state,
+        savingSuggestionIds: [...new Set([...state.savingSuggestionIds, event.externalId])],
+        failedSuggestionIds: state.failedSuggestionIds.filter(item => item !== event.externalId),
+        bulkResult: null,
+      };
+    case "identity-source-suggestion-confirmed":
+      return {
+        ...state,
+        selectedSuggestionIds: state.selectedSuggestionIds.filter(item => item !== event.externalId),
+        savingSuggestionIds: state.savingSuggestionIds.filter(item => item !== event.externalId),
+        confirmedSuggestionIds: [...new Set([...state.confirmedSuggestionIds, event.externalId])],
+        failedSuggestionIds: state.failedSuggestionIds.filter(item => item !== event.externalId),
+      };
+    case "identity-source-suggestion-failed":
+      return {
+        ...state,
+        savingSuggestionIds: state.savingSuggestionIds.filter(item => item !== event.externalId),
+        failedSuggestionIds: [...new Set([...state.failedSuggestionIds, event.externalId])],
+      };
+    case "identity-source-bulk-dialog-opened":
+      return { ...state, bulkDialogOpen: true, bulkResult: null };
+    case "identity-source-bulk-dialog-closed":
+      return { ...state, bulkDialogOpen: false };
+    case "identity-source-bulk-started":
+      return {
+        ...state,
+        bulkSaving: true,
+        savingSuggestionIds: [...new Set(event.externalIds || [])],
+        failedSuggestionIds: [],
+        bulkResult: null,
+      };
+    case "identity-source-bulk-completed": {
+      const confirmed = event.confirmedIds || [];
+      const failed = event.failedIds || [];
+      return {
+        ...state,
+        bulkSaving: false,
+        bulkDialogOpen: false,
+        savingSuggestionIds: [],
+        confirmedSuggestionIds: [...new Set([...state.confirmedSuggestionIds, ...confirmed])],
+        failedSuggestionIds: failed,
+        selectedSuggestionIds: failed,
+        bulkResult: { confirmed: confirmed.length, failed: failed.length },
+      };
+    }
     case "identity-source-apply-started":
       return { ...state, phase: "applying", error: null };
     case "identity-source-apply-completed":
@@ -73,6 +141,20 @@ export function applyIdentitySourceEvent(state, event) {
     default:
       return state;
   }
+}
+
+
+export async function mapWithConcurrency(items = [], limit = 4, worker) {
+  const queue = [...items];
+  const results = [];
+  const concurrency = Math.max(1, Math.min(Number(limit) || 1, queue.length || 1));
+  await Promise.all(Array.from({ length: concurrency }, async () => {
+    while (queue.length) {
+      const item = queue.shift();
+      results.push(await worker(item));
+    }
+  }));
+  return results;
 }
 
 

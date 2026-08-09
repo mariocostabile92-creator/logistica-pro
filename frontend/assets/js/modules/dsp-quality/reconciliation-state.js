@@ -1,7 +1,7 @@
 import {
   applyIdentitySourceEvent,
   createIdentitySourceState,
-} from "./identity-source.js?v=1";
+} from "./identity-source.js?v=3";
 
 
 export function createReconciliationState() {

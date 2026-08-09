@@ -57,7 +57,19 @@ function productionPreview() {
 
 
 function identityState(preview, bucket = "suggested", review = createSuggestionReviewState()) {
-  return { phase: "available", preview, bucket, review, selection: {} };
+  return {
+    phase: "available",
+    preview,
+    bucket,
+    review,
+    selection: {},
+    reconciliationRows: preview.rows.filter(row => row.status === "SUGGESTED").map(row => ({
+      transporter_external_id: row.transporter_external_id,
+      mapping_status: "UNMAPPED",
+      workforce_member_id: null,
+      updated_at: null,
+    })),
+  };
 }
 
 
@@ -68,10 +80,13 @@ test("production fixture exposes 128 suggested and 25 unresolved rows", () => {
 });
 
 
-test("Da verificare renders the existing 128 suggestions and review entry", () => {
+test("Da verificare renders 128 suggestions with inline actions", () => {
   const html = identitySourceMarkup(identityState(productionPreview()));
   assert.equal((html.match(/data-source-status="SUGGESTED"/g) || []).length, 128);
-  assert.match(html, /data-quality-suggestion-review-open/);
+  assert.equal((html.match(/data-quality-suggestion-confirm=/g) || []).length, 128);
+  assert.equal((html.match(/data-quality-suggestion-choose=/g) || []).length, 128);
+  assert.equal((html.match(/data-quality-suggestion-select=/g) || []).length, 128);
+  assert.doesNotMatch(html, /Rivedi suggerimenti/);
 });
 
 

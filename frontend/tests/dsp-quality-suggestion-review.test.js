@@ -62,17 +62,26 @@ function sourceState(review = createSuggestionReviewState()) {
     bucket: "suggested",
     review,
     selection: {},
+    reconciliationRows: suggestions.map(row => ({
+      transporter_external_id: row.transporter_external_id,
+      mapping_status: "UNMAPPED",
+      workforce_member_id: null,
+      updated_at: null,
+    })),
   };
 }
 
 
-test("Rivedi suggerimenti is visible when suggestions exist", () => {
-  assert.match(identitySourceMarkup(sourceState()), /Rivedi suggerimenti/);
+test("inline confirmation is visible when suggestions exist", () => {
+  const html = identitySourceMarkup(sourceState());
+  assert.match(html, /data-quality-suggestion-confirm="TID-1"/);
+  assert.match(html, /Scegli altro/);
+  assert.doesNotMatch(html, /Rivedi suggerimenti/);
 });
 
 
-test("entry point shows the dynamic review count", () => {
-  assert.match(identitySourceMarkup(sourceState()), /4 da verificare/);
+test("inline toolbar shows the dynamic selected count", () => {
+  assert.match(identitySourceMarkup(sourceState()), /Conferma selezionati \(0\)/);
 });
 
 
@@ -330,8 +339,9 @@ test("confirmation refreshes Q7 and Q8 without reload", async () => {
 });
 
 
-test("suggested bucket renders the review entry and every reviewable row", () => {
+test("suggested bucket renders inline controls on every reviewable row", () => {
   const html = identitySourceMarkup(sourceState());
   assert.equal((html.match(/data-source-status="SUGGESTED"/g) || []).length, 4);
-  assert.match(html, /data-quality-suggestion-review-open/);
+  assert.equal((html.match(/data-quality-suggestion-confirm=/g) || []).length, 4);
+  assert.equal((html.match(/data-quality-suggestion-select=/g) || []).length, 4);
 });

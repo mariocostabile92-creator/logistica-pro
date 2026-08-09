@@ -61,6 +61,12 @@ const availableState = (overrides = {}) => ({
   phase: "available",
   preview,
   bucket: "suggested",
+  reconciliationRows: [{
+    transporter_external_id: "A-SUGGEST",
+    mapping_status: "UNMAPPED",
+    workforce_member_id: null,
+    updated_at: null,
+  }],
   ...overrides,
 });
 
@@ -138,10 +144,12 @@ test("no silent or automatic apply copy exists", () => {
 });
 
 
-test("suggestions enter the individual review workflow", () => {
+test("suggestions expose the inline confirmation workflow", () => {
   const html = identitySourceMarkup(availableState());
-  assert.match(html, /data-quality-suggestion-review-open/);
-  assert.match(html, /Rivedi suggerimenti/);
+  assert.match(html, /data-quality-suggestion-confirm="A-SUGGEST"/);
+  assert.match(html, /data-quality-suggestion-choose="A-SUGGEST"/);
+  assert.match(html, /data-quality-suggestion-select="A-SUGGEST"/);
+  assert.doesNotMatch(html, /Rivedi suggerimenti/);
 });
 
 

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DSP Q8.7 inline DOM QA</title>
+  <link rel="stylesheet" href="../assets/css/design-system.css" />
+  <link rel="stylesheet" href="../assets/css/dsp-quality.css" />
+</head>
+<body>
+  <main id="q87Root" class="dsp-quality-root"></main>
+  <section id="q87Driver"></section>
+  <script type="module">
+    import {
+      applyIdentitySourceEvent,
+      createIdentitySourceState,
+      mapWithConcurrency,
+    } from "../assets/js/modules/dsp-quality/identity-source.js";
+    import { identitySourceMarkup } from "../assets/js/modules/dsp-quality/identity-source-presenter.js";
+    import { qualityDriversMarkup } from "../assets/js/modules/dsp-quality/drivers-presenter.js";
+
+    const names = ["Yassine Zyadi", "Alban Beqiraj", "Mirko Denti", "Valentina Beretta"];
+    const suggested = Array.from({ length: 128 }, (_, index) => ({
+      transporter_external_id: index === 0 ? "A1220Y3BKP176Z" : `TID-${String(index + 1).padStart(3, "0")}`,
+      source_driver_value: names[index] || `Driver ${index + 1}`,
+      proposed_workforce_member_id: index + 1,
+      proposed_display_name: names[index] || `Driver ${index + 1}`,
+      status: "SUGGESTED",
+      reason: "Corrispondenza da confermare.",
+    }));
+    const unresolved = Array.from({ length: 25 }, (_, index) => ({
+      transporter_external_id: `UNRESOLVED-${index + 1}`,
+      source_driver_value: "Non disponibile",
+      status: "UNRESOLVED",
+      reason: "Non trovato",
+    }));
+    const preview = {
+      valid: true,
+      source: { filename: "Planning.xlsx", sheet: "Planning", transporter_column: "T-ID", driver_column: "Driver", rows_detected: 142 },
+      coverage: { quality_transporters: 153, already_verified: 0, exact_matches: 0, suggestions: 128, unresolved: 25, conflicts: 0 },
+      rows: [...suggested, ...unresolved],
+    };
+    let reconciliationRows = suggested.map(row => ({
+      transporter_external_id: row.transporter_external_id,
+      mapping_status: "UNMAPPED",
+      workforce_member_id: null,
+      workforce_display_name: null,
+      updated_at: null,
+    }));
+    let state = {
+      ...createIdentitySourceState(),
+      phase: "available",
+      bucket: "suggested",
+      preview,
+    };
+    let putCalls = 0;
+    let activePuts = 0;
+    let maxConcurrency = 0;
+    const root = document.getElementById("q87Root");
+    const driverRoot = document.getElementById("q87Driver");
+
+    function metric(key, value) {
+      return { metric_key: key, current: { value_state: "PRESENT", raw_value: value } };
+    }
+
+    function driverMarkup() {
+      const matched = reconciliationRows.filter(row => row.mapping_status === "MATCHED");
+      if (!matched.length) return "";
+      const rows = matched.map((mapping, index) => ({
+        row_id: `driver-${index + 1}`,
+        row_index: index + 1,
+        transporter_external_id: mapping.transporter_external_id,
+        mapping_status: "MATCHED",
+        workforce_member_id: mapping.workforce_member_id,
+        workforce_display_name: mapping.workforce_display_name,
+        metrics: [
+          metric("delivery_completion_rate", "98.04%"),
+          metric("photo_on_delivery", "100%"),
+          metric("contact_compliance", "100%"),
+          metric("delivery_success_conditions_dpmo", "0"),
+          metric("customer_delivery_feedback_dpmo", "6667"),
+          metric("customer_escalations_count", "0"),
+          metric("delivered", "150"),
+        ],
+      }));
+      return qualityDriversMarkup({
+        phase: "available",
+        canManageMappings: true,
+        filter: "all",
+        search: "",
+        sort: { key: "row_index", direction: "asc" },
+        data: {
+          available: true,
+          drivers_available: true,
+          current_period: { week: 46, year: 2026 },
+          summary: { total: 153, matched: matched.length, unmapped: 153 - matched.length },
+          rows,
+        },
+        reconciliation: { open: false },
+      });
+    }
+
+    function render() {
+      const matched = reconciliationRows.filter(row => row.mapping_status === "MATCHED").length;
+      root.innerHTML = `
+        <dl data-q87-summary><div>Associati <strong>${matched}</strong></div><div>Da associare <strong>${153 - matched}</strong></div></dl>
+        ${identitySourceMarkup({ ...state, reconciliationRows })}
+      `;
+      driverRoot.innerHTML = driverMarkup();
+      document.body.dataset.putCalls = String(putCalls);
+      document.body.dataset.matched = String(matched);
+      document.body.dataset.unmapped = String(153 - matched);
+      document.body.dataset.maxConcurrency = String(maxConcurrency);
+    }
+
+    async function fakePut(externalId) {
+      putCalls += 1;
+      activePuts += 1;
+      maxConcurrency = Math.max(maxConcurrency, activePuts);
+      await new Promise(resolve => setTimeout(resolve, 15));
+      const suggestion = suggested.find(row => row.transporter_external_id === externalId);
+      reconciliationRows = reconciliationRows.map(row => row.transporter_external_id === externalId ? {
+        ...row,
+        mapping_status: "MATCHED",
+        workforce_member_id: suggestion.proposed_workforce_member_id,
+        workforce_display_name: suggestion.proposed_display_name,
+      } : row);
+      activePuts -= 1;
+    }
+
+    root.addEventListener("change", event => {
+      if (event.target.matches("[data-quality-suggestion-select]")) {
+        state = applyIdentitySourceEvent(state, {
+          type: "identity-source-suggestion-selection-changed",
+          externalId: event.target.dataset.qualitySuggestionSelect,
+          selected: event.target.checked,
+        });
+        render();
+      }
+      if (event.target.matches("[data-quality-suggestion-select-all]")) {
+        state = applyIdentitySourceEvent(state, {
+          type: "identity-source-suggestion-visible-selection-changed",
+          selected: event.target.checked,
+          externalIds: reconciliationRows.filter(row => row.mapping_status === "UNMAPPED").map(row => row.transporter_external_id),
+        });
+        render();
+      }
+    });
+
+    root.addEventListener("click", async event => {
+      const confirm = event.target.closest("[data-quality-suggestion-confirm]")?.dataset.qualitySuggestionConfirm;
+      if (confirm) {
+        state = applyIdentitySourceEvent(state, { type: "identity-source-suggestion-saving", externalId: confirm });
+        render();
+        await fakePut(confirm);
+        state = applyIdentitySourceEvent(state, { type: "identity-source-suggestion-confirmed", externalId: confirm });
+        render();
+      }
+      const choose = event.target.closest("[data-quality-suggestion-choose]")?.dataset.qualitySuggestionChoose;
+      if (choose) {
+        root.dataset.manualChooser = choose;
+      }
+      if (event.target.closest("[data-quality-suggestion-bulk-open]")) {
+        state = applyIdentitySourceEvent(state, { type: "identity-source-bulk-dialog-opened" });
+        render();
+      }
+      if (event.target.closest("[data-quality-suggestion-bulk-cancel]")) {
+        state = applyIdentitySourceEvent(state, { type: "identity-source-bulk-dialog-closed" });
+        render();
+      }
+      if (event.target.closest("[data-quality-suggestion-bulk-final]")) {
+        const ids = [...state.selectedSuggestionIds];
+        state = applyIdentitySourceEvent(state, { type: "identity-source-bulk-started", externalIds: ids });
+        render();
+        const results = await mapWithConcurrency(ids, 4, async externalId => {
+          await fakePut(externalId);
+          return externalId;
+        });
+        state = applyIdentitySourceEvent(state, {
+          type: "identity-source-bulk-completed",
+          confirmedIds: results,
+          failedIds: [],
+        });
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

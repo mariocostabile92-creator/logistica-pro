@@ -3,7 +3,7 @@ import {
   qualityActionLabel,
 } from "./import.js";
 import { qualityMetricsMarkup } from "./metrics-presenter.js?v=3";
-import { qualityDriversMarkup } from "./drivers-presenter.js?v=6";
+import { qualityDriversMarkup } from "./drivers-presenter.js?v=7";
 import { mountSuggestionReview } from "./suggestion-review-presenter.js?v=2";
 
 
