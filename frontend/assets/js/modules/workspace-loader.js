@@ -131,7 +131,7 @@ const WORKSPACE_PREPARERS = {
   },
   dsp: async () => {
     const [module] = await Promise.all([
-      import("./dsp-shell/index.js?v=13"),
+      import("./dsp-shell/index.js?v=14"),
       loadWorkspaceStyles("dsp"),
     ]);
     return async () => {

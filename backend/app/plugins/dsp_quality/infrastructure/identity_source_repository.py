@@ -17,12 +17,31 @@ def strict_workforce_members(organization_id: str) -> list[dict]:
 def latest_planning_source(organization_id: str) -> dict | None:
     with db_session() as conn:
         row = conn.execute(
-            """SELECT id, original_filename, sheet_name, normalized_rows, imported_at
-               FROM imports
-               WHERE organization_id = ? AND dataset_type = 'planning'
-               ORDER BY id DESC LIMIT 1""",
-            (organization_id,),
+            """SELECT i.id, i.original_filename, i.sheet_name,
+                      i.normalized_rows, i.imported_at,
+                      p.id AS planning_id, p.status AS planning_status,
+                      p.operation_date
+               FROM plannings p
+               JOIN imports i ON i.id = p.source_planning_import_id
+               WHERE p.organization_id = ?
+                 AND i.organization_id = ?
+                 AND i.dataset_type = 'planning'
+               ORDER BY p.id DESC
+               LIMIT 1""",
+            (organization_id, organization_id),
         ).fetchone()
+        if not row:
+            row = conn.execute(
+                """SELECT id, original_filename, sheet_name,
+                          normalized_rows, imported_at,
+                          NULL AS planning_id, NULL AS planning_status,
+                          NULL AS operation_date
+                   FROM imports
+                   WHERE organization_id = ? AND dataset_type = 'planning'
+                   ORDER BY id DESC
+                   LIMIT 1""",
+                (organization_id,),
+            ).fetchone()
     if not row:
         return None
     return {
@@ -31,6 +50,9 @@ def latest_planning_source(organization_id: str) -> dict | None:
         "sheet_name": row["sheet_name"],
         "normalized_rows": json.loads(row["normalized_rows"]),
         "imported_at": row["imported_at"],
+        "planning_id": row["planning_id"],
+        "planning_status": row["planning_status"],
+        "operation_date": row["operation_date"],
     }
 
 
@@ -114,4 +136,3 @@ def apply_exact_mappings(
             )
             applied.append(item["transporter_external_id"])
     return {"applied": applied, "already_verified": already_verified}
-

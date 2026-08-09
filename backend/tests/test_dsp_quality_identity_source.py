@@ -20,6 +20,7 @@ from app.plugins.dsp_quality.application.import_contract import (
 from app.plugins.dsp_quality.application.import_service import ingest_quality_document
 from app.plugins.dsp_quality.application.reconciliation_service import put_mapping, reconciliation_state
 from app.plugins.dsp_quality.infrastructure.adapters.tabular_identity_source import IdentitySourceSelection
+from app.plugins.dsp_quality.infrastructure.identity_source_repository import latest_planning_source
 
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "dsp_quality_week47.json"
@@ -307,6 +308,113 @@ def test_planning_source_reuses_persisted_raw_rows_as_suggestions():
     row = next(item for item in preview.rows if item.transporter_external_id == FIRST)
     assert preview.source.source_reference.startswith("planning-import:")
     assert row.status == "SUGGESTED"
+
+
+def _operational_planning_source(
+    organization_id: str,
+    *,
+    source_rows: list[dict],
+    filename: str = "Planning operativo.xlsx",
+) -> int:
+    now = "2026-08-09T10:00:00+00:00"
+    with db_session() as conn:
+        planning_import = conn.execute(
+            """INSERT INTO imports (
+                   organization_id, dataset_type, original_filename, imported_at,
+                   sheet_name, column_mapping, normalized_rows
+               ) VALUES (?, 'planning', ?, ?, 'Planning', '[]', ?)""",
+            (organization_id, filename, now, json.dumps(source_rows)),
+        ).lastrowid
+        fleet_import = conn.execute(
+            """INSERT INTO imports (
+                   organization_id, dataset_type, original_filename, imported_at,
+                   sheet_name, column_mapping, normalized_rows
+               ) VALUES (?, 'fleet', 'Fleet.xlsx', ?, 'Fleet', '[]', '[]')""",
+            (organization_id, now),
+        ).lastrowid
+        return int(conn.execute(
+            """INSERT INTO plannings (
+                   organization_id, operation_date, station,
+                   source_planning_import_id, source_fleet_import_id,
+                   status, version, reserve_threshold, configuration,
+                   summary, conflicts, generation_metadata, created_at, updated_at
+               ) VALUES (?, '2026-08-09', 'DLO2', ?, ?, 'published', 1, 0,
+                         '{}', '{}', '[]', '{}', ?, ?)""",
+            (organization_id, planning_import, fleet_import, now, now),
+        ).lastrowid)
+
+
+def test_planning_source_prefers_current_operational_planning_import():
+    scorecard = _persist("q84-authoritative")
+    _member("q84-authoritative", "Alban Beqiraj", "WF-ALBAN")
+    _operational_planning_source(
+        "q84-authoritative",
+        source_rows=[{
+            "row_number": 25,
+            "raw": {"T-ID": FIRST, "drivers": "Alban Beqiraj", "CF": "ignored"},
+        }],
+    )
+    with db_session() as conn:
+        conn.execute(
+            """INSERT INTO imports (
+                   organization_id, dataset_type, original_filename, imported_at,
+                   sheet_name, column_mapping, normalized_rows
+               ) VALUES (?, 'planning', 'Unpublished.xlsx', ?, 'Planning', '[]', '[]')""",
+            ("q84-authoritative", "2026-08-09T11:00:00+00:00"),
+        )
+
+    source = latest_planning_source("q84-authoritative")
+    assert source["planning_status"] == "published"
+    assert source["operation_date"] == "2026-08-09"
+    assert source["normalized_rows"][0]["raw"]["T-ID"] == FIRST
+    preview = preview_identity_source(
+        organization_id="q84-authoritative",
+        scorecard_id=scorecard.scorecard_id,
+        use_planning=True,
+    )
+    row = next(item for item in preview.rows if item.transporter_external_id == FIRST)
+    assert row.status == "SUGGESTED"
+    assert row.source_row == 2
+
+
+def test_planning_source_never_falls_back_to_default_or_another_organization():
+    _operational_planning_source(
+        "default",
+        source_rows=[{"raw": {"T-ID": FIRST, "drivers": "Default Driver"}}],
+    )
+    _operational_planning_source(
+        "q84-other",
+        source_rows=[{"raw": {"T-ID": FIRST, "drivers": "Other Driver"}}],
+    )
+    assert latest_planning_source("q84-requested") is None
+
+
+def test_openapi_registers_identity_source_post_contracts():
+    paths = app.openapi()["paths"]
+    assert "post" in paths["/api/dsp-quality/transporter-mappings/source-preview"]
+    assert "post" in paths["/api/dsp-quality/transporter-mappings/source-apply-exact"]
+
+
+def test_source_preview_api_uses_authenticated_organization_planning():
+    scorecard = _persist("test-organization")
+    _member("test-organization", "Alban Beqiraj", "WF-ALBAN")
+    _operational_planning_source(
+        "test-organization",
+        source_rows=[{
+            "row_number": 25,
+            "raw": {"T-ID": FIRST, "drivers": "Alban Beqiraj"},
+        }],
+    )
+    client = TestClient(app)
+    response = client.post(
+        "/api/dsp-quality/transporter-mappings/source-preview",
+        data={
+            "scorecard_id": scorecard.scorecard_id,
+            "use_planning": "true",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["coverage"]["suggestions"] == 1
 
 
 def test_source_preview_api_accepts_selected_scorecard_and_csv():

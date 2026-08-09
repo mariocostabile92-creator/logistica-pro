@@ -17,6 +17,7 @@ import {
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
 import { validateIdentitySourceFile } from "./identity-source.js?v=2";
 import { renderDspQuality } from "./presenter.js?v=9";
+import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=8";
 import {
   currentSuggestion,
   isReviewShortcutTarget,
@@ -52,6 +53,15 @@ let reviewCandidateTimer = null;
 function commit(event) {
   state = applyDspQualityEvent(state, event);
   renderDspQuality(root, deriveDspQualityView(state));
+}
+
+
+function commitCandidateRegion(event) {
+  state = applyDspQualityEvent(state, event);
+  const reconciliation = state.drivers?.reconciliation || {};
+  if (!updateReconciliationCandidateRegion(root, reconciliation)) {
+    renderDspQuality(root, deriveDspQualityView(state));
+  }
 }
 
 
@@ -467,11 +477,11 @@ async function loadCandidates(query) {
       signal: candidateRequestController.signal,
     });
     if (state.drivers?.reconciliation?.candidateSearch === query) {
-      commit({ type: "candidates-completed", items: result.items || [] });
+      commitCandidateRegion({ type: "candidates-completed", items: result.items || [] });
     }
   } catch (error) {
     if (error?.name === "AbortError") return;
-    commit({ type: "candidates-failed", message: "Ricerca Workforce non disponibile." });
+    commitCandidateRegion({ type: "candidates-failed", message: "Ricerca Workforce non disponibile." });
   }
 }
 
@@ -730,10 +740,9 @@ function bindEvents() {
     }
     if (event.target.matches("[data-quality-candidate-search]")) {
       const query = event.target.value;
-      commit({ type: "candidate-search-changed", search: query });
+      commitCandidateRegion({ type: "candidate-search-changed", search: query });
       clearTimeout(candidateTimer);
       candidateTimer = setTimeout(() => void loadCandidates(query), 250);
-      requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
     }
     if (event.target.matches("[data-quality-review-search]")) {
       const query = event.target.value;

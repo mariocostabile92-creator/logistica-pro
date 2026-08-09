@@ -84,6 +84,31 @@ function candidateMarkup(state) {
 }
 
 
+export function reconciliationCandidateRegionMarkup(state = {}, row = null) {
+  const selected = state.selectedCandidate;
+  const confirmation = selected && row
+    ? `<div class="dsp-quality-mapping-confirmation" role="status">
+        <span>${escapeHtml(row.transporter_external_id)}</span><strong aria-hidden="true">→</strong><span>${escapeHtml(selected.display_name)}</span>
+      </div>
+      <button type="button" class="primary" data-quality-mapping-confirm>Conferma associazione</button>`
+    : '<p class="dsp-quality-reconciliation-neutral">Seleziona un risultato. Nessuna associazione viene salvata automaticamente.</p>';
+  return `${candidateMarkup(state)}${confirmation}${state.error
+    ? `<p class="dsp-quality-reconciliation-error" role="alert">${escapeHtml(state.error)}</p>`
+    : ""}`;
+}
+
+
+export function updateReconciliationCandidateRegion(root, state = {}) {
+  const region = root?.querySelector?.("[data-quality-candidate-region]");
+  if (!region) return false;
+  const row = (state.data?.rows || []).find(
+    item => item.transporter_external_id === state.activeExternalId,
+  );
+  region.innerHTML = reconciliationCandidateRegionMarkup(state, row);
+  return true;
+}
+
+
 function associationPanel(row, state) {
   if (!row) return "";
   const selected = state.selectedCandidate;
@@ -98,6 +123,7 @@ function associationPanel(row, state) {
       <label for="qualityWorkforceSearch">Cerca driver Workforce</label>
       <input id="qualityWorkforceSearch" type="search" data-quality-candidate-search
         value="${escapeHtml(state.candidateSearch)}" placeholder="Nome, ID o station" autocomplete="off" />
+      <div data-quality-candidate-region>
       ${candidateMarkup(state)}
       ${selected ? `
         <div class="dsp-quality-mapping-confirmation" role="status">
@@ -107,6 +133,7 @@ function associationPanel(row, state) {
       ` : '<p class="dsp-quality-reconciliation-neutral">Seleziona un risultato. Nessuna associazione viene salvata automaticamente.</p>'}
       ${row.mapping_status === "MATCHED" ? '<button type="button" class="danger-outline" data-quality-mapping-remove>Rimuovi associazione</button>' : ""}
       ${state.error ? `<p class="dsp-quality-reconciliation-error" role="alert">${escapeHtml(state.error)}</p>` : ""}
+      </div>
       <details class="dsp-quality-mapping-history-wrap">
         <summary>Cronologia associazione</summary>
         ${historyMarkup(state.history)}
