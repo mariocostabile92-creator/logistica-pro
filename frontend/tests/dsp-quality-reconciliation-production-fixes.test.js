@@ -93,7 +93,7 @@ test("input handler keeps debounce and avoids destructive full commit or refocus
   const controller = await source("assets/js/modules/dsp-quality/index.js");
   const branch = controller.match(/if \(event\.target\.matches\("\[data-quality-candidate-search\]"\)\) \{([\s\S]*?)\n    \}/)?.[1] || "";
   assert.match(branch, /commitCandidateRegion/);
-  assert.match(branch, /setTimeout\(\(\) => void loadCandidates\(query\), 250\)/);
+  assert.match(branch, /setTimeout\(\(\) => void loadCandidates\(query, version\), 225\)/);
   assert.doesNotMatch(branch, /\bcommit\(|requestAnimationFrame|\.focus\(/);
 });
 

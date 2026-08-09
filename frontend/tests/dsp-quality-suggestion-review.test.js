@@ -330,8 +330,8 @@ test("confirmation refreshes Q7 and Q8 without reload", async () => {
 });
 
 
-test("overview renders one review entry instead of every suggestion card", () => {
+test("suggested bucket renders the review entry and every reviewable row", () => {
   const html = identitySourceMarkup(sourceState());
-  assert.equal((html.match(/data-source-status="SUGGESTED"/g) || []).length, 0);
+  assert.equal((html.match(/data-source-status="SUGGESTED"/g) || []).length, 4);
   assert.match(html, /data-quality-suggestion-review-open/);
 });

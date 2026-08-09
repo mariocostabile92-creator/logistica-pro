@@ -254,7 +254,7 @@ test("history endpoint is organization-derived server-side", async () => {
 
 test("controller implements debounce next-unmapped reload and Q7 refresh", async () => {
   const controller = await source("assets/js/modules/dsp-quality/index.js");
-  assert.match(controller, /setTimeout\(\(\) => void loadCandidates\(query\), 250\)/);
+  assert.match(controller, /setTimeout\(\(\) => void loadCandidates\(query, version\), 225\)/);
   assert.match(controller, /nextUnmapped/);
   assert.match(controller, /loadDrivers\(\{ force: true \}\)/);
   assert.match(controller, /loadReconciliation\(\{ keepFilter: true, advanceAfter:/);

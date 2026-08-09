@@ -74,12 +74,15 @@ function previewMarkup(state) {
     ["conflict", "Conflitti", preview.coverage?.conflicts || 0],
   ];
   const suggestions = Number(preview.coverage?.suggestions || 0);
+  const rowsList = `<div class="dsp-quality-source-rows">${rows.length
+    ? rows.map(rowMarkup).join("")
+    : '<p class="dsp-quality-reconciliation-neutral">Nessuna evidenza in questa categoria.</p>'}</div>`;
   const rowsMarkup = state.bucket === "suggested"
     ? `<div class="dsp-quality-source-review-entry">
         <div><strong>${escapeHtml(suggestions)} da verificare</strong><span>Rivedi una corrispondenza alla volta con conferma umana.</span></div>
         <button type="button" class="primary" data-quality-suggestion-review-open ${suggestions ? "" : "disabled"}>Rivedi suggerimenti</button>
-      </div>`
-    : `<div class="dsp-quality-source-rows">${rows.length ? rows.map(rowMarkup).join("") : '<p class="dsp-quality-reconciliation-neutral">Nessuna evidenza in questa categoria.</p>'}</div>`;
+      </div>${rowsList}`
+    : rowsList;
   return `
     <div class="dsp-quality-source-detection">
       <div><span>File</span><strong>${escapeHtml(source.filename)}</strong></div>

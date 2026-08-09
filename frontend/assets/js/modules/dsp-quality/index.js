@@ -16,8 +16,8 @@ import {
 } from "./api.js?v=7";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
 import { validateIdentitySourceFile } from "./identity-source.js?v=2";
-import { renderDspQuality } from "./presenter.js?v=9";
-import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=8";
+import { renderDspQuality } from "./presenter.js?v=10";
+import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=9";
 import {
   currentSuggestion,
   isReviewShortcutTarget,
@@ -44,6 +44,7 @@ let driversRequestVersion = 0;
 let driversRequestController = null;
 let reconciliationRequestController = null;
 let candidateRequestController = null;
+let candidateRequestVersion = 0;
 let candidateTimer = null;
 let identitySourceRequestController = null;
 let reviewCandidateRequestController = null;
@@ -468,20 +469,23 @@ async function openReconciliation(externalId = null) {
 }
 
 
-async function loadCandidates(query) {
-  candidateRequestController?.abort();
-  if (query.trim().length < 2) return;
+async function loadCandidates(query, version) {
+  if (query.trim().length < 2 || version !== candidateRequestVersion) return;
   candidateRequestController = new AbortController();
   try {
     const result = await searchQualityWorkforceCandidates(query, {
       signal: candidateRequestController.signal,
     });
-    if (state.drivers?.reconciliation?.candidateSearch === query) {
+    if (version === candidateRequestVersion
+      && state.drivers?.reconciliation?.candidateSearch === query) {
       commitCandidateRegion({ type: "candidates-completed", items: result.items || [] });
     }
   } catch (error) {
     if (error?.name === "AbortError") return;
-    commitCandidateRegion({ type: "candidates-failed", message: "Ricerca Workforce non disponibile." });
+    if (version === candidateRequestVersion
+      && state.drivers?.reconciliation?.candidateSearch === query) {
+      commitCandidateRegion({ type: "candidates-failed", message: "Ricerca Workforce non disponibile." });
+    }
   }
 }
 
@@ -613,7 +617,11 @@ function bindEvents() {
     if (event.target.closest("[data-quality-identity-analyze]")) void analyzeIdentitySource({ selection: identitySourceState().selection });
     if (event.target.closest("[data-quality-identity-apply]")) void applyExactIdentitySource();
     if (event.target.closest("[data-quality-identity-reset]")) commit({ type: "identity-source-reset" });
-    if (event.target.closest("[data-quality-suggestion-review-open]")) openSuggestionReview();
+    if (event.target.closest("[data-quality-suggestion-review-open]")) {
+      event.preventDefault();
+      openSuggestionReview();
+      return;
+    }
     if (event.target.closest("[data-quality-review-close]")) closeSuggestionReview();
     if (event.target.closest("[data-quality-review-confirm]")) {
       const suggestion = currentSuggestion(suggestionReviewState());
@@ -740,9 +748,13 @@ function bindEvents() {
     }
     if (event.target.matches("[data-quality-candidate-search]")) {
       const query = event.target.value;
+      candidateRequestController?.abort();
+      candidateRequestController = null;
+      candidateRequestVersion += 1;
+      const version = candidateRequestVersion;
       commitCandidateRegion({ type: "candidate-search-changed", search: query });
       clearTimeout(candidateTimer);
-      candidateTimer = setTimeout(() => void loadCandidates(query), 250);
+      candidateTimer = setTimeout(() => void loadCandidates(query, version), 225);
     }
     if (event.target.matches("[data-quality-review-search]")) {
       const query = event.target.value;

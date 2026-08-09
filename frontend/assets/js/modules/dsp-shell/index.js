@@ -21,7 +21,7 @@ function refs() {
 
 function loadQuality() {
   if (!qualityModulePromise) {
-    qualityModulePromise = import("../dsp-quality/index.js?v=14");
+    qualityModulePromise = import("../dsp-quality/index.js?v=15");
   }
   return qualityModulePromise;
 }
