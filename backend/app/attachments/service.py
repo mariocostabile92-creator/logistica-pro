@@ -71,7 +71,8 @@ def upload(
 ) -> dict:
     if entity_type not in SUPPORTED_ENTITY_TYPES:
         raise AttachmentError("Tipo entità allegato non supportato.")
-    if not repository.entity_exists(entity_type, entity_id):
+    entity_scope = organization_id if entity_type == "quality_scorecard" else None
+    if not repository.entity_exists(entity_type, entity_id, entity_scope):
         raise AttachmentError("Entità collegata non trovata.", 404)
     _authorize_document(entity_type, entity_id, organization_id)
     safe_name = Path(filename or "allegato").name

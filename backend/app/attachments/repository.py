@@ -58,8 +58,12 @@ def _dict(row) -> dict | None:
     return {key: row[key] for key in row.keys()} if row else None
 
 
-def entity_exists(entity_type: str, entity_id: int) -> bool:
-    organization_id = current_organization_id()
+def entity_exists(
+    entity_type: str,
+    entity_id: int,
+    organization_id: str | None = None,
+) -> bool:
+    organization_id = organization_id or current_organization_id()
     queries = {
         "document": "SELECT 1 FROM fleet_vehicle_documents WHERE id=? AND organization_id=?",
         "insurance": "SELECT 1 FROM fleet_insurance_policies p JOIN fleet_assets a ON a.id=p.vehicle_id WHERE p.id=? AND a.organization_id=?",
@@ -67,6 +71,7 @@ def entity_exists(entity_type: str, entity_id: int) -> bool:
         "rental": "SELECT 1 FROM fleet_rentals WHERE id=? AND organization_id=?",
         "maintenance": "SELECT 1 FROM fleet_maintenances m JOIN fleet_assets a ON a.id=m.vehicle_id WHERE m.id=? AND a.organization_id=?",
         "vehicle": "SELECT 1 FROM fleet_assets WHERE id=? AND organization_id=?",
+        "quality_scorecard": "SELECT 1 FROM dsp_quality_scorecards WHERE attachment_entity_id=? AND organization_id=?",
     }
     query = queries.get(entity_type)
     if not query:

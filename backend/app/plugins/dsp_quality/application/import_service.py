@@ -17,7 +17,7 @@ from app.plugins.dsp_quality.domain.models import (
 from app.plugins.dsp_quality.infrastructure import repository
 
 
-def _select_adapter(
+def select_adapter(
     source: QualitySourceInput,
     adapters: list[QualityScorecardAdapter],
 ) -> QualityScorecardAdapter:
@@ -29,7 +29,7 @@ def _select_adapter(
     return supported[0]
 
 
-def _document_from_adapter(
+def document_from_adapter(
     source: QualitySourceInput,
     adapter: QualityScorecardAdapter,
 ) -> QualityImportDocument:
@@ -49,7 +49,7 @@ def _document_from_adapter(
     )
 
 
-def _validate_document(document: QualityImportDocument) -> dict[str, dict]:
+def validate_import_document(document: QualityImportDocument) -> dict[str, dict]:
     definitions = repository.metric_definitions()
     if not definitions:
         raise ValueError("DSP Quality metric catalog is not initialized.")
@@ -89,7 +89,7 @@ def _validate_document(document: QualityImportDocument) -> dict[str, dict]:
     return definitions
 
 
-def _normalize_metrics(metrics, definitions, rule_version):
+def normalize_metrics(metrics, definitions, rule_version):
     result = {}
     for metric in metrics:
         value_type = QualityValueType(definitions[metric.metric_key]["value_type"])
@@ -127,11 +127,11 @@ def ingest_quality_document(
         raise ValueError("Organization and importer are required.")
     if not source_content:
         raise ValueError("Source content is required for traceability.")
-    definitions = _validate_document(document)
+    definitions = validate_import_document(document)
     rule_version = document.revision.normalization_rule_version
-    dsp_values = _normalize_metrics(document.dsp_metrics, definitions, rule_version)
+    dsp_values = normalize_metrics(document.dsp_metrics, definitions, rule_version)
     transporter_values = [
-        _normalize_metrics(row.metrics, definitions, rule_version)
+        normalize_metrics(row.metrics, definitions, rule_version)
         for row in document.transporter_rows
     ]
     working_hour_values = [
@@ -169,8 +169,8 @@ def ingest_quality_source(
     adapters: list[QualityScorecardAdapter],
     imported_by: str,
 ) -> QualityImportResult:
-    adapter = _select_adapter(source, adapters)
-    document = _document_from_adapter(source, adapter)
+    adapter = select_adapter(source, adapters)
+    document = document_from_adapter(source, adapter)
     return ingest_quality_document(
         organization_id=organization_id,
         document=document,

@@ -59,6 +59,7 @@ class QualityScorecard(BaseModel):
     reported_year: int
     reported_week: int = Field(ge=1, le=53)
     geography: str | None = None
+    attachment_entity_id: int | None = None
     active_revision_id: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -258,3 +259,4 @@ class QualityStandardRule(BaseModel):
     direction: QualityDirection
     raw_target: str | None = None
     raw_minimum: str | None = None
+    source_page: int | None = None

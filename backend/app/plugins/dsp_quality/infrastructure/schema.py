@@ -1,4 +1,5 @@
 from app.core.database import db_session
+from app.core.tenant_schema import ensure_column
 from app.plugins.dsp_quality.domain.metric_catalog import METRIC_DEFINITIONS
 
 
@@ -15,6 +16,7 @@ def init_schema() -> None:
                 reported_year INTEGER NOT NULL,
                 reported_week INTEGER NOT NULL,
                 geography TEXT,
+                attachment_entity_id INTEGER,
                 active_revision_id TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
@@ -210,6 +212,7 @@ def init_schema() -> None:
                 direction TEXT NOT NULL,
                 raw_target TEXT,
                 raw_minimum TEXT,
+                source_page INTEGER,
                 UNIQUE (standard_set_id, metric_key),
                 FOREIGN KEY (standard_set_id) REFERENCES dsp_quality_standard_sets(id),
                 FOREIGN KEY (metric_key) REFERENCES dsp_quality_metric_definitions(metric_key)
@@ -224,6 +227,22 @@ def init_schema() -> None:
             CREATE INDEX IF NOT EXISTS idx_workforce_external_identity_lookup
                 ON workforce_external_identities(organization_id, source, external_id);
             """
+        )
+        ensure_column(
+            conn,
+            "dsp_quality_scorecards",
+            "attachment_entity_id",
+            "INTEGER",
+        )
+        ensure_column(
+            conn,
+            "dsp_quality_standard_rules",
+            "source_page",
+            "INTEGER",
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_quality_scorecard_attachment "
+            "ON dsp_quality_scorecards(organization_id, attachment_entity_id)"
         )
         conn.executemany(
             """

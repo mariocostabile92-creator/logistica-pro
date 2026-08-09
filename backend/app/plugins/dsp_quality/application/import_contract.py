@@ -92,6 +92,7 @@ class QualityStandardRuleInput(BaseModel):
     direction: QualityDirection
     raw_target: str | None = None
     raw_minimum: str | None = None
+    source_page: int | None = None
 
 
 class QualityStandardsInput(BaseModel):

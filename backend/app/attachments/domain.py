@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 SUPPORTED_ENTITY_TYPES = {
     "document", "insurance", "damage", "rental", "maintenance", "vehicle",
+    "quality_scorecard",
 }
 SUPPORTED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov"}
 SUPPORTED_MIME_TYPES = {

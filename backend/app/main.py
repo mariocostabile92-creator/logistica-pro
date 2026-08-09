@@ -48,6 +48,7 @@ from app.demo.repository import init_schema as init_demo_schema
 from app.demo.router import router as demo_router
 from app.plugins.dsp_workspace.interfaces.router import router as dsp_workspace_router
 from app.plugins.dsp_quality.bootstrap import initialize_dsp_quality_plugin
+from app.plugins.dsp_quality.interfaces.router import router as dsp_quality_router
 from app.plugins.fleet.bootstrap import (
     initialize_fleet_plugin,
     register_fleet_plugin,
@@ -222,6 +223,7 @@ app.include_router(demo_router)
 app.include_router(briefing_router)
 app.include_router(workspace_router)
 app.include_router(dsp_workspace_router)
+app.include_router(dsp_quality_router)
 register_fleet_plugin(app)
 register_workforce_plugin(app)
 
