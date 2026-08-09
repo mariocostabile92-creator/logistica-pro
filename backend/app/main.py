@@ -47,6 +47,7 @@ from app.core.runtime_storage import initialize_runtime_storage
 from app.demo.repository import init_schema as init_demo_schema
 from app.demo.router import router as demo_router
 from app.plugins.dsp_workspace.interfaces.router import router as dsp_workspace_router
+from app.plugins.dsp_quality.bootstrap import initialize_dsp_quality_plugin
 from app.plugins.fleet.bootstrap import (
     initialize_fleet_plugin,
     register_fleet_plugin,
@@ -101,6 +102,7 @@ async def lifespan(app: FastAPI):
         init_configuration_schema()
         initialize_fleet_plugin()
         initialize_workforce_plugin()
+        initialize_dsp_quality_plugin()
         init_briefing_schema()
         init_demo_schema()
         init_workspace_schema()

@@ -1,0 +1,135 @@
+{
+  "identity": {
+    "source_provider": "amazon",
+    "dsp_identifier": "PROF",
+    "station": "DLO2",
+    "reported_year": 2025,
+    "reported_week": 47,
+    "geography": "IT"
+  },
+  "revision": {
+    "source_filename": "IT-PROF-DLO2-Week47-DSP-Scorecard-3.0.pdf",
+    "parser_adapter": "fixture.amazon_scorecard",
+    "parser_version": "q2-fixture-1",
+    "detected_template_version": "3.0",
+    "rank": 4,
+    "rank_wow_declared": -1,
+    "overall_score": "45.41",
+    "overall_standing": "Poor",
+    "raw_period_label": "Week 47 - 2025",
+    "normalization_rule_version": "amazon_scorecard_3.0"
+  },
+  "sections": [
+    {"section_key": "compliance_safety", "section_label": "Compliance and Safety", "standing": "Fantastic", "source_page": 2},
+    {"section_key": "delivery_quality_swc", "section_label": "Delivery Quality & SWC", "standing": "Poor", "source_page": 2},
+    {"section_key": "capacity", "section_label": "Capacity", "standing": "Fantastic", "source_page": 2}
+  ],
+  "dsp_metrics": [
+    {"metric_key": "overall_score", "raw_value": "45.41", "rating": "Poor", "source_page": 2, "extracted_label": "Overall Score"},
+    {"metric_key": "vsa_compliance", "raw_value": "98.02%", "rating": "Fantastic", "source_page": 2, "extracted_label": "Vehicle Audit (VSA) Compliance"},
+    {"metric_key": "breach_of_contract", "raw_value": "None", "compliance_state": "None", "source_page": 2, "extracted_label": "Breach of Contract (BOC)"},
+    {"metric_key": "working_hours_compliance", "raw_value": "100%", "rating": "Fantastic", "source_page": 2, "extracted_label": "Working Hours Compliance (WHC)"},
+    {"metric_key": "comprehensive_audit_score", "raw_value": "In Compliance", "compliance_state": "In Compliance", "source_page": 2, "extracted_label": "Comprehensive Audit Score (CAS)"},
+    {"metric_key": "customer_escalation_dpmo", "raw_value": "17", "rating": "Great", "source_page": 2, "extracted_label": "Customer escalation DPMO"},
+    {"metric_key": "customer_delivery_feedback_dpmo", "raw_value": "4280", "rating": "Poor", "source_page": 2, "extracted_label": "Customer Delivery Feedback"},
+    {"metric_key": "photo_on_delivery", "raw_value": "97.64%", "rating": "Fantastic", "source_page": 2, "extracted_label": "Photo-On-Delivery"},
+    {"metric_key": "contact_compliance", "raw_value": "95.16%", "rating": "Great", "source_page": 2, "extracted_label": "Contact Compliance"},
+    {"metric_key": "delivery_completion_rate", "raw_value": "96.93%", "rating": "Poor", "source_page": 2, "extracted_label": "Delivery Completion Rate (DCR)"},
+    {"metric_key": "delivered_not_received_dpmo", "raw_value": "1355", "rating": "Poor", "source_page": 2, "extracted_label": "Delivered Not Received (DNR DPMO)"},
+    {"metric_key": "lost_on_road_dpmo", "raw_value": "138", "rating": "Fair", "source_page": 2, "extracted_label": "Lost on Road (LoR) DPMO"},
+    {"metric_key": "delivery_success_conditions_dpmo", "raw_value": "1038", "rating": "Poor", "source_page": 2, "extracted_label": "Delivery Success Conditions (DSC DPMO)"},
+    {"metric_key": "next_day_capacity_reliability", "raw_value": "109.63%", "rating": "Fantastic", "source_page": 2, "extracted_label": "Next Day Capacity Reliability"},
+    {"metric_key": "same_day_capacity_reliability", "raw_value": "148%", "rating": "Fantastic", "source_page": 2, "extracted_label": "Same Day/Sub-Same Day Capacity Reliability"}
+  ],
+  "transporter_rows": [
+    {
+      "transporter_external_id": "A10GSCDE4XETEE", "row_index": 1, "source_page": 3,
+      "metrics": [
+        {"metric_key": "delivered", "raw_value": "135", "source_page": 3, "source_column": "Delivered"},
+        {"metric_key": "delivery_completion_rate", "raw_value": "92.47%", "source_page": 3, "source_column": "DCR"},
+        {"metric_key": "delivery_success_conditions_dpmo", "raw_value": "0", "source_page": 3, "source_column": "DSC DPMO"},
+        {"metric_key": "lost_on_road_dpmo", "raw_value": "0", "source_page": 3, "source_column": "LoR DPMO"},
+        {"metric_key": "photo_on_delivery", "raw_value": "96.88%", "source_page": 3, "source_column": "POD"},
+        {"metric_key": "contact_compliance", "raw_value": "88%", "source_page": 3, "source_column": "CC"},
+        {"metric_key": "customer_escalations_count", "raw_value": "0", "source_page": 3, "source_column": "CE"},
+        {"metric_key": "customer_delivery_feedback_dpmo", "raw_value": "29630", "source_page": 3, "source_column": "CDF DPMO"}
+      ]
+    },
+    {
+      "transporter_external_id": "A1220Y3BKPI76Z", "row_index": 2, "source_page": 3,
+      "metrics": [
+        {"metric_key": "delivered", "raw_value": "464"},
+        {"metric_key": "delivery_completion_rate", "raw_value": "99.57%"},
+        {"metric_key": "delivery_success_conditions_dpmo", "raw_value": "2155"},
+        {"metric_key": "lost_on_road_dpmo", "raw_value": "0"},
+        {"metric_key": "photo_on_delivery", "raw_value": "100%"},
+        {"metric_key": "contact_compliance", "raw_value": "100%"},
+        {"metric_key": "customer_escalations_count", "raw_value": "0"},
+        {"metric_key": "customer_delivery_feedback_dpmo", "raw_value": "6466"}
+      ]
+    },
+    {
+      "transporter_external_id": "A12PJLZEP9GGJZ", "row_index": 3, "source_page": 3,
+      "metrics": [
+        {"metric_key": "delivered", "raw_value": "170"},
+        {"metric_key": "delivery_completion_rate", "raw_value": "100%"},
+        {"metric_key": "delivery_success_conditions_dpmo", "raw_value": "5882"},
+        {"metric_key": "lost_on_road_dpmo", "raw_value": "0"},
+        {"metric_key": "photo_on_delivery", "raw_value": "100%"},
+        {"metric_key": "contact_compliance", "raw_value": "100%"},
+        {"metric_key": "customer_escalations_count", "raw_value": "0"},
+        {"metric_key": "customer_delivery_feedback_dpmo", "raw_value": "5882"}
+      ]
+    },
+    {
+      "transporter_external_id": "A13GR86JNE2BY9", "row_index": 4, "source_page": 3,
+      "metrics": [
+        {"metric_key": "delivered", "raw_value": "966"},
+        {"metric_key": "delivery_completion_rate", "raw_value": "97.09%"},
+        {"metric_key": "delivery_success_conditions_dpmo", "raw_value": "3106"},
+        {"metric_key": "lost_on_road_dpmo", "raw_value": "0"},
+        {"metric_key": "photo_on_delivery", "raw_value": "99.4%"},
+        {"metric_key": "contact_compliance", "raw_value": "100%"},
+        {"metric_key": "customer_escalations_count", "raw_value": "0"},
+        {"metric_key": "customer_delivery_feedback_dpmo", "raw_value": "11387"}
+      ]
+    },
+    {
+      "transporter_external_id": "A13OTLIT5NI18C", "row_index": 5, "source_page": 3,
+      "metrics": [
+        {"metric_key": "delivered", "raw_value": "418"},
+        {"metric_key": "delivery_completion_rate", "raw_value": "96.09%"},
+        {"metric_key": "delivery_success_conditions_dpmo", "raw_value": "0"},
+        {"metric_key": "lost_on_road_dpmo", "raw_value": "0"},
+        {"metric_key": "photo_on_delivery", "raw_value": "96.71%"},
+        {"metric_key": "contact_compliance", "raw_value": "98.41%"},
+        {"metric_key": "customer_escalations_count", "raw_value": "0"},
+        {"metric_key": "customer_delivery_feedback_dpmo", "raw_value": "9569"}
+      ]
+    }
+  ],
+  "working_hours": {"section_present": true, "exceptions": []},
+  "focus_areas": [
+    {"position": 1, "metric_key": "delivery_success_conditions_dpmo", "source_label": "Delivery Success Conditions (DSC) DPMO", "source_page": 2},
+    {"position": 2, "metric_key": "delivery_completion_rate", "source_label": "Delivery Completion Rate (DCR)", "source_page": 2},
+    {"position": 3, "metric_key": "customer_delivery_feedback_dpmo", "source_label": "CDF DPMO", "source_page": 2}
+  ],
+  "standards": {
+    "provider": "amazon",
+    "geography_scope": "IT",
+    "station_scope": "DLO2",
+    "detected_source_version": "3.0",
+    "rules": [
+      {"metric_key": "overall_score", "target_value": "85", "minimum_value": "50", "unit": "points", "direction": "HIGHER_IS_BETTER", "raw_target": "85", "raw_minimum": "50"},
+      {"metric_key": "vsa_compliance", "target_value": "98", "minimum_value": "95", "unit": "percent", "direction": "HIGHER_IS_BETTER", "raw_target": "98%", "raw_minimum": "95%"},
+      {"metric_key": "safe_driving_fico", "target_value": "810", "minimum_value": "730", "unit": "score_100_850", "direction": "HIGHER_IS_BETTER"},
+      {"metric_key": "delivery_completion_rate", "target_value": "97.9", "minimum_value": "97", "unit": "percent", "direction": "HIGHER_IS_BETTER", "raw_target": "97.9%", "raw_minimum": "97%"},
+      {"metric_key": "delivery_success_conditions_dpmo", "target_value": "500", "minimum_value": "780", "unit": "dpmo", "direction": "LOWER_IS_BETTER"},
+      {"metric_key": "lost_on_road_dpmo", "target_value": "60", "minimum_value": "200", "unit": "dpmo", "direction": "LOWER_IS_BETTER"}
+    ]
+  },
+  "warnings": [
+    "Week calendar semantics are not declared by the source PDF.",
+    "Template version 3.0 is inferred from the source filename."
+  ]
+}

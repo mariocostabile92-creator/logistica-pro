@@ -68,6 +68,7 @@ from app.plugins.fleet.insurance.infrastructure.repository import (
 )
 from app.plugins.fleet.rentals.infrastructure.repository import init_schema as init_rental_schema
 from app.plugins.workforce.infrastructure.schema import init_schema as init_workforce_schema
+from app.plugins.dsp_quality.infrastructure.schema import init_schema as init_dsp_quality_schema
 from app.repositories.authority_repository import init_schema as init_authority_schema
 from app.repositories.execution_intent_repository import init_schema as init_execution_intent_schema
 from app.repositories.execution_attempt_repository import init_schema as init_execution_attempt_schema
@@ -98,6 +99,7 @@ def reset_database():
     init_insurance_schema()
     init_rental_schema()
     init_workforce_schema()
+    init_dsp_quality_schema()
     init_briefing_schema()
     init_demo_schema()
     init_workspace_schema()
@@ -108,6 +110,18 @@ def reset_database():
     init_execution_intent_schema()
     init_execution_attempt_schema()
     with db_session() as conn:
+        conn.execute("DELETE FROM dsp_quality_standard_rules")
+        conn.execute("DELETE FROM dsp_quality_focus_areas")
+        conn.execute("DELETE FROM dsp_quality_working_hour_exceptions")
+        conn.execute("DELETE FROM dsp_quality_transporter_observations")
+        conn.execute("DELETE FROM dsp_quality_transporter_rows")
+        conn.execute("DELETE FROM dsp_quality_section_standings")
+        conn.execute("DELETE FROM dsp_quality_metric_observations")
+        conn.execute("DELETE FROM dsp_quality_scorecard_versions")
+        conn.execute("DELETE FROM dsp_quality_standard_sets")
+        conn.execute("DELETE FROM dsp_quality_scorecards")
+        conn.execute("DELETE FROM workforce_external_identity_events")
+        conn.execute("DELETE FROM workforce_external_identities")
         conn.execute("DELETE FROM admin_audit_events")
         conn.execute("DELETE FROM auth_bootstrap_state")
         conn.execute("DELETE FROM auth_sessions")
