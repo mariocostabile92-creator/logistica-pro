@@ -281,7 +281,7 @@ test("rendered row never exposes canonical technical IDs", () => {
 
 test("390 px layout becomes cards without fixed canvas", async () => {
   const css = await file("assets/css/dsp-workspace.css");
-  assert.match(css, /@media \(max-width: 620px\)[\s\S]*\.dsp-board-row[\s\S]*grid-template-columns: 1fr/);
+  assert.match(css, /@media \(max-width: 620px\)[\s\S]*\.dsp-board-row[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /min-width: 0/);
   assert.doesNotMatch(css, /width:\s*(?:390|768|1440)px/);
 });

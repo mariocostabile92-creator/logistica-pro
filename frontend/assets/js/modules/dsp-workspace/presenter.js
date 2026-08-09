@@ -1,5 +1,10 @@
 import { byId, escapeHtml, renderViewState } from "../../utils/dom.js";
 import { buildDspRowActions } from "./actions.js";
+import {
+  orderedSignals,
+  partialSourceItems,
+  rowTone,
+} from "./presentation.js";
 
 
 const SIGNAL_LABELS = Object.freeze({
@@ -57,12 +62,32 @@ function vehicleLabel(row) {
 
 
 function signalMarkup(signals) {
-  if (!signals.length) return '<span class="dsp-clear-label">Nessuna criticità</span>';
-  return signals.map((signal) => `
+  const ordered = orderedSignals(signals);
+  if (!ordered.length) return '<span class="dsp-clear-label">Situazione regolare</span>';
+  const [primary, ...secondary] = ordered;
+  const label = ordered.map((signal) => signalLabel(signal.code)).join(", ");
+  const moreLabel = secondary.length === 1 ? "+1 altra" : `+${secondary.length} altre`;
+  const moreAria = secondary.length === 1
+    ? "Mostra un'altra criticità"
+    : `Mostra altre ${secondary.length} criticità`;
+  const secondaryMarkup = secondary.map((signal) => `
     <span class="dsp-signal dsp-signal-${escapeHtml(signal.severity)}">
       ${escapeHtml(signalLabel(signal.code))}
     </span>
   `).join("");
+  return `
+    <div class="dsp-signal-cluster" aria-label="Criticità: ${escapeHtml(label)}">
+      <span class="dsp-signal dsp-signal-primary dsp-signal-${escapeHtml(primary.severity)}">
+        ${escapeHtml(signalLabel(primary.code))}
+      </span>
+      ${secondary.length ? `
+        <details class="dsp-more-signals">
+          <summary aria-label="${moreAria}">${moreLabel}</summary>
+          <div>${secondaryMarkup}</div>
+        </details>
+      ` : ""}
+    </div>
+  `;
 }
 
 
@@ -87,7 +112,7 @@ function procedureLabel(operation, status) {
 }
 
 
-function journalMarkup(journal = {}) {
+function journalMarkup(journal = {}, compact = false) {
   if (journal.available === false) {
     return "<strong>Non disponibile</strong><small>La board resta operativa</small>";
   }
@@ -99,6 +124,12 @@ function journalMarkup(journal = {}) {
     journal.anomaly ? "Anomalia presente" : null,
     journal.in_progress ? "Procedura in compilazione" : null,
   ].filter(Boolean).join(" · ");
+  if (compact) {
+    return `<strong class="dsp-status-line">${escapeHtml([
+      procedureLabel("check_out", journal.check_out_status),
+      procedureLabel("check_in", journal.check_in_status),
+    ].join(" · "))}</strong>`;
+  }
   return `
     <strong>${escapeHtml(procedureLabel("check_out", journal.check_out_status))}</strong>
     <small>${escapeHtml(detail)}</small>
@@ -106,7 +137,7 @@ function journalMarkup(journal = {}) {
 }
 
 
-function damageMarkup(damage = {}) {
+function damageMarkup(damage = {}, compact = false) {
   if (damage.available === false) {
     return "<strong>Non disponibile</strong><small>La board resta operativa</small>";
   }
@@ -114,7 +145,9 @@ function damageMarkup(damage = {}) {
     return "<strong>Da verificare</strong><small>Correlazione non certa</small>";
   }
   if (!damage.open_cases_count) {
-    return '<strong>Nessuna criticità</strong><small>Nessuna pratica aperta</small>';
+    return compact
+      ? '<strong class="dsp-status-line">Nessun danno aperto</strong>'
+      : '<strong>Nessuna criticità</strong><small>Nessuna pratica aperta</small>';
   }
   const count = damage.open_cases_count === 1
     ? "1 pratica aperta"
@@ -155,12 +188,19 @@ export function rowActionsMarkup(row, options = {}) {
 export function rowMarkup(row, actionOptions = {}) {
   const route = row.route || "Non assegnata";
   const wave = row.wave ? ` · ${row.wave}` : "";
+  const tone = rowTone(row);
+  const clear = tone === "clear";
   const workforceState = row.workforce?.convocable === false
     ? "unavailable"
     : row.workforce?.availability_status;
   const fleetState = row.fleet?.operational_status || row.fleet?.availability;
+  const rowLabel = [
+    driverLabel(row), vehicleLabel(row),
+    clear ? "Situazione regolare" : `${row.signals.length} criticità`,
+  ].join(" · ");
   return `
-    <article class="dsp-board-row${row.signals.length ? " has-attention" : ""}">
+    <article class="dsp-board-row ${clear ? "is-clear" : `has-attention tone-${escapeHtml(tone)}`}"
+      aria-label="${escapeHtml(rowLabel)}">
       <div class="dsp-primary dsp-driver">
         <span class="dsp-mobile-label">Driver</span>
         <strong>${escapeHtml(driverLabel(row))}</strong>
@@ -172,33 +212,39 @@ export function rowMarkup(row, actionOptions = {}) {
         ${row.vehicle?.model ? `<small>${escapeHtml(row.vehicle.model)}</small>` : ""}
       </div>
       <div class="dsp-attention">
-        <span class="dsp-mobile-label">Attenzione</span>
+        <span class="dsp-mobile-label">Criticità</span>
         <div>${signalMarkup(row.signals)}</div>
-      </div>
-      <div class="dsp-route">
-        <span class="dsp-mobile-label">Route</span>
-        <strong>${escapeHtml(route)}${escapeHtml(wave)}</strong>
       </div>
       <div class="dsp-source-state">
         <span class="dsp-mobile-label">Workforce</span>
         <strong>${escapeHtml(statusLabel(workforceState))}</strong>
-        ${row.workforce?.reason ? `<small>${escapeHtml(row.workforce.reason)}</small>` : ""}
-        ${row.workforce?.consecutivity_indicator ? `<small>Consecutività: ${escapeHtml(row.workforce.consecutivity_indicator)}</small>` : ""}
+        ${!clear && row.workforce?.reason ? `<small>${escapeHtml(row.workforce.reason)}</small>` : ""}
+        ${!clear && row.workforce?.consecutivity_indicator ? `<small>Consecutività: ${escapeHtml(row.workforce.consecutivity_indicator)}</small>` : ""}
       </div>
       <div class="dsp-source-state">
         <span class="dsp-mobile-label">Fleet</span>
         <strong>${escapeHtml(statusLabel(fleetState))}</strong>
-        ${row.fleet?.availability && row.fleet.availability !== fleetState
+        ${!clear && row.fleet?.availability && row.fleet.availability !== fleetState
           ? `<small>${escapeHtml(statusLabel(row.fleet.availability))}</small>` : ""}
       </div>
       <div class="dsp-source-state dsp-journal-state">
         <span class="dsp-mobile-label">Journal</span>
-        ${journalMarkup(row.journal)}
+        ${journalMarkup(row.journal, clear)}
       </div>
       <div class="dsp-source-state dsp-damage-state">
         <span class="dsp-mobile-label">Danni</span>
-        ${damageMarkup(row.damage)}
+        ${damageMarkup(row.damage, clear)}
       </div>
+      <div class="dsp-route">
+        <span class="dsp-mobile-label">Route / wave</span>
+        <strong>${escapeHtml(route)}${escapeHtml(wave)}</strong>
+      </div>
+      ${clear ? `
+        <div class="dsp-normal-overview">
+          <span>Situazione regolare</span>
+          <small>${escapeHtml(statusLabel(workforceState))} · ${escapeHtml(statusLabel(fleetState))} · ${escapeHtml(procedureLabel("check_out", row.journal?.check_out_status))}</small>
+        </div>
+      ` : ""}
       ${rowActionsMarkup(row, actionOptions)}
     </article>
   `;
@@ -206,27 +252,28 @@ export function rowMarkup(row, actionOptions = {}) {
 
 
 export function partialMessages(sources = {}) {
-  return Object.entries(sources).flatMap(([source, metadata]) => {
-    const label = {
-      planning: "Planning",
-      workforce: "Workforce",
-      fleet: "Fleet",
-      journal: "Journal",
-      damage: "Danni",
-    }[source] || source;
-    if (!metadata?.available) return [`Stato ${label} temporaneamente non disponibile.`];
-    if (metadata.partial) return [`Dati ${label} parzialmente disponibili.`];
-    return [];
-  });
+  return partialSourceItems(sources).map((item) => item.message);
 }
 
 
 function renderWarnings(refs, sources) {
-  const messages = partialMessages(sources);
-  refs.warnings.hidden = !messages.length;
-  refs.warnings.innerHTML = messages.map((message) => (
-    `<p>${escapeHtml(message)}</p>`
-  )).join("");
+  const items = partialSourceItems(sources);
+  refs.warnings.hidden = !items.length;
+  if (!items.length) {
+    refs.warnings.replaceChildren();
+    return;
+  }
+  refs.warnings.innerHTML = `
+    <details>
+      <summary>
+        <span>Alcune fonti dati sono parzialmente disponibili</span>
+        <span class="dsp-source-count">${items.length}</span>
+      </summary>
+      <ul>${items.map((item) => (
+        `<li><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.message)}</span></li>`
+      )).join("")}</ul>
+    </details>
+  `;
 }
 
 
@@ -265,6 +312,9 @@ export function renderDspWorkspace(refs, view) {
   refs.summaryDrivers.textContent = String(view.summary.drivers);
   refs.summaryVehicles.textContent = String(view.summary.vehicles);
   refs.summaryAttention.textContent = String(view.summary.attention);
+  refs.summaryAttention.parentElement?.classList.toggle(
+    "is-active", view.summary.attention > 0,
+  );
   refs.search.value = view.search;
   refs.sort.value = view.sort;
   refs.resultCount.textContent = `${view.rows.length} di ${view.totalRows} assegnazioni`;

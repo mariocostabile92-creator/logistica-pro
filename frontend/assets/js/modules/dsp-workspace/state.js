@@ -1,3 +1,9 @@
+import {
+  compareAttentionRows,
+  orderedSignals,
+} from "./presentation.js";
+
+
 const FILTERS = new Set(["all", "attention", "clear"]);
 const SORTS = new Set(["default", "driver", "route", "attention"]);
 
@@ -70,19 +76,21 @@ function rowSearchText(row) {
 
 function sortedRows(rows, sort) {
   if (sort === "default") return rows;
-  const key = (item) => {
-    if (sort === "driver") {
-      return item.driver?.name || item.driver?.planning_identifier || "";
-    }
-    if (sort === "route") return item.route || "";
-    return String(999 - item.signals.length).padStart(3, "0");
-  };
   return rows
     .map((item, index) => ({ item, index }))
-    .sort((left, right) => (
-      key(left.item).localeCompare(key(right.item), "it", { numeric: true })
-      || left.index - right.index
-    ))
+    .sort((left, right) => {
+      if (sort === "attention") {
+        return compareAttentionRows(left.item, right.item) || left.index - right.index;
+      }
+      const leftKey = sort === "driver"
+        ? left.item.driver?.name || left.item.driver?.planning_identifier || ""
+        : left.item.route || "";
+      const rightKey = sort === "driver"
+        ? right.item.driver?.name || right.item.driver?.planning_identifier || ""
+        : right.item.route || "";
+      return leftKey.localeCompare(rightKey, "it", { numeric: true })
+        || left.index - right.index;
+    })
     .map(({ item }) => item);
 }
 
@@ -102,7 +110,7 @@ export function deriveDspWorkspaceView(state) {
   const enrichedRows = snapshot.rows.map((row) => ({
     ...row,
     operation_date: snapshot.operation_date || state.operationDate,
-    signals: groupedSignals.get(row.assignment_id) || [],
+    signals: orderedSignals(groupedSignals.get(row.assignment_id) || []),
   }));
   const search = state.search.trim().toLocaleLowerCase("it");
   const filteredRows = enrichedRows.filter((row) => {

@@ -1174,7 +1174,7 @@
         <dl class="dsp-summary" aria-label="Riepilogo DSP">
           <div><dt>Driver pianificati</dt><dd id="dspSummaryDrivers">0</dd></div>
           <div><dt>Mezzi assegnati</dt><dd id="dspSummaryVehicles">0</dd></div>
-          <div class="has-attention"><dt>Criticità</dt><dd id="dspSummaryAttention">0</dd></div>
+          <div class="dsp-summary-attention"><dt>Criticità</dt><dd id="dspSummaryAttention">0</dd></div>
         </dl>
 
         <div id="dspSourceWarnings" class="dsp-source-warnings" role="status" hidden></div>
@@ -1186,16 +1186,16 @@
             <button type="button" data-dsp-filter="clear" aria-pressed="false">Senza criticità</button>
           </div>
           <label>
-            Cerca
+            <span>Cerca</span>
             <input id="dspSearch" type="search" placeholder="Driver, targa o route" autocomplete="off" />
           </label>
           <label>
-            Ordina
+            <span>Ordina</span>
             <select id="dspSort">
               <option value="default">Ordine Planning</option>
               <option value="driver">Driver</option>
               <option value="route">Route</option>
-              <option value="attention">Criticità</option>
+              <option value="attention">Criticità prima</option>
             </select>
           </label>
         </div>
@@ -1203,9 +1203,9 @@
         <p id="dspResultCount" class="dsp-result-count" aria-live="polite"></p>
         <div id="dspBoard" class="dsp-board" hidden>
           <div class="dsp-board-header" aria-hidden="true">
-            <span>Driver</span><span>Mezzo</span><span>Attenzione</span>
-            <span>Route</span><span>Workforce</span><span>Fleet</span>
-            <span>Journal</span><span>Danni</span>
+            <span>Driver</span><span>Mezzo</span><span>Criticità</span>
+            <span>Workforce</span><span>Fleet</span><span>Journal</span>
+            <span>Danni</span><span>Route / wave</span>
           </div>
           <div id="dspBoardRows"></div>
         </div>
@@ -2261,6 +2261,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="./assets/js/app.js?v=54"></script>
+  <script type="module" src="./assets/js/app.js?v=56"></script>
 </body>
 </html>
