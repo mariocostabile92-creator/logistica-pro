@@ -1,5 +1,6 @@
 import { can } from "../../auth/state.js";
 import {
+  applyExactTransporterIdentitySource,
   deleteTransporterMapping,
   getQualityDrivers,
   getQualityMetrics,
@@ -9,16 +10,18 @@ import {
   getTransporterReconciliation,
   importQualityScorecard,
   previewQualityScorecard,
+  previewTransporterIdentitySource,
   putTransporterMapping,
   searchQualityWorkforceCandidates,
-} from "./api.js?v=6";
+} from "./api.js?v=7";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
-import { renderDspQuality } from "./presenter.js?v=7";
+import { validateIdentitySourceFile } from "./identity-source.js?v=1";
+import { renderDspQuality } from "./presenter.js?v=8";
 import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=6";
+} from "./state.js?v=7";
 
 
 let initialized = false;
@@ -37,6 +40,7 @@ let driversRequestController = null;
 let reconciliationRequestController = null;
 let candidateRequestController = null;
 let candidateTimer = null;
+let identitySourceRequestController = null;
 
 
 function commit(event) {
@@ -233,6 +237,77 @@ async function loadReconciliation({ keepFilter = false, advanceAfter = null } = 
 }
 
 
+function identitySourceState() {
+  return state.drivers?.reconciliation?.identitySource || {};
+}
+
+
+function identitySourceError(error) {
+  return typeof error?.detail === "string"
+    ? error.detail
+    : "Impossibile analizzare la fonte. Controlla il file e riprova.";
+}
+
+
+async function analyzeIdentitySource({ file, usePlanning, selection } = {}) {
+  const current = identitySourceState();
+  const selectedFile = file === undefined ? current.file : file;
+  const planning = usePlanning === undefined ? current.usePlanning : usePlanning;
+  if (!planning) {
+    const message = validateIdentitySourceFile(selectedFile);
+    if (message) {
+      commit({ type: "identity-source-preview-failed", message });
+      return null;
+    }
+  }
+  identitySourceRequestController?.abort();
+  identitySourceRequestController = new AbortController();
+  commit({
+    type: "identity-source-preview-started",
+    file: selectedFile,
+    usePlanning: planning,
+  });
+  try {
+    const preview = await previewTransporterIdentitySource({
+      file: selectedFile,
+      scorecardId: state.selectedScorecardId,
+      usePlanning: planning,
+      ...(selection || current.selection || {}),
+    }, { signal: identitySourceRequestController.signal });
+    commit({ type: "identity-source-preview-completed", preview });
+    requestAnimationFrame(() => root.querySelector("[data-quality-identity-bucket]")?.focus());
+    return preview;
+  } catch (error) {
+    if (error?.name === "AbortError") return null;
+    commit({ type: "identity-source-preview-failed", message: identitySourceError(error) });
+    return null;
+  }
+}
+
+
+async function applyExactIdentitySource() {
+  const source = identitySourceState();
+  if (!source.preview?.preview_token || source.phase === "applying") return;
+  commit({ type: "identity-source-apply-started" });
+  try {
+    const result = await applyExactTransporterIdentitySource({
+      file: source.file,
+      scorecardId: state.selectedScorecardId,
+      previewToken: source.preview.preview_token,
+      usePlanning: source.usePlanning,
+    });
+    commit({ type: "identity-source-apply-completed", result });
+    await Promise.all([
+      loadDrivers({ force: true }),
+      loadReconciliation({ keepFilter: true }),
+    ]);
+    requestAnimationFrame(() => root.querySelector("[data-quality-identity-reset]")?.focus());
+  } catch (error) {
+    commit({ type: "identity-source-apply-failed", message: identitySourceError(error) });
+  }
+}
+
+
 async function openReconciliation(externalId = null) {
   commit({ type: "reconciliation-opened" });
   const data = await loadReconciliation();
@@ -286,6 +361,7 @@ async function confirmMapping() {
       loadReconciliation({ keepFilter: true, advanceAfter: row.transporter_external_id }),
     ]);
     requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
+    return true;
   } catch (error) {
     commit({
       type: error?.status === 409 ? "mapping-conflict" : "mapping-failed",
@@ -293,7 +369,35 @@ async function confirmMapping() {
         ? "Associazione aggiornata da un altro utente. Chiudi e riapri per continuare."
         : mappingErrorMessage(error),
     });
+    return false;
   }
+}
+
+
+async function confirmIdentitySuggestion(externalId) {
+  const source = identitySourceState();
+  const row = (source.preview?.rows || []).find(
+    item => item.transporter_external_id === externalId && item.status === "SUGGESTED",
+  );
+  if (!row?.proposed_workforce_member_id) return;
+  commit({ type: "reconciliation-row-opened", externalId });
+  commit({
+    type: "candidate-selected",
+    candidate: {
+      workforce_member_id: row.proposed_workforce_member_id,
+      display_name: row.proposed_display_name,
+      active: true,
+    },
+  });
+  const saved = await confirmMapping();
+  if (saved) await analyzeIdentitySource();
+}
+
+
+function chooseDifferentIdentity(externalId) {
+  commit({ type: "reconciliation-row-opened", externalId });
+  void loadMappingHistory(externalId);
+  requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
 }
 
 
@@ -381,6 +485,17 @@ function bindEvents() {
     if (event.target.closest("[data-quality-reconciliation-open]")) void openReconciliation();
     if (event.target.closest("[data-quality-reconciliation-close]")) commit({ type: "reconciliation-closed" });
     if (event.target.closest("[data-quality-reconciliation-retry]")) void loadReconciliation();
+    if (event.target.closest("[data-quality-identity-pick]")) root.querySelector("[data-quality-identity-file]")?.click();
+    if (event.target.closest("[data-quality-identity-planning]")) void analyzeIdentitySource({ file: null, usePlanning: true });
+    if (event.target.closest("[data-quality-identity-analyze]")) void analyzeIdentitySource({ selection: identitySourceState().selection });
+    if (event.target.closest("[data-quality-identity-apply]")) void applyExactIdentitySource();
+    if (event.target.closest("[data-quality-identity-reset]")) commit({ type: "identity-source-reset" });
+    const identityBucket = event.target.closest("[data-quality-identity-bucket]")?.dataset.qualityIdentityBucket;
+    if (identityBucket) commit({ type: "identity-source-bucket-changed", bucket: identityBucket });
+    const suggestionId = event.target.closest("[data-quality-source-confirm]")?.dataset.qualitySourceConfirm;
+    if (suggestionId) void confirmIdentitySuggestion(suggestionId);
+    const chooseId = event.target.closest("[data-quality-source-choose]")?.dataset.qualitySourceChoose;
+    if (chooseId) chooseDifferentIdentity(chooseId);
     const reconciliationExternalId = event.target.closest("[data-quality-reconciliation-row]")?.dataset.qualityReconciliationRow;
     if (reconciliationExternalId) {
       if (!state.drivers?.reconciliation?.open) {
@@ -437,6 +552,16 @@ function bindEvents() {
   });
   root.addEventListener("change", (event) => {
     if (event.target.matches("[data-quality-file]")) void analyze(selectedFile(event.target));
+    if (event.target.matches("[data-quality-identity-file]")) {
+      void analyzeIdentitySource({ file: selectedFile(event.target), usePlanning: false });
+    }
+    if (event.target.matches("[data-quality-identity-selection]")) {
+      commit({
+        type: "identity-source-selection-changed",
+        field: event.target.dataset.qualityIdentitySelection,
+        value: event.target.value,
+      });
+    }
     if (event.target.matches("[data-quality-scorecard-select]")) {
       const scorecardId = event.target.value || null;
       if (!scorecardId || scorecardId === state.selectedScorecardId) return;
@@ -502,15 +627,29 @@ function bindEvents() {
     }
   });
   root.addEventListener("dragover", (event) => {
+    const identityZone = event.target.closest("[data-quality-identity-dropzone]");
+    if (identityZone) {
+      event.preventDefault();
+      identityZone.classList.add("is-dragging");
+      return;
+    }
     const zone = event.target.closest("[data-quality-dropzone]");
     if (!zone) return;
     event.preventDefault();
     zone.classList.add("is-dragging");
   });
   root.addEventListener("dragleave", (event) => {
+    event.target.closest("[data-quality-identity-dropzone]")?.classList.remove("is-dragging");
     event.target.closest("[data-quality-dropzone]")?.classList.remove("is-dragging");
   });
   root.addEventListener("drop", (event) => {
+    const identityZone = event.target.closest("[data-quality-identity-dropzone]");
+    if (identityZone) {
+      event.preventDefault();
+      identityZone.classList.remove("is-dragging");
+      void analyzeIdentitySource({ file: event.dataTransfer?.files?.[0] || null, usePlanning: false });
+      return;
+    }
     const zone = event.target.closest("[data-quality-dropzone]");
     if (!zone) return;
     event.preventDefault();

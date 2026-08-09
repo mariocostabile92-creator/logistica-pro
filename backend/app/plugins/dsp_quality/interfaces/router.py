@@ -24,6 +24,15 @@ from app.plugins.dsp_quality.application.history_service import (
     ensure_scorecard,
     get_scorecard_history,
 )
+from app.plugins.dsp_quality.application.identity_source_models import (
+    ExactIdentityApplyResult,
+    IdentitySourcePreview,
+)
+from app.plugins.dsp_quality.application.identity_source_service import (
+    IdentitySourceError,
+    apply_exact_identity_matches,
+    preview_identity_source,
+)
 from app.plugins.dsp_quality.application.mapping_service import (
     MappingConflictError,
     MappingNotFoundError,
@@ -43,6 +52,9 @@ from app.plugins.dsp_quality.application.reconciliation_service import (
     put_mapping,
     reconciliation_state,
     search_workforce_candidates,
+)
+from app.plugins.dsp_quality.infrastructure.adapters.tabular_identity_source import (
+    IdentitySourceSelection,
 )
 
 
@@ -79,11 +91,36 @@ async def _source(file: UploadFile) -> QualitySourceInput:
     )
 
 
+async def _identity_source(file: UploadFile | None) -> QualitySourceInput | None:
+    if file is None:
+        return None
+    content = await file.read(MAX_UPLOAD_SIZE_BYTES + 1)
+    if len(content) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Il file supera la dimensione massima consentita.",
+        )
+    return QualitySourceInput(
+        filename=file.filename or "identity-source.xlsx",
+        content=content,
+        media_type=file.content_type,
+    )
+
+
 def _guard(call, **kwargs):
     try:
         return call(**kwargs)
     except QualityPreviewError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+def _identity_guard(call, **kwargs):
+    try:
+        return call(**kwargs)
+    except IdentitySourceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/scorecards", response_model=QualityScorecardHistory)
@@ -171,6 +208,57 @@ def transporter_mapping_candidates(
         request.state.user.organization_id,
         q,
         limit,
+    )
+
+
+@router.post(
+    "/transporter-mappings/source-preview",
+    response_model=IdentitySourcePreview,
+)
+async def transporter_mapping_source_preview(
+    request: Request,
+    scorecard_id: str = Form(..., min_length=1),
+    file: UploadFile | None = File(default=None),
+    use_planning: bool = Form(default=False),
+    sheet: str | None = Form(default=None),
+    transporter_column: str | None = Form(default=None),
+    driver_column: str | None = Form(default=None),
+):
+    _require_import_permission(request)
+    return _identity_guard(
+        preview_identity_source,
+        organization_id=request.state.user.organization_id,
+        scorecard_id=scorecard_id,
+        source=await _identity_source(file),
+        use_planning=use_planning,
+        selection=IdentitySourceSelection(
+            sheet=sheet,
+            transporter_column=transporter_column,
+            driver_column=driver_column,
+        ),
+    )
+
+
+@router.post(
+    "/transporter-mappings/source-apply-exact",
+    response_model=ExactIdentityApplyResult,
+)
+async def transporter_mapping_source_apply_exact(
+    request: Request,
+    scorecard_id: str = Form(..., min_length=1),
+    preview_token: str = Form(..., min_length=16),
+    file: UploadFile | None = File(default=None),
+    use_planning: bool = Form(default=False),
+):
+    _require_import_permission(request)
+    return _identity_guard(
+        apply_exact_identity_matches,
+        organization_id=request.state.user.organization_id,
+        scorecard_id=scorecard_id,
+        actor=request.state.user.id,
+        preview_token=preview_token,
+        source=await _identity_source(file),
+        use_planning=use_planning,
     )
 
 

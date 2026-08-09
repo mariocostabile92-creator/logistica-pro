@@ -1,3 +1,9 @@
+import {
+  applyIdentitySourceEvent,
+  createIdentitySourceState,
+} from "./identity-source.js?v=1";
+
+
 export function createReconciliationState() {
   return {
     open: false,
@@ -13,11 +19,21 @@ export function createReconciliationState() {
     candidates: [],
     selectedCandidate: null,
     history: [],
+    identitySource: createIdentitySourceState(),
   };
 }
 
 
 export function applyReconciliationEvent(state, event) {
+  if (event.type.startsWith("identity-source-")) {
+    return {
+      ...state,
+      identitySource: applyIdentitySourceEvent(
+        state.identitySource || createIdentitySourceState(),
+        event,
+      ),
+    };
+  }
   switch (event.type) {
     case "reconciliation-opened":
       return { ...state, open: true, error: null };

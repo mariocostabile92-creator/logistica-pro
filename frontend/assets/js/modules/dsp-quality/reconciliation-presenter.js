@@ -1,3 +1,6 @@
+import { identitySourceMarkup } from "./identity-source-presenter.js?v=1";
+
+
 const escapeHtml = value => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -147,6 +150,7 @@ export function reconciliationMarkup(state = {}) {
         <button type="button" class="secondary" data-quality-reconciliation-close>Chiudi</button>
       </header>
       ${summaryMarkup(state.data?.summary)}
+      ${identitySourceMarkup(state.identitySource)}
       <div class="dsp-quality-reconciliation-controls">
         <div role="group" aria-label="Filtra associazioni">${[["all", "Tutti"], ["unmapped", "Da associare"], ["matched", "Associati"], ["ambiguous", "Ambigui"]].map(([key, label]) => `
           <button type="button" data-quality-reconciliation-filter="${key}" aria-pressed="${state.filter === key}" class="${state.filter === key ? "active" : ""}">${label}</button>
@@ -158,4 +162,3 @@ export function reconciliationMarkup(state = {}) {
     </section>
   `;
 }
-

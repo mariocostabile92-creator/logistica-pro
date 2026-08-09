@@ -184,6 +184,47 @@ export async function getTransporterMappingHistory(
 }
 
 
+export async function previewTransporterIdentitySource(
+  {
+    file = null,
+    scorecardId,
+    usePlanning = false,
+    sheet = "",
+    transporterColumn = "",
+    driverColumn = "",
+  },
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  const form = new FormData();
+  form.append("scorecard_id", scorecardId);
+  form.append("use_planning", String(Boolean(usePlanning)));
+  if (file) form.append("file", file);
+  if (sheet) form.append("sheet", sheet);
+  if (transporterColumn) form.append("transporter_column", transporterColumn);
+  if (driverColumn) form.append("driver_column", driverColumn);
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/transporter-mappings/source-preview`,
+    { method: "POST", body: form, signal },
+  ));
+}
+
+
+export async function applyExactTransporterIdentitySource(
+  { file = null, scorecardId, previewToken, usePlanning = false },
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  const form = new FormData();
+  form.append("scorecard_id", scorecardId);
+  form.append("preview_token", previewToken);
+  form.append("use_planning", String(Boolean(usePlanning)));
+  if (file) form.append("file", file);
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/transporter-mappings/source-apply-exact`,
+    { method: "POST", body: form, signal },
+  ));
+}
+
+
 export async function importQualityScorecard(
   { file, previewToken, expectedAction },
   { signal, fetcher = globalThis.fetch } = {},

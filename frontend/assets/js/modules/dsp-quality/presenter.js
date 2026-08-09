@@ -3,7 +3,7 @@ import {
   qualityActionLabel,
 } from "./import.js";
 import { qualityMetricsMarkup } from "./metrics-presenter.js?v=3";
-import { qualityDriversMarkup } from "./drivers-presenter.js?v=2";
+import { qualityDriversMarkup } from "./drivers-presenter.js?v=3";
 
 
 const escapeHtml = value => String(value ?? "")

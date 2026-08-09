@@ -1,7 +1,7 @@
 import {
   applyReconciliationEvent,
   createReconciliationState,
-} from "./reconciliation-state.js?v=5";
+} from "./reconciliation-state.js?v=6";
 
 
 export function createDspQualityState({ canImport = false } = {}) {
@@ -41,7 +41,7 @@ export function createDspQualityState({ canImport = false } = {}) {
 
 
 export function applyDspQualityEvent(state, event) {
-  if (event.type.startsWith("reconciliation-")
+  if ((event.type.startsWith("reconciliation-") || event.type.startsWith("identity-source-"))
     || event.type.startsWith("candidate-")
     || event.type.startsWith("candidates-")
     || event.type.startsWith("mapping-")
