@@ -46,6 +46,7 @@ from app.core.database import claim_legacy_tenant_data, init_db
 from app.core.runtime_storage import initialize_runtime_storage
 from app.demo.repository import init_schema as init_demo_schema
 from app.demo.router import router as demo_router
+from app.plugins.dsp_workspace.interfaces.router import router as dsp_workspace_router
 from app.plugins.fleet.bootstrap import (
     initialize_fleet_plugin,
     register_fleet_plugin,
@@ -218,6 +219,7 @@ app.include_router(planning.router)
 app.include_router(demo_router)
 app.include_router(briefing_router)
 app.include_router(workspace_router)
+app.include_router(dsp_workspace_router)
 register_fleet_plugin(app)
 register_workforce_plugin(app)
 
