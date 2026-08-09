@@ -102,7 +102,7 @@ function revealTarget(targetId) {
 }
 
 
-async function navigate(view, targetId = null) {
+async function navigate(view, targetId = null, context = {}) {
   const startedAt = globalThis.performance?.now?.() || 0;
   const version = ++navigationVersion;
   const selectedView = normalizedWorkspace(view);
@@ -127,6 +127,11 @@ async function navigate(view, targetId = null) {
   if (version !== navigationVersion) return;
   showWorkspace(selectedView);
   announceWorkspace(selectedView);
+  if (selectedView === "workforce" && context.driverId != null) {
+    document.dispatchEvent(new CustomEvent("workforce:driver-open", {
+      detail: { driverId: context.driverId },
+    }));
+  }
   if (startedAt) {
     document.body.dataset.navigationReadyMs = String(Math.round(performance.now() - startedAt));
     document.body.dataset.navigationReadyView = selectedView;
@@ -159,7 +164,8 @@ export function initViewNavigation({ loadWorkspace, prepareWorkspace } = {}) {
   document.addEventListener("pointerover", handleNavigationIntent, { passive: true });
   document.addEventListener("focusin", handleNavigationIntent);
   document.addEventListener("workspace:navigate", (event) => {
-    void navigate(event.detail.view, event.detail.targetId || null);
+    const detail = event.detail || {};
+    void navigate(detail.view, detail.targetId || null, detail);
   });
   showWorkspace("home");
   announceWorkspace("home");

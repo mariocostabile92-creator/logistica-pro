@@ -21,7 +21,7 @@ const STYLES = {
     "workforce-responsive.css?v=6",
     "workforce-foundation.css?v=2",
   ],
-  dsp: ["dsp-workspace.css?v=2"],
+  dsp: ["dsp-workspace.css?v=3"],
   fleet: [
     "fleet.css",
     "fleet-sync.css",
@@ -111,7 +111,7 @@ function initializeOnce(key, callback) {
 const WORKSPACE_PREPARERS = {
   operations: async () => {
     const [planningWorkspace] = await Promise.all([
-      import("./planning-workspace/index.js?v=5"),
+      import("./planning-workspace/index.js?v=6"),
       loadWorkspaceStyles("operations"),
     ]);
     return async () => {
@@ -121,7 +121,7 @@ const WORKSPACE_PREPARERS = {
   },
   workforce: async () => {
     const [module] = await Promise.all([
-      import("./workforce-page.js?v=9"),
+      import("./workforce-page.js?v=10"),
       loadWorkspaceStyles("workforce"),
     ]);
     return async () => {
@@ -131,7 +131,7 @@ const WORKSPACE_PREPARERS = {
   },
   dsp: async () => {
     const [module] = await Promise.all([
-      import("./dsp-workspace/index.js?v=2"),
+      import("./dsp-workspace/index.js?v=3"),
       loadWorkspaceStyles("dsp"),
     ]);
     return async () => {
@@ -141,7 +141,7 @@ const WORKSPACE_PREPARERS = {
   },
   fleet: async () => {
     const [module, fleetSync] = await Promise.all([
-      import("./fleet-page.js?v=28"),
+      import("./fleet-page.js?v=29"),
       import("./fleet-sync.js"),
       loadWorkspaceStyles("fleet"),
     ]);

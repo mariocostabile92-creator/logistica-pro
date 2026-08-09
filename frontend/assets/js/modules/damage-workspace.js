@@ -60,6 +60,7 @@ let driverHistorySummary = { total_cases: 0, open_cases: 0, closed_cases: 0 };
 let driverPolicyState = null;
 let initialized = false;
 let selectedCaseId = null;
+let contextualVehicleId = null;
 let damageDraft = null;
 let driverSuggestionController = null;
 let vehicleSelectorController = null;
@@ -155,6 +156,7 @@ function filteredCases() {
       item.asset_availability || item.vehicle_operational_status,
     );
     return textMatch
+      && (!contextualVehicleId || Number(item.vehicle_id) === contextualVehicleId)
       && (!filters.plate || String(item.plate || item.external_identifier || "").toLocaleLowerCase("it-IT").includes(filters.plate))
       && (filters.status === "all" || item.status === filters.status)
       && (filters.severity === "all" || item.severity === filters.severity)
@@ -502,7 +504,12 @@ export async function showDamageWorkspace(options = {}) {
   document.getElementById("franchiseWorkspace").hidden = true;
   document.getElementById("insuranceWorkspace").hidden = true;
   document.getElementById("rentalWorkspace").hidden = true;
+  contextualVehicleId = Number.isInteger(Number(options.vehicleId))
+    && Number(options.vehicleId) > 0
+    ? Number(options.vehicleId)
+    : null;
   if (options.driverId != null) filters.driver = String(options.driverId);
+  else if (contextualVehicleId) filters.driver = ALL_DRIVERS;
   await refresh();
   renderShell();
   root.hidden = false;
@@ -530,6 +537,7 @@ export async function showDamageWorkspace(options = {}) {
   root.addEventListener("click", async (event) => {
     if (event.target.closest("[data-damage-reset]")) {
       query = "";
+      contextualVehicleId = null;
       Object.assign(filters, { plate: "", status: "all", severity: "all", stopped: "all", origin: "all", attachments: "all", driver: ALL_DRIVERS });
       await refresh();
       renderNavigator();

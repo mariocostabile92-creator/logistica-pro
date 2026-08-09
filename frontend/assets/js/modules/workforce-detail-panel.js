@@ -119,7 +119,7 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
   function openMember(member, trigger) {
     clearSelection();
     selectedMember = member;
-    trigger.classList.add("is-selected");
+    trigger?.classList.add("is-selected");
     byId("workforceDetailKind").textContent = "Profilo risorsa";
     byId("workforceDetailTitle").textContent = member.display_name;
     byId("workforceMemberDetailId").textContent = member.external_identifier;

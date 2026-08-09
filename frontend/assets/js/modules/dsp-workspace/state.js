@@ -101,6 +101,7 @@ export function deriveDspWorkspaceView(state) {
   const groupedSignals = signalsByAssignment(snapshot.signals);
   const enrichedRows = snapshot.rows.map((row) => ({
     ...row,
+    operation_date: snapshot.operation_date || state.operationDate,
     signals: groupedSignals.get(row.assignment_id) || [],
   }));
   const search = state.search.trim().toLocaleLowerCase("it");
@@ -131,4 +132,3 @@ export function deriveDspWorkspaceView(state) {
     sort: state.sort,
   };
 }
-

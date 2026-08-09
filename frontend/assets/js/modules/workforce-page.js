@@ -398,6 +398,24 @@ export function prepareWorkforceFirstPaint() {
 }
 
 
+export async function openWorkforceDriver(driverId) {
+  const canonicalId = Number(driverId);
+  if (!Number.isInteger(canonicalId) || canonicalId <= 0) return false;
+  await prepareWorkforceFirstPaint();
+  const member = currentData.members.find((item) => (
+    Number(item.workforce_member_id) === canonicalId
+  ));
+  if (!member) return false;
+  setActiveTab("calendar");
+  const trigger = byId("workforceCalendar").querySelector(
+    `[data-workforce-member-edit="${canonicalId}"]`,
+  );
+  workforceDetailPanel.openMember(member, trigger);
+  trigger?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  return true;
+}
+
+
 async function submitStatus(event) {
   event.preventDefault();
   const submit = event.submitter || byId("workforceStatusSave");
@@ -559,6 +577,9 @@ export function initWorkforcePage() {
   });
   document.addEventListener("workforce:consecutivity-changed", () => {
     if (loaded && currentStatus?.member_count) loadCalendar();
+  });
+  document.addEventListener("workforce:driver-open", (event) => {
+    void openWorkforceDriver(event.detail?.driverId);
   });
   document.addEventListener("workspace:view-changed", (event) => {
     if (event.detail.view === "workforce" && !loaded && !firstPaintPromise) {

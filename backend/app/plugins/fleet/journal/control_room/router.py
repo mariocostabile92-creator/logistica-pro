@@ -33,13 +33,17 @@ def procedures(
         pattern="^(drivers_expected|checkout_expected|checkout_completed|checkout_missing|checkin_expected|checkin_completed|checkin_missing|procedures_open|procedures_in_progress|procedures_late|procedures_anomaly)$",
     ),
     vehicle_id: int | None = Query(default=None, gt=0),
+    operation_date: str | None = Query(
+        default=None,
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+    ),
 ):
     return service.list_procedures({
         "search": search, "operation_type": operation_type, "anomaly": anomaly,
         "period": period, "live_status": live_status, "vehicle_id": vehicle_id,
         "completion_filter": completion_filter,
     }, request.state.user.organization_id, can_delete_media=has_permission(request.state.user.role, "journal:media:delete"),
-       current_scope=True)
+       current_scope=True, selected_operational_date=operation_date)
 
 
 @router.get("/{procedure_id}")

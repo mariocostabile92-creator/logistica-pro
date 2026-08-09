@@ -174,6 +174,29 @@ def test_control_room_is_current_day_plus_relevant_previous_carryover():
     assert historical["summary"]["total"] == 2
 
 
+def test_control_room_can_read_an_explicit_operational_date_and_vehicle_context():
+    vehicle = asset()
+    current = date.fromisoformat(client.get(CONTROL).json()["context"]["operational_date"])
+    historical_day = (current - timedelta(days=3)).isoformat()
+    historical = complete(open_session(vehicle, "check_in", "Driver Storico DSP"))
+    current_movement = complete(open_session(vehicle, "check_out", "Driver Corrente"))
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE journal_sessions SET operational_date=? "
+            "WHERE id=(SELECT session_id FROM asset_movements WHERE id=?)",
+            (historical_day, historical["id"]),
+        )
+
+    payload = client.get(CONTROL, params={
+        "operation_date": historical_day,
+        "vehicle_id": vehicle["id"],
+    })
+    assert payload.status_code == 200
+    assert payload.json()["context"]["operational_date"] == historical_day
+    assert [item["id"] for item in payload.json()["items"]] == [historical["id"]]
+    assert current_movement["id"] not in {item["id"] for item in payload.json()["items"]}
+
+
 def test_managed_session_uses_organization_timezone_at_operational_boundary():
     vehicle = asset()
     response = client.post(f"{CONTROL}/sessions", json={

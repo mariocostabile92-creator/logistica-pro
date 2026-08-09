@@ -1,5 +1,6 @@
 import { getDspDailySnapshot } from "./api.js";
 import { dspWorkspaceRefs, renderDspWorkspace } from "./presenter.js";
+import { buildDspRowActions, dispatchDspAction } from "./actions.js";
 import {
   applyDspWorkspaceEvent,
   createDspWorkspaceState,
@@ -69,6 +70,19 @@ function bindEvents() {
     if (event.target.closest('[data-view-action="dsp-retry"]')) {
       void loadSnapshot({ force: true });
     }
+    const actionButton = event.target.closest("[data-dsp-action]");
+    if (actionButton) {
+      const view = deriveDspWorkspaceView(state);
+      const row = view.rows?.find((item) => (
+        String(item.assignment_id) === actionButton.dataset.dspAssignment
+      ));
+      const selectedAction = buildDspRowActions(row || {}, {
+        operationDate: view.operationDate,
+      }).all.find((item) => item.id === actionButton.dataset.dspAction);
+      if (dispatchDspAction(selectedAction)) {
+        actionButton.closest("details")?.removeAttribute("open");
+      }
+    }
   });
 }
 
@@ -88,4 +102,3 @@ export function prepareDspFirstPaint() {
   if (state.snapshot && loadedDate === state.operationDate) return Promise.resolve(state.snapshot);
   return loadSnapshot();
 }
-

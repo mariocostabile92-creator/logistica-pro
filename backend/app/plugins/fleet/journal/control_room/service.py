@@ -176,24 +176,42 @@ def list_procedures(
     end_date: str | None = None,
     can_delete_media: bool = False,
     current_scope: bool = False,
+    selected_operational_date: str | None = None,
 ) -> dict:
     context = operational_context(organization_id)
-    today = date.fromisoformat(context["operational_date"])
+    selected_day = (
+        date.fromisoformat(selected_operational_date)
+        if selected_operational_date else None
+    )
+    today = selected_day or date.fromisoformat(context["operational_date"])
+    if selected_day:
+        context = {**context, "operational_date": selected_day.isoformat()}
     query_start, query_end = start_date, end_date
     if current_scope:
-        query_start, query_end = (today - timedelta(days=1)).isoformat(), today.isoformat()
+        query_start, query_end = (
+            (today.isoformat(), today.isoformat())
+            if selected_day
+            else ((today - timedelta(days=1)).isoformat(), today.isoformat())
+        )
     items = [_present(item, can_delete_media, context["timezone"]) for item in repository.list_procedures(
         organization_id, query_start, query_end
     )]
     if current_scope:
-        previous = today - timedelta(days=1)
-        items = [item for item in items if (
-            date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == today
-            or (
-                date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == previous
-                and item["status"] in {"generated", "opened", "in_progress"}
-            )
-        )]
+        if selected_day:
+            items = [item for item in items if (
+                date.fromisoformat(str(
+                    item.get("operational_date") or _iso_date(item["occurred_at"])
+                )) == today
+            )]
+        else:
+            previous = today - timedelta(days=1)
+            items = [item for item in items if (
+                date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == today
+                or (
+                    date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == previous
+                    and item["status"] in {"generated", "opened", "in_progress"}
+                )
+            )]
     current_items = [item for item in items if
                      date.fromisoformat(str(item.get("operational_date") or _iso_date(item["occurred_at"]))) == today]
     completion = journal_completion(context, current_items)

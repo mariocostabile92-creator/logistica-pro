@@ -40,7 +40,7 @@ function loadFleetModule(name, loader) {
 
 
 async function showDamageWorkspace(options) {
-  const module = await loadFleetModule("damage", () => import("./damage-workspace.js?v=11"));
+  const module = await loadFleetModule("damage", () => import("./damage-workspace.js?v=12"));
   return module.showDamageWorkspace(options);
 }
 
@@ -76,7 +76,7 @@ async function showRentalWorkspace(options) {
 
 
 async function showJournalControlRoom(options) {
-  const module = await loadFleetModule("journal", () => import("./journal-control-room.js?v=9"));
+  const module = await loadFleetModule("journal", () => import("./journal-control-room.js?v=10"));
   return module.showJournalControlRoom(options);
 }
 
@@ -674,6 +674,17 @@ export function initFleetPage() {
     );
     showDamageWorkspace(event.detail || {}).catch(
       (error) => showFleetActionError("fleet.damage", error),
+    );
+  });
+  document.addEventListener("journal:open", (event) => {
+    document.querySelectorAll("[data-fleet-module]").forEach(
+      (node) => node.classList.toggle(
+        "active",
+        node.dataset.fleetModule === "journal",
+      ),
+    );
+    showJournalControlRoom(event.detail || {}).catch(
+      (error) => showFleetActionError("fleet.journal-control-room", error),
     );
   });
   document.addEventListener("maintenance:open", (event) => {

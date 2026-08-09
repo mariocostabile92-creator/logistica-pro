@@ -1,4 +1,5 @@
 import { byId, escapeHtml, renderViewState } from "../../utils/dom.js";
+import { buildDspRowActions } from "./actions.js";
 
 
 const SIGNAL_LABELS = Object.freeze({
@@ -126,7 +127,32 @@ function damageMarkup(damage = {}) {
 }
 
 
-export function rowMarkup(row) {
+function actionButton(item, assignmentId, primary = false) {
+  return `<button type="button" class="${primary ? "primary" : "quiet"}"
+    data-dsp-action="${escapeHtml(item.id)}"
+    data-dsp-assignment="${escapeHtml(assignmentId)}">${escapeHtml(item.label)}</button>`;
+}
+
+
+export function rowActionsMarkup(row, options = {}) {
+  const actions = buildDspRowActions(row, options);
+  if (!actions.all.length) return "";
+  const assignmentId = String(row.assignment_id || "");
+  const secondary = actions.secondary
+    .map((item) => actionButton(item, assignmentId)).join("");
+  if (!actions.primary) {
+    return `<div class="dsp-row-actions dsp-row-actions-discreet">
+      <details><summary>Dettagli</summary><div>${secondary}</div></details>
+    </div>`;
+  }
+  return `<div class="dsp-row-actions">
+    ${actionButton(actions.primary, assignmentId, true)}
+    ${secondary ? `<details><summary>Altre azioni</summary><div>${secondary}</div></details>` : ""}
+  </div>`;
+}
+
+
+export function rowMarkup(row, actionOptions = {}) {
   const route = row.route || "Non assegnata";
   const wave = row.wave ? ` · ${row.wave}` : "";
   const workforceState = row.workforce?.convocable === false
@@ -173,6 +199,7 @@ export function rowMarkup(row) {
         <span class="dsp-mobile-label">Danni</span>
         ${damageMarkup(row.damage)}
       </div>
+      ${rowActionsMarkup(row, actionOptions)}
     </article>
   `;
 }

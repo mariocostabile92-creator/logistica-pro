@@ -16,7 +16,10 @@ const root = () => document.getElementById("journalControlRoom");
 
 async function load(preferredId = state.selected?.id) {
   root().setAttribute("aria-busy", "true");
-  const params = { vehicle_id: state.vehicle_id };
+  const params = {
+    vehicle_id: state.vehicle_id,
+    operation_date: state.operation_date,
+  };
   if (state.live_filter !== "all") params.live_status = state.live_filter;
   if (state.completion_filter !== "all") params.completion_filter = state.completion_filter;
   for (const [selector, key] of [["[data-jcr-search]", "search"], ["[data-jcr-operation]", "operation_type"], ["[data-jcr-anomaly]", "anomaly"]]) {
@@ -59,7 +62,10 @@ async function load(preferredId = state.selected?.id) {
 export async function showJournalControlRoom(options = {}) {
   document.querySelectorAll("#fleetWorkspaceHome,#fleetVehicleDossier,#damageWorkspace,#maintenanceWorkspace,#documentsWorkspace,#franchiseWorkspace,#insuranceWorkspace,#rentalWorkspace")
     .forEach(element => { element.hidden = true; });
-  resetJournalControlRoomState(options.vehicle_id || null);
+  resetJournalControlRoomState(
+    options.vehicle_id || null,
+    options.operation_date || null,
+  );
   root().hidden = false;
   root().innerHTML = `<nav class="jcr-workspace-nav" aria-label="Viste Giornale di bordo">
     <button type="button" class="active" data-jcr-view="control" aria-pressed="true">Control Room</button>

@@ -344,7 +344,91 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .dsp-source-state {
+.dsp-source-state {
     padding-top: 3px;
+  }
+}
+
+.dsp-row-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.dsp-row-actions button,
+.dsp-row-actions summary {
+  min-height: 34px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dsp-row-actions details {
+  position: relative;
+}
+
+.dsp-row-actions summary {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--accent-dark);
+  cursor: pointer;
+  list-style: none;
+}
+
+.dsp-row-actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.dsp-row-actions details > div {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.dsp-row-actions details > div button {
+  min-width: 0;
+  flex: 1 1 150px;
+  text-align: left;
+}
+
+.dsp-row-actions-discreet {
+  border-top-color: transparent;
+}
+
+@media (max-width: 620px) {
+  .dsp-row-actions {
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  .dsp-row-actions > button,
+  .dsp-row-actions details,
+  .dsp-row-actions summary {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .dsp-row-actions summary {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .dsp-row-actions details > div {
+    width: 100%;
   }
 }

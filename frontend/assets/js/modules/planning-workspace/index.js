@@ -576,6 +576,20 @@ function handleLegacyKeydown(event) {
 }
 
 
+export async function openPlanningDate(planningDate) {
+  const normalized = String(planningDate || "");
+  if (!initialized || !/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return false;
+  commit({ type: "load-started", planningDate: normalized });
+  const diagnostics = refs.root.querySelector(".planning-advanced-diagnostics");
+  diagnostics.dataset.loaded = "true";
+  diagnostics.open = true;
+  await loadConflictReview();
+  refs.root.querySelector("[data-planning-role='date']")
+    ?.scrollIntoView({ block: "center", inline: "nearest" });
+  return true;
+}
+
+
 export function initPlanningWorkspace() {
   if (initialized) return firstPaintPromise || Promise.resolve();
   initialized = true;
@@ -600,6 +614,9 @@ export function initPlanningWorkspace() {
       diagnostics.dataset.loaded = "true";
       loadConflictReview();
     }
+  });
+  document.addEventListener("planning:open-date", (event) => {
+    void openPlanningDate(event.detail?.operationDate);
   });
   firstPaintPromise = Promise.resolve(refs.operationsReady);
   return firstPaintPromise;
