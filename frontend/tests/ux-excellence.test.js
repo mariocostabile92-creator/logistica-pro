@@ -31,6 +31,7 @@ test("primary navigation is administrative and routes Journal through Fleet", as
     /data-workspace-view="operations"[\s\S]*?>\s*Planning\s*<\/button>/,
   );
   assert.match(navigation, /data-workspace-view="workforce"/);
+  assert.match(navigation, /data-workspace-view="dsp"/);
   assert.match(navigation, /data-workspace-view="fleet"/);
   assert.match(navigation, /data-workspace-view="learn"/);
   assert.doesNotMatch(navigation, /Giornale di bordo|\/app\/journal\//);

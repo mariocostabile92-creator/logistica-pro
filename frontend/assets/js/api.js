@@ -29,6 +29,18 @@ export async function getHealth() {
 }
 
 
+export async function getDspDailySnapshot(
+  operationDate,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  const query = new URLSearchParams({ operation_date: operationDate });
+  return parseResponse(await fetcher(
+    `${API_BASE}/api/dsp-workspace/daily-snapshot?${query}`,
+    { signal },
+  ));
+}
+
+
 export async function getWorkspaceStatus({ signal } = {}) {
   return parseResponse(await fetch(`${API_BASE}/api/workspace/v1/status`, { signal }));
 }

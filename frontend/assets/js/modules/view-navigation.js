@@ -11,6 +11,7 @@ const WORKSPACE_SECTIONS = {
   home: HOME_SECTIONS,
   operations: OPERATIONS_SECTIONS,
   workforce: ["workforceSection"],
+  dsp: ["dspWorkspaceSection"],
   fleet: ["fleetPluginSection"],
   settings: ["settingsSection"],
   learn: ["gettingStartedSection"],

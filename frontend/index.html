@@ -65,6 +65,14 @@
         <button
           type="button"
           class="workspace-tab"
+          data-workspace-view="dsp"
+          aria-selected="false"
+        >
+          DSP
+        </button>
+        <button
+          type="button"
+          class="workspace-tab"
           data-workspace-view="fleet"
           aria-selected="false"
         >
@@ -1140,6 +1148,70 @@
     </section>
 
     <section
+      id="dspWorkspaceSection"
+      class="dsp-workspace-section"
+      aria-labelledby="dspWorkspaceTitle"
+      hidden
+    >
+      <header class="section-heading dsp-workspace-header">
+        <div>
+          <p class="eyebrow oe-workspace-eyebrow"><img class="oe-workspace-mark" src="./assets/brand/operations-engine-mark.png?v=1" width="192" height="134" alt="" aria-hidden="true" /><span>Controllo giornaliero</span></p>
+          <h2 id="dspWorkspaceTitle">DSP Workspace</h2>
+          <p class="section-note">Vista operativa unificata di Planning, Workforce e Fleet.</p>
+        </div>
+        <div class="dsp-date-controls">
+          <label>
+            Data operativa
+            <input id="dspOperationDate" type="date" />
+          </label>
+          <button id="dspTodayButton" type="button" class="secondary">Oggi</button>
+        </div>
+      </header>
+
+      <div id="dspViewState" class="view-state loading" aria-live="polite" aria-busy="true"></div>
+
+      <div id="dspWorkspaceData" class="dsp-workspace-data" hidden>
+        <dl class="dsp-summary" aria-label="Riepilogo DSP">
+          <div><dt>Driver pianificati</dt><dd id="dspSummaryDrivers">0</dd></div>
+          <div><dt>Mezzi assegnati</dt><dd id="dspSummaryVehicles">0</dd></div>
+          <div class="has-attention"><dt>Criticità</dt><dd id="dspSummaryAttention">0</dd></div>
+        </dl>
+
+        <div id="dspSourceWarnings" class="dsp-source-warnings" role="status" hidden></div>
+
+        <div class="dsp-toolbar">
+          <div class="dsp-filter-group" aria-label="Filtra assegnazioni">
+            <button type="button" data-dsp-filter="all" class="active" aria-pressed="true">Tutti</button>
+            <button type="button" data-dsp-filter="attention" aria-pressed="false">Con criticità</button>
+            <button type="button" data-dsp-filter="clear" aria-pressed="false">Senza criticità</button>
+          </div>
+          <label>
+            Cerca
+            <input id="dspSearch" type="search" placeholder="Driver, targa o route" autocomplete="off" />
+          </label>
+          <label>
+            Ordina
+            <select id="dspSort">
+              <option value="default">Ordine Planning</option>
+              <option value="driver">Driver</option>
+              <option value="route">Route</option>
+              <option value="attention">Criticità</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="dspResultCount" class="dsp-result-count" aria-live="polite"></p>
+        <div id="dspBoard" class="dsp-board" hidden>
+          <div class="dsp-board-header" aria-hidden="true">
+            <span>Driver</span><span>Mezzo</span><span>Attenzione</span>
+            <span>Route</span><span>Workforce</span><span>Fleet</span>
+          </div>
+          <div id="dspBoardRows"></div>
+        </div>
+      </div>
+    </section>
+
+    <section
       id="fleetPluginSection"
       class="fleet-section"
       aria-labelledby="fleetPluginTitle"
@@ -2188,6 +2260,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="./assets/js/app.js?v=50"></script>
+  <script type="module" src="./assets/js/app.js?v=53"></script>
 </body>
 </html>
