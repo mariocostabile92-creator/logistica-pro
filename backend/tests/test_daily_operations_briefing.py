@@ -26,7 +26,7 @@ BASE_URL = "/api/briefing/v1/daily"
 APP_DIR = Path(__file__).parents[1] / "app"
 PROJECT_DIR = Path(__file__).parents[2]
 PRE_BRIEFING_PATHS_SHA256 = (
-    "f29fbaf22add666f5cd48cb599a6f870cc6bca80351bdc2e55a2c458dcf03338"
+    "939060596a4c481473206347e6c0ba71650fc1facd4cfc8c5be009c5a74294e3"
 )
 
 
@@ -408,6 +408,7 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
             and not path.startswith("/api/planning/publication")
             and not path.startswith("/api/planning/operations")
             and path not in {
+                "/api/dsp-quality/scorecards/latest",
                 "/api/planning/readiness",
                 "/api/planning/conflicts",
                 "/api/planning/timeline",

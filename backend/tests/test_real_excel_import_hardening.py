@@ -428,6 +428,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
         and not path.startswith("/api/planning/publication")
         and not path.startswith("/api/planning/operations")
         and path not in {
+            "/api/dsp-quality/scorecards/latest",
             "/api/planning/readiness",
             "/api/planning/conflicts",
             "/api/planning/timeline",
@@ -446,7 +447,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
     ).hexdigest()
 
     assert digest == (
-        "a17e205196c05b552a4aabd14f419cdc8dfc1e0b34bad3018edac9c85cde6455"
+        "ce303c29d8717c236f790f583f63abf87410998f27adfd09742ab3797a6322ef"
     )
 
 

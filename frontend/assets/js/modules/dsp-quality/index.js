@@ -1,12 +1,16 @@
 import { can } from "../../auth/state.js";
-import { importQualityScorecard, previewQualityScorecard } from "./api.js";
+import {
+  getLatestQualityScorecard,
+  importQualityScorecard,
+  previewQualityScorecard,
+} from "./api.js?v=2";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
-import { renderDspQuality } from "./presenter.js";
+import { renderDspQuality } from "./presenter.js?v=2";
 import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js";
+} from "./state.js?v=2";
 
 
 let initialized = false;
@@ -14,11 +18,39 @@ let root = null;
 let state = createDspQualityState();
 let requestVersion = 0;
 let requestController = null;
+let latestRequestVersion = 0;
+let latestRequestController = null;
 
 
 function commit(event) {
   state = applyDspQualityEvent(state, event);
   renderDspQuality(root, deriveDspQualityView(state));
+}
+
+
+async function loadLatest({ notice = null } = {}) {
+  const version = ++latestRequestVersion;
+  latestRequestController?.abort();
+  latestRequestController = new AbortController();
+  commit({ type: "latest-started" });
+  try {
+    const latest = await getLatestQualityScorecard({
+      signal: latestRequestController.signal,
+    });
+    if (version === latestRequestVersion) {
+      commit({ type: "latest-completed", latest, notice });
+    }
+    return latest;
+  } catch (error) {
+    if (error?.name === "AbortError") return null;
+    if (version === latestRequestVersion) {
+      commit({
+        type: "latest-failed",
+        message: "Impossibile caricare l'ultima scorecard. Riprova.",
+      });
+    }
+    return null;
+  }
 }
 
 
@@ -53,6 +85,7 @@ async function confirmImport() {
       expectedAction: state.preview.idempotency?.action || null,
     });
     commit({ type: "import-completed", result });
+    await loadLatest({ notice: "Scorecard importata" });
   } catch (error) {
     const message = qualityErrorMessage(error, "import");
     if (message) commit({ type: "import-failed", message });
@@ -70,6 +103,9 @@ function bindEvents() {
     if (event.target.closest("[data-quality-pick]")) root.querySelector("[data-quality-file]")?.click();
     if (event.target.closest("[data-quality-confirm]")) void confirmImport();
     if (event.target.closest("[data-quality-reset]")) commit({ type: "reset" });
+    if (event.target.closest("[data-quality-import-open]")) commit({ type: "import-opened" });
+    if (event.target.closest("[data-quality-back]")) commit({ type: "latest-restored" });
+    if (event.target.closest("[data-quality-retry]")) void loadLatest();
     if (event.target.closest("[data-quality-overview]")) commit({ type: "overview-opened" });
     const section = event.target.closest("[data-quality-section]")?.dataset.qualitySection;
     if (section) commit({ type: "section-changed", section });
@@ -103,4 +139,5 @@ export function initDspQuality() {
   state = createDspQualityState({ canImport: can("admin:write") });
   bindEvents();
   renderDspQuality(root, deriveDspQualityView(state));
+  void loadLatest();
 }

@@ -34,13 +34,14 @@ function shell(content) {
 }
 
 
-export function qualityEmptyMarkup(canImport) {
+export function qualityEmptyMarkup(canImport, { hasExisting = false } = {}) {
   const action = canImport ? `
     ${fileInput()}
     <div class="dsp-quality-dropzone" data-quality-dropzone>
       <strong>Trascina qui la scorecard PDF</strong>
       <span>oppure selezionala dal dispositivo</span>
       <button type="button" data-quality-pick>Importa scorecard</button>
+      ${hasExisting ? '<button type="button" class="secondary" data-quality-back>Torna alla panoramica</button>' : ""}
     </div>
   ` : `
     <div class="dsp-quality-permission" role="status">
@@ -49,6 +50,16 @@ export function qualityEmptyMarkup(canImport) {
     </div>
   `;
   return shell(`<section class="dsp-quality-empty">${action}</section>`);
+}
+
+
+export function qualityLoadingMarkup() {
+  return shell(`
+    <div class="dsp-quality-latest-loading" role="status" aria-busy="true">
+      <span aria-hidden="true"></span>
+      <div><strong>Caricamento Quality</strong><p>Recupero dell'ultima scorecard importata.</p></div>
+    </div>
+  `);
 }
 
 
@@ -121,6 +132,136 @@ function mappingMarkup(mapping = {}) {
 }
 
 
+function rankWow(valueToFormat) {
+  if (valueToFormat == null || valueToFormat === "") return "—";
+  const numeric = Number(valueToFormat);
+  if (!Number.isFinite(numeric)) return value(valueToFormat, "—");
+  return numeric > 0 ? `+${numeric}` : String(numeric);
+}
+
+
+function importedAt(raw) {
+  if (!raw) return "Non disponibile";
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return value(raw);
+  return new Intl.DateTimeFormat("it-IT", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+}
+
+
+function persistedSectionTabs(section) {
+  return `
+    <nav class="dsp-quality-section-tabs" role="tablist" aria-label="Sezioni scorecard">
+      ${[["overview", "Panoramica"], ["metrics", "Metriche"], ["drivers", "Driver"]].map(([key, label]) => `
+        <button type="button" role="tab" data-quality-section="${key}" aria-selected="${section === key}" class="${section === key ? "active" : ""}">${label}</button>
+      `).join("")}
+    </nav>
+  `;
+}
+
+
+function persistedOverview(latest) {
+  const scorecard = latest.scorecard || {};
+  const revision = latest.revision || {};
+  const counts = latest.counts || {};
+  const sections = latest.sections || [];
+  const focusAreas = latest.focus_areas || [];
+  const standingTone = String(revision.overall_standing || "unknown")
+    .toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+  return `
+    <article class="dsp-quality-overview" aria-label="Panoramica Quality persistita">
+      <section class="dsp-quality-overall" data-standing="${escapeHtml(standingTone)}">
+        <div class="dsp-quality-overall-standing">
+          <span>Overall Standing</span>
+          <strong>${value(revision.overall_standing, "Non disponibile")}</strong>
+        </div>
+        <div><span>Overall Score</span><strong>${value(revision.overall_score, "—")}</strong></div>
+        <div><span>Rank</span><strong>${value(revision.rank, "—")}</strong></div>
+        <div><span>Rank WoW</span><strong>${rankWow(revision.rank_wow_declared)}</strong></div>
+        <p><strong>${value(scorecard.dsp_identifier)}</strong> / ${value(scorecard.station)} · Week ${value(scorecard.reported_week, "—")} / ${value(scorecard.reported_year, "—")}</p>
+      </section>
+
+      <section class="dsp-quality-focus" aria-labelledby="dspQualityFocusTitle">
+        <div class="dsp-quality-block-heading"><p class="eyebrow">Priorità rilevate</p><h3 id="dspQualityFocusTitle">Focus Areas</h3></div>
+        ${focusAreas.length ? `<ol>${focusAreas.map(item => `
+          <li><span>${value(item.position, "—")}</span><strong>${value(item.source_label)}</strong></li>
+        `).join("")}</ol>` : '<p class="dsp-quality-neutral">Nessuna focus area disponibile.</p>'}
+      </section>
+
+      <section class="dsp-quality-standings" aria-labelledby="dspQualityStandingsTitle">
+        <div class="dsp-quality-block-heading"><p class="eyebrow">Sezioni Amazon</p><h3 id="dspQualityStandingsTitle">Section standings</h3></div>
+        ${sections.length ? `<ul>${sections.map(item => `
+          <li><span>${value(item.label)}</span><strong>${value(item.standing)}</strong></li>
+        `).join("")}</ul>` : '<p class="dsp-quality-neutral">Standing di sezione non disponibili.</p>'}
+      </section>
+
+      <div class="dsp-quality-secondary-grid">
+        <section class="dsp-quality-persisted-counts" aria-labelledby="dspQualityCountsTitle">
+          <h3 id="dspQualityCountsTitle">Contenuto importato</h3>
+          <dl>
+            <div><dt>Transporter</dt><dd>${value(counts.transporter_rows, "0")}</dd></div>
+            <div><dt>Metriche DSP</dt><dd>${value(counts.dsp_metrics, "0")}</dd></div>
+            <div><dt>Eccezioni WH</dt><dd>${value(counts.working_hour_exceptions, "0")}</dd></div>
+          </dl>
+        </section>
+        <section class="dsp-quality-persisted-mapping" aria-labelledby="dspQualityMappingTitle">
+          <h3 id="dspQualityMappingTitle">Mapping driver</h3>
+          <dl>
+            <div><dt>Riconosciuti</dt><dd>${value(counts.mapped_transporters, "0")}</dd></div>
+            <div><dt>Da associare</dt><dd>${value(counts.unmapped_transporters, "0")}</dd></div>
+            <div><dt>Ambigui</dt><dd>${value(counts.ambiguous_transporters, "0")}</dd></div>
+          </dl>
+        </section>
+      </div>
+
+      <section class="dsp-quality-source" aria-labelledby="dspQualitySourceTitle">
+        <h3 id="dspQualitySourceTitle">Fonte</h3>
+        <dl>
+          <div><dt>File</dt><dd>${value(revision.source_filename)}</dd></div>
+          <div><dt>Importata</dt><dd>${importedAt(revision.imported_at)}</dd></div>
+          <div><dt>Template</dt><dd>${value(revision.detected_template_version)}</dd></div>
+        </dl>
+      </section>
+    </article>
+  `;
+}
+
+
+export function qualityAvailableMarkup(view) {
+  const section = view.section || "overview";
+  const placeholder = section === "metrics"
+    ? "Analisi metriche disponibile nel prossimo step."
+    : "Performance driver disponibile nel prossimo step.";
+  return shell(`
+    <div class="dsp-quality-available-heading">
+      ${view.notice ? `<p class="dsp-quality-notice" role="status">${escapeHtml(view.notice)}</p>` : ""}
+      ${view.canImport ? '<button type="button" class="secondary" data-quality-import-open>Importa nuova scorecard</button>' : ""}
+    </div>
+    <section class="dsp-quality-scorecard-shell" aria-label="Ultima scorecard attiva">
+      ${persistedSectionTabs(section)}
+      <div class="dsp-quality-section-panel" role="tabpanel">
+        ${section === "overview" ? persistedOverview(view.latest) : `
+          <div class="dsp-quality-placeholder"><strong>${section === "metrics" ? "Metriche" : "Driver"}</strong><span>${placeholder}</span></div>
+        `}
+      </div>
+    </section>
+  `);
+}
+
+
+export function qualityLatestErrorMarkup(message) {
+  return shell(`
+    <div class="dsp-quality-error-state" role="alert">
+      <strong>Quality temporaneamente non disponibile</strong>
+      <span>${escapeHtml(message || "Impossibile caricare l'ultima scorecard.")}</span>
+    </div>
+    <button type="button" data-quality-retry>Riprova</button>
+  `);
+}
+
+
 export function qualityPreviewMarkup(view) {
   const preview = view.preview;
   const action = preview.idempotency?.action;
@@ -189,14 +330,17 @@ export function qualitySuccessMarkup(view) {
 
 export function renderDspQuality(root, view) {
   if (!root) return;
-  if (view.phase === "empty") root.innerHTML = qualityEmptyMarkup(view.canImport);
+  if (view.phase === "loading") root.innerHTML = qualityLoadingMarkup();
+  else if (view.phase === "empty") root.innerHTML = qualityEmptyMarkup(view.canImport, { hasExisting: Boolean(view.latest?.available) });
+  else if (view.phase === "available") root.innerHTML = qualityAvailableMarkup(view);
   else if (view.phase === "preview-loading") root.innerHTML = shell(fileSummary(view.file, "Analisi scorecard in corso…"));
   else if (view.phase === "import-loading") root.innerHTML = shell(`${fileSummary(view.file, "Importazione scorecard in corso…")}${identityMarkup(view.preview)}`);
   else if (view.phase === "preview-ready") root.innerHTML = qualityPreviewMarkup(view);
   else if (view.phase === "success") root.innerHTML = qualitySuccessMarkup(view);
+  else if (view.phase === "error" && !view.file) root.innerHTML = qualityLatestErrorMarkup(view.error);
   else root.innerHTML = shell(`
-    ${view.canImport ? fileInput() : ""}
-    <div class="dsp-quality-error-state" role="alert"><strong>Scorecard non disponibile</strong><span>${escapeHtml(view.error || "Operazione non riuscita.")}</span></div>
-    ${view.canImport ? '<button type="button" data-quality-pick>Seleziona un altro PDF</button>' : ""}
-  `);
+      ${view.canImport ? fileInput() : ""}
+      <div class="dsp-quality-error-state" role="alert"><strong>Scorecard non disponibile</strong><span>${escapeHtml(view.error || "Operazione non riuscita.")}</span></div>
+      ${view.canImport ? '<button type="button" data-quality-pick>Seleziona un altro PDF</button>' : ""}
+    `);
 }

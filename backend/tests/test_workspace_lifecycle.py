@@ -27,7 +27,7 @@ from tests.planning_helpers import save_normalized_imports, simple_rows
 client = TestClient(app)
 BASE_URL = "/api/workspace/v1"
 PRE_WORKSPACE_PATHS_SHA256 = (
-    "3f50f1bcf28109bd816a25e7723abab917b945275aaa4d7c8fc7655730395d9a"
+    "10ee98c3ecbcc057a8b9c72f00209d2a690c66e2e2b6c7b55e08092147717421"
 )
 
 
@@ -529,6 +529,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         or path.startswith("/api/planning/operations")
         or path
         in {
+            "/api/dsp-quality/scorecards/latest",
             "/api/planning/readiness",
             "/api/planning/conflicts",
             "/api/planning/timeline",

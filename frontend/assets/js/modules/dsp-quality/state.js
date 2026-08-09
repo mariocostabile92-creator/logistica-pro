@@ -1,19 +1,40 @@
 export function createDspQualityState({ canImport = false } = {}) {
   return {
-    phase: "empty",
+    phase: "loading",
     canImport,
+    latest: null,
     file: null,
     preview: null,
     result: null,
     error: null,
     section: "overview",
     overviewVisible: false,
+    notice: null,
   };
 }
 
 
 export function applyDspQualityEvent(state, event) {
   switch (event.type) {
+    case "latest-started":
+      return { ...state, phase: "loading", error: null };
+    case "latest-completed":
+      return {
+        ...state,
+        phase: event.latest?.available ? "available" : "empty",
+        latest: event.latest?.available ? event.latest : null,
+        file: null,
+        preview: null,
+        error: null,
+        notice: event.notice || null,
+        section: "overview",
+      };
+    case "latest-failed":
+      return { ...state, phase: "error", error: event.message, notice: null };
+    case "import-opened":
+      return { ...state, phase: "empty", file: null, preview: null, error: null, notice: null };
+    case "latest-restored":
+      return { ...state, phase: state.latest?.available ? "available" : "empty", error: null };
     case "file-invalid":
       return { ...state, phase: "error", file: event.file || null, preview: null, error: event.message };
     case "preview-started":
@@ -33,7 +54,11 @@ export function applyDspQualityEvent(state, event) {
     case "section-changed":
       return { ...state, section: event.section };
     case "reset":
-      return createDspQualityState({ canImport: state.canImport });
+      return {
+        ...createDspQualityState({ canImport: state.canImport }),
+        phase: state.latest?.available ? "available" : "empty",
+        latest: state.latest,
+      };
     default:
       return state;
   }

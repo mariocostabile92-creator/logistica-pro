@@ -122,6 +122,9 @@ def _decode_token(token: str) -> dict:
     try:
         padding = "=" * (-len(token) % 4)
         decoded = base64.urlsafe_b64decode(token + padding)
+        canonical = base64.urlsafe_b64encode(decoded).decode("ascii").rstrip("=")
+        if not hmac.compare_digest(token, canonical):
+            raise ValueError
         payload, signature = decoded[:-32], decoded[-32:]
         expected = hmac.new(_TOKEN_KEY, payload, hashlib.sha256).digest()
         if not hmac.compare_digest(signature, expected):

@@ -13,6 +13,8 @@ from app.plugins.dsp_quality.application.preview_service import (
     confirm_scorecard_import,
     preview_scorecard_import,
 )
+from app.plugins.dsp_quality.application.read_models import QualityLatestOverview
+from app.plugins.dsp_quality.application.read_service import get_latest_scorecard
 
 
 router = APIRouter(prefix="/api/dsp-quality", tags=["dsp-quality"])
@@ -23,6 +25,14 @@ def _require_import_permission(request: Request) -> None:
         raise HTTPException(
             status_code=403,
             detail="Permesso import Quality insufficiente.",
+        )
+
+
+def _require_read_permission(request: Request) -> None:
+    if not has_permission(request.state.user.role, "admin:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Permesso lettura Quality insufficiente.",
         )
 
 
@@ -45,6 +55,12 @@ def _guard(call, **kwargs):
         return call(**kwargs)
     except QualityPreviewError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/scorecards/latest", response_model=QualityLatestOverview)
+def latest_scorecard(request: Request):
+    _require_read_permission(request)
+    return get_latest_scorecard(request.state.user.organization_id)
 
 
 @router.post("/scorecards/preview", response_model=QualityImportPreview)
