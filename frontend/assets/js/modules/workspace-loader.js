@@ -21,7 +21,7 @@ const STYLES = {
     "workforce-responsive.css?v=6",
     "workforce-foundation.css?v=2",
   ],
-  dsp: ["dsp-workspace.css?v=6", "dsp-quality.css?v=3"],
+  dsp: ["dsp-workspace.css?v=6", "dsp-quality.css?v=4"],
   fleet: [
     "fleet.css",
     "fleet-sync.css",
@@ -131,7 +131,7 @@ const WORKSPACE_PREPARERS = {
   },
   dsp: async () => {
     const [module] = await Promise.all([
-      import("./dsp-shell/index.js?v=3"),
+      import("./dsp-shell/index.js?v=4"),
       loadWorkspaceStyles("dsp"),
     ]);
     return async () => {

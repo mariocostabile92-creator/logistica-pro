@@ -17,6 +17,8 @@ from app.plugins.dsp_quality.application.read_models import QualityLatestOvervie
 from app.plugins.dsp_quality.application.read_service import get_latest_scorecard
 from app.plugins.dsp_quality.application.metrics_read_models import QualityLatestMetrics
 from app.plugins.dsp_quality.application.metrics_read_service import get_latest_metrics
+from app.plugins.dsp_quality.application.drivers_read_models import QualityLatestDrivers
+from app.plugins.dsp_quality.application.drivers_read_service import get_latest_drivers
 
 
 router = APIRouter(prefix="/api/dsp-quality", tags=["dsp-quality"])
@@ -69,6 +71,12 @@ def latest_scorecard(request: Request):
 def latest_scorecard_metrics(request: Request):
     _require_read_permission(request)
     return get_latest_metrics(request.state.user.organization_id)
+
+
+@router.get("/scorecards/latest/drivers", response_model=QualityLatestDrivers)
+def latest_scorecard_drivers(request: Request):
+    _require_read_permission(request)
+    return get_latest_drivers(request.state.user.organization_id)
 
 
 @router.post("/scorecards/preview", response_model=QualityImportPreview)

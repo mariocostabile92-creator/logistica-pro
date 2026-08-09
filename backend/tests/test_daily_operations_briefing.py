@@ -410,6 +410,7 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
             and path not in {
                 "/api/dsp-quality/scorecards/latest",
                 "/api/dsp-quality/scorecards/latest/metrics",
+                "/api/dsp-quality/scorecards/latest/drivers",
                 "/api/planning/readiness",
                 "/api/planning/conflicts",
                 "/api/planning/timeline",

@@ -204,9 +204,10 @@ test("Metriche hands off to the Q6 lazy loading state", () => {
   assert.doesNotMatch(markup, /canvas|chart|trend/i);
 });
 
-test("Driver remains the approved Q5 placeholder", () => {
+test("Driver hands off to the Q7 lazy loading state", () => {
   const markup = qualityAvailableMarkup(availableView({ section: "drivers" }));
-  assert.match(markup, /Performance driver disponibile nel prossimo step\./);
+  assert.match(markup, /Caricamento performance driver/);
+  assert.doesNotMatch(markup, /Performance driver disponibile nel prossimo step\./);
   assert.doesNotMatch(markup, /ranking|coaching/i);
 });
 

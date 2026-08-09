@@ -1,17 +1,18 @@
 import { can } from "../../auth/state.js";
 import {
+  getLatestQualityDrivers,
   getLatestQualityMetrics,
   getLatestQualityScorecard,
   importQualityScorecard,
   previewQualityScorecard,
-} from "./api.js?v=3";
+} from "./api.js?v=4";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
-import { renderDspQuality } from "./presenter.js?v=3";
+import { renderDspQuality } from "./presenter.js?v=4";
 import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=3";
+} from "./state.js?v=4";
 
 
 let initialized = false;
@@ -23,6 +24,8 @@ let latestRequestVersion = 0;
 let latestRequestController = null;
 let metricsRequestVersion = 0;
 let metricsRequestController = null;
+let driversRequestVersion = 0;
+let driversRequestController = null;
 
 
 function commit(event) {
@@ -70,6 +73,24 @@ async function loadMetrics({ force = false } = {}) {
     if (error?.name === "AbortError") return;
     if (version === metricsRequestVersion) {
       commit({ type: "metrics-failed", message: "Impossibile caricare le metriche. Riprova." });
+    }
+  }
+}
+
+
+async function loadDrivers({ force = false } = {}) {
+  if (!force && ["loading", "available"].includes(state.drivers?.phase)) return;
+  const version = ++driversRequestVersion;
+  driversRequestController?.abort();
+  driversRequestController = new AbortController();
+  commit({ type: "drivers-started" });
+  try {
+    const data = await getLatestQualityDrivers({ signal: driversRequestController.signal });
+    if (version === driversRequestVersion) commit({ type: "drivers-completed", data });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    if (version === driversRequestVersion) {
+      commit({ type: "drivers-failed", message: "Impossibile caricare le performance driver. Riprova." });
     }
   }
 }
@@ -128,13 +149,37 @@ function bindEvents() {
     if (event.target.closest("[data-quality-back]")) commit({ type: "latest-restored" });
     if (event.target.closest("[data-quality-retry]")) void loadLatest();
     if (event.target.closest("[data-quality-metrics-retry]")) void loadMetrics({ force: true });
+    if (event.target.closest("[data-quality-drivers-retry]")) void loadDrivers({ force: true });
     const metricFilter = event.target.closest("[data-quality-metrics-filter]")?.dataset.qualityMetricsFilter;
     if (metricFilter) commit({ type: "metrics-filter-changed", filter: metricFilter });
+    const driverFilter = event.target.closest("[data-quality-drivers-filter]")?.dataset.qualityDriversFilter;
+    if (driverFilter) commit({ type: "drivers-filter-changed", filter: driverFilter });
+    const sortKey = event.target.closest("[data-quality-drivers-sort]")?.dataset.qualityDriversSort;
+    if (sortKey) {
+      const current = state.drivers.sort || {};
+      commit({
+        type: "drivers-sort-changed",
+        sort: {
+          key: sortKey,
+          direction: current.key === sortKey && current.direction === "asc" ? "desc" : "asc",
+        },
+      });
+    }
+    const rowId = event.target.closest("[data-quality-driver-open]")?.dataset.qualityDriverOpen;
+    if (rowId) commit({ type: "driver-opened", rowId });
+    if (event.target.closest("[data-quality-driver-close]")) commit({ type: "driver-closed" });
+    const workforceId = Number(event.target.closest("[data-quality-driver-workforce]")?.dataset.qualityDriverWorkforce);
+    if (Number.isInteger(workforceId) && workforceId > 0) {
+      document.dispatchEvent(new CustomEvent("workspace:navigate", {
+        detail: { view: "workforce", driverId: workforceId },
+      }));
+    }
     if (event.target.closest("[data-quality-overview]")) commit({ type: "overview-opened" });
     const section = event.target.closest("[data-quality-section]")?.dataset.qualitySection;
     if (section) {
       commit({ type: "section-changed", section });
       if (section === "metrics") void loadMetrics();
+      if (section === "drivers") void loadDrivers();
     }
   });
   root.addEventListener("change", (event) => {
@@ -147,6 +192,14 @@ function bindEvents() {
         const input = root.querySelector("[data-quality-metrics-search]");
         input?.focus();
         input?.setSelectionRange?.(state.metrics.search.length, state.metrics.search.length);
+      });
+    }
+    if (event.target.matches("[data-quality-drivers-search]")) {
+      commit({ type: "drivers-search-changed", search: event.target.value });
+      requestAnimationFrame(() => {
+        const input = root.querySelector("[data-quality-drivers-search]");
+        input?.focus();
+        input?.setSelectionRange?.(state.drivers.search.length, state.drivers.search.length);
       });
     }
   });

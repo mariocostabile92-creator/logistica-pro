@@ -17,6 +17,15 @@ export function createDspQualityState({ canImport = false } = {}) {
       filter: "all",
       search: "",
     },
+    drivers: {
+      phase: "idle",
+      data: null,
+      error: null,
+      filter: "all",
+      search: "",
+      sort: { key: "row_index", direction: "asc" },
+      selectedRowId: null,
+    },
   };
 }
 
@@ -29,6 +38,7 @@ export function applyDspQualityEvent(state, event) {
         phase: "loading",
         error: null,
         metrics: { ...state.metrics, phase: "idle", data: null, error: null },
+        drivers: { ...state.drivers, phase: "idle", data: null, error: null, selectedRowId: null },
       };
     case "latest-completed":
       return {
@@ -41,6 +51,16 @@ export function applyDspQualityEvent(state, event) {
         notice: event.notice || null,
         section: "overview",
         metrics: { ...state.metrics, phase: "idle", data: null, error: null, filter: "all", search: "" },
+        drivers: {
+          ...state.drivers,
+          phase: "idle",
+          data: null,
+          error: null,
+          filter: "all",
+          search: "",
+          sort: { key: "row_index", direction: "asc" },
+          selectedRowId: null,
+        },
       };
     case "latest-failed":
       return { ...state, phase: "error", error: event.message, notice: null };
@@ -76,6 +96,22 @@ export function applyDspQualityEvent(state, event) {
       return { ...state, metrics: { ...state.metrics, filter: event.filter } };
     case "metrics-search-changed":
       return { ...state, metrics: { ...state.metrics, search: event.search } };
+    case "drivers-started":
+      return { ...state, drivers: { ...state.drivers, phase: "loading", error: null } };
+    case "drivers-completed":
+      return { ...state, drivers: { ...state.drivers, phase: "available", data: event.data, error: null } };
+    case "drivers-failed":
+      return { ...state, drivers: { ...state.drivers, phase: "error", error: event.message } };
+    case "drivers-filter-changed":
+      return { ...state, drivers: { ...state.drivers, filter: event.filter, selectedRowId: null } };
+    case "drivers-search-changed":
+      return { ...state, drivers: { ...state.drivers, search: event.search, selectedRowId: null } };
+    case "drivers-sort-changed":
+      return { ...state, drivers: { ...state.drivers, sort: event.sort } };
+    case "driver-opened":
+      return { ...state, drivers: { ...state.drivers, selectedRowId: event.rowId } };
+    case "driver-closed":
+      return { ...state, drivers: { ...state.drivers, selectedRowId: null } };
     case "reset":
       return {
         ...createDspQualityState({ canImport: state.canImport }),

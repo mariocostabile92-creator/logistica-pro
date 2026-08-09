@@ -52,6 +52,16 @@ export async function getLatestQualityMetrics(
 }
 
 
+export async function getLatestQualityDrivers(
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/scorecards/latest/drivers`,
+    { method: "GET", signal },
+  ));
+}
+
+
 export async function importQualityScorecard(
   { file, previewToken, expectedAction },
   { signal, fetcher = globalThis.fetch } = {},

@@ -259,9 +259,10 @@ test("Q5 Panoramica remains the persisted overview", async () => {
   assert.match(presenter, /Overall Standing/);
 });
 
-test("Driver remains the approved placeholder", async () => {
+test("Driver placeholder is removed by Q7 without changing Metriche", async () => {
   const presenter = await source("assets/js/modules/dsp-quality/presenter.js");
-  assert.match(presenter, /Performance driver disponibile nel prossimo step\./);
+  assert.match(presenter, /qualityDriversMarkup/);
+  assert.doesNotMatch(presenter, /Performance driver disponibile nel prossimo step\./);
 });
 
 test("metrics controller supports filter search retry and cache invalidation", async () => {
@@ -274,4 +275,3 @@ test("metrics controller supports filter search retry and cache invalidation", a
   assert.match(controller, /data-quality-metrics-retry/);
   assert.match(state, /latest-started[\s\S]*phase: "idle"/);
 });
-

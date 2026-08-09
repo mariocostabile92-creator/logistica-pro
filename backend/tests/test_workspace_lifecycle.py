@@ -531,6 +531,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         in {
             "/api/dsp-quality/scorecards/latest",
             "/api/dsp-quality/scorecards/latest/metrics",
+            "/api/dsp-quality/scorecards/latest/drivers",
             "/api/planning/readiness",
             "/api/planning/conflicts",
             "/api/planning/timeline",
