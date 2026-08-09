@@ -62,6 +62,73 @@ export async function getLatestQualityDrivers(
 }
 
 
+export async function getTransporterReconciliation(
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/transporter-mappings/reconciliation`,
+    { method: "GET", signal },
+  ));
+}
+
+
+export async function searchQualityWorkforceCandidates(
+  query,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  const params = new URLSearchParams({ q: query });
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/transporter-mappings/workforce-candidates?${params}`,
+    { method: "GET", signal },
+  ));
+}
+
+
+export async function putTransporterMapping(
+  transporterExternalId,
+  payload,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function deleteTransporterMapping(
+  transporterExternalId,
+  expectedUpdatedAt,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}`,
+    {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expected_updated_at: expectedUpdatedAt }),
+      signal,
+    },
+  ));
+}
+
+
+export async function getTransporterMappingHistory(
+  transporterExternalId,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/transporter-mappings/${encodeURIComponent(transporterExternalId)}/history`,
+    { method: "GET", signal },
+  ));
+}
+
+
 export async function importQualityScorecard(
   { file, previewToken, expectedAction },
   { signal, fetcher = globalThis.fetch } = {},

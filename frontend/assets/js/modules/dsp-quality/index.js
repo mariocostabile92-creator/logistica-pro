@@ -1,18 +1,23 @@
 import { can } from "../../auth/state.js";
 import {
+  deleteTransporterMapping,
   getLatestQualityDrivers,
   getLatestQualityMetrics,
   getLatestQualityScorecard,
+  getTransporterMappingHistory,
+  getTransporterReconciliation,
   importQualityScorecard,
   previewQualityScorecard,
-} from "./api.js?v=4";
+  putTransporterMapping,
+  searchQualityWorkforceCandidates,
+} from "./api.js?v=5";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
-import { renderDspQuality } from "./presenter.js?v=4";
+import { renderDspQuality } from "./presenter.js?v=6";
 import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=4";
+} from "./state.js?v=5";
 
 
 let initialized = false;
@@ -26,6 +31,9 @@ let metricsRequestVersion = 0;
 let metricsRequestController = null;
 let driversRequestVersion = 0;
 let driversRequestController = null;
+let reconciliationRequestController = null;
+let candidateRequestController = null;
+let candidateTimer = null;
 
 
 function commit(event) {
@@ -96,6 +104,152 @@ async function loadDrivers({ force = false } = {}) {
 }
 
 
+function activeReconciliationRow() {
+  const reconciliation = state.drivers?.reconciliation || {};
+  return (reconciliation.data?.rows || []).find(
+    row => row.transporter_external_id === reconciliation.activeExternalId,
+  ) || null;
+}
+
+
+function nextUnmapped(data, currentExternalId) {
+  const rows = data?.rows || [];
+  const currentIndex = rows.findIndex(
+    row => row.transporter_external_id === currentExternalId,
+  );
+  return [
+    ...rows.slice(currentIndex + 1),
+    ...rows.slice(0, Math.max(currentIndex, 0)),
+  ].find(row => row.mapping_status === "UNMAPPED")?.transporter_external_id || null;
+}
+
+
+async function loadMappingHistory(externalId) {
+  if (!externalId) return;
+  try {
+    const result = await getTransporterMappingHistory(externalId);
+    if (state.drivers?.reconciliation?.activeExternalId === externalId) {
+      commit({ type: "history-completed", items: result.items || [] });
+    }
+  } catch {
+    commit({ type: "history-completed", items: [] });
+  }
+}
+
+
+async function loadReconciliation({ keepFilter = false, advanceAfter = null } = {}) {
+  reconciliationRequestController?.abort();
+  reconciliationRequestController = new AbortController();
+  commit({ type: "reconciliation-started" });
+  try {
+    const data = await getTransporterReconciliation({
+      signal: reconciliationRequestController.signal,
+    });
+    const activeExternalId = advanceAfter ? nextUnmapped(data, advanceAfter) : undefined;
+    commit({
+      type: "reconciliation-completed",
+      data,
+      activeExternalId,
+      setActive: Boolean(advanceAfter),
+      keepFilter,
+    });
+    if (activeExternalId) void loadMappingHistory(activeExternalId);
+    return data;
+  } catch (error) {
+    if (error?.name === "AbortError") return null;
+    commit({
+      type: "reconciliation-failed",
+      message: "Impossibile caricare le associazioni Transporter.",
+    });
+    return null;
+  }
+}
+
+
+async function openReconciliation(externalId = null) {
+  commit({ type: "reconciliation-opened" });
+  const data = await loadReconciliation();
+  if (data && externalId) {
+    commit({ type: "reconciliation-row-opened", externalId });
+    void loadMappingHistory(externalId);
+  }
+}
+
+
+async function loadCandidates(query) {
+  candidateRequestController?.abort();
+  if (query.trim().length < 2) return;
+  candidateRequestController = new AbortController();
+  try {
+    const result = await searchQualityWorkforceCandidates(query, {
+      signal: candidateRequestController.signal,
+    });
+    if (state.drivers?.reconciliation?.candidateSearch === query) {
+      commit({ type: "candidates-completed", items: result.items || [] });
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({ type: "candidates-failed", message: "Ricerca Workforce non disponibile." });
+  }
+}
+
+
+function mappingErrorMessage(error) {
+  return typeof error?.detail === "string"
+    ? error.detail
+    : "Impossibile salvare l'associazione. Riprova.";
+}
+
+
+async function confirmMapping() {
+  const reconciliation = state.drivers?.reconciliation || {};
+  const row = activeReconciliationRow();
+  const candidate = reconciliation.selectedCandidate;
+  if (!row || !candidate || reconciliation.mutationPhase === "loading") return;
+  commit({ type: "mapping-started" });
+  try {
+    await putTransporterMapping(row.transporter_external_id, {
+      workforce_member_id: candidate.workforce_member_id,
+      expected_updated_at: row.updated_at || null,
+    });
+    await Promise.all([
+      loadDrivers({ force: true }),
+      loadReconciliation({ keepFilter: true, advanceAfter: row.transporter_external_id }),
+    ]);
+    requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
+  } catch (error) {
+    commit({
+      type: error?.status === 409 ? "mapping-conflict" : "mapping-failed",
+      message: error?.status === 409
+        ? "Associazione aggiornata da un altro utente. Chiudi e riapri per continuare."
+        : mappingErrorMessage(error),
+    });
+  }
+}
+
+
+async function removeMapping() {
+  const reconciliation = state.drivers?.reconciliation || {};
+  const row = activeReconciliationRow();
+  if (!row?.updated_at || reconciliation.mutationPhase === "loading") return;
+  commit({ type: "mapping-started" });
+  try {
+    await deleteTransporterMapping(row.transporter_external_id, row.updated_at);
+    await Promise.all([
+      loadDrivers({ force: true }),
+      loadReconciliation({ keepFilter: true, advanceAfter: row.transporter_external_id }),
+    ]);
+  } catch (error) {
+    commit({
+      type: error?.status === 409 ? "mapping-conflict" : "mapping-failed",
+      message: error?.status === 409
+        ? "Associazione aggiornata da un altro utente. Chiudi e riapri per continuare."
+        : mappingErrorMessage(error),
+    });
+  }
+}
+
+
 async function analyze(file) {
   const message = validateQualityFile(file);
   if (message) {
@@ -150,6 +304,31 @@ function bindEvents() {
     if (event.target.closest("[data-quality-retry]")) void loadLatest();
     if (event.target.closest("[data-quality-metrics-retry]")) void loadMetrics({ force: true });
     if (event.target.closest("[data-quality-drivers-retry]")) void loadDrivers({ force: true });
+    if (event.target.closest("[data-quality-reconciliation-open]")) void openReconciliation();
+    if (event.target.closest("[data-quality-reconciliation-close]")) commit({ type: "reconciliation-closed" });
+    if (event.target.closest("[data-quality-reconciliation-retry]")) void loadReconciliation();
+    const reconciliationExternalId = event.target.closest("[data-quality-reconciliation-row]")?.dataset.qualityReconciliationRow;
+    if (reconciliationExternalId) {
+      if (!state.drivers?.reconciliation?.open) {
+        void openReconciliation(reconciliationExternalId);
+      } else {
+        commit({ type: "reconciliation-row-opened", externalId: reconciliationExternalId });
+        void loadMappingHistory(reconciliationExternalId);
+        requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
+      }
+    }
+    if (event.target.closest("[data-quality-association-close]")) commit({ type: "reconciliation-row-closed" });
+    const reconciliationFilter = event.target.closest("[data-quality-reconciliation-filter]")?.dataset.qualityReconciliationFilter;
+    if (reconciliationFilter) commit({ type: "reconciliation-filter-changed", filter: reconciliationFilter });
+    const candidateId = Number(event.target.closest("[data-quality-candidate-id]")?.dataset.qualityCandidateId);
+    if (Number.isInteger(candidateId) && candidateId > 0) {
+      const candidate = (state.drivers?.reconciliation?.candidates || []).find(
+        item => item.workforce_member_id === candidateId,
+      );
+      if (candidate) commit({ type: "candidate-selected", candidate });
+    }
+    if (event.target.closest("[data-quality-mapping-confirm]")) void confirmMapping();
+    if (event.target.closest("[data-quality-mapping-remove]")) void removeMapping();
     const metricFilter = event.target.closest("[data-quality-metrics-filter]")?.dataset.qualityMetricsFilter;
     if (metricFilter) commit({ type: "metrics-filter-changed", filter: metricFilter });
     const driverFilter = event.target.closest("[data-quality-drivers-filter]")?.dataset.qualityDriversFilter;
@@ -201,6 +380,39 @@ function bindEvents() {
         input?.focus();
         input?.setSelectionRange?.(state.drivers.search.length, state.drivers.search.length);
       });
+    }
+    if (event.target.matches("[data-quality-reconciliation-search]")) {
+      commit({ type: "reconciliation-search-changed", search: event.target.value });
+      requestAnimationFrame(() => root.querySelector("[data-quality-reconciliation-search]")?.focus());
+    }
+    if (event.target.matches("[data-quality-candidate-search]")) {
+      const query = event.target.value;
+      commit({ type: "candidate-search-changed", search: query });
+      clearTimeout(candidateTimer);
+      candidateTimer = setTimeout(() => void loadCandidates(query), 250);
+      requestAnimationFrame(() => root.querySelector("[data-quality-candidate-search]")?.focus());
+    }
+  });
+  root.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && state.drivers?.reconciliation?.activeExternalId) {
+      event.preventDefault();
+      commit({ type: "reconciliation-row-closed" });
+      return;
+    }
+    if (event.key === "Escape" && state.drivers?.reconciliation?.open) {
+      event.preventDefault();
+      commit({ type: "reconciliation-closed" });
+      return;
+    }
+    if (!event.target.matches("[data-quality-candidate-search]")) return;
+    const candidates = state.drivers?.reconciliation?.candidates || [];
+    if (event.key === "ArrowDown" && candidates.length) {
+      event.preventDefault();
+      root.querySelector("[data-quality-candidate-id]")?.focus();
+    }
+    if (event.key === "Enter" && candidates.length) {
+      event.preventDefault();
+      commit({ type: "candidate-selected", candidate: candidates[0] });
     }
   });
   root.addEventListener("dragover", (event) => {

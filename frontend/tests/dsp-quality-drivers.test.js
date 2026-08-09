@@ -266,14 +266,16 @@ test("drivers endpoint is lazy and requested only on Driver tab", async () => {
 });
 
 test("cache busting reaches the DSP shell and Q7 Driver module", async () => {
-  const [loader, shell, controller] = await Promise.all([
+  const [loader, shell, controller, presenter] = await Promise.all([
     source("assets/js/modules/workspace-loader.js"),
     source("assets/js/modules/dsp-shell/index.js"),
     source("assets/js/modules/dsp-quality/index.js"),
+    source("assets/js/modules/dsp-quality/presenter.js"),
   ]);
-  assert.match(loader, /dsp-shell\/index\.js\?v=4/);
-  assert.match(shell, /dsp-quality\/index\.js\?v=4/);
-  assert.match(controller, /presenter\.js\?v=4/);
+  assert.match(loader, /dsp-shell\/index\.js\?v=6/);
+  assert.match(shell, /dsp-quality\/index\.js\?v=6/);
+  assert.match(controller, /presenter\.js\?v=6/);
+  assert.match(presenter, /drivers-presenter\.js\?v=2/);
 });
 
 test("Driver UI has accessible sort row and mapping semantics", () => {

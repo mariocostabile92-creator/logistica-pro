@@ -68,6 +68,31 @@ def find_members_by_display_name(
     return [member_from_row(row) for row in rows]
 
 
+def search_members(
+    organization_id: str,
+    query: str,
+    *,
+    limit: int = 20,
+) -> list[WorkforceMember]:
+    """Search the canonical Workforce registry inside one organization only."""
+    needle = f"%{query.strip().casefold()}%"
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM workforce_members
+            WHERE organization_id = ? AND (
+                LOWER(display_name) LIKE ?
+                OR LOWER(external_identifier) LIKE ?
+                OR LOWER(COALESCE(station, '')) LIKE ?
+            )
+            ORDER BY active DESC, display_name, id
+            LIMIT ?
+            """,
+            (organization_id, needle, needle, needle, limit),
+        ).fetchall()
+    return [member_from_row(row) for row in rows]
+
+
 def imported_result(fingerprint: str) -> WorkforceImportResult | None:
     organization_id = current_organization_id()
     with db_session() as conn:

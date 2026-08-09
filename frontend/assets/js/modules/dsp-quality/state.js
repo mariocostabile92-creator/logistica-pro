@@ -1,3 +1,9 @@
+import {
+  applyReconciliationEvent,
+  createReconciliationState,
+} from "./reconciliation-state.js?v=5";
+
+
 export function createDspQualityState({ canImport = false } = {}) {
   return {
     phase: "loading",
@@ -25,12 +31,30 @@ export function createDspQualityState({ canImport = false } = {}) {
       search: "",
       sort: { key: "row_index", direction: "asc" },
       selectedRowId: null,
+      canManageMappings: canImport,
+      reconciliation: createReconciliationState(),
     },
   };
 }
 
 
 export function applyDspQualityEvent(state, event) {
+  if (event.type.startsWith("reconciliation-")
+    || event.type.startsWith("candidate-")
+    || event.type.startsWith("candidates-")
+    || event.type.startsWith("mapping-")
+    || event.type === "history-completed") {
+    return {
+      ...state,
+      drivers: {
+        ...state.drivers,
+        reconciliation: applyReconciliationEvent(
+          state.drivers.reconciliation || createReconciliationState(),
+          event,
+        ),
+      },
+    };
+  }
   switch (event.type) {
     case "latest-started":
       return {
@@ -38,7 +62,7 @@ export function applyDspQualityEvent(state, event) {
         phase: "loading",
         error: null,
         metrics: { ...state.metrics, phase: "idle", data: null, error: null },
-        drivers: { ...state.drivers, phase: "idle", data: null, error: null, selectedRowId: null },
+        drivers: { ...state.drivers, phase: "idle", data: null, error: null, selectedRowId: null, reconciliation: createReconciliationState() },
       };
     case "latest-completed":
       return {
@@ -60,6 +84,7 @@ export function applyDspQualityEvent(state, event) {
           search: "",
           sort: { key: "row_index", direction: "asc" },
           selectedRowId: null,
+          reconciliation: createReconciliationState(),
         },
       };
     case "latest-failed":

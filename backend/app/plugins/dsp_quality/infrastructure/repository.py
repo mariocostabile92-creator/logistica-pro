@@ -12,6 +12,14 @@ from app.plugins.dsp_quality.domain.models import (
 )
 
 
+class ConcurrentMappingUpdateError(ValueError):
+    pass
+
+
+class MappingNotFoundError(ValueError):
+    pass
+
+
 def utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -244,6 +252,188 @@ def save_external_identity(
         row = conn.execute(
             "SELECT * FROM workforce_external_identities WHERE id = ?",
             (identity_id,),
+        ).fetchone()
+    return _dict(row)  # type: ignore[return-value]
+
+
+def reconcile_external_identity(
+    *,
+    organization_id: str,
+    external_id: str,
+    workforce_member_id: int,
+    actor: str,
+    expected_updated_at: str | None,
+) -> dict:
+    now = utc_now_iso()
+    with db_session() as conn:
+        member = conn.execute(
+            """
+            SELECT id, display_name FROM workforce_members
+            WHERE id = ? AND organization_id = ?
+            """,
+            (workforce_member_id, organization_id),
+        ).fetchone()
+        if not member:
+            raise MappingNotFoundError(
+                "Workforce member non trovato nell'organizzazione."
+            )
+        existing = conn.execute(
+            """
+            SELECT identity.*, member.display_name AS workforce_display_name
+            FROM workforce_external_identities identity
+            LEFT JOIN workforce_members member
+              ON member.id = identity.workforce_member_id
+             AND member.organization_id = identity.organization_id
+            WHERE identity.organization_id = ?
+              AND identity.source = 'amazon_transporter'
+              AND identity.external_id = ?
+            """,
+            (organization_id, external_id),
+        ).fetchone()
+        if existing:
+            if expected_updated_at is None or existing["updated_at"] != expected_updated_at:
+                raise ConcurrentMappingUpdateError(
+                    "Associazione modificata da un altro utente. Ricaricare e riprovare."
+                )
+        elif expected_updated_at is not None:
+            raise ConcurrentMappingUpdateError(
+                "Associazione modificata da un altro utente. Ricaricare e riprovare."
+            )
+
+        identity_id = existing["id"] if existing else _id()
+        previous_member_id = existing["workforce_member_id"] if existing else None
+        previous_display_name = existing["workforce_display_name"] if existing else None
+        action = (
+            "mapping_replaced"
+            if existing and existing["status"] == QualityMappingStatus.MATCHED.value
+            else "mapping_created"
+        )
+        conn.execute(
+            """
+            INSERT INTO workforce_external_identities (
+                id, organization_id, source, external_id, workforce_member_id,
+                status, valid_from, valid_to, verified_by, verified_at,
+                created_at, updated_at
+            ) VALUES (?, ?, 'amazon_transporter', ?, ?, 'MATCHED', NULL, NULL, ?, ?, ?, ?)
+            ON CONFLICT(organization_id, source, external_id) DO UPDATE SET
+                workforce_member_id=excluded.workforce_member_id,
+                status='MATCHED', verified_by=excluded.verified_by,
+                verified_at=excluded.verified_at, updated_at=excluded.updated_at
+            """,
+            (
+                identity_id,
+                organization_id,
+                external_id,
+                workforce_member_id,
+                actor,
+                now,
+                existing["created_at"] if existing else now,
+                now,
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO workforce_external_identity_events (
+                id, identity_id, organization_id, action, actor, details, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                _id(),
+                identity_id,
+                organization_id,
+                action,
+                actor,
+                json.dumps({
+                    "source": "amazon_transporter",
+                    "external_id": external_id,
+                    "previous_workforce_member_id": previous_member_id,
+                    "previous_workforce_display_name": previous_display_name,
+                    "new_workforce_member_id": workforce_member_id,
+                    "new_workforce_display_name": member["display_name"],
+                }, sort_keys=True),
+                now,
+            ),
+        )
+        row = conn.execute(
+            """
+            SELECT identity.*, member.display_name AS workforce_display_name
+            FROM workforce_external_identities identity
+            JOIN workforce_members member
+              ON member.id = identity.workforce_member_id
+             AND member.organization_id = identity.organization_id
+            WHERE identity.id = ? AND identity.organization_id = ?
+            """,
+            (identity_id, organization_id),
+        ).fetchone()
+    return _dict(row)  # type: ignore[return-value]
+
+
+def remove_external_identity(
+    *,
+    organization_id: str,
+    external_id: str,
+    actor: str,
+    expected_updated_at: str,
+) -> dict:
+    now = utc_now_iso()
+    with db_session() as conn:
+        existing = conn.execute(
+            """
+            SELECT identity.*, member.display_name AS workforce_display_name
+            FROM workforce_external_identities identity
+            LEFT JOIN workforce_members member
+              ON member.id = identity.workforce_member_id
+             AND member.organization_id = identity.organization_id
+            WHERE identity.organization_id = ?
+              AND identity.source = 'amazon_transporter'
+              AND identity.external_id = ?
+            """,
+            (organization_id, external_id),
+        ).fetchone()
+        if not existing or existing["status"] != QualityMappingStatus.MATCHED.value:
+            raise MappingNotFoundError("Associazione Transporter non trovata.")
+        if existing["updated_at"] != expected_updated_at:
+            raise ConcurrentMappingUpdateError(
+                "Associazione modificata da un altro utente. Ricaricare e riprovare."
+            )
+        conn.execute(
+            """
+            UPDATE workforce_external_identities
+            SET workforce_member_id = NULL, status = 'UNMAPPED',
+                verified_by = ?, verified_at = ?, updated_at = ?
+            WHERE id = ? AND organization_id = ?
+            """,
+            (actor, now, now, existing["id"], organization_id),
+        )
+        conn.execute(
+            """
+            INSERT INTO workforce_external_identity_events (
+                id, identity_id, organization_id, action, actor, details, created_at
+            ) VALUES (?, ?, ?, 'mapping_removed', ?, ?, ?)
+            """,
+            (
+                _id(),
+                existing["id"],
+                organization_id,
+                actor,
+                json.dumps({
+                    "source": "amazon_transporter",
+                    "external_id": external_id,
+                    "previous_workforce_member_id": existing["workforce_member_id"],
+                    "previous_workforce_display_name": existing["workforce_display_name"],
+                    "new_workforce_member_id": None,
+                    "new_workforce_display_name": None,
+                }, sort_keys=True),
+                now,
+            ),
+        )
+        row = conn.execute(
+            """
+            SELECT identity.*, NULL AS workforce_display_name
+            FROM workforce_external_identities identity
+            WHERE identity.id = ? AND identity.organization_id = ?
+            """,
+            (existing["id"], organization_id),
         ).fetchone()
     return _dict(row)  # type: ignore[return-value]
 

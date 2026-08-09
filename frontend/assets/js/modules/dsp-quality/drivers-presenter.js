@@ -1,3 +1,6 @@
+import { reconciliationMarkup } from "./reconciliation-presenter.js?v=5";
+
+
 const escapeHtml = value => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -128,7 +131,16 @@ function sortHeading(label, key, state, className = "") {
 }
 
 
-function tableRow(row) {
+function mappingAction(row, canManageMappings) {
+  if (!canManageMappings) return "";
+  const label = row.mapping_status === "MATCHED"
+    ? "Modifica associazione"
+    : row.mapping_status === "AMBIGUOUS" ? "Risolvi associazione" : "Associa driver";
+  return `<button type="button" class="dsp-quality-driver-map-action" data-quality-reconciliation-row="${escapeHtml(row.transporter_external_id)}">${label}</button>`;
+}
+
+
+function tableRow(row, state) {
   const cell = (key, label, extraClass = "") => `<td data-label="${label}" class="${extraClass}">${escapeHtml(driverMetricValue(metric(row, key)))}</td>`;
   return `
     <tr data-quality-driver-row="${escapeHtml(row.row_id)}">
@@ -138,6 +150,7 @@ function tableRow(row) {
           <span>${escapeHtml(row.transporter_external_id || "Transporter non disponibile")}</span>
           ${mappingBadge(row)}
         </button>
+        ${mappingAction(row, state.canManageMappings)}
       </th>
       ${cell("delivery_completion_rate", "DCR")}
       ${cell("photo_on_delivery", "POD")}
@@ -185,7 +198,7 @@ function detailMetric(row, [key, label]) {
 }
 
 
-function driverDetail(row) {
+function driverDetail(row, state) {
   if (!row) return "";
   const hasPrevious = (row.metrics || []).some(item => item.previous?.available);
   return `
@@ -203,6 +216,7 @@ function driverDetail(row) {
       ${row.mapping_status === "MATCHED" && row.workforce_member_id ? `
         <button type="button" class="dsp-quality-driver-workforce" data-quality-driver-workforce="${escapeHtml(row.workforce_member_id)}">Apri driver Workforce</button>
       ` : ""}
+      ${mappingAction(row, state.canManageMappings)}
     </aside>
   `;
 }
@@ -235,7 +249,7 @@ function driverContent(data, state) {
           ${sortHeading("CE", "customer_escalations_count", state)}
           ${sortHeading("Delivered", "delivered", state)}
         </tr></thead>
-        <tbody>${visible.map(tableRow).join("")}</tbody>
+        <tbody>${visible.map(row => tableRow(row, state)).join("")}</tbody>
       </table>
     </div>
   `;
@@ -272,6 +286,7 @@ export function qualityDriversMarkup(driversState = {}) {
           <div><dt>Da associare</dt><dd>${escapeHtml(summary.unmapped ?? 0)}</dd></div>
         </dl>
         ${Number(summary.ambiguous || 0) > 0 ? `<p class="dsp-quality-drivers-ambiguous" role="status">Associazioni ambigue: <strong>${escapeHtml(summary.ambiguous)}</strong></p>` : ""}
+        ${driversState.canManageMappings ? '<button type="button" class="dsp-quality-reconciliation-entry" data-quality-reconciliation-open>Gestisci associazioni</button>' : ""}
       </header>
       <div class="dsp-quality-drivers-controls">
         <div role="group" aria-label="Filtra mapping driver">
@@ -281,8 +296,9 @@ export function qualityDriversMarkup(driversState = {}) {
         </div>
         <label>Ricerca driver<input type="search" data-quality-drivers-search value="${escapeHtml(driversState.search || "")}" placeholder="Nome o Transporter ID" /></label>
       </div>
-      ${driverDetail(selected)}
+      ${driverDetail(selected, driversState)}
       ${driverContent(data, driversState)}
+      ${reconciliationMarkup(driversState.reconciliation)}
     </section>
   `;
 }
