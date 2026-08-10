@@ -14,6 +14,10 @@ from app.plugins.fleet.application.asset_service import (
     add_document,
     create_asset,
 )
+from app.plugins.dsp_quality.application.mapping_service import (
+    set_workforce_external_identity,
+)
+from app.plugins.dsp_quality.domain.models import QualityMappingStatus
 from app.repositories.import_repository import save_analysis, save_import
 from app.schemas.planning_schema import GeneratePlanningRequest
 from app.services.planning_generation_service import generate_planning
@@ -228,6 +232,222 @@ def test_reset_production_removes_operational_roots_and_children():
         _count(table) == 0
         for table in workspace_repository.OPERATIONAL_DELETE_ORDER
     )
+
+
+def test_reset_removes_quality_identity_before_workforce_member():
+    with db_session() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO workforce_members (
+                external_identifier, display_name, capabilities, active,
+                source_reference, created_at, updated_at, organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "WF-RESET-QUALITY",
+                "Driver Quality Reset",
+                "[]",
+                1,
+                "workspace-reset-test",
+                "2026-08-10T10:00:00+00:00",
+                "2026-08-10T10:00:00+00:00",
+                "test-organization",
+            ),
+        )
+        member_id = int(cursor.lastrowid)
+        foreign_cursor = conn.execute(
+            """
+            INSERT INTO workforce_members (
+                external_identifier, display_name, capabilities, active,
+                source_reference, created_at, updated_at, organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "WF-RESET-FOREIGN",
+                "Driver Altra Organizzazione",
+                "[]",
+                1,
+                "workspace-reset-test",
+                "2026-08-10T10:00:00+00:00",
+                "2026-08-10T10:00:00+00:00",
+                "foreign-organization",
+            ),
+        )
+        foreign_member_id = int(foreign_cursor.lastrowid)
+
+    set_workforce_external_identity(
+        organization_id="test-organization",
+        external_id="AMZ-RESET-QUALITY",
+        status=QualityMappingStatus.MATCHED,
+        workforce_member_id=member_id,
+        actor="workspace-reset-test",
+    )
+    set_workforce_external_identity(
+        organization_id="foreign-organization",
+        external_id="AMZ-RESET-FOREIGN",
+        status=QualityMappingStatus.MATCHED,
+        workforce_member_id=foreign_member_id,
+        actor="workspace-reset-test",
+    )
+
+    response = client.post(f"{BASE_URL}/reset")
+
+    assert response.status_code == 200
+    removed = response.json()["removed_counts"]
+    assert removed["workforce_external_identity_events"] == 1
+    assert removed["workforce_external_identities"] == 1
+    assert removed["workforce_members"] == 1
+    with db_session() as conn:
+        current_counts = {
+            table: int(
+                conn.execute(
+                    f"SELECT COUNT(*) AS total FROM {table} "
+                    "WHERE organization_id=?",
+                    ("test-organization",),
+                ).fetchone()["total"]
+            )
+            for table in (
+                "workforce_external_identity_events",
+                "workforce_external_identities",
+                "workforce_members",
+            )
+        }
+        foreign_identity = conn.execute(
+            """
+            SELECT COUNT(*) AS total
+            FROM workforce_external_identities
+            WHERE organization_id=?
+            """,
+            ("foreign-organization",),
+        ).fetchone()
+        foreign_member = conn.execute(
+            """
+            SELECT COUNT(*) AS total
+            FROM workforce_members
+            WHERE organization_id=?
+            """,
+            ("foreign-organization",),
+        ).fetchone()
+    assert not any(current_counts.values())
+    assert int(foreign_identity["total"]) == 1
+    assert int(foreign_member["total"]) == 1
+
+
+def test_reset_removes_recent_fleet_modules_before_asset_roots():
+    asset = create_asset(
+        {
+            "external_identifier": "RESET-FLEET-001",
+            "plate": "RS001AA",
+            "category": "light_van",
+            "status": "active",
+            "availability": "available",
+            "notes": None,
+            "capabilities": [],
+        },
+        actor="workspace-reset-test",
+    )
+    profile = client.put(
+        f"/api/plugins/fleet/v1/assets/{asset.id}/profile",
+        json={
+            "contract_type": "lungo_termine",
+            "company": "Reset Mobility",
+            "contract_number": "RESET-LT-001",
+            "monthly_fee": "500.00",
+            "deductible": "750.00",
+            "included_km": 100000,
+            "starts_on": "2026-01-01",
+            "expires_on": "2029-12-31",
+            "contract_status": "attivo",
+        },
+    )
+    assert profile.status_code == 200
+    damage = client.post(
+        "/api/fleet/damage-cases",
+        json={
+            "vehicle_id": asset.id,
+            "occurred_at": "2026-08-10T10:00:00Z",
+            "origin": "manual",
+            "manual_reason": "Test reset relazionale",
+            "description": "Danno da eliminare con il workspace",
+            "severity": "alta",
+            "vehicle_operational_status": "indisponibile",
+        },
+    )
+    assert damage.status_code == 201
+    damage_id = damage.json()["id"]
+    maintenance = client.post(
+        "/api/fleet/maintenances",
+        json={
+            "vehicle_id": asset.id,
+            "damage_case_id": damage_id,
+            "description": "Ripristino danno",
+            "maintenance_type": "carrozzeria",
+            "status": "aperta",
+            "priority": "alta",
+        },
+    )
+    assert maintenance.status_code == 201
+    maintenance_id = maintenance.json()["id"]
+    franchise = client.post(
+        "/api/fleet/franchises",
+        json={
+            "damage_case_id": damage_id,
+            "motivation": "Verifica franchigia reset",
+        },
+    )
+    assert franchise.status_code == 201
+    rental = client.post(
+        "/api/fleet/rentals",
+        json={
+            "maintenance_id": maintenance_id,
+            "replacement_vehicle": "Reset replacement",
+            "rental_company": "Reset Rent",
+            "start_date": "2026-08-10",
+            "expected_end_date": "2026-08-17",
+            "reason": "manutenzione",
+            "status": "attivo",
+        },
+    )
+    assert rental.status_code == 201
+    insurance = client.post(
+        "/api/fleet/insurance-policies",
+        json={
+            "vehicle_id": asset.id,
+            "company": "Reset Insurance",
+            "policy_number": "RESET-POL-001",
+            "coverage_type": "kasko",
+            "starts_on": "2026-01-01",
+            "expires_on": "2026-12-31",
+            "status": "attiva",
+        },
+    )
+    assert insurance.status_code == 201
+    document = client.post(
+        "/api/fleet/documents",
+        json={
+            "vehicle_id": asset.id,
+            "document_type": "assicurazione",
+            "title": "Documento reset",
+            "document_number": "RESET-DOC-001",
+            "issued_at": "2026-01-01",
+            "expires_at": "2026-12-31",
+            "status": "valido",
+        },
+    )
+    assert document.status_code == 201
+
+    response = client.post(f"{BASE_URL}/reset")
+
+    assert response.status_code == 200
+    removed = response.json()["removed_counts"]
+    assert removed["fleet_rentals"] == 1
+    assert removed["fleet_franchise_cases"] == 1
+    assert removed["fleet_maintenances"] == 1
+    assert removed["damage_cases"] == 1
+    assert removed["fleet_insurance_policies"] == 1
+    assert removed["fleet_vehicle_documents"] == 1
+    assert removed["fleet_asset_profiles"] == 1
+    assert removed["fleet_assets"] == 1
 
 
 def test_reset_removes_briefing_snapshot_events_and_demo_data():
@@ -573,8 +793,24 @@ def test_workspace_domain_contains_no_market_specific_vocabulary():
 
 def test_operational_and_preserved_table_classification_is_complete():
     assert workspace_repository.OPERATIONAL_DELETE_ORDER == (
+        "attachment_events",
+        "attachments",
+        "workforce_external_identity_events",
+        "workforce_external_identities",
+        "dsp_quality_transporter_observations",
+        "dsp_quality_focus_areas",
+        "dsp_quality_working_hour_exceptions",
+        "dsp_quality_section_standings",
+        "dsp_quality_metric_observations",
+        "dsp_quality_transporter_rows",
+        "dsp_quality_scorecard_versions",
+        "dsp_quality_scorecards",
+        "runtime_execution_attempts",
+        "runtime_execution_intents",
+        "runtime_authority_decisions",
         "planning_publications",
         "planning_confirmations",
+        "planning_convocations",
         "planning_draft_changes",
         "planning_draft_versions",
         "planning_drafts",
@@ -590,6 +826,21 @@ def test_operational_and_preserved_table_classification_is_complete():
         "workforce_requirements",
         "workforce_members",
         "workforce_imports",
+        "fleet_document_events",
+        "fleet_maintenance_events",
+        "fleet_rentals",
+        "fleet_franchise_cases",
+        "fleet_maintenances",
+        "damage_case_events",
+        "damage_cases",
+        "fleet_insurance_policies",
+        "fleet_vehicle_documents",
+        "movement_media",
+        "movement_equipment",
+        "asset_movements",
+        "journal_sessions",
+        "journal_shared_access",
+        "fleet_asset_profiles",
         "fleet_asset_documents",
         "fleet_sync_event_fingerprints",
         "fleet_asset_events",

@@ -28,6 +28,27 @@ class WorkspaceStatusResponse(BaseModel):
 
 
 class WorkspaceRemovedCounts(BaseModel):
+    attachment_events: int = 0
+    attachments: int = 0
+    workforce_external_identity_events: int = 0
+    workforce_external_identities: int = 0
+    dsp_quality_transporter_observations: int = 0
+    dsp_quality_focus_areas: int = 0
+    dsp_quality_working_hour_exceptions: int = 0
+    dsp_quality_section_standings: int = 0
+    dsp_quality_metric_observations: int = 0
+    dsp_quality_transporter_rows: int = 0
+    dsp_quality_scorecard_versions: int = 0
+    dsp_quality_scorecards: int = 0
+    runtime_execution_attempts: int = 0
+    runtime_execution_intents: int = 0
+    runtime_authority_decisions: int = 0
+    planning_publications: int = 0
+    planning_confirmations: int = 0
+    planning_convocations: int = 0
+    planning_draft_changes: int = 0
+    planning_draft_versions: int = 0
+    planning_drafts: int = 0
     daily_briefings: int = 0
     planning_events: int = 0
     planning_versions: int = 0
@@ -40,6 +61,21 @@ class WorkspaceRemovedCounts(BaseModel):
     workforce_requirements: int = 0
     workforce_members: int = 0
     workforce_imports: int = 0
+    fleet_document_events: int = 0
+    fleet_maintenance_events: int = 0
+    fleet_rentals: int = 0
+    fleet_franchise_cases: int = 0
+    fleet_maintenances: int = 0
+    damage_case_events: int = 0
+    damage_cases: int = 0
+    fleet_insurance_policies: int = 0
+    fleet_vehicle_documents: int = 0
+    movement_media: int = 0
+    movement_equipment: int = 0
+    asset_movements: int = 0
+    journal_sessions: int = 0
+    journal_shared_access: int = 0
+    fleet_asset_profiles: int = 0
     fleet_asset_documents: int = 0
     fleet_sync_event_fingerprints: int = 0
     fleet_asset_events: int = 0

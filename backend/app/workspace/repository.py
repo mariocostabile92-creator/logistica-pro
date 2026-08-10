@@ -7,8 +7,24 @@ from app.core.database import db_session
 
 
 OPERATIONAL_DELETE_ORDER = (
+    "attachment_events",
+    "attachments",
+    "workforce_external_identity_events",
+    "workforce_external_identities",
+    "dsp_quality_transporter_observations",
+    "dsp_quality_focus_areas",
+    "dsp_quality_working_hour_exceptions",
+    "dsp_quality_section_standings",
+    "dsp_quality_metric_observations",
+    "dsp_quality_transporter_rows",
+    "dsp_quality_scorecard_versions",
+    "dsp_quality_scorecards",
+    "runtime_execution_attempts",
+    "runtime_execution_intents",
+    "runtime_authority_decisions",
     "planning_publications",
     "planning_confirmations",
+    "planning_convocations",
     "planning_draft_changes",
     "planning_draft_versions",
     "planning_drafts",
@@ -24,6 +40,21 @@ OPERATIONAL_DELETE_ORDER = (
     "workforce_requirements",
     "workforce_members",
     "workforce_imports",
+    "fleet_document_events",
+    "fleet_maintenance_events",
+    "fleet_rentals",
+    "fleet_franchise_cases",
+    "fleet_maintenances",
+    "damage_case_events",
+    "damage_cases",
+    "fleet_insurance_policies",
+    "fleet_vehicle_documents",
+    "movement_media",
+    "movement_equipment",
+    "asset_movements",
+    "journal_sessions",
+    "journal_shared_access",
+    "fleet_asset_profiles",
     "fleet_asset_documents",
     "fleet_sync_event_fingerprints",
     "fleet_asset_events",
@@ -33,6 +64,191 @@ OPERATIONAL_DELETE_ORDER = (
     "imports",
     "demo_workspaces",
 )
+
+DIRECT_OPERATIONAL_TABLES = frozenset(
+    {
+        "attachment_events",
+        "attachments",
+        "workforce_external_identity_events",
+        "workforce_external_identities",
+        "dsp_quality_scorecard_versions",
+        "dsp_quality_scorecards",
+        "runtime_execution_attempts",
+        "runtime_execution_intents",
+        "runtime_authority_decisions",
+        "planning_publications",
+        "planning_confirmations",
+        "planning_drafts",
+        "plannings",
+        "operation_snapshots",
+        "analyses",
+        "workforce_changes",
+        "workforce_day_statuses",
+        "workforce_requirements",
+        "workforce_members",
+        "workforce_imports",
+        "fleet_document_events",
+        "fleet_rentals",
+        "fleet_vehicle_documents",
+        "movement_media",
+        "asset_movements",
+        "journal_sessions",
+        "journal_shared_access",
+        "fleet_sync_runs",
+        "fleet_assets",
+        "imports",
+        "demo_workspaces",
+    }
+)
+
+DEPENDENT_SCOPED_SELECTS = {
+    "dsp_quality_transporter_observations": (
+        "SELECT o.id FROM dsp_quality_transporter_observations o "
+        "JOIN dsp_quality_transporter_rows r ON r.id=o.transporter_row_id "
+        "JOIN dsp_quality_scorecard_versions v ON v.id=r.revision_id "
+        "WHERE v.organization_id=?"
+    ),
+    "dsp_quality_focus_areas": (
+        "SELECT d.id FROM dsp_quality_focus_areas d "
+        "JOIN dsp_quality_scorecard_versions v ON v.id=d.revision_id "
+        "WHERE v.organization_id=?"
+    ),
+    "dsp_quality_working_hour_exceptions": (
+        "SELECT d.id FROM dsp_quality_working_hour_exceptions d "
+        "JOIN dsp_quality_scorecard_versions v ON v.id=d.revision_id "
+        "WHERE v.organization_id=?"
+    ),
+    "dsp_quality_section_standings": (
+        "SELECT d.id FROM dsp_quality_section_standings d "
+        "JOIN dsp_quality_scorecard_versions v ON v.id=d.revision_id "
+        "WHERE v.organization_id=?"
+    ),
+    "dsp_quality_metric_observations": (
+        "SELECT d.id FROM dsp_quality_metric_observations d "
+        "JOIN dsp_quality_scorecard_versions v ON v.id=d.revision_id "
+        "WHERE v.organization_id=?"
+    ),
+    "dsp_quality_transporter_rows": (
+        "SELECT d.id FROM dsp_quality_transporter_rows d "
+        "JOIN dsp_quality_scorecard_versions v ON v.id=d.revision_id "
+        "WHERE v.organization_id=?"
+    ),
+    "planning_convocations": (
+        "SELECT c.id FROM planning_convocations c "
+        "JOIN plannings p ON p.id=c.planning_id "
+        "WHERE p.organization_id=?"
+    ),
+    "planning_draft_changes": (
+        "SELECT c.change_id FROM planning_draft_changes c "
+        "JOIN planning_drafts d ON d.draft_id=c.draft_id "
+        "WHERE d.organization_id=?"
+    ),
+    "planning_draft_versions": (
+        "SELECT v.snapshot_id FROM planning_draft_versions v "
+        "JOIN planning_drafts d ON d.draft_id=v.draft_id "
+        "WHERE d.organization_id=?"
+    ),
+    "daily_briefings": (
+        "SELECT b.id FROM daily_briefings b "
+        "JOIN plannings p ON p.id=b.planning_id "
+        "WHERE p.organization_id=?"
+    ),
+    "planning_events": (
+        "SELECT e.id FROM planning_events e "
+        "JOIN plannings p ON p.id=e.planning_id "
+        "WHERE p.organization_id=?"
+    ),
+    "planning_versions": (
+        "SELECT v.id FROM planning_versions v "
+        "JOIN plannings p ON p.id=v.planning_id "
+        "WHERE p.organization_id=?"
+    ),
+    "assignments": (
+        "SELECT a.id FROM assignments a "
+        "JOIN plannings p ON p.id=a.planning_id "
+        "WHERE p.organization_id=?"
+    ),
+    "fleet_maintenance_events": (
+        "SELECT e.id FROM fleet_maintenance_events e "
+        "JOIN fleet_maintenances m ON m.id=e.maintenance_id "
+        "JOIN fleet_assets a ON a.id=m.vehicle_id "
+        "WHERE a.organization_id=?"
+    ),
+    "fleet_franchise_cases": (
+        "SELECT f.id FROM fleet_franchise_cases f "
+        "JOIN fleet_assets a ON a.id=f.vehicle_id "
+        "WHERE a.organization_id=?"
+    ),
+    "fleet_maintenances": (
+        "SELECT m.id FROM fleet_maintenances m "
+        "JOIN fleet_assets a ON a.id=m.vehicle_id "
+        "WHERE a.organization_id=?"
+    ),
+    "damage_case_events": (
+        "SELECT e.id FROM damage_case_events e "
+        "JOIN damage_cases d ON d.id=e.damage_case_id "
+        "JOIN fleet_assets a ON a.id=d.vehicle_id "
+        "WHERE a.organization_id=?"
+    ),
+    "damage_cases": (
+        "SELECT d.id FROM damage_cases d "
+        "JOIN fleet_assets a ON a.id=d.vehicle_id "
+        "WHERE a.organization_id=?"
+    ),
+    "fleet_insurance_policies": (
+        "SELECT p.id FROM fleet_insurance_policies p "
+        "JOIN fleet_assets a ON a.id=p.vehicle_id "
+        "WHERE a.organization_id=?"
+    ),
+    "movement_equipment": (
+        "SELECT e.movement_id FROM movement_equipment e "
+        "JOIN asset_movements m ON m.id=e.movement_id "
+        "WHERE m.organization_id=?"
+    ),
+    "fleet_asset_profiles": (
+        "SELECT p.asset_id FROM fleet_asset_profiles p "
+        "JOIN fleet_assets a ON a.id=p.asset_id "
+        "WHERE a.organization_id=?"
+    ),
+    "fleet_asset_documents": (
+        "SELECT d.id FROM fleet_asset_documents d "
+        "JOIN fleet_assets a ON a.id=d.asset_id "
+        "WHERE a.organization_id=?"
+    ),
+    "fleet_sync_event_fingerprints": (
+        "SELECT f.event_id FROM fleet_sync_event_fingerprints f "
+        "JOIN fleet_asset_events e ON e.id=f.event_id "
+        "JOIN fleet_assets a ON a.id=e.asset_id "
+        "WHERE a.organization_id=?"
+    ),
+    "fleet_asset_events": (
+        "SELECT e.id FROM fleet_asset_events e "
+        "JOIN fleet_assets a ON a.id=e.asset_id "
+        "WHERE a.organization_id=?"
+    ),
+    "fleet_asset_metadata": (
+        "SELECT m.asset_id FROM fleet_asset_metadata m "
+        "JOIN fleet_assets a ON a.id=m.asset_id "
+        "WHERE a.organization_id=?"
+    ),
+}
+
+DEPENDENT_KEY_COLUMNS = {
+    "planning_draft_changes": "change_id",
+    "planning_draft_versions": "snapshot_id",
+    "movement_equipment": "movement_id",
+    "fleet_asset_profiles": "asset_id",
+    "fleet_asset_metadata": "asset_id",
+    "fleet_sync_event_fingerprints": "event_id",
+}
+
+DEPENDENT_SCOPED_DELETES = {
+    table: (
+        f"DELETE FROM {table} WHERE "
+        f"{DEPENDENT_KEY_COLUMNS.get(table, 'id')} IN ({select})"
+    )
+    for table, select in DEPENDENT_SCOPED_SELECTS.items()
+}
 
 PRESERVED_TABLES = (
     "configuration_versions",
@@ -64,29 +280,11 @@ def init_schema() -> None:
 
 def _count(conn, table: str) -> int:
     organization_id = current_organization_id()
-    direct = {
-        "imports", "analyses", "operation_snapshots", "plannings",
-        "fleet_assets", "fleet_sync_runs", "workforce_imports",
-        "workforce_members", "workforce_day_statuses", "workforce_requirements",
-        "workforce_changes", "planning_drafts", "planning_confirmations",
-        "planning_publications", "demo_workspaces",
-    }
-    queries = {
-        "planning_draft_changes": "SELECT COUNT(*) total FROM planning_draft_changes c JOIN planning_drafts d ON d.draft_id=c.draft_id WHERE d.organization_id=?",
-        "planning_draft_versions": "SELECT COUNT(*) total FROM planning_draft_versions v JOIN planning_drafts d ON d.draft_id=v.draft_id WHERE d.organization_id=?",
-        "assignments": "SELECT COUNT(*) total FROM assignments a JOIN plannings p ON p.id=a.planning_id WHERE p.organization_id=?",
-        "planning_events": "SELECT COUNT(*) total FROM planning_events e JOIN plannings p ON p.id=e.planning_id WHERE p.organization_id=?",
-        "planning_versions": "SELECT COUNT(*) total FROM planning_versions v JOIN plannings p ON p.id=v.planning_id WHERE p.organization_id=?",
-        "daily_briefings": "SELECT COUNT(*) total FROM daily_briefings b JOIN plannings p ON p.id=b.planning_id WHERE p.organization_id=?",
-        "fleet_asset_documents": "SELECT COUNT(*) total FROM fleet_asset_documents d JOIN fleet_assets a ON a.id=d.asset_id WHERE a.organization_id=?",
-        "fleet_asset_events": "SELECT COUNT(*) total FROM fleet_asset_events e JOIN fleet_assets a ON a.id=e.asset_id WHERE a.organization_id=?",
-        "fleet_asset_metadata": "SELECT COUNT(*) total FROM fleet_asset_metadata m JOIN fleet_assets a ON a.id=m.asset_id WHERE a.organization_id=?",
-        "fleet_sync_event_fingerprints": "SELECT COUNT(*) total FROM fleet_sync_event_fingerprints f JOIN fleet_asset_events e ON e.id=f.event_id JOIN fleet_assets a ON a.id=e.asset_id WHERE a.organization_id=?",
-    }
-    if table in direct:
+    if table in DIRECT_OPERATIONAL_TABLES:
         query = f"SELECT COUNT(*) AS total FROM {table} WHERE organization_id=?"
     else:
-        query = queries.get(table)
+        scoped = DEPENDENT_SCOPED_SELECTS.get(table)
+        query = f"SELECT COUNT(*) AS total FROM ({scoped}) scoped" if scoped else None
     if not query:
         return 0
     row = conn.execute(query, (organization_id,)).fetchone()
@@ -352,30 +550,11 @@ def reset_operational_data(conn) -> dict[str, int]:
         table: _count(conn, table)
         for table in OPERATIONAL_DELETE_ORDER
     }
-    dependent_deletes = {
-        "planning_draft_changes": "DELETE FROM planning_draft_changes WHERE draft_id IN (SELECT draft_id FROM planning_drafts WHERE organization_id=?)",
-        "planning_draft_versions": "DELETE FROM planning_draft_versions WHERE draft_id IN (SELECT draft_id FROM planning_drafts WHERE organization_id=?)",
-        "daily_briefings": "DELETE FROM daily_briefings WHERE planning_id IN (SELECT id FROM plannings WHERE organization_id=?)",
-        "planning_events": "DELETE FROM planning_events WHERE planning_id IN (SELECT id FROM plannings WHERE organization_id=?)",
-        "planning_versions": "DELETE FROM planning_versions WHERE planning_id IN (SELECT id FROM plannings WHERE organization_id=?)",
-        "assignments": "DELETE FROM assignments WHERE planning_id IN (SELECT id FROM plannings WHERE organization_id=?)",
-        "fleet_asset_documents": "DELETE FROM fleet_asset_documents WHERE asset_id IN (SELECT id FROM fleet_assets WHERE organization_id=?)",
-        "fleet_sync_event_fingerprints": "DELETE FROM fleet_sync_event_fingerprints WHERE event_id IN (SELECT e.id FROM fleet_asset_events e JOIN fleet_assets a ON a.id=e.asset_id WHERE a.organization_id=?)",
-        "fleet_asset_events": "DELETE FROM fleet_asset_events WHERE asset_id IN (SELECT id FROM fleet_assets WHERE organization_id=?)",
-        "fleet_asset_metadata": "DELETE FROM fleet_asset_metadata WHERE asset_id IN (SELECT id FROM fleet_assets WHERE organization_id=?)",
-    }
-    direct = {
-        "planning_publications", "planning_confirmations", "planning_drafts",
-        "plannings", "operation_snapshots", "analyses", "workforce_changes",
-        "workforce_day_statuses", "workforce_requirements", "workforce_members",
-        "workforce_imports", "fleet_sync_runs", "fleet_assets", "imports",
-        "demo_workspaces",
-    }
     for table in OPERATIONAL_DELETE_ORDER:
-        query = dependent_deletes.get(table)
+        query = DEPENDENT_SCOPED_DELETES.get(table)
         if query:
             conn.execute(query, (organization_id,))
-        elif table in direct:
+        elif table in DIRECT_OPERATIONAL_TABLES:
             conn.execute(
                 f"DELETE FROM {table} WHERE organization_id=?",
                 (organization_id,),
