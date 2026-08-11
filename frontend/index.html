@@ -850,7 +850,7 @@
           <div>
             <p class="eyebrow">Workforce · Turni driver</p>
             <h3 id="driverShiftPlanningTitle">Fonti turni</h3>
-            <p>Combina più file in una preview verificabile prima della futura pubblicazione.</p>
+            <p>Combina più file, risolvi i conflitti e pubblica la vista operativa Workforce.</p>
           </div>
           <div class="driver-shift-actions">
             <label id="driverShiftPlanningSelectorWrap" hidden>
@@ -860,6 +860,9 @@
             <button id="driverShiftCreateBtn" type="button" class="secondary">Nuovo planning</button>
             <button id="driverShiftAddSourceBtn" type="button">Aggiungi file turni</button>
             <button id="driverShiftReplaceSourcesBtn" type="button" class="secondary">Sostituisci fonti</button>
+            <button id="driverShiftResolveBtn" type="button" class="secondary" hidden>Risolvi conflitti</button>
+            <button id="driverShiftPublishBtn" type="button" hidden>Pubblica turni unificati</button>
+            <button id="driverShiftRevisionBtn" type="button" class="secondary" hidden>Crea nuova revisione</button>
           </div>
         </header>
 
@@ -867,7 +870,7 @@
 
         <div id="driverShiftPlanningWorkspace" hidden>
           <div id="driverShiftPlanningHeader" class="driver-shift-planning-header"></div>
-          <p class="driver-shift-draft-notice">
+          <p id="driverShiftDraftNotice" class="driver-shift-draft-notice">
             Questa combinazione è una BOZZA e non modifica ancora i turni operativi.
             L’ordine delle fonti non risolve automaticamente i conflitti.
           </p>
@@ -947,6 +950,19 @@
           <div class="driver-shift-dialog-actions">
             <button id="driverShiftRemoveCancel" type="button" class="secondary">Annulla</button>
             <button id="driverShiftRemoveConfirm" type="button">Rimuovi dalla combinazione</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="driverShiftPublishDialog" class="driver-shift-dialog" aria-labelledby="driverShiftPublishTitle">
+        <div>
+          <p class="eyebrow">Pubblicazione Workforce</p>
+          <h3 id="driverShiftPublishTitle">Pubblica turni unificati</h3>
+          <div id="driverShiftPublishSummary"></div>
+          <p>Questi turni diventeranno la vista operativa Workforce per il periodo selezionato.</p>
+          <div class="driver-shift-dialog-actions">
+            <button id="driverShiftPublishCancel" type="button" class="secondary">Annulla</button>
+            <button id="driverShiftPublishConfirm" type="button">Pubblica</button>
           </div>
         </div>
       </dialog>
@@ -2408,6 +2424,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="./assets/js/app.js?v=77"></script>
+  <script type="module" src="./assets/js/app.js?v=80"></script>
 </body>
 </html>

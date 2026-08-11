@@ -11,6 +11,9 @@ from app.main import app
 from app.plugins.workforce.application import driver_shift_planning_service as service
 from app.plugins.workforce.domain.driver_shift_planning import (
     DriverShiftPlanningError,
+    DriverShiftPlanningConflictError,
+    DriverShiftPlanningPublishBlockedError,
+    DriverShiftPlanningResolutionType,
     DriverShiftPlanningNotFoundError,
     DriverShiftPlanningSourceNotFoundError,
     MergeClassification,
@@ -83,6 +86,21 @@ def _planning(
     return service.create_driver_shift_planning(
         organization_id, start, end, "Agosto", actor="dispatcher@test"
     )
+
+
+def _member(external_identifier: str, organization_id: str = ORG) -> int:
+    with db_session() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO workforce_members (
+                external_identifier, display_name, capabilities, active,
+                source_reference, created_at, updated_at, organization_id
+            ) VALUES (?, ?, '[]', 1, 'test', '2026-08-11T09:00:00Z',
+                      '2026-08-11T09:00:00Z', ?)
+            """,
+            (external_identifier, f"Driver {external_identifier}", organization_id),
+        )
+        return int(cursor.lastrowid)
 
 
 def _counts() -> dict[str, int]:
@@ -239,7 +257,7 @@ def test_same_transporter_id_for_different_drivers_is_identity_conflict():
     }
 
 
-def test_unresolved_external_identifier_uses_fallback_but_missing_identity_is_explicit():
+def test_unresolved_external_identifier_is_explicit_until_canonical_member_exists():
     import_id = _import("unresolved.xlsx")
     _row(import_id, driver="SOURCE-77", member_id=None)
     _row(import_id, driver=None, member_id=None, row_number=3)
@@ -248,7 +266,7 @@ def test_unresolved_external_identifier_uses_fallback_but_missing_identity_is_ex
     preview = service.merge_preview(ORG, planning.id)
     assert preview.summary.unresolved_rows == 2
     by_identity = {item.identity_key: item for item in preview.rows}
-    assert by_identity["external:source-77"].classification == MergeClassification.DISTINCT_ASSIGNMENT
+    assert by_identity["external:source-77"].classification == MergeClassification.UNRESOLVED_IDENTITY
     assert any(
         item.classification == MergeClassification.UNRESOLVED_IDENTITY
         for item in preview.rows
@@ -362,16 +380,32 @@ def test_q4_current_api_returns_current_draft_or_null():
 
 
 def test_workspace_reset_deletes_source_relations_before_plannings_and_imports():
+    member_id = _member("WF-RESET")
     import_id = _import("Planning_A.xlsx")
-    _row(import_id, driver="WF-1", member_id=1)
+    selected_row = _row(import_id, driver="WF-RESET", member_id=member_id, shift="A")
+    second_import = _import("Planning_B.xlsx")
+    _row(second_import, driver="WF-RESET", member_id=member_id, shift="B")
     planning = _planning()
     service.add_source(ORG, planning.id, import_id)
+    service.add_source(ORG, planning.id, second_import)
+    preview = service.merge_preview(ORG, planning.id)
+    service.resolve_conflict(
+        ORG, planning.id, preview.rows[0].conflict_key,
+        DriverShiftPlanningResolutionType.USE_SOURCE_ROW,
+        preview.planning.version, selected_source_row_id=selected_row,
+    )
+    preview = service.merge_preview(ORG, planning.id)
+    service.publish_driver_shift_planning(
+        ORG, planning.id, preview.planning.version, preview.preview_fingerprint,
+    )
     token = bind_organization(ORG)
     try:
         result = reset_workspace(actor="test")
     finally:
         reset_organization(token)
-    assert result.removed_counts.driver_shift_planning_sources == 1
+    assert result.removed_counts.driver_shift_planning_sources == 2
+    assert result.removed_counts.driver_shift_planning_resolutions == 1
+    assert result.removed_counts.driver_shift_planning_published_rows == 1
     assert result.removed_counts.driver_shift_plannings == 1
     assert repository.source_facts(ORG, import_id) is None
 
@@ -522,7 +556,7 @@ def test_q4_add_remove_and_replace_recalculate_preview_without_canonical_writes(
     assert _counts() == before
 
 
-def test_q4_api_exposes_read_replace_and_paginated_preview_but_no_publish(monkeypatch):
+def test_q5_api_exposes_read_replace_preview_resolution_and_publish(monkeypatch):
     monkeypatch.setattr(
         "app.plugins.workforce.interfaces.router.ensure_real_data_write_allowed",
         lambda: None,
@@ -551,4 +585,223 @@ def test_q4_api_exposes_read_replace_and_paginated_preview_but_no_publish(monkey
     assert replaced.json()[0]["row_count"] == 1
     assert preview.status_code == 200
     assert preview.json()["filtered_rows"] == 1
-    assert not any("publish" in path or "activate" in path for path in paths if "driver-shift-plannings" in path)
+    planning_paths = [path for path in paths if "driver-shift-plannings" in path]
+    assert any(path.endswith("/publish") for path in planning_paths)
+    assert any("/conflicts/" in path for path in planning_paths)
+    assert any(path.endswith("/new-revision") for path in planning_paths)
+
+
+def test_q5_resolution_persists_survives_reload_and_rejects_stale_version():
+    member_id = _member("WF-RESOLVE")
+    first = _import("resolve-a.xlsx")
+    second = _import("resolve-b.xlsx")
+    first_row = _row(first, driver="WF-RESOLVE", member_id=member_id, shift="A")
+    _row(second, driver="WF-RESOLVE", member_id=member_id, shift="B")
+    planning = _planning()
+    service.add_source(ORG, planning.id, first)
+    service.add_source(ORG, planning.id, second)
+    preview = service.merge_preview(ORG, planning.id)
+    resolution = service.resolve_conflict(
+        ORG, planning.id, preview.rows[0].conflict_key,
+        DriverShiftPlanningResolutionType.USE_SOURCE_ROW,
+        preview.planning.version, selected_source_row_id=first_row, actor="dispatcher@test",
+    )
+    reloaded = service.merge_preview(ORG, planning.id)
+    assert resolution.selected_source_row_id == first_row
+    assert reloaded.rows[0].resolved is True
+    assert reloaded.summary.conflicts_resolved == 1
+    with pytest.raises(DriverShiftPlanningConflictError):
+        service.resolve_conflict(
+            ORG, planning.id, preview.rows[0].conflict_key,
+            DriverShiftPlanningResolutionType.EXCLUDE,
+            preview.planning.version - 1, actor="dispatcher@test",
+        )
+
+
+def test_q5_unresolved_identity_blocks_then_allows_scoped_manual_association():
+    member_id = _member("WF-MANUAL")
+    foreign_member = _member("WF-MANUAL", "other-organization")
+    import_id = _import("unresolved-publish.xlsx")
+    row_id = _row(import_id, driver="LEGACY NAME", member_id=None)
+    planning = _planning()
+    service.add_source(ORG, planning.id, import_id)
+    preview = service.merge_preview(ORG, planning.id)
+    with pytest.raises(DriverShiftPlanningPublishBlockedError):
+        service.publish_driver_shift_planning(
+            ORG, planning.id, preview.planning.version, preview.preview_fingerprint,
+        )
+    with pytest.raises(DriverShiftPlanningError):
+        service.resolve_conflict(
+            ORG, planning.id, preview.rows[0].conflict_key,
+            DriverShiftPlanningResolutionType.USE_SOURCE_ROW,
+            preview.planning.version, selected_source_row_id=row_id,
+            workforce_member_id=foreign_member,
+        )
+    service.resolve_conflict(
+        ORG, planning.id, preview.rows[0].conflict_key,
+        DriverShiftPlanningResolutionType.USE_SOURCE_ROW,
+        preview.planning.version, selected_source_row_id=row_id,
+        workforce_member_id=member_id,
+    )
+    ready = service.merge_preview(ORG, planning.id)
+    assert ready.summary.ready_to_publish is True
+
+
+def test_q5_single_source_publish_updates_canonical_preserves_tid_and_outside_period():
+    member_id = _member("WF-PUBLISH")
+    import_id = _import("single-publish.xlsx")
+    _row(import_id, driver="WF-PUBLISH", member_id=member_id, shift="S1", transporter_id="T-900")
+    planning = _planning()
+    service.add_source(ORG, planning.id, import_id)
+    with db_session() as conn:
+        conn.executemany(
+            """INSERT INTO workforce_day_statuses (
+                workforce_member_id, date, status_code, availability, source_reference,
+                observed_or_confirmed, updated_at, organization_id
+            ) VALUES (?, ?, 'legacy', 0, 'legacy', 'confirmed',
+                      '2026-08-01T00:00:00Z', ?)""",
+            [(member_id, "2026-07-31", ORG), (member_id, "2026-08-12", ORG)],
+        )
+    preview = service.merge_preview(ORG, planning.id)
+    result = service.publish_driver_shift_planning(
+        ORG, planning.id, preview.planning.version, preview.preview_fingerprint,
+        actor="dispatcher@test",
+    )
+    assert result.planning.status.value == "ACTIVE"
+    with db_session() as conn:
+        statuses = conn.execute(
+            "SELECT date, shift_code, source_reference FROM workforce_day_statuses WHERE organization_id=? ORDER BY date",
+            (ORG,),
+        ).fetchall()
+        published = conn.execute(
+            "SELECT transporter_id, provenance_summary FROM driver_shift_planning_published_rows WHERE organization_id=?",
+            (ORG,),
+        ).fetchone()
+        audit = conn.execute(
+            "SELECT reason FROM workforce_changes WHERE organization_id=? ORDER BY id",
+            (ORG,),
+        ).fetchall()
+    assert [(row["date"], row["shift_code"]) for row in statuses] == [
+        ("2026-07-31", None), ("2026-08-11", "S1"),
+    ]
+    assert statuses[1]["source_reference"].startswith("driver_shift_planning:")
+    assert published["transporter_id"] == "T-900"
+    assert json.loads(published["provenance_summary"])[0]["source_row_id"] > 0
+    assert "driver_shift_planning_published" in {row["reason"] for row in audit}
+    with pytest.raises(DriverShiftPlanningError):
+        service.add_source(ORG, planning.id, import_id)
+
+
+def test_q5_multi_source_resolution_replace_scope_supersede_and_revision():
+    member_id = _member("WF-MULTI")
+    first = _import("multi-a.xlsx")
+    second = _import("multi-b.xlsx")
+    first_row = _row(first, driver="WF-MULTI", member_id=member_id, shift="A")
+    _row(second, driver="WF-MULTI", member_id=member_id, shift="B")
+    old = _planning()
+    service.add_source(ORG, old.id, first)
+    old_preview = service.merge_preview(ORG, old.id)
+    service.publish_driver_shift_planning(
+        ORG, old.id, old_preview.planning.version, old_preview.preview_fingerprint,
+    )
+    revision = service.create_new_revision(ORG, old.id, actor="dispatcher@test")
+    assert revision.status.value == "DRAFT"
+    assert revision.revision_of_planning_id == old.id
+    service.replace_sources(ORG, revision.id, [first, second])
+    preview = service.merge_preview(ORG, revision.id)
+    service.resolve_conflict(
+        ORG, revision.id, preview.rows[0].conflict_key,
+        DriverShiftPlanningResolutionType.USE_SOURCE_ROW,
+        preview.planning.version, selected_source_row_id=first_row,
+    )
+    ready = service.merge_preview(ORG, revision.id)
+    published = service.publish_driver_shift_planning(
+        ORG, revision.id, ready.planning.version, ready.preview_fingerprint,
+    )
+    assert old.id in published.superseded_planning_ids
+    assert repository.get_planning(ORG, old.id).status.value == "SUPERSEDED"
+
+
+def test_q5_preview_fingerprint_mismatch_and_transaction_failure_roll_back(monkeypatch):
+    member_id = _member("WF-ROLLBACK")
+    import_id = _import("rollback.xlsx")
+    _row(import_id, driver="WF-ROLLBACK", member_id=member_id)
+    planning = _planning()
+    service.add_source(ORG, planning.id, import_id)
+    preview = service.merge_preview(ORG, planning.id)
+    with pytest.raises(DriverShiftPlanningConflictError):
+        service.publish_driver_shift_planning(
+            ORG, planning.id, preview.planning.version, "0" * 64,
+        )
+    monkeypatch.setattr(repository, "_apply_canonical_statuses", lambda *args: (_ for _ in ()).throw(RuntimeError("boom")))
+    with pytest.raises(RuntimeError, match="boom"):
+        service.publish_driver_shift_planning(
+            ORG, planning.id, preview.planning.version, preview.preview_fingerprint,
+        )
+    assert repository.get_planning(ORG, planning.id).status.value == "DRAFT"
+    with db_session() as conn:
+        assert conn.execute("SELECT COUNT(*) total FROM driver_shift_planning_published_rows").fetchone()["total"] == 0
+        assert conn.execute("SELECT COUNT(*) total FROM workforce_day_statuses").fetchone()["total"] == 0
+
+
+def test_q5_publish_48k_annual_rows_uses_batch_projection_and_canonical_apply():
+    driver_count = 160
+    day_count = 300
+    with db_session() as conn:
+        conn.executemany(
+            """INSERT INTO workforce_members (
+                external_identifier, display_name, capabilities, active,
+                source_reference, created_at, updated_at, organization_id
+            ) VALUES (?, ?, '[]', 1, 'performance', '2026-01-01T00:00:00Z',
+                      '2026-01-01T00:00:00Z', ?)""",
+            [(f"WF-{index:04d}", f"Driver {index}", ORG) for index in range(driver_count)],
+        )
+        members = conn.execute(
+            "SELECT id, external_identifier FROM workforce_members WHERE organization_id=?",
+            (ORG,),
+        ).fetchall()
+    member_by_external = {row["external_identifier"]: int(row["id"]) for row in members}
+    import_id = _import("annual-publish.xlsx")
+    start = date(2026, 1, 1)
+    rows = []
+    for driver_index in range(driver_count):
+        external = f"WF-{driver_index:04d}"
+        for day_index in range(day_count):
+            operation_date = (start + timedelta(days=day_index)).isoformat()
+            rows.append((
+                ORG, import_id, "Planning", driver_index + 2,
+                f"Planning!{driver_index + 2}", f"shift:{operation_date}:{driver_index}",
+                "shift", external, f"Driver {driver_index}", f"T-{driver_index:04d}",
+                "DLO2", operation_date, "scheduled", 1, "S1", None, None, None,
+                None, None, None, None, member_by_external[external], "{}",
+            ))
+    with db_session() as conn:
+        conn.executemany(
+            """INSERT INTO workforce_import_rows (
+                organization_id, workforce_import_id, source_sheet,
+                source_row_number, source_reference, source_record_key,
+                row_kind, source_external_identifier, driver_display_name,
+                transporter_id, station, operational_date, status_code,
+                availability, shift_code, start_time, end_time, notes,
+                employment_type, contract_start, contract_end, weekly_hours,
+                resolved_workforce_member_id, raw_payload
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                      ?, ?, ?, ?, ?, ?)""",
+            rows,
+        )
+    planning = _planning("2026-01-01", "2026-12-31")
+    service.add_source(ORG, planning.id, import_id)
+    preview = service.merge_preview(ORG, planning.id)
+    started = perf_counter()
+    publication = service.publish_driver_shift_planning(
+        ORG, planning.id, preview.planning.version, preview.preview_fingerprint,
+    )
+    elapsed = perf_counter() - started
+    assert publication.published_rows == 48_000
+    with db_session() as conn:
+        canonical = conn.execute(
+            "SELECT COUNT(*) total FROM workforce_day_statuses WHERE organization_id=?",
+            (ORG,),
+        ).fetchone()["total"]
+    assert canonical == 48_000
+    assert elapsed < 20

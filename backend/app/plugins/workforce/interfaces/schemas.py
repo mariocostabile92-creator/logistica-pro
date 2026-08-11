@@ -129,3 +129,15 @@ class DriverShiftPlanningReplaceSourcesRequest(BaseModel):
         if len(set(value)) != len(value):
             raise ValueError("Una source non può essere ripetuta.")
         return value
+
+
+class DriverShiftPlanningResolutionRequest(BaseModel):
+    expected_version: int = Field(gt=0)
+    resolution_type: str = Field(pattern="^(USE_SOURCE_ROW|EXCLUDE)$")
+    selected_source_row_id: int | None = Field(default=None, gt=0)
+    workforce_member_id: int | None = Field(default=None, gt=0)
+
+
+class DriverShiftPlanningPublishRequest(BaseModel):
+    expected_version: int = Field(gt=0)
+    expected_preview_fingerprint: str = Field(min_length=64, max_length=64)

@@ -14,6 +14,7 @@ export function createDriverShiftPlanningState() {
     loading: false,
     pendingImportMode: null,
     pendingImport: null,
+    members: [],
   };
 
   function beginRequest() {
@@ -42,6 +43,7 @@ export function createDriverShiftPlanningState() {
       plannings: [], planning: null, preview: null,
       classification: "", search: "", offset: 0,
       loading: false, pendingImportMode: null, pendingImport: null,
+      members: [],
     });
   }
 

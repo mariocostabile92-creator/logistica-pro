@@ -357,6 +357,56 @@ def init_schema() -> None:
                 organization_id TEXT NOT NULL DEFAULT 'default'
             );
 
+            CREATE TABLE IF NOT EXISTS driver_shift_planning_resolutions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT NOT NULL,
+                driver_shift_planning_id INTEGER NOT NULL,
+                planning_version INTEGER NOT NULL,
+                conflict_key TEXT NOT NULL,
+                resolution_type TEXT NOT NULL,
+                selected_source_row_id INTEGER,
+                resolved_payload TEXT,
+                actor TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (driver_shift_planning_id, organization_id)
+                    REFERENCES driver_shift_plannings(id, organization_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (selected_source_row_id)
+                    REFERENCES workforce_import_rows(id) ON DELETE RESTRICT,
+                UNIQUE (driver_shift_planning_id, planning_version, conflict_key)
+            );
+
+            CREATE TABLE IF NOT EXISTS driver_shift_planning_published_rows (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT NOT NULL,
+                driver_shift_planning_id INTEGER NOT NULL,
+                planning_version INTEGER NOT NULL,
+                workforce_member_id INTEGER NOT NULL,
+                operational_date TEXT NOT NULL,
+                status_code TEXT NOT NULL,
+                availability INTEGER NOT NULL,
+                shift_code TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                station TEXT,
+                transporter_id TEXT,
+                provenance_summary TEXT NOT NULL,
+                selected_source_row_id INTEGER,
+                published_at TEXT NOT NULL,
+                FOREIGN KEY (driver_shift_planning_id, organization_id)
+                    REFERENCES driver_shift_plannings(id, organization_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (workforce_member_id) REFERENCES workforce_members(id)
+                    ON DELETE RESTRICT,
+                FOREIGN KEY (selected_source_row_id)
+                    REFERENCES workforce_import_rows(id) ON DELETE RESTRICT,
+                UNIQUE (
+                    driver_shift_planning_id, planning_version,
+                    workforce_member_id, operational_date
+                )
+            );
+
             CREATE INDEX IF NOT EXISTS idx_workforce_status_date
                 ON workforce_day_statuses(date, workforce_member_id);
             CREATE INDEX IF NOT EXISTS idx_workforce_requirement_date
@@ -382,6 +432,15 @@ def init_schema() -> None:
             CREATE INDEX IF NOT EXISTS idx_driver_shift_planning_sources_scope
                 ON driver_shift_planning_sources(
                     organization_id, driver_shift_planning_id, source_order
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_planning_resolutions_scope
+                ON driver_shift_planning_resolutions(
+                    organization_id, driver_shift_planning_id,
+                    planning_version, conflict_key
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_published_member_date
+                ON driver_shift_planning_published_rows(
+                    organization_id, workforce_member_id, operational_date
                 );
 
             CREATE TABLE IF NOT EXISTS workforce_consecutivity_policies (
@@ -418,6 +477,11 @@ def init_schema() -> None:
         _ensure_profile_columns(conn)
         for table, columns in SCOPED_COLUMNS.items():
             _ensure_columns(conn, table, columns)
+        _ensure_columns(conn, "driver_shift_plannings", {
+            "published_at": "TEXT",
+            "published_by": "TEXT",
+            "revision_of_planning_id": "INTEGER",
+        })
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_workforce_member_org ON workforce_members(organization_id, active)"
         )

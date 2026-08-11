@@ -8,4 +8,8 @@ export {
   removeDriverShiftPlanningSource as removeSource,
   resolveDriverShiftPlanningImport as resolveImport,
   replaceDriverShiftPlanningSources as replaceSources,
-} from "../api.js?v=8";
+  resolveDriverShiftPlanningConflict as resolveConflict,
+  publishDriverShiftPlanning as publishPlanning,
+  createDriverShiftPlanningRevision as createRevision,
+  listWorkforceMembers,
+} from "../api.js?v=9";

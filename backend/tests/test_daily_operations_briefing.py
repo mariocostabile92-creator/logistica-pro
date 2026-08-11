@@ -26,7 +26,7 @@ BASE_URL = "/api/briefing/v1/daily"
 APP_DIR = Path(__file__).parents[1] / "app"
 PROJECT_DIR = Path(__file__).parents[2]
 PRE_BRIEFING_PATHS_SHA256 = (
-    "939060596a4c481473206347e6c0ba71650fc1facd4cfc8c5be009c5a74294e3"
+    "71a39d73f6bfad31c17ff60b8a495b45fa92487c2c19fbdbc24287b3089772d8"
 )
 
 

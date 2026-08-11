@@ -31,7 +31,7 @@ from tests.planning_helpers import save_normalized_imports, simple_rows
 client = TestClient(app)
 BASE_URL = "/api/workspace/v1"
 PRE_WORKSPACE_PATHS_SHA256 = (
-    "10ee98c3ecbcc057a8b9c72f00209d2a690c66e2e2b6c7b55e08092147717421"
+    "2480a721770ca34b10264e97f09937e66ca3ccf1c3cd10a1e9bad4b04d3b458b"
 )
 
 
@@ -821,6 +821,8 @@ def test_operational_and_preserved_table_classification_is_complete():
         "plannings",
         "operation_snapshots",
         "analyses",
+        "driver_shift_planning_published_rows",
+        "driver_shift_planning_resolutions",
         "driver_shift_planning_sources",
         "driver_shift_plannings",
         "workforce_import_rows",

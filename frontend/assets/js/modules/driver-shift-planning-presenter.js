@@ -37,43 +37,48 @@ function provenance(reference) {
 }
 
 
-function alternativeMarkup(alternative) {
+function alternativeMarkup(alternative, row) {
   const driver = safe(
     alternative.driver_display_name || alternative.source_external_identifier,
     "Driver non risolto",
   );
   const value = [alternative.shift_code, alternative.status_code]
     .filter(Boolean).join(" · ") || "Turno non disponibile";
+  const sourceRowId = alternative.source_references?.[0]?.source_row_id;
   return `
     <li>
       <strong>${escapeHtml(driver)}</strong>
       <span>${escapeHtml(value)}</span>
       ${alternative.source_references.map((item) => `<small>${provenance(item)}</small>`).join("")}
+      ${row.resolved ? "" : `<button type="button" class="secondary" data-resolve-conflict="${escapeHtml(row.conflict_key)}" data-source-row-id="${sourceRowId}">Usa questa fonte</button>`}
     </li>
   `;
 }
 
 
-function rowMarkup(row) {
+function rowMarkup(row, members) {
   const label = CLASSIFICATION_LABELS[row.classification] || row.classification;
   const driver = safe(row.display_name || row.source_external_identifier, "Driver non risolto");
   const hasAlternatives = row.conflicting_alternatives?.length > 0;
+  const requiresResolution = [
+    "POTENTIAL_CONFLICT", "IDENTITY_CONFLICT", "UNRESOLVED_IDENTITY",
+  ].includes(row.classification);
+  const memberOptions = members.map((member) => `
+    <option value="${member.workforce_member_id}">${escapeHtml(member.display_name)} · ${escapeHtml(member.external_identifier)}</option>
+  `).join("");
   const explanation = row.classification === "IDENTITY_CONFLICT"
     ? "Lo stesso T-ID è associato a driver differenti."
     : row.classification === "UNRESOLVED_IDENTITY"
-      ? "Driver non risolto. La riga resta visibile e non crea una nuova risorsa."
+      ? "Associa un membro Workforce oppure escludi la giornata."
       : row.classification === "POTENTIAL_CONFLICT"
-        ? "Valori differenti: nessun vincitore è stato selezionato."
+        ? "Valori differenti: seleziona esplicitamente la fonte autorevole."
         : row.classification === "EXACT_DUPLICATE"
           ? "Una sola assegnazione candidata, con tutte le fonti conservate."
           : "Assegnazione distinta.";
   return `
-    <article class="driver-shift-row" data-classification="${escapeHtml(row.classification)}">
+    <article class="driver-shift-row ${row.resolved ? "is-resolved" : ""}" data-classification="${escapeHtml(row.classification)}" data-conflict-key="${escapeHtml(row.conflict_key)}">
       <header>
-        <div>
-          <strong>${escapeHtml(driver)}</strong>
-          <span>${escapeHtml(dateLabel(row.operational_date))}</span>
-        </div>
+        <div><strong>${escapeHtml(driver)}</strong><span>${escapeHtml(dateLabel(row.operational_date))}</span></div>
         <span class="driver-shift-classification">${escapeHtml(label)}</span>
       </header>
       <dl>
@@ -85,13 +90,26 @@ function rowMarkup(row) {
       ${hasAlternatives ? `
         <div class="driver-shift-alternatives" aria-label="Valori sorgente in confronto">
           <span>Valori dalle fonti</span>
-          <ul>${row.conflicting_alternatives.map(alternativeMarkup).join("")}</ul>
+          <ul>${row.conflicting_alternatives.map((item) => alternativeMarkup(item, row)).join("")}</ul>
         </div>
       ` : ""}
       <div class="driver-shift-provenance">
         <span>Provenienza</span>
         <ul>${row.source_references.map((item) => `<li>${provenance(item)}</li>`).join("")}</ul>
       </div>
+      ${requiresResolution ? `
+        <div class="driver-shift-resolution">
+          ${row.resolved ? `
+            <strong>Risolto: ${escapeHtml(row.resolution?.resolution_type === "EXCLUDE" ? "giornata esclusa" : "fonte selezionata")}</strong>
+          ` : row.classification === "UNRESOLVED_IDENTITY" ? `
+            <label>Associa a Workforce
+              <select data-unresolved-member><option value="">Seleziona driver</option>${memberOptions}</select>
+            </label>
+            <button type="button" data-resolve-unresolved="${escapeHtml(row.conflict_key)}" data-source-row-id="${row.source_references[0]?.source_row_id}">Associa e usa</button>
+          ` : ""}
+          ${row.resolved ? "" : `<button type="button" class="quiet" data-exclude-conflict="${escapeHtml(row.conflict_key)}">Escludi questa giornata</button>`}
+        </div>
+      ` : ""}
     </article>
   `;
 }
@@ -108,10 +126,8 @@ export function renderPlanningSelector(element, plannings, selectedId) {
 
 
 export function renderPlanningHeader(element, planning, sourceCount) {
-  if (!planning) {
-    element.innerHTML = "";
-    return;
-  }
+  if (!planning) { element.innerHTML = ""; return; }
+  const badge = planning.status === "ACTIVE" ? "ATTIVO" : planning.status === "SUPERSEDED" ? "SUPERATO" : "BOZZA";
   element.innerHTML = `
     <div>
       <p class="eyebrow">Planning turni</p>
@@ -119,10 +135,11 @@ export function renderPlanningHeader(element, planning, sourceCount) {
       <p>${escapeHtml(dateLabel(planning.period_start))} – ${escapeHtml(dateLabel(planning.period_end))}</p>
     </div>
     <div class="driver-shift-planning-meta">
-      <span class="driver-shift-draft-badge">BOZZA</span>
+      <span class="driver-shift-draft-badge" data-status="${escapeHtml(planning.status)}">${badge}</span>
       <span>${sourceCount} ${sourceCount === 1 ? "fonte" : "fonti"}</span>
       <span>v${planning.version}</span>
       <span>Aggiornato ${escapeHtml(dateTimeLabel(planning.updated_at))}</span>
+      ${planning.published_at ? `<span>Pubblicato ${escapeHtml(dateTimeLabel(planning.published_at))} da ${escapeHtml(safe(planning.published_by))}</span>` : ""}
     </div>
   `;
 }
@@ -135,10 +152,7 @@ export function renderSources(element, sources) {
   }
   element.innerHTML = sources.map((source) => `
     <li class="driver-shift-source-card" data-source-id="${source.id}">
-      <div>
-        <strong>${escapeHtml(source.source_filename)}</strong>
-        <span>Importato ${escapeHtml(dateTimeLabel(source.imported_at))}</span>
-      </div>
+      <div><strong>${escapeHtml(source.source_filename)}</strong><span>Importato ${escapeHtml(dateTimeLabel(source.imported_at))}</span></div>
       <dl>
         <div><dt>Righe</dt><dd>${source.row_count}</dd></div>
         <div><dt>Periodo rilevato</dt><dd>${escapeHtml(dateLabel(source.date_from))} → ${escapeHtml(dateLabel(source.date_to))}</dd></div>
@@ -146,9 +160,7 @@ export function renderSources(element, sources) {
         <div><dt>Merge</dt><dd>${source.status === "AVAILABLE" ? "Disponibile" : "Non disponibile"}</dd></div>
       </dl>
       ${source.warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join("")}
-      <button type="button" class="quiet" data-remove-driver-shift-source="${source.id}">
-        Rimuovi dalla combinazione
-      </button>
+      <button type="button" class="quiet" data-remove-driver-shift-source="${source.id}">Rimuovi dalla combinazione</button>
     </li>
   `).join("");
 }
@@ -156,22 +168,22 @@ export function renderSources(element, sources) {
 
 export function renderMergeSummary(element, summary) {
   const values = [
+    ["Da risolvere", summary.conflicts_to_resolve],
+    ["Risolti", summary.conflicts_resolved],
+    ["Identità non risolte", summary.unresolved_identities],
+    ["Pronto per pubblicare", summary.ready_to_publish ? "SÌ" : "NO"],
     ["Righe sorgente", summary.total_source_rows],
     ["Righe unificate", summary.unified_rows],
-    ["Duplicati esatti", summary.exact_duplicates],
-    ["Conflitti", summary.potential_conflicts],
-    ["Conflitti identità", summary.identity_conflicts],
-    ["Non risolti", summary.unresolved_rows],
   ];
   element.innerHTML = values.map(([label, value]) => `
-    <div><dt>${escapeHtml(label)}</dt><dd>${Number(value || 0)}</dd></div>
+    <div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value ?? 0))}</dd></div>
   `).join("");
 }
 
 
-export function renderMergeRows(element, preview) {
+export function renderMergeRows(element, preview, members = []) {
   element.innerHTML = preview.rows.length
-    ? preview.rows.map(rowMarkup).join("")
+    ? preview.rows.map((row) => rowMarkup(row, members)).join("")
     : '<p class="driver-shift-empty">Nessuna riga corrisponde ai filtri.</p>';
 }
 

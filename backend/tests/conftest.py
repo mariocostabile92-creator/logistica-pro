@@ -150,6 +150,8 @@ def reset_database():
         conn.execute("DELETE FROM workforce_changes")
         conn.execute("DELETE FROM workforce_consecutivity_overrides")
         conn.execute("DELETE FROM workforce_consecutivity_policies")
+        conn.execute("DELETE FROM driver_shift_planning_published_rows")
+        conn.execute("DELETE FROM driver_shift_planning_resolutions")
         conn.execute("DELETE FROM driver_shift_planning_sources")
         conn.execute("DELETE FROM driver_shift_plannings")
         conn.execute("DELETE FROM workforce_import_rows")

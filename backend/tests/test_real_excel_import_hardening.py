@@ -449,7 +449,7 @@ def test_preexisting_non_import_openapi_paths_are_unchanged():
     ).hexdigest()
 
     assert digest == (
-        "ce303c29d8717c236f790f583f63abf87410998f27adfd09742ab3797a6322ef"
+        "bcdc1fcb868c0c4905fd3f11b216768c1731fea3b4f598b6cf95018c34afba81"
     )
 
 

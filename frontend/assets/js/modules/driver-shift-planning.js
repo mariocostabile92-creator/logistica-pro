@@ -6,7 +6,11 @@ import {
   removeSource,
   resolveImport,
   replaceSources,
-} from "./driver-shift-planning-api.js";
+  resolveConflict,
+  publishPlanning,
+  createRevision,
+  listWorkforceMembers,
+} from "./driver-shift-planning-api.js?v=2";
 import {
   renderMergeRows,
   renderMergeSummary,
@@ -14,8 +18,8 @@ import {
   renderPlanningHeader,
   renderPlanningSelector,
   renderSources,
-} from "./driver-shift-planning-presenter.js";
-import { createDriverShiftPlanningState } from "./driver-shift-planning-state.js";
+} from "./driver-shift-planning-presenter.js?v=3";
+import { createDriverShiftPlanningState } from "./driver-shift-planning-state.js?v=2";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 
@@ -47,6 +51,7 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
       section: byId("driverShiftPlanningSection"),
       state: byId("driverShiftPlanningState"),
       workspace: byId("driverShiftPlanningWorkspace"),
+      draftNotice: byId("driverShiftDraftNotice"),
       header: byId("driverShiftPlanningHeader"),
       selectorWrap: byId("driverShiftPlanningSelectorWrap"),
       selector: byId("driverShiftPlanningSelector"),
@@ -61,6 +66,7 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
       createForm: byId("driverShiftPlanningForm"),
       replaceDialog: byId("driverShiftReplaceDialog"),
       removeDialog: byId("driverShiftRemoveDialog"),
+      publishDialog: byId("driverShiftPublishDialog"),
     });
   }
 
@@ -80,6 +86,9 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
     elements.state.hidden = hasPlanning;
     elements.workspace.hidden = !hasPlanning;
     if (!hasPlanning) {
+      byId("driverShiftResolveBtn").hidden = true;
+      byId("driverShiftPublishBtn").hidden = true;
+      byId("driverShiftRevisionBtn").hidden = true;
       elements.state.innerHTML = `
         <div>
           <strong>Crea il Planning turni</strong>
@@ -105,6 +114,16 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
       state.preview?.sources?.length || 0,
     );
     renderSources(elements.sources, state.preview?.sources || []);
+    const isDraft = state.planning.status === "DRAFT";
+    elements.draftNotice.hidden = !isDraft;
+    const blockers = Number(state.preview?.summary?.conflicts_to_resolve || 0);
+    const resolveButton = byId("driverShiftResolveBtn");
+    const publishButton = byId("driverShiftPublishBtn");
+    const revisionButton = byId("driverShiftRevisionBtn");
+    resolveButton.hidden = !isDraft || blockers === 0;
+    publishButton.hidden = !isDraft;
+    publishButton.disabled = !state.preview?.summary?.ready_to_publish;
+    revisionButton.hidden = state.planning.status !== "ACTIVE";
     if (state.planning.status !== "DRAFT") {
       byId("driverShiftReplaceSourcesBtn").disabled = true;
       elements.sources.querySelectorAll("[data-remove-driver-shift-source]")
@@ -112,7 +131,7 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
     }
     if (state.preview) {
       renderMergeSummary(elements.summary, state.preview.summary);
-      renderMergeRows(elements.rows, state.preview);
+      renderMergeRows(elements.rows, state.preview, state.members);
       renderPagination({
         previous: elements.previous,
         next: elements.next,
@@ -127,9 +146,15 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
     elements.section.hidden = false;
     elements.section.setAttribute("aria-busy", "true");
     try {
-      const collection = await listPlannings();
+      const [collection, memberCollection] = await Promise.all([
+        listPlannings(),
+        listWorkforceMembers(),
+      ]);
       if (!store.isCurrent(request)) return;
       state.plannings = collection.items;
+      state.members = Array.isArray(memberCollection)
+        ? memberCollection
+        : (memberCollection.items || []);
       state.planning = state.plannings.find((item) => item.id === preferredPlanningId)
         || collection.current
         || null;
@@ -288,6 +313,81 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
     }
   }
 
+  async function saveResolution(conflictKey, resolutionType, sourceRowId = null, memberId = null) {
+    if (!state.planning) return;
+    try {
+      await resolveConflict(state.planning.id, conflictKey, {
+        expected_version: state.planning.version,
+        resolution_type: resolutionType,
+        selected_source_row_id: sourceRowId,
+        workforce_member_id: memberId,
+      });
+      await refreshPreview();
+    } catch (error) {
+      if (error?.status === 409) setMessage("Il planning è cambiato. Preview ricaricata.", "warning");
+      else presentError("workforce.driver-shift-resolution", error);
+      await refreshPreview();
+    }
+  }
+
+  function openPublishDialog() {
+    if (!state.preview?.summary?.ready_to_publish) return;
+    const planning = state.planning;
+    byId("driverShiftPublishSummary").innerHTML = `
+      <dl class="driver-shift-publish-summary">
+        <div><dt>Periodo</dt><dd>${planning.period_start} → ${planning.period_end}</dd></div>
+        <div><dt>Giornate unificate</dt><dd>${state.preview.summary.unified_rows}</dd></div>
+        <div><dt>Fonti</dt><dd>${state.preview.sources.length}</dd></div>
+      </dl>
+    `;
+    elements.publishDialog.showModal();
+    byId("driverShiftPublishConfirm").focus();
+  }
+
+  async function confirmPublish() {
+    if (!state.planning || !state.preview) return;
+    const button = byId("driverShiftPublishConfirm");
+    setLoading(button, true, "Pubblicazione...");
+    try {
+      await publishPlanning(state.planning.id, {
+        expected_version: state.planning.version,
+        expected_preview_fingerprint: state.preview.preview_fingerprint,
+      });
+      elements.publishDialog.close();
+      await refresh(state.planning.id);
+      await onChanged({
+        type: "published",
+        planningId: state.planning.id,
+        periodStart: state.planning.period_start,
+      });
+      setMessage("Turni unificati pubblicati in Workforce.", "success");
+    } catch (error) {
+      if (error?.status === 409) {
+        setMessage("La preview è cambiata. Controllala prima di pubblicare.", "warning");
+        elements.publishDialog.close();
+        await refreshPreview();
+      } else {
+        presentError("workforce.driver-shift-publish", error);
+      }
+    } finally {
+      setLoading(button, false);
+    }
+  }
+
+  async function createNewRevision() {
+    if (!state.planning) return;
+    const button = byId("driverShiftRevisionBtn");
+    setLoading(button, true, "Creazione...");
+    try {
+      const revision = await createRevision(state.planning.id);
+      await refresh(revision.id);
+    } catch (error) {
+      presentError("workforce.driver-shift-revision", error);
+    } finally {
+      setLoading(button, false);
+    }
+  }
+
   function bindEvents() {
     byId("driverShiftCreateBtn").addEventListener("click", () => openCreateDialog());
     byId("driverShiftAddSourceBtn").addEventListener("click", () => startImport("add"));
@@ -321,6 +421,45 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
       elements.removeDialog.close();
     });
     byId("driverShiftRemoveConfirm").addEventListener("click", confirmRemove);
+    byId("driverShiftResolveBtn").addEventListener("click", () => {
+      const summary = state.preview?.summary || {};
+      state.classification = summary.potential_conflicts > 0
+        ? "POTENTIAL_CONFLICT"
+        : summary.identity_conflicts > 0 ? "IDENTITY_CONFLICT" : "UNRESOLVED_IDENTITY";
+      refreshPreview({ resetPaging: true });
+      elements.rows.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    byId("driverShiftPublishBtn").addEventListener("click", openPublishDialog);
+    byId("driverShiftPublishCancel").addEventListener("click", () => elements.publishDialog.close());
+    byId("driverShiftPublishConfirm").addEventListener("click", confirmPublish);
+    byId("driverShiftRevisionBtn").addEventListener("click", createNewRevision);
+    elements.rows.addEventListener("click", (event) => {
+      const choose = event.target.closest("[data-resolve-conflict]");
+      if (choose) {
+        saveResolution(choose.dataset.resolveConflict, "USE_SOURCE_ROW", Number(choose.dataset.sourceRowId));
+        return;
+      }
+      const exclude = event.target.closest("[data-exclude-conflict]");
+      if (exclude) {
+        saveResolution(exclude.dataset.excludeConflict, "EXCLUDE");
+        return;
+      }
+      const unresolved = event.target.closest("[data-resolve-unresolved]");
+      if (unresolved) {
+        const card = unresolved.closest(".driver-shift-row");
+        const memberId = Number(card.querySelector("[data-unresolved-member]")?.value);
+        if (!memberId) {
+          setMessage("Seleziona il driver Workforce da associare.", "warning");
+          return;
+        }
+        saveResolution(
+          unresolved.dataset.resolveUnresolved,
+          "USE_SOURCE_ROW",
+          Number(unresolved.dataset.sourceRowId),
+          memberId,
+        );
+      }
+    });
     document.querySelectorAll("[data-driver-shift-filter]").forEach((button) => {
       button.addEventListener("click", () => {
         const value = button.dataset.driverShiftFilter;

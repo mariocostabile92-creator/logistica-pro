@@ -35,7 +35,7 @@ import {
   initWorkforceFoundation,
   renderWorkforceFoundation,
 } from "./workforce-foundation.js?v=2";
-import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=1";
+import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=5";
 
 
 const PAGE_STATES = Object.freeze({
@@ -536,6 +536,14 @@ export function initWorkforcePage() {
   });
   driverShiftPlanning = initDriverShiftPlanning({
     openImport: () => workforceImportFlow.open(),
+    onChanged: async ({ type, periodStart } = {}) => {
+      if (type !== "published") return;
+      calendarLoaded = false;
+      document.dispatchEvent(new CustomEvent("workforce:data-imported", {
+        detail: { datasetType: "workforce", source: "driver-shift-planning" },
+      }));
+      await loadFromAnchor(periodStart || byId("workforceDatePicker").value);
+    },
   });
   byId("workforceRefreshBtn").addEventListener("click", () => {
     loadFromAnchor(byId("workforceDatePicker").value);

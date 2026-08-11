@@ -19,10 +19,12 @@ const source = (relative) => readFile(new URL(`../${relative}`, import.meta.url)
 const element = () => ({ innerHTML: "", textContent: "", hidden: false, disabled: false });
 
 const referenceA = {
+  source_row_id: 101,
   workforce_import_id: 1, filename: "Planning_A.xlsx", sheet: "Planning",
   row_number: 27, source_record_key: "a", source_order: 0,
 };
 const referenceB = {
+  source_row_id: 202,
   workforce_import_id: 2, filename: "Planning_B.xlsx", sheet: "Driver",
   row_number: 84, source_record_key: "b", source_order: 1,
 };
@@ -40,6 +42,9 @@ function row(classification, overrides = {}) {
     station: "DLO2",
     transporter_id: "T-100",
     classification,
+    conflict_key: `conflict-${classification}`,
+    resolved: !["POTENTIAL_CONFLICT", "IDENTITY_CONFLICT", "UNRESOLVED_IDENTITY"].includes(classification),
+    resolution: null,
     source_references: [referenceA],
     conflicting_alternatives: [],
     ...overrides,
@@ -94,13 +99,15 @@ test("remove copy removes only the relation and never says delete file", () => {
 });
 
 
-test("merge summary renders all six real counters including unified rows", () => {
+test("merge summary renders publish readiness and real unified counters", () => {
   const target = element();
   renderMergeSummary(target, {
     total_source_rows: 143, unified_rows: 139, exact_duplicates: 2,
     potential_conflicts: 1, identity_conflicts: 0, unresolved_rows: 1,
+    conflicts_to_resolve: 2, conflicts_resolved: 3,
+    unresolved_identities: 1, ready_to_publish: false,
   });
-  for (const label of ["Righe sorgente", "Righe unificate", "Duplicati esatti", "Conflitti identità", "Non risolti"])
+  for (const label of ["Da risolvere", "Risolti", "Identità non risolte", "Pronto per pubblicare", "Righe sorgente", "Righe unificate"])
     assert.match(target.innerHTML, new RegExp(label));
   assert.match(target.innerHTML, /143/);
   assert.match(target.innerHTML, /139/);
@@ -112,14 +119,14 @@ test("exact duplicate is one card with multi-source provenance", () => {
   renderMergeRows(target, {
     rows: [row("EXACT_DUPLICATE", { source_references: [referenceA, referenceB] })],
   });
-  assert.equal((target.innerHTML.match(/class="driver-shift-row"/g) || []).length, 1);
+  assert.equal((target.innerHTML.match(/class="driver-shift-row /g) || []).length, 1);
   assert.match(target.innerHTML, /Duplicato esatto/);
   assert.match(target.innerHTML, /Planning_A.xlsx/);
   assert.match(target.innerHTML, /Planning_B.xlsx/);
 });
 
 
-test("potential conflict compares alternatives and explicitly selects no winner", () => {
+test("potential conflict compares alternatives and offers explicit source choices", () => {
   const target = element();
   renderMergeRows(target, { rows: [row("POTENTIAL_CONFLICT", {
     conflicting_alternatives: [
@@ -128,9 +135,11 @@ test("potential conflict compares alternatives and explicitly selects no winner"
     ],
   })] });
   assert.match(target.innerHTML, /Valori dalle fonti/);
-  assert.match(target.innerHTML, /nessun vincitore è stato selezionato/);
+  assert.match(target.innerHTML, /seleziona esplicitamente la fonte autorevole/);
   assert.match(target.innerHTML, />A · scheduled</);
   assert.match(target.innerHTML, />B · scheduled</);
+  assert.equal((target.innerHTML.match(/Usa questa fonte/g) || []).length, 2);
+  assert.match(target.innerHTML, /Escludi questa giornata/);
 });
 
 
@@ -154,7 +163,8 @@ test("unresolved identity remains visible and does not create a member", () => {
     identity_key: null, display_name: null, source_external_identifier: null,
   })] });
   assert.match(target.innerHTML, /Driver non risolto/);
-  assert.match(target.innerHTML, /non crea una nuova risorsa/);
+  assert.match(target.innerHTML, /Associa un membro Workforce/);
+  assert.match(target.innerHTML, /Associa e usa/);
 });
 
 
@@ -246,13 +256,15 @@ test("remove requires an accessible confirmation and refreshes the preview", asy
 });
 
 
-test("there is no publish activate or winner action in the Q4 UI", async () => {
+test("Q5 UI exposes explicit resolve and publish actions without silent publish", async () => {
   const html = await source("index.html");
   const section = html.slice(
     html.indexOf('id="driverShiftPlanningSection"'),
     html.indexOf('id="workforceReadyView"'),
   );
-  assert.doesNotMatch(section, /<button[^>]*>[^<]*(Pubblica|Attiva|Applica merge|Scegli vincitore)/i);
+  assert.match(section, /id="driverShiftResolveBtn"[^>]*>Risolvi conflitti/);
+  assert.match(section, /id="driverShiftPublishBtn"[^>]*>Pubblica turni unificati/);
+  assert.match(section, /id="driverShiftPublishDialog"/);
   assert.match(section, /non modifica ancora i turni operativi/);
 });
 
@@ -329,8 +341,79 @@ test("import flow forwards persisted fingerprint result and detected preview", a
 });
 
 
-test("workspace loader loads Q4 styles only with Workforce", async () => {
+test("workspace loader loads Q5 styles only with Workforce", async () => {
   const loader = await source("assets/js/modules/workspace-loader.js");
-  assert.match(loader, /driver-shift-planning\.css\?v=1/);
-  assert.match(loader, /import\("\.\/workforce-page\.js\?v=11"\)/);
+  assert.match(loader, /driver-shift-planning\.css\?v=3/);
+  assert.match(loader, /import\("\.\/workforce-page\.js\?v=15"\)/);
+});
+
+
+test("resolved conflict state is visible and keeps source provenance", () => {
+  const target = element();
+  renderMergeRows(target, { rows: [row("POTENTIAL_CONFLICT", {
+    resolved: true,
+    resolution: { resolution_type: "USE_SOURCE_ROW", selected_source_row_id: 101 },
+    conflicting_alternatives: [
+      { driver_display_name: "Mario Rossi", shift_code: "A", source_references: [referenceA] },
+    ],
+  })] });
+  assert.match(target.innerHTML, /Risolto: fonte selezionata/);
+  assert.match(target.innerHTML, /Planning_A.xlsx/);
+  assert.doesNotMatch(target.innerHTML, /Escludi questa giornata/);
+});
+
+
+test("publish CTA is controlled by backend readiness and always uses confirmation", async () => {
+  const [controller, html] = await Promise.all([
+    source("assets/js/modules/driver-shift-planning.js"), source("index.html"),
+  ]);
+  assert.match(controller, /publishButton\.disabled = !state\.preview\?\.summary\?\.ready_to_publish/);
+  assert.match(controller, /openPublishDialog/);
+  assert.match(controller, /expected_preview_fingerprint: state\.preview\.preview_fingerprint/);
+  assert.match(html, /Questi turni diventeranno la vista operativa Workforce/);
+  assert.doesNotMatch(controller, /addSource[\s\S]{0,100}publishPlanning/);
+});
+
+
+test("stale publish response reloads preview instead of overwriting state", async () => {
+  const controller = await source("assets/js/modules/driver-shift-planning.js");
+  assert.match(controller, /error\?\.status === 409/);
+  assert.match(controller, /La preview è cambiata/);
+  assert.match(controller, /await refreshPreview\(\)/);
+});
+
+
+test("ACTIVE planning disables source mutations and offers a new revision", async () => {
+  const controller = await source("assets/js/modules/driver-shift-planning.js");
+  assert.match(controller, /state\.planning\.status !== "DRAFT"/);
+  assert.match(controller, /elements\.draftNotice\.hidden = !isDraft/);
+  assert.match(controller, /revisionButton\.hidden = state\.planning\.status !== "ACTIVE"/);
+  assert.match(controller, /await createRevision\(state\.planning\.id\)/);
+});
+
+
+test("single-source ready preview can publish directly", () => {
+  const target = element();
+  renderMergeSummary(target, {
+    conflicts_to_resolve: 0, conflicts_resolved: 0,
+    unresolved_identities: 0, ready_to_publish: true,
+    total_source_rows: 10, unified_rows: 10,
+  });
+  assert.match(target.innerHTML, /Pronto per pubblicare/);
+  assert.match(target.innerHTML, /SÌ/);
+});
+
+
+test("Workforce refreshes only after successful publication", async () => {
+  const page = await source("assets/js/modules/workforce-page.js");
+  assert.match(page, /type !== "published"/);
+  assert.match(page, /calendarLoaded = false/);
+  assert.match(page, /await loadFromAnchor\(periodStart/);
+});
+
+
+test("mobile conflict resolution and publish dialog remain one column", async () => {
+  const css = await source("assets/css/driver-shift-planning.css");
+  assert.match(css, /\.driver-shift-resolution,[\s\S]*width: 100%/);
+  assert.match(css, /\.driver-shift-publish-summary,[\s\S]*grid-template-columns: 1fr/);
 });

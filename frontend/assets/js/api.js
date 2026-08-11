@@ -739,6 +739,38 @@ export async function getDriverShiftPlanningMergePreview(
 }
 
 
+export async function resolveDriverShiftPlanningConflict(planningId, conflictKey, payload) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/conflicts/${encodeURIComponent(conflictKey)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  ));
+}
+
+
+export async function publishDriverShiftPlanning(planningId, payload) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/publish`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  ));
+}
+
+
+export async function createDriverShiftPlanningRevision(planningId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/new-revision`,
+    { method: "POST" },
+  ));
+}
+
+
 export async function getWorkforceFoundation(operationDate = "") {
   const params = new URLSearchParams();
   if (operationDate) params.set("operation_date", operationDate);

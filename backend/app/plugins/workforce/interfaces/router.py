@@ -25,6 +25,10 @@ from app.plugins.workforce.domain.models import (
 from app.plugins.workforce.domain.driver_shift_planning import (
     DriverShiftPlanning,
     DriverShiftPlanningError,
+    DriverShiftPlanningConflictError,
+    DriverShiftPlanningPublication,
+    DriverShiftPlanningResolution,
+    DriverShiftPlanningResolutionType,
     DriverShiftPlanningMergePreview,
     DriverShiftPlanningList,
     DriverShiftPlanningNotFoundError,
@@ -47,6 +51,8 @@ from app.plugins.workforce.interfaces.schemas import (
     DriverShiftPlanningImportReference,
     DriverShiftPlanningSourceRequest,
     DriverShiftPlanningReplaceSourcesRequest,
+    DriverShiftPlanningResolutionRequest,
+    DriverShiftPlanningPublishRequest,
 )
 from app.workspace.status_service import (
     DemoWorkspaceResetRequiredError,
@@ -89,6 +95,11 @@ def _require(request: Request, permission: str):
 
 
 def _planning_error(exc: DriverShiftPlanningError | ValueError) -> HTTPException:
+    if isinstance(exc, DriverShiftPlanningConflictError):
+        return HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "message": str(exc)},
+        )
     if isinstance(
         exc,
         (DriverShiftPlanningNotFoundError, DriverShiftPlanningSourceNotFoundError),
@@ -146,6 +157,76 @@ def resolve_driver_shift_import_reference(
                 fingerprint,
             )
         )
+    except DriverShiftPlanningError as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.put(
+    "/driver-shift-plannings/{planning_id}/conflicts/{conflict_key}",
+    response_model=DriverShiftPlanningResolution,
+)
+def resolve_driver_shift_planning_conflict(
+    planning_id: int,
+    conflict_key: str,
+    payload: DriverShiftPlanningResolutionRequest,
+    request: Request,
+) -> DriverShiftPlanningResolution:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_planning_service.resolve_conflict(
+            user.organization_id, planning_id, conflict_key,
+            DriverShiftPlanningResolutionType(payload.resolution_type),
+            payload.expected_version,
+            selected_source_row_id=payload.selected_source_row_id,
+            workforce_member_id=payload.workforce_member_id,
+            actor=user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except (DriverShiftPlanningError, ValueError) as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-plannings/{planning_id}/publish",
+    response_model=DriverShiftPlanningPublication,
+)
+def publish_driver_shift_planning(
+    planning_id: int,
+    payload: DriverShiftPlanningPublishRequest,
+    request: Request,
+) -> DriverShiftPlanningPublication:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_planning_service.publish_driver_shift_planning(
+            user.organization_id, planning_id, payload.expected_version,
+            payload.expected_preview_fingerprint, actor=user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftPlanningError as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-plannings/{planning_id}/new-revision",
+    response_model=DriverShiftPlanning,
+    status_code=201,
+)
+def create_driver_shift_planning_revision(
+    planning_id: int,
+    request: Request,
+) -> DriverShiftPlanning:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_planning_service.create_new_revision(
+            user.organization_id, planning_id, actor=user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
     except DriverShiftPlanningError as exc:
         raise _planning_error(exc) from exc
 
