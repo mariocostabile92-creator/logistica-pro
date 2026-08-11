@@ -44,6 +44,8 @@ class WorkforceMemberUpdateRequest(BaseModel):
     weekly_hours: float | None = Field(default=None, ge=0, le=168)
     capabilities: list[str] | None = None
     operational_notes: str | None = Field(default=None, max_length=1000)
+    phone: str | None = Field(default=None, max_length=40)
+    email: str | None = Field(default=None, max_length=254)
     is_reserve: bool | None = None
     active: bool | None = None
     actor: str = Field(default="local_operator", min_length=1, max_length=120)
@@ -141,3 +143,18 @@ class DriverShiftPlanningResolutionRequest(BaseModel):
 class DriverShiftPlanningPublishRequest(BaseModel):
     expected_version: int = Field(gt=0)
     expected_preview_fingerprint: str = Field(min_length=64, max_length=64)
+
+
+class DriverShiftBatchPrepareRequest(BaseModel):
+    recipient_ids: list[int] | None = Field(default=None, max_length=500)
+
+    @field_validator("recipient_ids")
+    @classmethod
+    def valid_recipient_ids(cls, value: list[int] | None) -> list[int] | None:
+        if value is None:
+            return None
+        if any(item <= 0 for item in value):
+            raise ValueError("Gli ID destinatario devono essere positivi.")
+        if len(value) != len(set(value)):
+            raise ValueError("Un destinatario non può essere ripetuto.")
+        return value

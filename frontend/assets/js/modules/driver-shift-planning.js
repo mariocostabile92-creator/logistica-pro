@@ -10,7 +10,7 @@ import {
   publishPlanning,
   createRevision,
   listWorkforceMembers,
-} from "./driver-shift-planning-api.js?v=2";
+} from "./driver-shift-planning-api.js?v=4";
 import {
   renderMergeRows,
   renderMergeSummary,
@@ -20,7 +20,7 @@ import {
   renderSources,
 } from "./driver-shift-planning-presenter.js?v=3";
 import { createDriverShiftPlanningState } from "./driver-shift-planning-state.js?v=2";
-import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=1";
+import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=2";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 

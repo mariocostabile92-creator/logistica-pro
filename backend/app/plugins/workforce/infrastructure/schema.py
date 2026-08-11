@@ -7,6 +7,8 @@ PROFILE_COLUMNS = {
     "station": "TEXT",
     "operational_notes": "TEXT",
     "is_reserve": "INTEGER NOT NULL DEFAULT 0",
+    "phone": "TEXT",
+    "email": "TEXT",
     "organization_id": "TEXT NOT NULL DEFAULT 'default'",
 }
 

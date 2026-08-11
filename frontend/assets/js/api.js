@@ -810,6 +810,34 @@ export async function regenerateDriverShiftRecipientAccess(distributionId, recip
 }
 
 
+export async function prepareDriverShiftBatch(distributionId, recipientIds = null) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/prepare-batch`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_ids: recipientIds }),
+    },
+  ));
+}
+
+
+export async function exportDriverShiftBatchCsv(distributionId, recipientIds = null) {
+  const response = await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/export.csv`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_ids: recipientIds }),
+    },
+  );
+  if (!response.ok) await parseResponse(response);
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const filename = disposition.match(/filename="([^"]+)"/)?.[1] || "turni.csv";
+  return { blob: await response.blob(), filename };
+}
+
+
 export async function getWorkforceFoundation(operationDate = "") {
   const params = new URLSearchParams();
   if (operationDate) params.set("operation_date", operationDate);

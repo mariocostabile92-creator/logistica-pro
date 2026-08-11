@@ -109,6 +109,8 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     byId("workforceMemberRole").value = member.role || "";
     byId("workforceMemberStation").value = member.station || "";
     byId("workforceEmploymentType").value = member.employment_type || "";
+    byId("workforceMemberPhone").value = member.phone || "";
+    byId("workforceMemberEmail").value = member.email || "";
     byId("workforceContractEnd").value = member.contract_end || "";
     byId("workforceWeeklyHours").value = member.weekly_hours ?? "";
     byId("workforceCapabilities").value = member.capabilities.join(", ");
@@ -126,6 +128,8 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     byId("workforceMemberDetailRole").textContent = member.role || "Non disponibile";
     byId("workforceMemberDetailStation").textContent = member.station || "Non disponibile";
     byId("workforceMemberDetailContract").textContent = member.employment_type || "Non disponibile";
+    byId("workforceMemberDetailPhone").textContent = member.phone || "Non disponibile";
+    byId("workforceMemberDetailEmail").textContent = member.email || "Non disponibile";
     byId("workforceMemberDetailCapabilities").textContent = member.capabilities.length
       ? member.capabilities.join(", ")
       : "Nessuna capability";

@@ -81,6 +81,8 @@ def _member_values(row) -> dict[str, object]:
         "weekly_hours": row["weekly_hours"],
         "capabilities": json.loads(row["capabilities"]),
         "operational_notes": row["operational_notes"],
+        "phone": row["phone"],
+        "email": row["email"],
         "is_reserve": bool(row["is_reserve"]),
         "active": bool(row["active"]),
         "source_reference": row["source_reference"],
@@ -130,7 +132,7 @@ def update_member(
                 SET display_name = ?, first_name = ?, last_name = ?,
                     role = ?, station = ?, employment_type = ?,
                     contract_start = ?, contract_end = ?, weekly_hours = ?,
-                    capabilities = ?, operational_notes = ?, is_reserve = ?,
+                    capabilities = ?, operational_notes = ?, phone = ?, email = ?, is_reserve = ?,
                     active = ?, updated_at = ?
                 WHERE id = ? AND organization_id = ?
                 """,
@@ -146,6 +148,8 @@ def update_member(
                     after["weekly_hours"],
                     _json(after["capabilities"]),
                     after["operational_notes"],
+                    after["phone"],
+                    after["email"],
                     int(bool(after["is_reserve"])),
                     int(bool(after["active"])),
                     now,

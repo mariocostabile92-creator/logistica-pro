@@ -915,8 +915,8 @@
             <header class="driver-shift-subheading">
               <div>
                 <p class="eyebrow">Distribuzione turni</p>
-                <h4 id="driverShiftDistributionTitle">Accessi personali driver</h4>
-                <p>I destinatari derivano automaticamente dai turni pubblicati.</p>
+                <h4 id="driverShiftDistributionTitle">Distribuzione turni</h4>
+                <p>I destinatari derivano automaticamente dai turni pubblicati. Nessun invio automatico viene eseguito.</p>
               </div>
               <button id="driverShiftDistributionRefresh" type="button" class="secondary">Aggiorna stato</button>
             </header>
@@ -924,14 +924,37 @@
             <div class="driver-shift-distribution-toolbar">
               <div role="group" aria-label="Filtra destinatari distribuzione">
                 <button type="button" data-distribution-filter="" class="active" aria-pressed="true">Tutti</button>
+                <button type="button" data-distribution-filter="READY" aria-pressed="false">Pronti</button>
+                <button type="button" data-distribution-filter="EXCEPTIONS" aria-pressed="false">Da sistemare</button>
                 <button type="button" data-distribution-filter="NOT_OPENED" aria-pressed="false">Non visualizzati</button>
                 <button type="button" data-distribution-filter="OPENED" aria-pressed="false">Visualizzati</button>
                 <button type="button" data-distribution-filter="ACKNOWLEDGED" aria-pressed="false">Presa visione</button>
               </div>
               <label>Cerca driver<input id="driverShiftDistributionSearch" type="search" autocomplete="off" /></label>
             </div>
+            <div class="driver-shift-selection-tools">
+              <button id="driverShiftSelectAllReady" type="button" class="secondary">Seleziona tutti i pronti</button>
+              <button id="driverShiftOpenWorkforce" type="button" class="quiet">Apri Workforce</button>
+            </div>
             <p id="driverShiftDistributionStatus" role="status" aria-live="polite"></p>
             <div id="driverShiftDistributionRecipients" class="driver-shift-distribution-recipients"></div>
+            <div id="driverShiftBatchActions" class="driver-shift-batch-actions" hidden>
+              <strong><span id="driverShiftSelectedCount">0</span> selezionati</strong>
+              <div>
+                <button id="driverShiftPrepareBatch" type="button">Prepara distribuzione</button>
+                <button id="driverShiftExportBatch" type="button" class="secondary">Esporta CSV</button>
+              </div>
+            </div>
+            <section id="driverShiftPreparedBatch" class="driver-shift-prepared-batch" aria-labelledby="driverShiftPreparedBatchTitle" hidden>
+              <p class="eyebrow">Condivisione manuale</p>
+              <h5 id="driverShiftPreparedBatchTitle">Batch pronto</h5>
+              <p><strong id="driverShiftPreparedCount">0</strong> destinatari preparati. Nessun messaggio è stato inviato.</p>
+              <div>
+                <button id="driverShiftCopyBatch" type="button">Copia elenco</button>
+                <button id="driverShiftExportPrepared" type="button" class="secondary">Esporta CSV</button>
+                <button id="driverShiftBackRecipients" type="button" class="quiet">Torna ai destinatari</button>
+              </div>
+            </section>
           </section>
         </div>
       </section>
@@ -1220,6 +1243,8 @@
                   <div><dt>Ruolo</dt><dd id="workforceMemberDetailRole">--</dd></div>
                   <div><dt>Station</dt><dd id="workforceMemberDetailStation">--</dd></div>
                   <div><dt>Contratto</dt><dd id="workforceMemberDetailContract">--</dd></div>
+                  <div><dt>Telefono</dt><dd id="workforceMemberDetailPhone">--</dd></div>
+                  <div><dt>Email</dt><dd id="workforceMemberDetailEmail">--</dd></div>
                   <div><dt>Capability</dt><dd id="workforceMemberDetailCapabilities">--</dd></div>
                   <div><dt>Note operative</dt><dd id="workforceMemberDetailNotes">--</dd></div>
                   <div><dt>Riserva</dt><dd id="workforceMemberDetailReserve">--</dd></div>
@@ -1240,6 +1265,8 @@
                 <label>Ruolo<input id="workforceMemberRole" type="text" maxlength="120" /></label>
                 <label>Station<input id="workforceMemberStation" type="text" maxlength="120" /></label>
                 <label>Contratto<input id="workforceEmploymentType" type="text" maxlength="120" /></label>
+                <label>Telefono<input id="workforceMemberPhone" type="tel" maxlength="40" autocomplete="tel" /></label>
+                <label>Email<input id="workforceMemberEmail" type="email" maxlength="254" autocomplete="email" /></label>
                 <label>Fine contratto<input id="workforceContractEnd" type="date" /></label>
                 <label>Ore settimanali<input id="workforceWeeklyHours" type="number" min="0" max="168" step="0.5" /></label>
                 <label>Capability<input id="workforceCapabilities" type="text" placeholder="separate da virgola" /></label>
@@ -2448,6 +2475,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="./assets/js/app.js?v=81"></script>
+    <script type="module" src="./assets/js/app.js?v=82"></script>
 </body>
 </html>

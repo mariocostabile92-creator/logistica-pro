@@ -26,6 +26,8 @@ def member_from_row(row) -> WorkforceMember:
         weekly_hours=row["weekly_hours"],
         capabilities=json.loads(row["capabilities"]),
         operational_notes=row["operational_notes"] if "operational_notes" in keys else None,
+        phone=row["phone"] if "phone" in keys else None,
+        email=row["email"] if "email" in keys else None,
         is_reserve=bool(row["is_reserve"]) if "is_reserve" in keys else False,
         active=bool(row["active"]),
         source_reference=row["source_reference"],

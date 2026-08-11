@@ -24,6 +24,8 @@ class WorkforceMember(BaseModel):
     weekly_hours: float | None = Field(default=None, ge=0)
     capabilities: list[str] = Field(default_factory=list)
     operational_notes: str | None = None
+    phone: str | None = None
+    email: str | None = None
     is_reserve: bool = False
     active: bool = True
     source_reference: str

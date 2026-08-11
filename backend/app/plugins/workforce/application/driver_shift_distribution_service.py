@@ -1,6 +1,8 @@
 import hashlib
 import hmac
 import uuid
+import csv
+import io
 from datetime import date, timedelta
 
 from app.core.config import SETTINGS
@@ -10,11 +12,21 @@ from app.plugins.workforce.domain.driver_shift_distribution import (
     DriverShiftPersonalAccessNotFoundError,
     DriverShiftRecipientAccessLink,
     PersonalDriverShiftView,
+    DriverShiftPreparedBatch,
+    DriverShiftPreparedRecipient,
+    DriverShiftDeliveryChannel,
 )
+from app.plugins.workforce.domain.driver_shift_contact import contact_readiness
+from app.plugins.workforce.application.driver_shift_delivery_provider import MANUAL_SHARE_PROVIDER
+from app.utils.date_utils import utc_now_iso
 from app.plugins.workforce.infrastructure import driver_shift_distribution_repository as repository
 
 
 ACCESS_GRACE_DAYS = 7
+MESSAGE_TEMPLATE = (
+    "Ciao {first_name}, sono disponibili i tuoi turni dal {period_start} "
+    "al {period_end}. Puoi consultarli qui: {personal_url}"
+)
 
 
 def _key() -> bytes:
@@ -119,3 +131,80 @@ def acknowledge(token: str) -> PersonalDriverShiftView:
     if not token or len(token) > 256:
         raise DriverShiftPersonalAccessNotFoundError("Accesso turni non disponibile.")
     return repository.personal_view(_token_hash(token), acknowledge=True)
+
+
+def prepare_batch(
+    organization_id: str,
+    distribution_id: int,
+    recipient_ids: list[int] | None = None,
+) -> DriverShiftPreparedBatch:
+    distribution, candidates = repository.batch_recipient_candidates(
+        organization_id, distribution_id, recipient_ids,
+    )
+    prepared: list[DriverShiftPreparedRecipient] = []
+    excluded: list[int] = []
+    now = utc_now_iso()
+    for candidate in candidates:
+        contact = contact_readiness(candidate.get("phone"), candidate.get("email"))
+        eligible = (
+            contact.readiness == "READY"
+            and not candidate.get("access_revoked_at")
+            and str(candidate["access_expires_at"]) >= now
+        )
+        if not eligible:
+            excluded.append(int(candidate["id"]))
+            continue
+        link = _access_link(candidate)
+        display_name = str(candidate["display_name"])
+        first_name = (candidate.get("first_name") or display_name.split(maxsplit=1)[0]).strip()
+        message = MESSAGE_TEMPLATE.format(
+            first_name=first_name,
+            period_start=distribution["period_start"],
+            period_end=distribution["period_end"],
+            personal_url=link.access_url,
+        )
+        prepared.append(DriverShiftPreparedRecipient(
+            recipient_id=int(candidate["id"]),
+            display_name=display_name,
+            phone=contact.phone,
+            email=contact.email,
+            available_channels=list(contact.available_channels),
+            personal_url=link.access_url,
+            message=message,
+        ))
+    return DriverShiftPreparedBatch(
+        distribution_id=distribution_id,
+        period_start=str(distribution["period_start"]),
+        period_end=str(distribution["period_end"]),
+        requested_count=len(candidates),
+        prepared_count=len(prepared),
+        excluded_recipient_ids=excluded,
+        recipients=prepared,
+    )
+
+
+def export_batch_csv(batch: DriverShiftPreparedBatch) -> str:
+    def safe(value: str) -> str:
+        return f"'{value}" if value[:1] in {"=", "+", "-", "@"} else value
+
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=(
+        "driver", "phone", "email", "personal_url", "message",
+        "period_start", "period_end",
+    ))
+    writer.writeheader()
+    for recipient in batch.recipients:
+        writer.writerow({
+            "driver": safe(recipient.display_name),
+            "phone": safe(recipient.phone or ""),
+            "email": safe(recipient.email or ""),
+            "personal_url": safe(recipient.personal_url),
+            "message": safe(recipient.message),
+            "period_start": batch.period_start,
+            "period_end": batch.period_end,
+        })
+    return output.getvalue()
+
+
+def automatic_provider_sending_available() -> bool:
+    return MANUAL_SHARE_PROVIDER.can_send(DriverShiftDeliveryChannel.MANUAL_SHARE)

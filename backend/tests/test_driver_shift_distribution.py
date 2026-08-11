@@ -92,6 +92,8 @@ def test_prepare_requires_active_and_is_idempotent_with_distinct_recipients():
     assert first.json()["distribution"]["id"] == second.json()["distribution"]["id"]
     assert first.json()["summary"] == {
         "recipients_total": 3, "ready": 3, "pending": 0,
+        "contact_ready": 0, "missing_contact": 3,
+        "invalid_contact": 0, "excluded": 0,
         "opened": 0, "acknowledged": 0, "not_opened": 3,
     }
     assert [item["shift_days_count"] for item in first.json()["recipients"]] == [2, 2, 2]

@@ -16,5 +16,7 @@ export {
   getDriverShiftRecipientAccessLink as getRecipientAccessLink,
   revokeDriverShiftRecipientAccess as revokeRecipientAccess,
   regenerateDriverShiftRecipientAccess as regenerateRecipientAccess,
+  prepareDriverShiftBatch as prepareDistributionBatch,
+  exportDriverShiftBatchCsv as exportDistributionBatchCsv,
   listWorkforceMembers,
-} from "../api.js?v=10";
+} from "../api.js?v=11";

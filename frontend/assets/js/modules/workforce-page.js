@@ -35,7 +35,7 @@ import {
   initWorkforceFoundation,
   renderWorkforceFoundation,
 } from "./workforce-foundation.js?v=2";
-import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=6";
+import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=7";
 
 
 const PAGE_STATES = Object.freeze({
@@ -469,6 +469,8 @@ async function submitMember(event) {
       role: byId("workforceMemberRole").value.trim() || null,
       station: byId("workforceMemberStation").value.trim() || null,
       employment_type: byId("workforceEmploymentType").value.trim() || null,
+      phone: byId("workforceMemberPhone").value.trim() || null,
+      email: byId("workforceMemberEmail").value.trim() || null,
       contract_end: byId("workforceContractEnd").value || null,
       weekly_hours: byId("workforceWeeklyHours").value
         ? Number(byId("workforceWeeklyHours").value)

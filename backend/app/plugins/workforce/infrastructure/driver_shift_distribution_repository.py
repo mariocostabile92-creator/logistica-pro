@@ -2,6 +2,7 @@ import json
 from collections.abc import Sequence
 
 from app.core.database import db_session
+from app.plugins.workforce.domain.driver_shift_contact import contact_readiness
 from app.plugins.workforce.domain.driver_shift_distribution import (
     DriverShiftDistribution,
     DriverShiftDistributionError,
@@ -70,7 +71,7 @@ def _read_model_conn(conn, organization_id: str, distribution_id: int) -> Driver
     if distribution is None:
         raise DriverShiftDistributionNotFoundError("Distribuzione turni non trovata.")
     rows = conn.execute(
-        """SELECT r.id, r.workforce_member_id, m.display_name,
+        """SELECT r.id, r.workforce_member_id, m.display_name, m.phone, m.email,
                   r.delivery_status, r.access_status, r.access_revoked_at, r.first_opened_at,
                   r.last_opened_at, r.acknowledged_at, COUNT(pr.id) shift_days_count
            FROM driver_shift_distribution_recipients r
@@ -82,7 +83,7 @@ def _read_model_conn(conn, organization_id: str, distribution_id: int) -> Driver
             AND pr.planning_version=?
             AND pr.workforce_member_id=r.workforce_member_id
            WHERE r.organization_id=? AND r.distribution_id=?
-           GROUP BY r.id, r.workforce_member_id, m.display_name,
+           GROUP BY r.id, r.workforce_member_id, m.display_name, m.phone, m.email,
                     r.delivery_status, r.access_status, r.access_revoked_at, r.first_opened_at,
                     r.last_opened_at, r.acknowledged_at
            ORDER BY m.display_name, r.id""",
@@ -92,12 +93,20 @@ def _read_model_conn(conn, organization_id: str, distribution_id: int) -> Driver
     recipients = []
     for row in rows:
         values = {key: row[key] for key in row.keys()}
+        contact = contact_readiness(values.pop("phone", None), values.pop("email", None))
+        values["readiness"] = contact.readiness
+        values["available_channels"] = list(contact.available_channels)
+        values["preferred_channel"] = contact.preferred_channel
         values["access_revoked"] = bool(values.pop("access_revoked_at", None))
         recipients.append(DriverShiftDistributionRecipient.model_validate(values))
     summary = DriverShiftDistributionSummary(
         recipients_total=len(recipients),
         ready=sum(item.delivery_status == "READY" and not item.access_revoked for item in recipients),
         pending=sum(item.delivery_status == "PENDING" for item in recipients),
+        contact_ready=sum(item.readiness == "READY" for item in recipients),
+        missing_contact=sum(item.readiness == "MISSING_CONTACT" for item in recipients),
+        invalid_contact=sum(item.readiness == "INVALID_CONTACT" for item in recipients),
+        excluded=sum(item.readiness == "EXCLUDED" for item in recipients),
         opened=sum(item.access_status in {"OPENED", "ACKNOWLEDGED"} for item in recipients),
         acknowledged=sum(item.access_status == "ACKNOWLEDGED" for item in recipients),
         not_opened=sum(item.access_status == "NOT_OPENED" and not item.access_revoked for item in recipients),
@@ -208,6 +217,50 @@ def recipient_access(organization_id: str, distribution_id: int, recipient_id: i
     if row is None:
         raise DriverShiftDistributionNotFoundError("Destinatario non trovato.")
     return {key: row[key] for key in row.keys()}
+
+
+def batch_recipient_candidates(
+    organization_id: str,
+    distribution_id: int,
+    recipient_ids: Sequence[int] | None = None,
+) -> tuple[dict, list[dict]]:
+    with db_session() as conn:
+        distribution = conn.execute(
+            "SELECT * FROM driver_shift_distributions WHERE id=? AND organization_id=?",
+            (distribution_id, organization_id),
+        ).fetchone()
+        if distribution is None:
+            raise DriverShiftDistributionNotFoundError("Distribuzione turni non trovata.")
+        if distribution["status"] == "SUPERSEDED":
+            raise DriverShiftDistributionError("Una distribuzione superata non può preparare batch.")
+        parameters: list[object] = [organization_id, distribution_id]
+        selected_clause = ""
+        if recipient_ids is not None:
+            if not recipient_ids:
+                return ({key: distribution[key] for key in distribution.keys()}, [])
+            placeholders = ",".join("?" for _ in recipient_ids)
+            selected_clause = f" AND r.id IN ({placeholders})"
+            parameters.extend(recipient_ids)
+        rows = conn.execute(
+            f"""SELECT r.*, m.display_name, m.first_name, m.phone, m.email,
+                       d.status distribution_status
+                FROM driver_shift_distribution_recipients r
+                JOIN driver_shift_distributions d
+                  ON d.id=r.distribution_id AND d.organization_id=r.organization_id
+                JOIN workforce_members m
+                  ON m.id=r.workforce_member_id AND m.organization_id=r.organization_id
+                WHERE r.organization_id=? AND r.distribution_id=?{selected_clause}
+                ORDER BY m.display_name, r.id""",
+            tuple(parameters),
+        ).fetchall()
+    if recipient_ids is not None and len(rows) != len(set(recipient_ids)):
+        raise DriverShiftDistributionNotFoundError(
+            "Uno o più destinatari non appartengono alla distribuzione richiesta."
+        )
+    return (
+        {key: distribution[key] for key in distribution.keys()},
+        [{key: row[key] for key in row.keys()} for row in rows],
+    )
 
 
 def revoke_recipient(organization_id: str, distribution_id: int, recipient_id: int,

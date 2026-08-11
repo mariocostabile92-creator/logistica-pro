@@ -7,6 +7,13 @@ const ACCESS_LABELS = Object.freeze({
   ACKNOWLEDGED: "Presa visione",
 });
 
+const READINESS_LABELS = Object.freeze({
+  READY: "Pronto",
+  MISSING_CONTACT: "Contatto mancante",
+  INVALID_CONTACT: "Contatto non valido",
+  EXCLUDED: "Escluso",
+});
+
 
 function dateTime(value) {
   if (!value) return "—";
@@ -20,16 +27,22 @@ function dateTime(value) {
 export function filterDistributionRecipients(recipients, filter = "", search = "") {
   const query = search.trim().toLocaleLowerCase("it-IT");
   return recipients.filter((recipient) => (
-    (!filter || recipient.access_status === filter)
+    (!filter
+      || (filter === "READY" && recipient.readiness === "READY")
+      || (filter === "EXCEPTIONS" && ["MISSING_CONTACT", "INVALID_CONTACT", "EXCLUDED"].includes(recipient.readiness))
+      || recipient.access_status === filter)
     && (!query || recipient.display_name.toLocaleLowerCase("it-IT").includes(query))
   ));
 }
 
 
-export function renderDistributionSummary(element, summary) {
+export function renderDistributionSummary(element, summary, selectedCount = 0) {
   const values = [
     ["Destinatari", summary.recipients_total],
-    ["Pronti", summary.ready],
+    ["Pronti", summary.contact_ready],
+    ["Senza contatto", summary.missing_contact],
+    ["Non validi", summary.invalid_contact],
+    ["Selezionati", selectedCount],
     ["Visualizzati", summary.opened],
     ["Presa visione", summary.acknowledged],
     ["Non visualizzati", summary.not_opened],
@@ -40,18 +53,26 @@ export function renderDistributionSummary(element, summary) {
 }
 
 
-export function renderDistributionRecipients(element, recipients) {
+export function renderDistributionRecipients(element, recipients, selectedIds = new Set()) {
   if (!recipients.length) {
     element.innerHTML = '<p class="driver-shift-distribution-empty">Nessun destinatario corrisponde ai filtri.</p>';
     return;
   }
   element.innerHTML = recipients.map((recipient) => `
     <article class="driver-shift-recipient" data-recipient-id="${recipient.id}">
+      <label class="driver-shift-recipient-select">
+        <input type="checkbox" data-select-shift-recipient="${recipient.id}"
+          ${selectedIds.has(recipient.id) ? "checked" : ""}
+          ${recipient.readiness !== "READY" || recipient.access_revoked ? "disabled" : ""} />
+        <span class="sr-only">Seleziona ${escapeHtml(recipient.display_name)}</span>
+      </label>
       <div class="driver-shift-recipient-main">
         <strong>${escapeHtml(recipient.display_name)}</strong>
         <span>${recipient.shift_days_count} ${recipient.shift_days_count === 1 ? "giornata" : "giornate"}</span>
+        <small>${escapeHtml((recipient.available_channels || []).join(" · ") || "Nessun canale disponibile")}</small>
       </div>
       <div class="driver-shift-recipient-state">
+        <span data-readiness="${escapeHtml(recipient.readiness)}">${escapeHtml(READINESS_LABELS[recipient.readiness] || "Da verificare")}</span>
         <span data-access-status="${escapeHtml(recipient.access_revoked ? "REVOKED" : recipient.access_status)}">${escapeHtml(recipient.access_revoked ? "Revocato" : (ACCESS_LABELS[recipient.access_status] || "Non disponibile"))}</span>
         ${recipient.acknowledged_at ? `<small>${escapeHtml(dateTime(recipient.acknowledged_at))}</small>` : ""}
       </div>

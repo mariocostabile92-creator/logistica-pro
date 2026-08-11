@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Response, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 
 from app.auth.permission_service import has_permission
 
@@ -47,6 +47,7 @@ from app.plugins.workforce.domain.driver_shift_distribution import (
     DriverShiftPersonalAccessNotFoundError,
     DriverShiftRecipientAccessLink,
     PersonalDriverShiftView,
+    DriverShiftPreparedBatch,
 )
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.interfaces.schemas import (
@@ -65,6 +66,7 @@ from app.plugins.workforce.interfaces.schemas import (
     DriverShiftPlanningReplaceSourcesRequest,
     DriverShiftPlanningResolutionRequest,
     DriverShiftPlanningPublishRequest,
+    DriverShiftBatchPrepareRequest,
 )
 from app.workspace.status_service import (
     DemoWorkspaceResetRequiredError,
@@ -225,6 +227,58 @@ def regenerate_driver_shift_recipient_access(
         user = _require(request, "workforce:write")
         return driver_shift_distribution_service.regenerate_recipient_access(
             user.organization_id, distribution_id, recipient_id, user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-distributions/{distribution_id}/prepare-batch",
+    response_model=DriverShiftPreparedBatch,
+)
+def prepare_driver_shift_batch(
+    distribution_id: int,
+    payload: DriverShiftBatchPrepareRequest,
+    request: Request,
+) -> DriverShiftPreparedBatch:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_distribution_service.prepare_batch(
+            user.organization_id, distribution_id, payload.recipient_ids,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-distributions/{distribution_id}/export.csv",
+    response_class=PlainTextResponse,
+)
+def export_driver_shift_batch(
+    distribution_id: int,
+    payload: DriverShiftBatchPrepareRequest,
+    request: Request,
+) -> PlainTextResponse:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        batch = driver_shift_distribution_service.prepare_batch(
+            user.organization_id, distribution_id, payload.recipient_ids,
+        )
+        content = driver_shift_distribution_service.export_batch_csv(batch)
+        filename = f"turni-{batch.period_start}_{batch.period_end}.csv"
+        return PlainTextResponse(
+            content,
+            media_type="text/csv; charset=utf-8",
+            headers={
+                **PRIVATE_CACHE_HEADERS,
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
         )
     except DemoWorkspaceResetRequiredError as exc:
         raise _write_error(exc) from exc
