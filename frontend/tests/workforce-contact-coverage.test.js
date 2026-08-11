@@ -95,7 +95,9 @@ test("Workforce refresh loads coverage and Delivery remains derived", async () =
   assert.match(page, /renderWorkforceContactCoverage/);
   assert.match(distribution, /async function load/);
   assert.match(distribution, /getDistribution\(state\.planning\.id\)/);
-  assert.match(distribution, /void load\(\{ quietMissing: true \}\)/);
+  const setPlanning = distribution.slice(distribution.indexOf("setPlanning(planning)"));
+  assert.doesNotMatch(setPlanning, /load\(\{ quietMissing: true \}\)/);
+  assert.match(distribution, /windowConfirm\.addEventListener[\s\S]*void prepare\(\)/);
 });
 
 

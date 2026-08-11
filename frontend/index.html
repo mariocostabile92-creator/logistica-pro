@@ -1070,6 +1070,35 @@
       </dialog>
 
       <dialog
+        id="driverShiftDistributionWindowDialog"
+        class="driver-shift-dialog driver-shift-window-dialog"
+        aria-labelledby="driverShiftDistributionWindowTitle"
+        aria-describedby="driverShiftDistributionWindowDescription"
+      >
+        <div>
+          <p class="eyebrow">Distribuzione settimanale</p>
+          <h3 id="driverShiftDistributionWindowTitle">Scegli la settimana</h3>
+          <p id="driverShiftDistributionWindowDescription">
+            Verranno inclusi soltanto i driver con turni pubblicati nella settimana selezionata.
+          </p>
+          <label class="driver-shift-window-field">
+            Settimana contenente
+            <input id="driverShiftDistributionWeek" type="date" required />
+          </label>
+          <p class="driver-shift-window-summary">
+            Periodo: <strong id="driverShiftDistributionWindowLabel"></strong>
+          </p>
+          <p id="driverShiftDistributionWindowError" class="driver-shift-window-error" role="alert" hidden>
+            La settimana deve essere interamente compresa nel planning ACTIVE.
+          </p>
+          <div class="driver-shift-dialog-actions">
+            <button id="driverShiftDistributionWindowCancel" type="button" class="secondary">Annulla</button>
+            <button id="driverShiftDistributionWindowConfirm" type="button">Prepara distribuzione</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog
         id="driverShiftLegacyPublishDialog"
         class="driver-shift-dialog"
         aria-labelledby="driverShiftLegacyPublishTitle"
@@ -2555,6 +2584,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=92"></script>
+    <script type="module" src="./assets/js/app.js?v=93"></script>
 </body>
 </html>

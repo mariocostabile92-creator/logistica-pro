@@ -29,4 +29,4 @@ export {
   prepareDriverShiftBatch as prepareDistributionBatch,
   exportDriverShiftBatchCsv as exportDistributionBatchCsv,
   listWorkforceMembers,
-} from "../api.js?v=15";
+} from "../api.js?v=16";

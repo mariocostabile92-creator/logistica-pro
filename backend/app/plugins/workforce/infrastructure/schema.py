@@ -177,6 +177,93 @@ def _ensure_scoped_uniqueness(conn, database_backend: str | None = None) -> None
     )
 
 
+def _migrate_driver_shift_distribution_window_uniqueness(conn) -> None:
+    """Allow one distribution per planning revision and selected date window."""
+    if isinstance(conn, PostgresConnection):
+        constraints = conn.execute(
+            """SELECT c.conname, pg_get_constraintdef(c.oid) definition
+               FROM pg_constraint c
+               JOIN pg_class t ON t.oid=c.conrelid
+               WHERE t.relname=? AND c.contype='u'""",
+            ("driver_shift_distributions",),
+        ).fetchall()
+        legacy_columns = (
+            "UNIQUE (organization_id, driver_shift_planning_id, planning_version)"
+        )
+        for row in constraints:
+            if str(row["definition"]).strip() != legacy_columns:
+                continue
+            name = str(row["conname"])
+            if not name.replace("_", "").isalnum():
+                continue
+            conn.execute(
+                f'ALTER TABLE driver_shift_distributions DROP CONSTRAINT "{name}"'
+            )
+    else:
+        definition = _sqlite_table_definition(conn, "driver_shift_distributions")
+        legacy = "UNIQUE (ORGANIZATION_ID, DRIVER_SHIFT_PLANNING_ID, PLANNING_VERSION)"
+        current = (
+            "UNIQUE (ORGANIZATION_ID, DRIVER_SHIFT_PLANNING_ID, "
+            "PLANNING_VERSION, PERIOD_START, PERIOD_END)"
+        )
+        if legacy in definition and current not in definition:
+            conn.commit()
+            conn.execute("PRAGMA foreign_keys = OFF")
+            conn.execute("PRAGMA legacy_alter_table = ON")
+            try:
+                conn.executescript(
+                    """
+                    ALTER TABLE driver_shift_distributions
+                        RENAME TO driver_shift_distributions_revision_unique;
+                    CREATE TABLE driver_shift_distributions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        organization_id TEXT NOT NULL,
+                        driver_shift_planning_id INTEGER NOT NULL,
+                        planning_version INTEGER NOT NULL,
+                        period_start TEXT NOT NULL,
+                        period_end TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TEXT NOT NULL,
+                        created_by TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        FOREIGN KEY (driver_shift_planning_id, organization_id)
+                            REFERENCES driver_shift_plannings(id, organization_id)
+                            ON DELETE CASCADE,
+                        UNIQUE (
+                            organization_id, driver_shift_planning_id,
+                            planning_version, period_start, period_end
+                        ),
+                        UNIQUE (id, organization_id)
+                    );
+                    INSERT INTO driver_shift_distributions (
+                        id, organization_id, driver_shift_planning_id,
+                        planning_version, period_start, period_end, status,
+                        created_at, created_by, updated_at
+                    )
+                    SELECT id, organization_id, driver_shift_planning_id,
+                           planning_version, period_start, period_end, status,
+                           created_at, created_by, updated_at
+                    FROM driver_shift_distributions_revision_unique;
+                    DROP TABLE driver_shift_distributions_revision_unique;
+                    """
+                )
+            finally:
+                conn.execute("PRAGMA legacy_alter_table = OFF")
+                conn.execute("PRAGMA foreign_keys = ON")
+
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_driver_shift_distribution_window "
+        "ON driver_shift_distributions("
+        "organization_id, driver_shift_planning_id, planning_version, "
+        "period_start, period_end)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_driver_shift_distribution_scope "
+        "ON driver_shift_distributions("
+        "organization_id, driver_shift_planning_id, planning_version, status)"
+    )
+
+
 def _ensure_profile_columns(conn) -> None:
     if isinstance(conn, PostgresConnection):
         rows = conn.execute(
@@ -425,7 +512,10 @@ def init_schema() -> None:
                 FOREIGN KEY (driver_shift_planning_id, organization_id)
                     REFERENCES driver_shift_plannings(id, organization_id)
                     ON DELETE CASCADE,
-                UNIQUE (organization_id, driver_shift_planning_id, planning_version),
+                UNIQUE (
+                    organization_id, driver_shift_planning_id, planning_version,
+                    period_start, period_end
+                ),
                 UNIQUE (id, organization_id)
             );
 
@@ -661,3 +751,4 @@ def init_schema() -> None:
                     (organization_id,),
                 )
         _ensure_scoped_uniqueness(conn)
+        _migrate_driver_shift_distribution_window_uniqueness(conn)

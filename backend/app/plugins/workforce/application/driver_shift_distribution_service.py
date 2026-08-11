@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from app.core.config import SETTINGS
 from app.plugins.workforce.domain.driver_shift_distribution import (
     DriverShiftDistributionError,
+    DriverShiftDistributionPeriodError,
     DriverShiftDistributionReadModel,
     DriverShiftPersonalAccessNotFoundError,
     DriverShiftRecipientAccessLink,
@@ -61,12 +62,53 @@ def _access_link(recipient: dict) -> DriverShiftRecipientAccessLink:
     )
 
 
-def prepare_distribution(organization_id: str, planning_id: int,
-                         actor: str) -> DriverShiftDistributionReadModel:
-    planning, candidates = repository.published_recipient_candidates(
-        organization_id, planning_id,
+def _distribution_period(
+    planning: dict,
+    period_start: str | None,
+    period_end: str | None,
+) -> tuple[str, str]:
+    if (period_start is None) != (period_end is None):
+        raise DriverShiftDistributionPeriodError(
+            "Il periodo della distribuzione richiede data iniziale e finale."
+        )
+    start_value = period_start or str(planning["period_start"])
+    end_value = period_end or str(planning["period_end"])
+    try:
+        start = date.fromisoformat(start_value)
+        end = date.fromisoformat(end_value)
+        planning_start = date.fromisoformat(str(planning["period_start"]))
+        planning_end = date.fromisoformat(str(planning["period_end"]))
+    except ValueError as exc:
+        raise DriverShiftDistributionPeriodError(
+            "Il periodo della distribuzione non è valido."
+        ) from exc
+    if end < start:
+        raise DriverShiftDistributionPeriodError(
+            "La data finale deve essere uguale o successiva alla data iniziale."
+        )
+    if start < planning_start or end > planning_end:
+        raise DriverShiftDistributionPeriodError(
+            "Il periodo della distribuzione deve essere contenuto nel planning ACTIVE."
+        )
+    return start.isoformat(), end.isoformat()
+
+
+def prepare_distribution(
+    organization_id: str,
+    planning_id: int,
+    actor: str,
+    *,
+    period_start: str | None = None,
+    period_end: str | None = None,
+) -> DriverShiftDistributionReadModel:
+    planning = repository.active_planning(organization_id, planning_id)
+    distribution_start, distribution_end = _distribution_period(
+        planning, period_start, period_end,
     )
-    expires_at = _expires_at(str(planning["period_end"]))
+    candidates = repository.published_recipient_candidates(
+        organization_id, planning, distribution_start, distribution_end,
+    )
+    expires_at = _expires_at(distribution_end)
     recipients = []
     for candidate in candidates:
         public_id = str(uuid.uuid4())
@@ -80,7 +122,12 @@ def prepare_distribution(organization_id: str, planning_id: int,
             "access_expires_at": expires_at,
         })
     return repository.prepare_distribution(
-        organization_id, planning, recipients, actor,
+        organization_id,
+        planning,
+        distribution_start,
+        distribution_end,
+        recipients,
+        actor,
     )
 
 

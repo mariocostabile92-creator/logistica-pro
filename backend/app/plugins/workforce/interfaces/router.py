@@ -52,6 +52,7 @@ from app.plugins.workforce.domain.legacy_canonical_publication import (
 from app.plugins.workforce.domain.driver_shift_distribution import (
     DriverShiftDistributionError,
     DriverShiftDistributionNotFoundError,
+    DriverShiftDistributionPeriodError,
     DriverShiftDistributionReadModel,
     DriverShiftPersonalAccessNotFoundError,
     DriverShiftRecipientAccessLink,
@@ -91,6 +92,7 @@ from app.plugins.workforce.interfaces.schemas import (
     ConsecutivityOverrideRequest,
     ConsecutivityPolicyRequest,
     DriverShiftPlanningCreateRequest,
+    DriverShiftDistributionPrepareRequest,
     DriverShiftPlanningImportReference,
     DriverShiftPlanningSourceRequest,
     DriverShiftPlanningReplaceSourcesRequest,
@@ -205,7 +207,12 @@ def _planning_error(exc: DriverShiftPlanningError | ValueError) -> HTTPException
 
 
 def _distribution_error(exc: DriverShiftDistributionError) -> HTTPException:
-    status = 404 if isinstance(exc, DriverShiftDistributionNotFoundError) else 422
+    if isinstance(exc, DriverShiftDistributionNotFoundError):
+        status = 404
+    elif isinstance(exc, DriverShiftDistributionPeriodError):
+        status = 400
+    else:
+        status = 422
     return HTTPException(
         status_code=status,
         detail={"code": exc.code, "message": str(exc)},
@@ -294,13 +301,19 @@ def revoke_driver_shift_credential(
     response_model=DriverShiftDistributionReadModel,
 )
 def prepare_driver_shift_distribution(
-    planning_id: int, request: Request,
+    planning_id: int,
+    request: Request,
+    payload: DriverShiftDistributionPrepareRequest | None = None,
 ) -> DriverShiftDistributionReadModel:
     try:
         ensure_real_data_write_allowed()
         user = _require(request, "workforce:write")
         return driver_shift_distribution_service.prepare_distribution(
-            user.organization_id, planning_id, user.email,
+            user.organization_id,
+            planning_id,
+            user.email,
+            period_start=payload.period_start if payload else None,
+            period_end=payload.period_end if payload else None,
         )
     except DemoWorkspaceResetRequiredError as exc:
         raise _write_error(exc) from exc

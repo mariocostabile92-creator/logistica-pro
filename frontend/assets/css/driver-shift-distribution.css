@@ -5,6 +5,39 @@
   min-width: 0;
 }
 
+.driver-shift-window-dialog > div {
+  display: grid;
+  gap: 1rem;
+  min-width: min(26rem, calc(100vw - 3rem));
+}
+
+.driver-shift-window-dialog h3,
+.driver-shift-window-dialog p {
+  margin: 0;
+}
+
+.driver-shift-window-field {
+  display: grid;
+  gap: .4rem;
+  font-weight: 750;
+}
+
+.driver-shift-window-field input {
+  width: 100%;
+  min-width: 0;
+}
+
+.driver-shift-window-summary {
+  padding: .75rem;
+  border-radius: .55rem;
+  background: #f1f7f5;
+}
+
+.driver-shift-window-error {
+  color: var(--danger, #b22b24);
+  font-weight: 700;
+}
+
 .driver-shift-portal {
   margin: 1rem 0;
   padding: 1rem;
@@ -243,6 +276,20 @@
 }
 
 @media (max-width: 520px) {
+  .driver-shift-window-dialog {
+    width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .driver-shift-window-dialog > div {
+    min-width: 0;
+  }
+
+  .driver-shift-window-dialog .driver-shift-dialog-actions,
+  .driver-shift-window-dialog .driver-shift-dialog-actions button {
+    width: 100%;
+  }
+
   .driver-shift-portal-heading,
   .driver-shift-portal-details > div,
   .driver-shift-group-share-heading {

@@ -33,7 +33,8 @@ test("DRAFT planning hides delivery instead of generating manual recipients", as
 test("prepare distribution is an explicit admin action", async () => {
   const [api, controller] = await Promise.all([source("assets/js/api.js"), source("assets/js/modules/driver-shift-distribution.js")]);
   assert.match(api, /prepareDriverShiftDistribution[\s\S]*method: "POST"/);
-  assert.match(controller, /elements\.entry\.addEventListener\("click", prepare\)/);
+  assert.match(controller, /elements\.entry\.addEventListener\("click", openWindowDialog\)/);
+  assert.match(controller, /elements\.windowConfirm\.addEventListener\("click", \(\) => void prepare\(\)\)/);
 });
 
 test("distribution summary exposes recipients readiness opens and acknowledgements", () => {

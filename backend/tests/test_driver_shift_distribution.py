@@ -29,16 +29,18 @@ def _member(external_id: str, name: str, organization_id: str = ORG) -> int:
 
 
 def _planning(status: str = "ACTIVE", *, version: int = 1,
-              organization_id: str = ORG, label: str = "Settimana QA") -> int:
+              organization_id: str = ORG, label: str = "Settimana QA",
+              period_start: str = "2026-08-17",
+              period_end: str = "2026-08-23") -> int:
     with db_session() as conn:
         cursor = conn.execute(
             """INSERT INTO driver_shift_plannings (
                    organization_id, label, period_start, period_end, status,
                    version, created_at, created_by, updated_at, published_at, published_by
-               ) VALUES (?, ?, '2026-08-17', '2026-08-23', ?, ?,
+               ) VALUES (?, ?, ?, ?, ?, ?,
                          '2026-08-11T09:00:00Z', 'qa@test',
                          '2026-08-11T09:00:00Z', '2026-08-11T09:00:00Z', 'qa@test')""",
-            (organization_id, label, status, version),
+            (organization_id, label, period_start, period_end, status, version),
         )
         return int(cursor.lastrowid)
 

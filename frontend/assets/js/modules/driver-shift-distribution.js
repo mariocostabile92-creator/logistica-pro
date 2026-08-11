@@ -10,13 +10,13 @@ import {
   revokeRecipientAccess,
   revokeSharedPortal,
   prepareSharedPortal,
-} from "./driver-shift-planning-api.js?v=6";
+} from "./driver-shift-planning-api.js?v=8";
 import {
   filterDistributionRecipients,
   renderDistributionRecipients,
   renderDistributionSummary,
 } from "./driver-shift-distribution-presenter.js?v=3";
-import { initDriverShiftCredentials } from "./driver-shift-credentials.js?v=1";
+import { initDriverShiftCredentials } from "./driver-shift-credentials.js?v=2";
 import {
   buildDriverShiftGroupMessage,
   copyGroupMessage,
@@ -54,7 +54,29 @@ function downloadBlob(blob, filename) {
 }
 
 
-export function initDriverShiftDistribution() {
+function isoDateUtc(value) {
+  return value.toISOString().slice(0, 10);
+}
+
+
+function addIsoDays(value, days) {
+  const [year, month, day] = value.split("-").map(Number);
+  return isoDateUtc(new Date(Date.UTC(year, month - 1, day + days)));
+}
+
+
+export function distributionWindowForAnchor(anchor) {
+  const fallback = isoDateUtc(new Date());
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(anchor || "") ? anchor : fallback;
+  const [year, month, day] = value.split("-").map(Number);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const mondayOffset = (weekday + 6) % 7;
+  const periodStart = addIsoDays(value, -mondayOffset);
+  return { period_start: periodStart, period_end: addIsoDays(periodStart, 6) };
+}
+
+
+export function initDriverShiftDistribution({ getDefaultWindow = () => null } = {}) {
   const state = {
     planning: null,
     model: null,
@@ -68,6 +90,8 @@ export function initDriverShiftDistribution() {
     credentialModel: null,
     credentialStatuses: new Map(),
     newRevision: false,
+    pendingWindow: null,
+    windowTrigger: null,
   };
   const elements = {
     entry: byId("driverShiftDistributeBtn"),
@@ -106,6 +130,12 @@ export function initDriverShiftDistribution() {
     groupCopy: byId("driverShiftGroupMessageCopy"),
     messageFallback: byId("driverShiftMessageFallback"),
     messageFallbackText: byId("driverShiftMessageFallbackText"),
+    windowDialog: byId("driverShiftDistributionWindowDialog"),
+    windowDate: byId("driverShiftDistributionWeek"),
+    windowLabel: byId("driverShiftDistributionWindowLabel"),
+    windowError: byId("driverShiftDistributionWindowError"),
+    windowCancel: byId("driverShiftDistributionWindowCancel"),
+    windowConfirm: byId("driverShiftDistributionWindowConfirm"),
   };
 
   function status(message = "", tone = "") {
@@ -367,22 +397,57 @@ export function initDriverShiftDistribution() {
     }
   }
 
-  async function prepare() {
+  function selectedWindowIsValid(window) {
+    return Boolean(
+      window
+      && state.planning
+      && window.period_start >= state.planning.period_start
+      && window.period_end <= state.planning.period_end
+    );
+  }
+
+  function syncWindow(anchor) {
+    const window = distributionWindowForAnchor(anchor);
+    const valid = selectedWindowIsValid(window);
+    state.pendingWindow = valid ? window : null;
+    elements.windowDate.value = window.period_start;
+    elements.windowLabel.textContent = `${window.period_start} - ${window.period_end}`;
+    elements.windowError.hidden = valid;
+    elements.windowConfirm.disabled = !valid;
+  }
+
+  function openWindowDialog() {
     if (!state.planning) return;
-    setLoading(elements.entry, true, "Preparazione...");
+    const selected = getDefaultWindow() || {};
+    state.windowTrigger = document.activeElement;
+    elements.windowDate.min = state.planning.period_start;
+    elements.windowDate.max = state.planning.period_end;
+    syncWindow(selected.dateFrom || selected.period_start || isoDateUtc(new Date()));
+    elements.windowDialog.showModal();
+    elements.windowDate.focus();
+  }
+
+  function closeWindowDialog() {
+    elements.windowDialog.close();
+  }
+
+  async function prepare() {
+    if (!state.planning || !state.pendingWindow) return;
+    setLoading(elements.windowConfirm, true, "Preparazione...");
     try {
-      state.model = await prepareDistribution(state.planning.id);
+      state.model = await prepareDistribution(state.planning.id, state.pendingWindow);
       state.selectionDirty = false;
       state.prepared = null;
       clearMessageFallback();
       syncSelection({ reset: true });
       credentialsController.setDistribution(state.model.distribution);
       render();
+      closeWindowDialog();
       status("Distribuzione pronta. Nessun messaggio è stato inviato.", "success");
     } catch (error) {
       status(userErrorPresentation("workforce.driver-shift-distribution", error).message, "error");
     } finally {
-      setLoading(elements.entry, false);
+      setLoading(elements.windowConfirm, false);
     }
   }
 
@@ -458,7 +523,14 @@ export function initDriverShiftDistribution() {
     }
   }
 
-  elements.entry.addEventListener("click", prepare);
+  elements.entry.addEventListener("click", openWindowDialog);
+  elements.windowDate.addEventListener("change", () => syncWindow(elements.windowDate.value));
+  elements.windowCancel.addEventListener("click", closeWindowDialog);
+  elements.windowConfirm.addEventListener("click", () => void prepare());
+  elements.windowDialog.addEventListener("close", () => {
+    state.windowTrigger?.focus?.();
+    state.windowTrigger = null;
+  });
   elements.portalPrepare.addEventListener("click", () => void preparePortal());
   elements.portalCopy.addEventListener("click", () => void copyPortal());
   elements.portalRevoke.addEventListener("click", () => void revokePortal());
@@ -553,7 +625,6 @@ export function initDriverShiftDistribution() {
         state.credentialStatuses = new Map();
         credentialsController.setDistribution(null);
         render();
-        void load({ quietMissing: true });
       }
     },
   };

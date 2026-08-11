@@ -50,6 +50,10 @@ class DriverShiftDistributionNotFoundError(DriverShiftDistributionError):
     code = "DRIVER_SHIFT_DISTRIBUTION_NOT_FOUND"
 
 
+class DriverShiftDistributionPeriodError(DriverShiftDistributionError):
+    code = "DRIVER_SHIFT_DISTRIBUTION_PERIOD_INVALID"
+
+
 class DriverShiftPersonalAccessNotFoundError(DriverShiftDistributionError):
     code = "DRIVER_SHIFT_PERSONAL_ACCESS_NOT_FOUND"
 

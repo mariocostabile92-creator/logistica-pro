@@ -3,7 +3,7 @@ import {
   prepareCredentials,
   resetCredential,
   revokeCredential,
-} from "./driver-shift-planning-api.js?v=6";
+} from "./driver-shift-planning-api.js?v=8";
 import {
   credentialStatusMap,
   renderCredentialSummary,

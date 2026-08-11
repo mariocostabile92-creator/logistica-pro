@@ -797,10 +797,14 @@ export async function createDriverShiftPlanningRevision(planningId) {
 }
 
 
-export async function prepareDriverShiftDistribution(planningId) {
+export async function prepareDriverShiftDistribution(planningId, period = null) {
   return parseResponse(await fetch(
     `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/distribution`,
-    { method: "POST" },
+    {
+      method: "POST",
+      headers: period ? { "Content-Type": "application/json" } : undefined,
+      body: period ? JSON.stringify(period) : undefined,
+    },
   ));
 }
 

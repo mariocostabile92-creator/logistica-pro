@@ -104,7 +104,12 @@ def test_credential_is_reused_by_later_distribution():
 
     with db_session() as conn:
         conn.execute("UPDATE driver_shift_plannings SET status='SUPERSEDED' WHERE id=?", (first_planning,))
-    second_planning = _planning(version=2, label="Settimana successiva")
+    second_planning = _planning(
+        version=2,
+        label="Settimana successiva",
+        period_start="2026-08-24",
+        period_end="2026-08-30",
+    )
     _shift(second_planning, members[0], "2026-08-24", version=2)
     second_id = _distribution(client, second_planning)["distribution"]["id"]
     second = _prepare(client, second_id).json()

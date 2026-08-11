@@ -177,10 +177,12 @@ def session_week_data(session_token_hash: str, *, acknowledge: bool = False) -> 
                FROM driver_shift_planning_published_rows
                WHERE organization_id=? AND driver_shift_planning_id=?
                  AND planning_version=? AND workforce_member_id=?
+                 AND operational_date BETWEEN ? AND ?
                ORDER BY operational_date, id""",
             (
                 row["organization_id"], row["driver_shift_planning_id"],
                 row["planning_version"], row["workforce_member_id"],
+                row["period_start"], row["period_end"],
             ),
         ).fetchall()
         result = _dict(row)

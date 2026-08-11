@@ -12,7 +12,7 @@ import {
   publishLegacyPlanning,
   createRevision,
   listWorkforceMembers,
-} from "./driver-shift-planning-api.js?v=7";
+} from "./driver-shift-planning-api.js?v=8";
 import {
   renderMergeRows,
   renderMergeSummary,
@@ -27,7 +27,7 @@ import {
   createDriverShiftPlanningState,
   LEGACY_PREVIEW_STATUS,
 } from "./driver-shift-planning-state.js?v=4";
-import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=5";
+import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=6";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 
@@ -59,7 +59,11 @@ function presentError(context, error) {
 }
 
 
-export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
+export function initDriverShiftPlanning({
+  openImport,
+  onChanged = () => {},
+  getDistributionWindow = () => null,
+}) {
   const store = createDriverShiftPlanningState();
   const { state } = store;
   let initialized = false;
@@ -638,7 +642,9 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
     if (initialized) return;
     initialized = true;
     bindElements();
-    distributionController = initDriverShiftDistribution();
+    distributionController = initDriverShiftDistribution({
+      getDefaultWindow: getDistributionWindow,
+    });
     bindEvents();
   }
 

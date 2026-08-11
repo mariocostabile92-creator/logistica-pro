@@ -34,7 +34,7 @@ def _audit(conn, organization_id: str, entity_id: str, actor: str, reason: str,
     )
 
 
-def published_recipient_candidates(organization_id: str, planning_id: int) -> tuple[dict, list[dict]]:
+def active_planning(organization_id: str, planning_id: int) -> dict:
     with db_session() as conn:
         planning = conn.execute(
             """SELECT * FROM driver_shift_plannings
@@ -45,6 +45,16 @@ def published_recipient_candidates(organization_id: str, planning_id: int) -> tu
             raise DriverShiftDistributionNotFoundError("Planning turni non trovato.")
         if planning["status"] != "ACTIVE":
             raise DriverShiftDistributionError("La distribuzione richiede un planning ACTIVE.")
+    return {key: planning[key] for key in planning.keys()}
+
+
+def published_recipient_candidates(
+    organization_id: str,
+    planning: dict,
+    period_start: str,
+    period_end: str,
+) -> list[dict]:
+    with db_session() as conn:
         rows = conn.execute(
             """SELECT pr.workforce_member_id, m.display_name, COUNT(pr.id) shift_days_count
                FROM driver_shift_planning_published_rows pr
@@ -53,14 +63,18 @@ def published_recipient_candidates(organization_id: str, planning_id: int) -> tu
                 AND m.organization_id=pr.organization_id
                WHERE pr.organization_id=? AND pr.driver_shift_planning_id=?
                  AND pr.planning_version=?
+                 AND pr.operational_date BETWEEN ? AND ?
                GROUP BY pr.workforce_member_id, m.display_name
                ORDER BY m.display_name, pr.workforce_member_id""",
-            (organization_id, planning_id, planning["version"]),
+            (
+                organization_id,
+                planning["id"],
+                planning["version"],
+                period_start,
+                period_end,
+            ),
         ).fetchall()
-    return (
-        {key: planning[key] for key in planning.keys()},
-        [{key: row[key] for key in row.keys()} for row in rows],
-    )
+    return [{key: row[key] for key in row.keys()} for row in rows]
 
 
 def _read_model_conn(conn, organization_id: str, distribution_id: int) -> DriverShiftDistributionReadModel:
@@ -82,13 +96,20 @@ def _read_model_conn(conn, organization_id: str, distribution_id: int) -> Driver
             AND pr.driver_shift_planning_id=?
             AND pr.planning_version=?
             AND pr.workforce_member_id=r.workforce_member_id
+            AND pr.operational_date BETWEEN ? AND ?
            WHERE r.organization_id=? AND r.distribution_id=?
            GROUP BY r.id, r.workforce_member_id, m.display_name, m.phone, m.email,
                     r.delivery_status, r.access_status, r.access_revoked_at, r.first_opened_at,
                     r.last_opened_at, r.acknowledged_at
            ORDER BY m.display_name, r.id""",
-        (distribution["driver_shift_planning_id"], distribution["planning_version"],
-         organization_id, distribution_id),
+        (
+            distribution["driver_shift_planning_id"],
+            distribution["planning_version"],
+            distribution["period_start"],
+            distribution["period_end"],
+            organization_id,
+            distribution_id,
+        ),
     ).fetchall()
     recipients = []
     for row in rows:
@@ -119,6 +140,8 @@ def _read_model_conn(conn, organization_id: str, distribution_id: int) -> Driver
 def prepare_distribution(
     organization_id: str,
     planning: dict,
+    period_start: str,
+    period_end: str,
     recipients: Sequence[dict[str, object]],
     actor: str,
 ) -> DriverShiftDistributionReadModel:
@@ -135,8 +158,14 @@ def prepare_distribution(
         existing = conn.execute(
             """SELECT id FROM driver_shift_distributions
                WHERE organization_id=? AND driver_shift_planning_id=?
-                 AND planning_version=?""",
-            (organization_id, planning["id"], planning["version"]),
+                 AND planning_version=? AND period_start=? AND period_end=?""",
+            (
+                organization_id,
+                planning["id"],
+                planning["version"],
+                period_start,
+                period_end,
+            ),
         ).fetchone()
         if existing is not None:
             return _read_model_conn(conn, organization_id, int(existing["id"]))
@@ -146,7 +175,7 @@ def prepare_distribution(
             """SELECT id FROM driver_shift_distributions
                WHERE organization_id=? AND period_start=? AND period_end=?
                  AND status <> 'SUPERSEDED'""",
-            (organization_id, planning["period_start"], planning["period_end"]),
+            (organization_id, period_start, period_end),
         ).fetchall()
         previous_ids = [int(row["id"]) for row in previous]
         if previous_ids:
@@ -168,8 +197,16 @@ def prepare_distribution(
                    organization_id, driver_shift_planning_id, planning_version,
                    period_start, period_end, status, created_at, created_by, updated_at
                ) VALUES (?, ?, ?, ?, ?, 'READY', ?, ?, ?)""",
-            (organization_id, planning["id"], planning["version"], planning["period_start"],
-             planning["period_end"], now, actor, now),
+            (
+                organization_id,
+                planning["id"],
+                planning["version"],
+                period_start,
+                period_end,
+                now,
+                actor,
+                now,
+            ),
         )
         distribution_id = int(cursor.lastrowid)
         conn.executemany(
@@ -189,8 +226,8 @@ def prepare_distribution(
         _audit(conn, organization_id, str(distribution_id), actor,
                "driver_shift_distribution_prepared", {
                    "planning_id": planning["id"], "planning_version": planning["version"],
-                   "recipients": len(recipients), "period_start": planning["period_start"],
-                   "period_end": planning["period_end"],
+                   "recipients": len(recipients), "period_start": period_start,
+                   "period_end": period_end,
                })
         return _read_model_conn(conn, organization_id, distribution_id)
 
@@ -359,9 +396,11 @@ def personal_view(token_hash: str, *, acknowledge: bool = False) -> PersonalDriv
                FROM driver_shift_planning_published_rows
                WHERE organization_id=? AND driver_shift_planning_id=?
                  AND planning_version=? AND workforce_member_id=?
+                 AND operational_date BETWEEN ? AND ?
                ORDER BY operational_date, id""",
             (recipient["organization_id"], recipient["driver_shift_planning_id"],
-             recipient["planning_version"], recipient["workforce_member_id"]),
+             recipient["planning_version"], recipient["workforce_member_id"],
+             recipient["period_start"], recipient["period_end"]),
         ).fetchall()
     assert refreshed is not None
     return PersonalDriverShiftView(

@@ -37,7 +37,7 @@ import {
   initWorkforceFoundation,
   renderWorkforceFoundation,
 } from "./workforce-foundation.js?v=2";
-import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=14";
+import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=15";
 
 
 const PAGE_STATES = Object.freeze({
@@ -542,6 +542,7 @@ export function initWorkforcePage() {
   });
   driverShiftPlanning = initDriverShiftPlanning({
     openImport: () => workforceImportFlow.open(),
+    getDistributionWindow: () => selectedCalendarWindow(),
     onChanged: async ({ type, periodStart } = {}) => {
       if (type !== "published") return;
       calendarLoaded = false;

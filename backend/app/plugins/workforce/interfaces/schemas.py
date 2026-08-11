@@ -108,6 +108,16 @@ class DriverShiftPlanningCreateRequest(BaseModel):
         return date.fromisoformat(value).isoformat()
 
 
+class DriverShiftDistributionPrepareRequest(BaseModel):
+    period_start: str
+    period_end: str
+
+    @field_validator("period_start", "period_end")
+    @classmethod
+    def valid_distribution_date(cls, value: str) -> str:
+        return date.fromisoformat(value).isoformat()
+
+
 class DriverShiftPlanningSourceRequest(BaseModel):
     workforce_import_id: int = Field(gt=0)
     source_order: int | None = Field(default=None, ge=0)
