@@ -34,6 +34,17 @@ def _json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
+def _safe_audit(values: dict[str, object] | None) -> dict[str, object] | None:
+    if values is None:
+        return None
+    return {
+        key: ("[present]" if value else None)
+        if key in {"phone", "email"}
+        else value
+        for key, value in values.items()
+    }
+
+
 def _change(
     conn,
     *,
@@ -59,8 +70,8 @@ def _change(
             entity_id,
             actor,
             timestamp,
-            _json(before) if before is not None else None,
-            _json(after),
+            _json(_safe_audit(before)) if before is not None else None,
+            _json(_safe_audit(after) or {}),
             reason,
             source,
             organization_id,
@@ -169,6 +180,32 @@ def update_member(
                 timestamp=now,
                 organization_id=organization_id,
             )
+            if before["phone"] != after["phone"]:
+                _change(
+                    conn,
+                    entity_type="member",
+                    entity_id=str(member_id),
+                    actor=actor,
+                    before={"phone": before["phone"]},
+                    after={"phone": after["phone"]},
+                    reason="phone_changed",
+                    source="manual",
+                    timestamp=now,
+                    organization_id=organization_id,
+                )
+            if before["email"] != after["email"]:
+                _change(
+                    conn,
+                    entity_type="member",
+                    entity_id=str(member_id),
+                    actor=actor,
+                    before={"email": before["email"]},
+                    after={"email": after["email"]},
+                    reason="email_changed",
+                    source="manual",
+                    timestamp=now,
+                    organization_id=organization_id,
+                )
         updated = conn.execute(
             "SELECT * FROM workforce_members WHERE id = ? AND organization_id = ?",
             (member_id, storage_organization_id),

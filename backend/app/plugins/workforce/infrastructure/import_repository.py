@@ -24,6 +24,8 @@ MEMBER_FIELDS = (
     "contract_end",
     "weekly_hours",
     "capabilities",
+    "phone",
+    "email",
     "active",
     "source_reference",
 )
@@ -99,6 +101,8 @@ def _member_values(row) -> dict[str, object]:
         "contract_end": row["contract_end"],
         "weekly_hours": row["weekly_hours"],
         "capabilities": json.loads(row["capabilities"]),
+        "phone": row["phone"],
+        "email": row["email"],
         "active": bool(row["active"]),
         "source_reference": row["source_reference"],
     }
@@ -235,17 +239,40 @@ def _audit_row(
     source: str,
     timestamp: str,
 ) -> tuple[object, ...]:
+    def safe(values: dict[str, object] | None) -> dict[str, object] | None:
+        if values is None:
+            return None
+        return {
+            key: ("[present]" if value else None)
+            if key in {"phone", "email"}
+            else value
+            for key, value in values.items()
+        }
+
+    safe_before = safe(before)
+    safe_after = safe(after) or {}
     return (
         entity_type,
         str(entity_id),
         actor,
         timestamp,
-        _json(before) if before is not None else None,
-        _json(after),
+        _json(safe_before) if safe_before is not None else None,
+        _json(safe_after),
         reason,
         source,
         current_organization_id(),
     )
+
+
+def _import_contact(item, field: str, existing: object = None) -> str | None:
+    if getattr(item, f"{field}_conflict") or not getattr(item, f"{field}_present"):
+        return str(existing) if existing is not None else None
+    incoming = getattr(item, field)
+    if getattr(item, f"{field}_valid"):
+        return incoming
+    if existing is not None and str(existing).strip():
+        return str(existing)
+    return incoming
 
 
 def _persist_members(
@@ -268,6 +295,9 @@ def _persist_members(
         values["capabilities"] = list(values.get("capabilities") or [])
         row = existing.get(item.external_identifier)
         if row is None:
+            phone = _import_contact(item, "phone")
+            email = _import_contact(item, "email")
+            after = {**values, "phone": phone, "email": email}
             insert_rows.append(
                 (
                     item.external_identifier,
@@ -278,6 +308,8 @@ def _persist_members(
                     values.get("contract_end"),
                     values.get("weekly_hours"),
                     _json(values["capabilities"]),
+                    phone,
+                    email,
                     int(bool(values.get("active", True))),
                     values["source_reference"],
                     now,
@@ -286,11 +318,39 @@ def _persist_members(
                 )
             )
             audit_specs.append(
-                (item.external_identifier, None, values, "workforce_import")
+                (
+                    item.external_identifier,
+                    None,
+                    after,
+                    "workforce_import",
+                    values["source_reference"],
+                )
             )
+            if phone:
+                audit_specs.append((
+                    item.external_identifier,
+                    None,
+                    {"phone": phone},
+                    "phone_changed",
+                    values["source_reference"],
+                ))
+            if email:
+                audit_specs.append((
+                    item.external_identifier,
+                    None,
+                    {"email": email},
+                    "email_changed",
+                    values["source_reference"],
+                ))
             continue
         before = _member_values(row)
-        after = {field: values.get(field) for field in MEMBER_FIELDS}
+        after = {
+            field: values.get(field)
+            for field in MEMBER_FIELDS
+            if field not in {"phone", "email"}
+        }
+        after["phone"] = _import_contact(item, "phone", before["phone"])
+        after["email"] = _import_contact(item, "email", before["email"])
         if before == after:
             continue
         update_rows.append(
@@ -302,6 +362,8 @@ def _persist_members(
                 after["contract_end"],
                 after["weekly_hours"],
                 _json(after["capabilities"]),
+                after["phone"],
+                after["email"],
                 int(bool(after["active"])),
                 after["source_reference"],
                 now,
@@ -315,8 +377,25 @@ def _persist_members(
                 before,
                 after,
                 "workforce_import_update",
+                after["source_reference"],
             )
         )
+        if before["phone"] != after["phone"]:
+            audit_specs.append((
+                item.external_identifier,
+                {"phone": before["phone"]},
+                {"phone": after["phone"]},
+                "phone_changed",
+                after["source_reference"],
+            ))
+        if before["email"] != after["email"]:
+            audit_specs.append((
+                item.external_identifier,
+                {"email": before["email"]},
+                {"email": after["email"]},
+                "email_changed",
+                after["source_reference"],
+            ))
 
     _executemany(
         conn,
@@ -325,8 +404,9 @@ def _persist_members(
         INSERT INTO workforce_members (
             external_identifier, display_name, role, employment_type,
             contract_start, contract_end, weekly_hours, capabilities,
-            active, source_reference, created_at, updated_at, organization_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            phone, email, active, source_reference, created_at, updated_at,
+            organization_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         insert_rows,
         chunk_size,
@@ -338,7 +418,8 @@ def _persist_members(
         UPDATE workforce_members
         SET display_name = ?, role = ?, employment_type = ?,
             contract_start = ?, contract_end = ?, weekly_hours = ?,
-            capabilities = ?, active = ?, source_reference = ?, updated_at = ?
+            capabilities = ?, phone = ?, email = ?, active = ?,
+            source_reference = ?, updated_at = ?
         WHERE id = ? AND organization_id = ?
         """,
         update_rows,
@@ -357,10 +438,10 @@ def _persist_members(
             before=before,
             after=after,
             reason=reason,
-            source=str(after["source_reference"]),
+            source=str(source),
             timestamp=now,
         )
-        for identifier, before, after, reason in audit_specs
+        for identifier, before, after, reason, source in audit_specs
     ]
     return member_ids, len(insert_rows), len(update_rows), audit_rows
 
@@ -731,6 +812,10 @@ def apply_import(
             "contracts_detected": parsed.preview.contracts_detected,
             "absences_detected": parsed.preview.absences_detected,
             "excluded_rows": parsed.preview.excluded_rows,
+            "phone_detected": parsed.preview.phone_detected,
+            "email_detected": parsed.preview.email_detected,
+            "invalid_contacts": parsed.preview.invalid_contacts,
+            "contact_conflicts": parsed.preview.contact_conflicts,
             "confirmation_columns": parsed.preview.confirmation_columns,
         }
         import_cursor = _execute(

@@ -653,6 +653,13 @@ export async function getLatestPlanning() {
 }
 
 
+export async function getWorkforceContactCoverage() {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/contact-coverage`,
+  ));
+}
+
+
 export async function listDriverShiftPlannings() {
   return parseResponse(await fetch(
     `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings`,

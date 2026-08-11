@@ -11,6 +11,7 @@ from app.plugins.workforce.application import workforce_service
 from app.plugins.workforce.application import consecutivity_policy, override_service
 from app.plugins.workforce.application import driver_shift_planning_service
 from app.plugins.workforce.application import driver_shift_distribution_service
+from app.plugins.workforce.application.contact_coverage_service import contact_coverage
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
 from app.plugins.workforce.domain.errors import (
@@ -49,6 +50,7 @@ from app.plugins.workforce.domain.driver_shift_distribution import (
     PersonalDriverShiftView,
     DriverShiftPreparedBatch,
 )
+from app.plugins.workforce.domain.contact_coverage import WorkforceContactCoverage
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.interfaces.schemas import (
     WorkforceCalendarResponse,
@@ -691,6 +693,12 @@ def coverage(
     return WorkforceCoverageResponse(
         items=workforce_service.coverage(date_from, date_to)
     )
+
+
+@router.get("/contact-coverage", response_model=WorkforceContactCoverage)
+def workforce_contact_coverage(request: Request) -> WorkforceContactCoverage:
+    user = _require(request, "workforce:read")
+    return contact_coverage(user.organization_id)
 
 
 @router.get("/changes", response_model=WorkforceChangesResponse)

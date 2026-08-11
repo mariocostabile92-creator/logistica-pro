@@ -15,6 +15,10 @@ from app.plugins.workforce.domain.models import (
     WorkforceImportSheet,
     WorkforceMapping,
 )
+from app.plugins.workforce.domain.driver_shift_contact import (
+    normalize_email,
+    normalize_phone,
+)
 from app.utils.text_normalizer import compact_key, normalize_text
 
 
@@ -27,6 +31,11 @@ FIELD_ALIASES = {
         "lavoratore",
     ),
     "role": ("ruolo", "mansione", "role"),
+    "phone": (
+        "telefono", "phone", "mobile", "cellulare", "numero telefono",
+        "phone number",
+    ),
+    "email": ("email", "e-mail", "mail", "indirizzo email"),
     "employment_type": (
         "contratto", "tipo contratto", "employment type", "full time", "part time",
         "p time", "percentuale part time",
@@ -56,6 +65,18 @@ FIELD_ALIASES = {
 class ParsedMember:
     external_identifier: str
     values: dict[str, object]
+    phone: str | None = None
+    email: str | None = None
+    phone_original: str | None = None
+    email_original: str | None = None
+    phone_present: bool = False
+    email_present: bool = False
+    phone_valid: bool = False
+    email_valid: bool = False
+    phone_invalid: bool = False
+    email_invalid: bool = False
+    phone_conflict: bool = False
+    email_conflict: bool = False
 
 
 @dataclass(frozen=True)
@@ -164,6 +185,8 @@ for _target, _aliases in _NORMALIZED_ALIASES.items():
     for _alias in _aliases:
         _EXACT_ALIAS_TARGETS.setdefault(_alias, _target)
 
+_STRICT_ALIAS_TARGETS = {"phone", "email"}
+
 
 @lru_cache(maxsize=4096)
 def _target_for_normalized(normalized: str) -> tuple[str | None, float, str]:
@@ -173,6 +196,7 @@ def _target_for_normalized(normalized: str) -> tuple[str | None, float, str]:
     candidates = [
         target
         for target, aliases in _NORMALIZED_ALIASES.items()
+        if target not in _STRICT_ALIAS_TARGETS
         if any(len(alias) >= 4 and alias in normalized for alias in aliases)
     ]
     if len(candidates) == 1:
@@ -235,7 +259,7 @@ def _responsibility(name: str, columns: list[Column]) -> str:
         return "contracts"
     if any(column.date_value for column in columns) or targets & {"date", "shift_code", "status_code"}:
         return "schedule"
-    if targets & {"external_identifier", "display_name", "role"}:
+    if targets & {"external_identifier", "display_name", "role", "phone", "email"}:
         return "members"
     return "ignored"
 
@@ -347,6 +371,65 @@ def _employment_type(value: Any, current: object = None) -> str | None:
     return str(value).strip() or None
 
 
+def _contact_state() -> dict[str, object]:
+    return {
+        "phone": None,
+        "email": None,
+        "phone_original": None,
+        "email_original": None,
+        "phone_present": False,
+        "email_present": False,
+        "phone_valid": False,
+        "email_valid": False,
+        "phone_invalid": False,
+        "email_invalid": False,
+        "phone_conflict": False,
+        "email_conflict": False,
+    }
+
+
+def _merge_contact(
+    state: dict[str, object],
+    field: str,
+    raw_value: Any,
+    *,
+    source: str,
+    identifier: str,
+    anomalies: list[str],
+) -> None:
+    original = _text(raw_value)
+    if original is None:
+        return
+    state[f"{field}_present"] = True
+    normalizer = normalize_phone if field == "phone" else normalize_email
+    normalized = normalizer(original)
+    label = "Telefono" if field == "phone" else "Email"
+    if normalized is None:
+        state[f"{field}_invalid"] = True
+        if not state.get(f"{field}_valid") and not state.get(f"{field}_conflict"):
+            state[field] = original
+            state[f"{field}_original"] = original
+        anomalies.append(
+            f"{label} non valido per {identifier} in {source}."
+        )
+        return
+    if state.get(f"{field}_conflict"):
+        return
+    current = state.get(field) if state.get(f"{field}_valid") else None
+    if current is not None and current != normalized:
+        state[field] = None
+        state[f"{field}_original"] = None
+        state[f"{field}_valid"] = False
+        state[f"{field}_conflict"] = True
+        anomalies.append(
+            f"Conflitto {label.lower()} per {identifier}: valori differenti nello stesso file."
+        )
+        return
+    state[field] = normalized
+    state[f"{field}_original"] = original
+    state[f"{field}_valid"] = True
+
+
 def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkforceWorkbook:
     total_started = perf_counter()
     workbook = scan_workbook(
@@ -359,6 +442,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
     fingerprint = sha256(content).hexdigest()
     status_mapping = _status_mapping()
     members: dict[str, dict[str, object]] = {}
+    member_contacts: dict[str, dict[str, object]] = {}
     statuses: dict[tuple[str, str], dict[str, object]] = {}
     requirements: dict[tuple[str, str], ParsedRequirement] = {}
     source_rows: list[ParsedWorkforceSourceRow] = []
@@ -416,6 +500,24 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
             identifier = _member_identifier(raw_identifier, display_name) if (display_name or raw_identifier) else ""
             source = f"{sheet.name}:row:{excel_row}"
             source_external_identifier = _text(raw_identifier)
+            if identifier:
+                contact = member_contacts.setdefault(identifier, _contact_state())
+                _merge_contact(
+                    contact,
+                    "phone",
+                    _value(row, columns, "phone"),
+                    source=source,
+                    identifier=identifier,
+                    anomalies=anomalies,
+                )
+                _merge_contact(
+                    contact,
+                    "email",
+                    _value(row, columns, "email"),
+                    source=source,
+                    identifier=identifier,
+                    anomalies=anomalies,
+                )
             station = _text(_value(row, columns, "operational_unit_id"))
             employment_type = _employment_type(
                 _value(row, columns, "employment_type")
@@ -644,6 +746,22 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         for item in mappings
         if item.status == "needs_confirmation"
     })
+    phone_detected = sum(
+        bool(item["phone_valid"]) and not bool(item["phone_conflict"])
+        for item in member_contacts.values()
+    )
+    email_detected = sum(
+        bool(item["email_valid"]) and not bool(item["email_conflict"])
+        for item in member_contacts.values()
+    )
+    invalid_contacts = sum(
+        bool(item["phone_invalid"]) + bool(item["email_invalid"])
+        for item in member_contacts.values()
+    )
+    contact_conflicts = sum(
+        bool(item["phone_conflict"]) + bool(item["email_conflict"])
+        for item in member_contacts.values()
+    )
     preview = WorkforceImportPreview(
         fingerprint=fingerprint,
         sheets=sheets,
@@ -656,6 +774,10 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         absences_detected=sum(item.get("status_code") in absence_codes for item in statuses.values()),
         excluded_rows=excluded_rows,
         confirmation_columns=confirmation_columns,
+        phone_detected=phone_detected,
+        email_detected=email_detected,
+        invalid_contacts=invalid_contacts,
+        contact_conflicts=contact_conflicts,
         anomalies=anomalies[:50],
         matrix=matrix,
     )
@@ -664,7 +786,14 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
     return ParsedWorkforceWorkbook(
         fingerprint=fingerprint,
         preview=preview,
-        members=[ParsedMember(identifier, values) for identifier, values in members.items()],
+        members=[
+            ParsedMember(
+                identifier,
+                values,
+                **member_contacts.get(identifier, _contact_state()),
+            )
+            for identifier, values in members.items()
+        ],
         statuses=[ParsedStatus(identifier, day, values) for (identifier, day), values in statuses.items()],
         requirements=list(requirements.values()),
         source_rows=source_rows,

@@ -2,12 +2,13 @@ import {
   downloadWorkforceExport,
   getWorkforceCalendar,
   getWorkforceCoverage,
+  getWorkforceContactCoverage,
   getWorkforceFoundation,
   getWorkforceStatus,
   listWorkforceMembers,
   saveWorkforceDayStatus,
   updateWorkforceMember,
-} from "../api.js?v=5";
+} from "../api.js?v=12";
 import {
   byId,
   renderViewState,
@@ -31,6 +32,7 @@ import {
   workforceCalendarWindow,
   workforceSummary,
 } from "./workforce-view.js";
+import { renderWorkforceContactCoverage } from "./workforce-contact-coverage.js?v=1";
 import {
   initWorkforceFoundation,
   renderWorkforceFoundation,
@@ -325,11 +327,12 @@ async function loadCalendar(range = null) {
     </div>
   `;
   try {
-    const [members, calendar, coverage, foundation] = await Promise.all([
+    const [members, calendar, coverage, foundation, contactCoverage] = await Promise.all([
       listWorkforceMembers(),
       getWorkforceCalendar(dateFrom, dateTo),
       getWorkforceCoverage(dateFrom, dateTo),
       getWorkforceFoundation(dateFrom),
+      getWorkforceContactCoverage(),
     ]);
     currentData = {
       members: members.items,
@@ -337,6 +340,7 @@ async function loadCalendar(range = null) {
       coverage: coverage.items,
     };
     renderWorkforceFoundation(foundation);
+    renderWorkforceContactCoverage(byId("workforceContactCoverage"), contactCoverage);
     anomalyLimit = ANOMALY_PAGE_SIZE;
     renderData();
     calendarLoaded = true;

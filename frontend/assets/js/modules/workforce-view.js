@@ -169,6 +169,10 @@ export function renderWorkforceImportPreview(preview) {
       <div><span>Contratti</span><strong>${integer(preview.contracts_detected)}</strong></div>
       <div><span>Assenze</span><strong>${integer(preview.absences_detected)}</strong></div>
       <div><span>Righe escluse</span><strong>${integer(preview.excluded_rows)}</strong></div>
+      <div><span>Telefono rilevato</span><strong>${integer(preview.phone_detected)}</strong></div>
+      <div><span>Email rilevate</span><strong>${integer(preview.email_detected)}</strong></div>
+      <div><span>Contatti invalidi</span><strong>${integer(preview.invalid_contacts)}</strong></div>
+      <div><span>Conflitti contatto</span><strong>${integer(preview.contact_conflicts)}</strong></div>
       <div><span>Colonne da confermare</span><strong>${integer(confirmationColumns.length)}</strong></div>
     </div>
   `;
