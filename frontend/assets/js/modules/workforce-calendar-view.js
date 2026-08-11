@@ -2,11 +2,32 @@ import { escapeHtml } from "../utils/dom.js";
 import { workforceStatusLabel } from "./workforce-view.js";
 
 
-function selectedDates(statuses, mode) {
+function statusDates(statuses, mode) {
   const dates = [...new Set(statuses.map((item) => item.date))].sort();
   if (mode === "day") return dates.slice(0, 1);
   if (mode === "week") return dates.slice(0, 7);
   return dates.slice(0, 14);
+}
+
+
+function addDays(value, days) {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  parsed.setUTCDate(parsed.getUTCDate() + days);
+  return parsed.toISOString().slice(0, 10);
+}
+
+
+export function workforceCalendarDates(statuses, mode, dateFrom = "", dateTo = "") {
+  if (!dateFrom) return statusDates(statuses, mode);
+  if (mode === "day") return [dateFrom];
+  const maximum = mode === "week" ? 7 : 14;
+  const dates = [];
+  for (let offset = 0; offset < maximum; offset += 1) {
+    const value = addDays(dateFrom, offset);
+    if (mode !== "week" && dateTo && value > dateTo) break;
+    dates.push(value);
+  }
+  return dates;
 }
 
 
@@ -55,7 +76,16 @@ function resourceMeta(member) {
 }
 
 
-function statusButton(member, day, status, rowIndex, columnIndex, selectedCellKey) {
+function statusButton(
+  member,
+  day,
+  status,
+  rowIndex,
+  columnIndex,
+  selectedCellKey,
+  editingMemberId,
+  multiDayDates,
+) {
   const code = status?.status_code || "unknown";
   const label = workforceStatusLabel(code);
   const time = workforceTimeLabel(status);
@@ -64,17 +94,21 @@ function statusButton(member, day, status, rowIndex, columnIndex, selectedCellKe
   const detail = [label, status?.shift_code, time].filter(Boolean).join(", ");
   const key = workforceCellKey(member.workforce_member_id, day);
   const selected = key === selectedCellKey;
+  const multiSelected = editingMemberId === member.workforce_member_id && multiDayDates.has(day);
+  const editing = editingMemberId === member.workforce_member_id;
+  const locked = Boolean(editingMemberId) && !editing;
   return `
     <button
       type="button"
-      class="workforce-status-button ${escapeHtml(code)}${selected ? " is-selected" : ""}"
+      class="workforce-status-button ${escapeHtml(code)}${selected ? " is-selected" : ""}${multiSelected ? " is-multi-selected" : ""}${editing ? " is-editing" : ""}${locked ? " is-locked" : ""}"
       data-workforce-status-id="${status?.status_id || ""}"
       data-workforce-member-id="${member.workforce_member_id}"
       data-workforce-date="${day}"
       data-workforce-cell-key="${escapeHtml(key)}"
       data-workforce-row="${rowIndex}"
       data-workforce-column="${columnIndex}"
-      aria-pressed="${selected}"
+      aria-pressed="${multiSelected || selected}"
+      aria-disabled="${locked}"
       aria-label="${escapeHtml(`${member.display_name}, ${day}, ${detail}`)}"
       title="${escapeHtml(detail)}"
     >
@@ -87,17 +121,14 @@ function statusButton(member, day, status, rowIndex, columnIndex, selectedCellKe
 
 function memberButton(member) {
   return `
-    <button
-      type="button"
-      class="workforce-member-button"
-      data-workforce-member-edit="${member.workforce_member_id}"
-    >${escapeHtml(member.display_name)}</button>
+    <button type="button" class="workforce-member-button" data-workforce-member-edit="${member.workforce_member_id}">${escapeHtml(member.display_name)}</button>
     <small>${escapeHtml(resourceMeta(member))}</small>
+    <button type="button" class="workforce-member-schedule" data-workforce-member-schedule="${member.workforce_member_id}">Modifica turni</button>
   `;
 }
 
 
-function renderDayList(members, date, byKey, selectedCellKey) {
+function renderDayList(members, date, byKey, selectedCellKey, editingMemberId, multiDayDates) {
   return `
     <div class="workforce-day-list" role="list" aria-label="Planning del ${escapeHtml(date)}">
       ${members.map((member, rowIndex) => {
@@ -105,7 +136,7 @@ function renderDayList(members, date, byKey, selectedCellKey) {
         return `
           <article class="workforce-day-card" role="listitem">
             <div class="workforce-day-person">${memberButton(member)}</div>
-            <div class="workforce-day-status">${statusButton(member, date, status, rowIndex, 0, selectedCellKey)}</div>
+            <div class="workforce-day-status">${statusButton(member, date, status, rowIndex, 0, selectedCellKey, editingMemberId, multiDayDates)}</div>
           </article>
         `;
       }).join("")}
@@ -114,7 +145,7 @@ function renderDayList(members, date, byKey, selectedCellKey) {
 }
 
 
-function renderTable(members, dates, byKey, selectedCellKey) {
+function renderTable(members, dates, byKey, selectedCellKey, editingMemberId, multiDayDates) {
   return `
     <table class="workforce-calendar-table">
       <caption class="visually-hidden">Planning turni per risorsa e giornata</caption>
@@ -135,6 +166,8 @@ function renderTable(members, dates, byKey, selectedCellKey) {
                   rowIndex,
                   columnIndex,
                   selectedCellKey,
+                  editingMemberId,
+                  multiDayDates,
                 )}
               </td>
             `).join("")}
@@ -153,9 +186,18 @@ export function renderWorkforceCalendar(
   mode,
   onEditStatus,
   onEditMember,
-  { selectedCellKey = null, onSelectCell = () => {} } = {},
+  {
+    selectedCellKey = null,
+    onSelectCell = () => {},
+    dateFrom = "",
+    dateTo = "",
+    editingMemberId = null,
+    multiDayDates = new Set(),
+    onStartMultiDayEdit = () => {},
+    onToggleMultiDayDate = () => {},
+  } = {},
 ) {
-  const dates = selectedDates(statuses, mode);
+  const dates = workforceCalendarDates(statuses, mode, dateFrom, dateTo);
   if (!members.length) {
     container.innerHTML = '<p class="empty-state">Nessuna risorsa Workforce disponibile.</p>';
     return;
@@ -168,8 +210,8 @@ export function renderWorkforceCalendar(
     statuses.map((item) => [`${item.workforce_member_id}:${item.date}`, item]),
   );
   container.innerHTML = mode === "day"
-    ? renderDayList(members, dates[0], byKey, selectedCellKey)
-    : renderTable(members, dates, byKey, selectedCellKey);
+    ? renderDayList(members, dates[0], byKey, selectedCellKey, editingMemberId, multiDayDates)
+    : renderTable(members, dates, byKey, selectedCellKey, editingMemberId, multiDayDates);
 
   const statusButtons = [...container.querySelectorAll("[data-workforce-member-id]")];
   const markSelected = (button) => {
@@ -182,9 +224,20 @@ export function renderWorkforceCalendar(
   };
 
   statusButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      markSelected(button);
+    button.addEventListener("click", (event) => {
       const memberId = Number(button.dataset.workforceMemberId);
+      if (editingMemberId) {
+        if (memberId !== Number(editingMemberId)) return;
+        onToggleMultiDayDate({
+          member: members.find((item) => item.workforce_member_id === memberId),
+          date: button.dataset.workforceDate,
+          shiftKey: event.shiftKey,
+          visibleDates: dates,
+          trigger: button,
+        });
+        return;
+      }
+      markSelected(button);
       const statusId = Number(button.dataset.workforceStatusId || 0);
       onEditStatus({
         member: members.find((item) => item.workforce_member_id === memberId),
@@ -224,6 +277,14 @@ export function renderWorkforceCalendar(
     button.addEventListener("click", () => {
       onEditMember(
         members.find((item) => item.workforce_member_id === Number(button.dataset.workforceMemberEdit)),
+        button,
+      );
+    });
+  });
+  container.querySelectorAll("[data-workforce-member-schedule]").forEach((button) => {
+    button.addEventListener("click", () => {
+      onStartMultiDayEdit(
+        members.find((item) => item.workforce_member_id === Number(button.dataset.workforceMemberSchedule)),
         button,
       );
     });

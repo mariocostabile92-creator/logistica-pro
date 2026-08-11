@@ -1301,6 +1301,26 @@
               <div id="workforceCalendar" class="workforce-calendar-wrap"></div>
             </div>
 
+            <section id="workforceMultiDayBar" class="workforce-multi-day-bar" aria-live="polite" hidden>
+              <div class="workforce-multi-day-context">
+                <span>Modifica turni</span>
+                <strong id="workforceMultiDayDriver">Driver</strong>
+                <b id="workforceMultiDayCount">0 giorni selezionati</b>
+              </div>
+              <label>
+                Turno o stato
+                <select id="workforceMultiDayChoice"></select>
+              </label>
+              <label>
+                Nota
+                <input id="workforceMultiDayNotes" type="text" maxlength="1000" placeholder="Facoltativa" />
+              </label>
+              <div class="workforce-multi-day-actions">
+                <button id="workforceMultiDayCancel" type="button" class="quiet">Annulla selezione</button>
+                <button id="workforceMultiDayApply" type="button" disabled>Applica</button>
+              </div>
+            </section>
+
             <button
               id="workforceDetailBackdrop"
               type="button"
@@ -2601,6 +2621,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=94"></script>
+    <script type="module" src="./assets/js/app.js?v=96"></script>
 </body>
 </html>

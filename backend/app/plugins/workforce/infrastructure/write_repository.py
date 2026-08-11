@@ -324,3 +324,126 @@ def save_manual_status(
             (status_id, storage_organization_id),
         ).fetchone()
     return status_from_row(updated)
+
+
+def _save_batch_status(
+    conn,
+    values: dict[str, object],
+    actor: str,
+    organization_id: str,
+    now: str,
+):
+    row = conn.execute(
+        """
+        SELECT * FROM workforce_day_statuses
+        WHERE workforce_member_id = ? AND date = ? AND organization_id = ?
+        """,
+        (values["workforce_member_id"], values["date"], organization_id),
+    ).fetchone()
+    before = _status_values(row) if row else None
+    after = {field: values.get(field) for field in STATUS_FIELDS}
+    after["source_reference"] = str(
+        values.get("source_reference") or "manual_bulk"
+    )
+    if row:
+        status_id = int(row["id"])
+        conn.execute(
+            """
+            UPDATE workforce_day_statuses
+            SET status_code = ?, availability = ?, shift_code = ?,
+                start_time = ?, end_time = ?, notes = ?,
+                source_reference = ?, observed_or_confirmed = ?,
+                updated_at = ?
+            WHERE id = ? AND organization_id = ?
+            """,
+            (
+                after["status_code"],
+                int(bool(after["availability"])),
+                after["shift_code"],
+                after["start_time"],
+                after["end_time"],
+                after["notes"],
+                after["source_reference"],
+                "manual",
+                now,
+                status_id,
+                organization_id,
+            ),
+        )
+    else:
+        cursor = conn.execute(
+            """
+            INSERT INTO workforce_day_statuses (
+                workforce_member_id, date, status_code, availability,
+                shift_code, start_time, end_time, notes,
+                source_reference, observed_or_confirmed, updated_at,
+                organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                values["workforce_member_id"],
+                values["date"],
+                after["status_code"],
+                int(bool(after["availability"])),
+                after["shift_code"],
+                after["start_time"],
+                after["end_time"],
+                after["notes"],
+                after["source_reference"],
+                "manual",
+                now,
+                organization_id,
+            ),
+        )
+        status_id = int(cursor.lastrowid)
+    _change(
+        conn,
+        entity_type="day_status",
+        entity_id=str(status_id),
+        actor=actor,
+        before=before,
+        after={**after, "date": values["date"]},
+        reason="manual_bulk_update",
+        source="manual",
+        timestamp=now,
+        organization_id=organization_id,
+    )
+    return conn.execute(
+        """
+        SELECT * FROM workforce_day_statuses
+        WHERE id = ? AND organization_id = ?
+        """,
+        (status_id, organization_id),
+    ).fetchone()
+
+
+def save_manual_statuses_batch(
+    values: dict[str, object],
+    dates: list[str],
+    actor: str,
+    organization_id: str = "default",
+):
+    now = utc_now_iso()
+    with db_session() as conn:
+        member = conn.execute(
+            """
+            SELECT id FROM workforce_members
+            WHERE id = ? AND organization_id = ?
+            """,
+            (values["workforce_member_id"], organization_id),
+        ).fetchone()
+        if not member:
+            raise WorkforceMemberNotFoundError(
+                "Risorsa Workforce non trovata."
+            )
+        rows = [
+            _save_batch_status(
+                conn,
+                {**values, "date": selected_date},
+                actor,
+                organization_id,
+                now,
+            )
+            for selected_date in dates
+        ]
+    return [status_from_row(row) for row in rows]

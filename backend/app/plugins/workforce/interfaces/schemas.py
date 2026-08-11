@@ -77,6 +77,31 @@ class WorkforceDayStatusRequest(BaseModel):
         return value
 
 
+class WorkforceDayStatusBatchRequest(BaseModel):
+    workforce_member_id: int = Field(gt=0)
+    dates: list[str] = Field(min_length=1, max_length=31)
+    status_code: str = Field(min_length=1, max_length=80)
+    availability: bool | None = None
+    shift_code: str | None = Field(default=None, max_length=80)
+    start_time: str | None = Field(default=None, max_length=20)
+    end_time: str | None = Field(default=None, max_length=20)
+    notes: str | None = Field(default=None, max_length=1000)
+    source_reference: str = Field(default="manual_bulk", max_length=240)
+    actor: str = Field(default="local_operator", min_length=1, max_length=120)
+
+    @field_validator("dates")
+    @classmethod
+    def valid_dates(cls, values: list[str]) -> list[str]:
+        normalized = [date.fromisoformat(value).isoformat() for value in values]
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("Le date selezionate non possono essere duplicate.")
+        return normalized
+
+
+class WorkforceDayStatusBatchResponse(BaseModel):
+    items: list[WorkforceDayStatus]
+
+
 class ConsecutivityPolicyRequest(BaseModel):
     warning_threshold: int = Field(default=5, ge=1, le=30)
     rest_required_threshold: int = Field(default=6, ge=2, le=31)

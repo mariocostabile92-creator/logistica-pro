@@ -128,7 +128,7 @@ test("Workforce shift editing is compact immediate and keyboard accessible", asy
   const submitStart = page.indexOf("async function submitStatus");
   const submitBody = page.slice(submitStart, page.indexOf("async function submitMember", submitStart));
   assert.doesNotMatch(submitBody, /loadCalendar\(/);
-  assert.match(calendar, /aria-pressed="\$\{selected\}"/);
+  assert.match(calendar, /aria-pressed="\$\{multiSelected \|\| selected\}"/);
   assert.match(calendar, /event\.key === "Enter"[\s\S]*?button\.click\(\)/);
   assert.match(calendar, /target\.focus\(\{ preventScroll: true \}\)/);
 });

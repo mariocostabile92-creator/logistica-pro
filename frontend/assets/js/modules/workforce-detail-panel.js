@@ -1,5 +1,5 @@
 import { byId, escapeHtml } from "../utils/dom.js";
-import { workforceTimeLabel } from "./workforce-calendar-view.js";
+import { workforceTimeLabel } from "./workforce-calendar-view.js?v=3";
 import { createWorkforceSurface } from "./workforce-surface.js";
 import { workforceStatusLabel } from "./workforce-view.js";
 import { createWorkforceDamageSummary } from "./workforce-damage-summary.js?v=1";

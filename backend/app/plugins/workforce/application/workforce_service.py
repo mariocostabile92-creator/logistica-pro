@@ -105,17 +105,18 @@ def _allowed_statuses() -> set[str]:
     return configured | {"available_limited"}
 
 
-def save_day_status(values: dict[str, object], actor: str, status_id: int | None = None, organization_id: str = "default"):
-    status_code = str(values["status_code"])
+def _normalized_day_status(values: dict[str, object]) -> dict[str, object]:
+    normalized = dict(values)
+    status_code = str(normalized["status_code"])
     if status_code not in _allowed_statuses():
         raise WorkforceValidationError(
             "Lo stato Workforce non e previsto dalla configurazione corrente."
         )
-    if status_code == "available_limited" and not str(values.get("notes") or "").strip():
+    if status_code == "available_limited" and not str(normalized.get("notes") or "").strip():
         raise WorkforceValidationError(
             "La disponibilita con limitazioni richiede una motivazione."
         )
-    if values.get("availability") is None:
+    if normalized.get("availability") is None:
         configured = workforce_status_configuration().get(
             "available_statuses", ["available", "available_limited", "scheduled"]
         )
@@ -123,8 +124,30 @@ def save_day_status(values: dict[str, object], actor: str, status_id: int | None
             str(item) for item in configured
         } if isinstance(configured, list) else {"available", "scheduled"}
         available_statuses.add("available_limited")
-        values["availability"] = status_code in available_statuses
-    return write_repository.save_manual_status(values, actor, status_id, organization_id)
+        normalized["availability"] = status_code in available_statuses
+    return normalized
+
+
+def save_day_status(values: dict[str, object], actor: str, status_id: int | None = None, organization_id: str = "default"):
+    normalized = _normalized_day_status(values)
+    return write_repository.save_manual_status(normalized, actor, status_id, organization_id)
+
+
+def save_day_statuses_batch(
+    values: dict[str, object],
+    actor: str,
+    organization_id: str = "default",
+):
+    normalized = _normalized_day_status(values)
+    dates = [str(item) for item in normalized.pop("dates", [])]
+    if not dates or len(set(dates)) != len(dates):
+        raise WorkforceValidationError("Le date selezionate non sono valide.")
+    return write_repository.save_manual_statuses_batch(
+        normalized,
+        dates,
+        actor,
+        organization_id,
+    )
 
 
 def update_member(member_id: int, changes: dict[str, object], actor: str, organization_id: str = "default"):

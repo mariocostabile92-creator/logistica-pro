@@ -85,6 +85,8 @@ from app.plugins.workforce.interfaces.schemas import (
     WorkforceCalendarResponse,
     WorkforceChangesResponse,
     WorkforceCoverageResponse,
+    WorkforceDayStatusBatchRequest,
+    WorkforceDayStatusBatchResponse,
     WorkforceDayStatusRequest,
     WorkforceMembersResponse,
     WorkforceMemberUpdateRequest,
@@ -1147,6 +1149,28 @@ def create_day_status(
             organization_id=user.organization_id,
         )
     except (DemoWorkspaceResetRequiredError, WorkforceMemberNotFoundError, WorkforceValidationError) as exc:
+        raise _write_error(exc) from exc
+
+
+@router.post("/day-status/batch", response_model=WorkforceDayStatusBatchResponse)
+def update_day_statuses_batch(
+    request: WorkforceDayStatusBatchRequest,
+    http_request: Request,
+) -> WorkforceDayStatusBatchResponse:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(http_request, "workforce:write")
+        items = workforce_service.save_day_statuses_batch(
+            request.model_dump(exclude={"actor"}),
+            request.actor,
+            user.organization_id,
+        )
+        return WorkforceDayStatusBatchResponse(items=items)
+    except (
+        DemoWorkspaceResetRequiredError,
+        WorkforceMemberNotFoundError,
+        WorkforceValidationError,
+    ) as exc:
         raise _write_error(exc) from exc
 
 

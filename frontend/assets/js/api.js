@@ -653,6 +653,15 @@ export async function getLatestPlanning() {
 }
 
 
+export async function saveWorkforceDayStatusesBatch(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/day-status/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+
 export async function getWorkforceContactCoverage() {
   return parseResponse(await fetch(
     `${API_BASE}/api/plugins/workforce/v1/contact-coverage`,

@@ -7,8 +7,9 @@ import {
   getWorkforceStatus,
   listWorkforceMembers,
   saveWorkforceDayStatus,
+  saveWorkforceDayStatusesBatch,
   updateWorkforceMember,
-} from "../api.js?v=12";
+} from "../api.js?v=17";
 import {
   byId,
   renderViewState,
@@ -19,8 +20,14 @@ import { isExpectedApiError, userErrorPresentation } from "../utils/errors.js";
 import {
   renderWorkforceCalendar,
   workforceCellKey,
-} from "./workforce-calendar-view.js";
-import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=2";
+} from "./workforce-calendar-view.js?v=3";
+import {
+  nextMultiDaySelection,
+  populateWorkforceBulkChoices,
+  workforceBulkPayload,
+  workforceNavigationDays,
+} from "./workforce-multi-day-editor.js?v=2";
+import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=4";
 import { initWorkforceImportFlow } from "./workforce-import-flow.js";
 import {
   renderWorkforceAnomalies,
@@ -62,6 +69,12 @@ let workforceDetailPanel = null;
 let driverShiftPlanning = null;
 let feedbackTimeout = null;
 let selectedCellKey = null;
+let multiDayEditing = {
+  memberId: null,
+  selectedDates: new Set(),
+  anchorDate: null,
+  trigger: null,
+};
 
 
 function errorMessage(context, error) {
@@ -218,6 +231,71 @@ function setActiveTab(tab, { focus = false } = {}) {
 }
 
 
+function multiDayMember() {
+  return currentData.members.find((item) => (
+    Number(item.workforce_member_id) === Number(multiDayEditing.memberId)
+  )) || null;
+}
+
+
+function renderMultiDayBar() {
+  const member = multiDayMember();
+  const count = multiDayEditing.selectedDates.size;
+  byId("workforceMultiDayBar").hidden = !member;
+  if (!member) return;
+  byId("workforceMultiDayDriver").textContent = member.display_name;
+  byId("workforceMultiDayCount").textContent = `${count} ${count === 1 ? "giorno selezionato" : "giorni selezionati"}`;
+  byId("workforceMultiDayApply").disabled = count === 0 || !byId("workforceMultiDayChoice").value;
+}
+
+
+function clearMultiDayEditing({ restoreFocus = false, rerender = true } = {}) {
+  const trigger = multiDayEditing.trigger;
+  multiDayEditing = {
+    memberId: null,
+    selectedDates: new Set(),
+    anchorDate: null,
+    trigger: null,
+  };
+  byId("workforceMultiDayBar").hidden = true;
+  if (rerender && currentData.members.length) renderData();
+  if (restoreFocus) trigger?.focus?.();
+}
+
+
+function startMultiDayEditing(member, trigger) {
+  if (!member) return;
+  selectedCellKey = null;
+  workforceDetailPanel.close({ restoreFocus: false });
+  multiDayEditing = {
+    memberId: Number(member.workforce_member_id),
+    selectedDates: new Set(),
+    anchorDate: null,
+    trigger,
+  };
+  populateWorkforceBulkChoices(
+    byId("workforceMultiDayChoice"),
+    currentData.statuses,
+  );
+  renderData();
+  renderMultiDayBar();
+}
+
+
+function toggleMultiDayDate({ date, shiftKey, visibleDates }) {
+  const next = nextMultiDaySelection(
+    multiDayEditing.selectedDates,
+    date,
+    visibleDates,
+    { shiftKey, anchorDate: multiDayEditing.anchorDate },
+  );
+  multiDayEditing.selectedDates = next.selectedDates;
+  multiDayEditing.anchorDate = next.anchorDate;
+  renderData();
+  renderMultiDayBar();
+}
+
+
 function renderData() {
   const { members, statuses, coverage } = currentData;
   renderWorkforceSummary(workforceSummary(members, statuses, coverage));
@@ -237,8 +315,15 @@ function renderData() {
     {
       selectedCellKey,
       onSelectCell: (key) => { selectedCellKey = key; },
+      dateFrom: byId("workforceDateFrom").value,
+      dateTo: byId("workforceDateTo").value,
+      editingMemberId: multiDayEditing.memberId,
+      multiDayDates: multiDayEditing.selectedDates,
+      onStartMultiDayEdit: startMultiDayEditing,
+      onToggleMultiDayDate: toggleMultiDayDate,
     },
   );
+  renderMultiDayBar();
   renderActiveTab();
 }
 
@@ -303,9 +388,9 @@ function selectedCalendarWindow() {
   if (dateFrom && dateTo) return { dateFrom, dateTo };
   const suggested = workforceCalendarWindow(currentStatus?.latest_import);
   const fallback = suggested.dateFrom ? suggested : fallbackCalendarWindow();
-  return viewMode === "day"
-    ? { dateFrom: fallback.dateFrom, dateTo: fallback.dateFrom }
-    : fallback;
+  if (viewMode === "day") return { dateFrom: fallback.dateFrom, dateTo: fallback.dateFrom };
+  if (viewMode === "week") return periodForAnchor(fallback.dateFrom);
+  return fallback;
 }
 
 
@@ -313,6 +398,7 @@ async function loadCalendar(range = null) {
   if (!currentStatus?.member_count) return;
   const { dateFrom, dateTo } = range || selectedCalendarWindow();
   selectedCellKey = null;
+  clearMultiDayEditing({ rerender: false });
   workforceDetailPanel.close({ restoreFocus: false });
   byId("workforceDateFrom").value = dateFrom;
   byId("workforceDateTo").value = dateTo;
@@ -462,6 +548,44 @@ async function submitStatus(event) {
 }
 
 
+async function applyMultiDayStatus() {
+  const button = byId("workforceMultiDayApply");
+  const payload = workforceBulkPayload(
+    multiDayEditing.memberId,
+    multiDayEditing.selectedDates,
+    byId("workforceMultiDayChoice").value,
+  );
+  if (!payload) return;
+  payload.notes = byId("workforceMultiDayNotes").value.trim() || null;
+  if (payload.status_code === "available_limited" && !payload.notes) {
+    setMessage("Aggiungi una motivazione per la disponibilita con limitazioni.", "warning");
+    byId("workforceMultiDayNotes").focus();
+    return;
+  }
+  setLoading(button, true, "Applicazione...");
+  try {
+    const result = await saveWorkforceDayStatusesBatch(payload);
+    result.items.forEach(updateCurrentStatus);
+    const count = result.items.length;
+    multiDayEditing.selectedDates = new Set();
+    multiDayEditing.anchorDate = null;
+    byId("workforceMultiDayChoice").value = "";
+    byId("workforceMultiDayNotes").value = "";
+    renderData();
+    showWorkforceFeedback(`${count} ${count === 1 ? "giorno aggiornato" : "giorni aggiornati"}`);
+    refreshCoverageAfterStatusSave(
+      byId("workforceDateFrom").value,
+      byId("workforceDateTo").value,
+    );
+  } catch (error) {
+    errorMessage("workforce.save-status-batch", error);
+  } finally {
+    setLoading(button, false);
+    renderMultiDayBar();
+  }
+}
+
+
 async function submitMember(event) {
   event.preventDefault();
   const submit = event.submitter;
@@ -504,9 +628,9 @@ function loadFromAnchor(anchor) {
 }
 
 
-function shiftWeek(days) {
+function shiftCalendar(direction) {
   const current = byId("workforceDateFrom").value || isoDate(new Date());
-  loadFromAnchor(addDays(current, days));
+  loadFromAnchor(addDays(current, workforceNavigationDays(viewMode, direction)));
 }
 
 
@@ -559,12 +683,10 @@ export function initWorkforcePage() {
     loadFromAnchor(event.target.value);
   });
   byId("workforceTodayBtn").addEventListener("click", () => {
-    const suggested = workforceCalendarWindow(currentStatus?.latest_import, new Date());
-    const anchor = suggested.dateFrom || isoDate(new Date());
-    loadFromAnchor(anchor);
+    loadFromAnchor(isoDate(new Date()));
   });
-  byId("workforcePreviousBtn").addEventListener("click", () => shiftWeek(-7));
-  byId("workforceNextBtn").addEventListener("click", () => shiftWeek(7));
+  byId("workforcePreviousBtn").addEventListener("click", () => shiftCalendar(-1));
+  byId("workforceNextBtn").addEventListener("click", () => shiftCalendar(1));
   byId("workforceExportBtn").addEventListener("click", async () => {
     try {
       await downloadWorkforceExport();
@@ -574,6 +696,13 @@ export function initWorkforcePage() {
   });
   byId("workforceStatusEditor").addEventListener("submit", submitStatus);
   byId("workforceMemberEditor").addEventListener("submit", submitMember);
+  byId("workforceMultiDayChoice").addEventListener("change", renderMultiDayBar);
+  byId("workforceMultiDayCancel").addEventListener("click", () => {
+    clearMultiDayEditing({ restoreFocus: true });
+  });
+  byId("workforceMultiDayApply").addEventListener("click", () => {
+    void applyMultiDayStatus();
+  });
   document.querySelectorAll("[data-workforce-view-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       setViewMode(button.dataset.workforceViewMode);
@@ -616,6 +745,7 @@ export function initWorkforcePage() {
     currentStatus = null;
     currentData = { members: [], statuses: [], coverage: [] };
     selectedCellKey = null;
+    clearMultiDayEditing({ rerender: false });
     workforceImportFlow.reset();
     driverShiftPlanning.reset();
     refresh();
