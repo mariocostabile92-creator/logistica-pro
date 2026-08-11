@@ -21,6 +21,7 @@ const STYLES = {
     "workforce-responsive.css?v=6",
     "workforce-foundation.css?v=2",
     "driver-shift-planning.css?v=3",
+    "driver-shift-distribution.css?v=1",
   ],
   dsp: ["dsp-workspace.css?v=6", "dsp-quality.css?v=12"],
   fleet: [
@@ -122,7 +123,7 @@ const WORKSPACE_PREPARERS = {
   },
   workforce: async () => {
     const [module] = await Promise.all([
-      import("./workforce-page.js?v=15"),
+      import("./workforce-page.js?v=16"),
       loadWorkspaceStyles("workforce"),
     ]);
     return async () => {

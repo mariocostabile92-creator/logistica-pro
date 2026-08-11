@@ -165,7 +165,10 @@ async def production_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
-    if (
+    if request.url.path.startswith(("/app/driver-shifts", "/api/public/driver-shifts/")):
+        response.headers["Cache-Control"] = "no-store, private, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+    elif (
         request.url.path in {"/app", "/app/", "/app/sw.js", "/app/manifest.webmanifest"}
         or (request.url.path.startswith("/app/") and request.url.path.endswith(".html"))
     ):

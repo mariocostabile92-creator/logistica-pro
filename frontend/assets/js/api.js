@@ -771,6 +771,45 @@ export async function createDriverShiftPlanningRevision(planningId) {
 }
 
 
+export async function prepareDriverShiftDistribution(planningId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/distribution`,
+    { method: "POST" },
+  ));
+}
+
+
+export async function getDriverShiftDistribution(planningId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/distribution`,
+  ));
+}
+
+
+export async function getDriverShiftRecipientAccessLink(distributionId, recipientId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/recipients/${recipientId}/access-link`,
+    { method: "POST" },
+  ));
+}
+
+
+export async function revokeDriverShiftRecipientAccess(distributionId, recipientId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/recipients/${recipientId}/revoke`,
+    { method: "POST" },
+  ));
+}
+
+
+export async function regenerateDriverShiftRecipientAccess(distributionId, recipientId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/recipients/${recipientId}/regenerate`,
+    { method: "POST" },
+  ));
+}
+
+
 export async function getWorkforceFoundation(operationDate = "") {
   const params = new URLSearchParams();
   if (operationDate) params.set("operation_date", operationDate);

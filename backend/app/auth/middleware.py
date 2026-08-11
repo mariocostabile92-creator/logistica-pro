@@ -55,6 +55,8 @@ def public_path(request: Request) -> bool:
     path = request.url.path
     if path in PUBLIC_EXACT or path.startswith("/app/assets/"):
         return True
+    if path.startswith("/app/driver-shifts") or path.startswith("/api/public/driver-shifts/"):
+        return True
     if path.startswith("/app/journal/"):
         return True
     if path.startswith("/api/plugins/fleet/v1/journal/"):

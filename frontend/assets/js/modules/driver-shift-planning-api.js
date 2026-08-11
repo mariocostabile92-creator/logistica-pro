@@ -11,5 +11,10 @@ export {
   resolveDriverShiftPlanningConflict as resolveConflict,
   publishDriverShiftPlanning as publishPlanning,
   createDriverShiftPlanningRevision as createRevision,
+  prepareDriverShiftDistribution as prepareDistribution,
+  getDriverShiftDistribution as getDistribution,
+  getDriverShiftRecipientAccessLink as getRecipientAccessLink,
+  revokeDriverShiftRecipientAccess as revokeRecipientAccess,
+  regenerateDriverShiftRecipientAccess as regenerateRecipientAccess,
   listWorkforceMembers,
-} from "../api.js?v=9";
+} from "../api.js?v=10";

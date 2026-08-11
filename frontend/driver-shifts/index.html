@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>I tuoi turni · Operations Engine</title>
+  <link rel="icon" href="../assets/brand/operations-engine-mark-32.png?v=1" sizes="32x32" type="image/png" />
+  <link rel="stylesheet" href="../assets/css/driver-shifts-public.css?v=1" />
+</head>
+<body>
+  <main class="driver-shifts-page">
+    <header class="driver-shifts-header">
+      <img src="../assets/brand/operations-engine-mark.png?v=1" width="72" height="50" alt="" aria-hidden="true" />
+      <div><p>Operations Engine</p><h1>I tuoi turni</h1></div>
+    </header>
+    <section id="driverShiftsLoading" class="driver-shifts-state" role="status" aria-live="polite">
+      <strong>Caricamento turni</strong><p>Stiamo preparando la tua vista personale.</p>
+    </section>
+    <section id="driverShiftsError" class="driver-shifts-state" role="alert" hidden>
+      <strong>Link non disponibile</strong>
+      <p>Il collegamento non è valido oppure non è più attivo. Chiedi un nuovo link al responsabile.</p>
+    </section>
+    <section id="driverShiftsContent" hidden>
+      <div class="driver-shifts-identity">
+        <p id="driverShiftsPeriod"></p>
+        <h2 id="driverShiftsDriver"></h2>
+      </div>
+      <div id="driverShiftsList" class="driver-shifts-list"></div>
+      <section class="driver-shifts-ack" aria-labelledby="driverShiftsAckTitle">
+        <h2 id="driverShiftsAckTitle">Presa visione</h2>
+        <p>Conferma solamente di aver visualizzato i turni. Non costituisce accettazione contrattuale.</p>
+        <button id="driverShiftsAcknowledge" type="button">Ho visto i turni</button>
+        <p id="driverShiftsAckStatus" role="status" aria-live="polite"></p>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="../assets/js/driver-shifts-public.js?v=1"></script>
+</body>
+</html>

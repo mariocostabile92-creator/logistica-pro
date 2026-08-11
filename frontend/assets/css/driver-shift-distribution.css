@@ -1,0 +1,71 @@
+.driver-shift-distribution {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color, #c9d4d0);
+  min-width: 0;
+}
+
+.driver-shift-distribution[hidden] { display: none; }
+
+.driver-shift-distribution-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 1rem 0;
+  border: 1px solid var(--border-color, #c9d4d0);
+  border-radius: .65rem;
+  overflow: hidden;
+}
+
+.driver-shift-distribution-summary div { padding: .85rem; min-width: 0; }
+.driver-shift-distribution-summary div + div { border-left: 1px solid var(--border-color, #c9d4d0); }
+.driver-shift-distribution-summary dt { font-size: .75rem; color: var(--muted, #52645f); }
+.driver-shift-distribution-summary dd { margin: .25rem 0 0; font-size: 1.35rem; font-weight: 750; }
+
+.driver-shift-distribution-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.driver-shift-distribution-toolbar > div { display: flex; flex-wrap: wrap; gap: .45rem; }
+.driver-shift-distribution-toolbar label { min-width: min(100%, 18rem); }
+.driver-shift-distribution-toolbar input { width: 100%; }
+
+.driver-shift-distribution-recipients { display: grid; gap: .65rem; }
+.driver-shift-recipient {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: .9rem;
+  border: 1px solid var(--border-color, #c9d4d0);
+  border-radius: .65rem;
+  min-width: 0;
+}
+
+.driver-shift-recipient-main,
+.driver-shift-recipient-state { display: grid; gap: .2rem; min-width: 0; }
+.driver-shift-recipient-state span { font-weight: 700; }
+.driver-shift-recipient-state [data-access-status="ACKNOWLEDGED"] { color: var(--success, #176b55); }
+.driver-shift-recipient-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: .4rem; }
+.driver-shift-distribution-empty { padding: 1rem; border: 1px dashed var(--border-color, #c9d4d0); }
+#driverShiftDistributionStatus[data-tone="error"] { color: var(--danger, #b22b24); }
+#driverShiftDistributionStatus[data-tone="success"] { color: var(--success, #176b55); }
+
+@media (max-width: 900px) {
+  .driver-shift-distribution-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .driver-shift-distribution-summary div + div { border-left: 0; }
+  .driver-shift-recipient { grid-template-columns: minmax(0, 1fr) auto; }
+  .driver-shift-recipient-actions { grid-column: 1 / -1; justify-content: start; }
+}
+
+@media (max-width: 520px) {
+  .driver-shift-distribution-summary { grid-template-columns: 1fr; }
+  .driver-shift-distribution-toolbar,
+  .driver-shift-recipient { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .driver-shift-recipient-state,
+  .driver-shift-recipient-actions { grid-column: 1; }
+  .driver-shift-recipient-actions button { width: 100%; min-height: 44px; }
+}

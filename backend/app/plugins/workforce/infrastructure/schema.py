@@ -407,6 +407,49 @@ def init_schema() -> None:
                 )
             );
 
+            CREATE TABLE IF NOT EXISTS driver_shift_distributions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT NOT NULL,
+                driver_shift_planning_id INTEGER NOT NULL,
+                planning_version INTEGER NOT NULL,
+                period_start TEXT NOT NULL,
+                period_end TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (driver_shift_planning_id, organization_id)
+                    REFERENCES driver_shift_plannings(id, organization_id)
+                    ON DELETE CASCADE,
+                UNIQUE (organization_id, driver_shift_planning_id, planning_version),
+                UNIQUE (id, organization_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS driver_shift_distribution_recipients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                public_id TEXT NOT NULL UNIQUE,
+                organization_id TEXT NOT NULL,
+                distribution_id INTEGER NOT NULL,
+                workforce_member_id INTEGER NOT NULL,
+                delivery_status TEXT NOT NULL,
+                access_status TEXT NOT NULL,
+                access_token_hash TEXT NOT NULL UNIQUE,
+                access_generation INTEGER NOT NULL,
+                access_expires_at TEXT NOT NULL,
+                access_revoked_at TEXT,
+                first_opened_at TEXT,
+                last_opened_at TEXT,
+                acknowledged_at TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (distribution_id, organization_id)
+                    REFERENCES driver_shift_distributions(id, organization_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (workforce_member_id) REFERENCES workforce_members(id)
+                    ON DELETE RESTRICT,
+                UNIQUE (distribution_id, workforce_member_id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_workforce_status_date
                 ON workforce_day_statuses(date, workforce_member_id);
             CREATE INDEX IF NOT EXISTS idx_workforce_requirement_date
@@ -442,6 +485,17 @@ def init_schema() -> None:
                 ON driver_shift_planning_published_rows(
                     organization_id, workforce_member_id, operational_date
                 );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_distribution_scope
+                ON driver_shift_distributions(
+                    organization_id, driver_shift_planning_id,
+                    planning_version, status
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_recipient_scope
+                ON driver_shift_distribution_recipients(
+                    organization_id, distribution_id, workforce_member_id
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_recipient_token
+                ON driver_shift_distribution_recipients(access_token_hash);
 
             CREATE TABLE IF NOT EXISTS workforce_consecutivity_policies (
                 organization_id TEXT PRIMARY KEY,

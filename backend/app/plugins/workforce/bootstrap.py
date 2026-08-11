@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 
 from app.plugins.workforce.infrastructure.schema import init_schema
-from app.plugins.workforce.interfaces.router import router
+from app.plugins.workforce.interfaces.router import public_router, router
 
 
 def workforce_plugin_enabled() -> bool:
@@ -18,3 +18,4 @@ def initialize_workforce_plugin() -> None:
 def register_workforce_plugin(app: FastAPI) -> None:
     if workforce_plugin_enabled():
         app.include_router(router)
+        app.include_router(public_router)

@@ -20,6 +20,7 @@ import {
   renderSources,
 } from "./driver-shift-planning-presenter.js?v=3";
 import { createDriverShiftPlanningState } from "./driver-shift-planning-state.js?v=2";
+import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=1";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 
@@ -43,6 +44,7 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
   let initialized = false;
   let searchTimer = null;
   let sourceToRemove = null;
+  let distributionController = null;
 
   const elements = {};
 
@@ -81,6 +83,7 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
   function render() {
     elements.section.hidden = false;
     const hasPlanning = Boolean(state.planning);
+    distributionController?.setPlanning(state.planning);
     byId("driverShiftReplaceSourcesBtn").disabled = !hasPlanning;
     byId("driverShiftAddSourceBtn").disabled = hasPlanning && state.planning.status !== "DRAFT";
     elements.state.hidden = hasPlanning;
@@ -489,6 +492,7 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
     if (initialized) return;
     initialized = true;
     bindElements();
+    distributionController = initDriverShiftDistribution();
     bindEvents();
   }
 

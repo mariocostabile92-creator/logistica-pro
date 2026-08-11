@@ -743,6 +743,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         or path == "/api/runtime/primary"
         or path == "/api/runtime/legacy-retirement"
         or path.startswith("/api/plugins/workforce/")
+        or path.startswith("/api/public/driver-shifts/")
         or path.startswith("/api/planning/drafts")
         or path.startswith("/api/planning/confirmation")
         or path.startswith("/api/planning/publication")
@@ -821,6 +822,8 @@ def test_operational_and_preserved_table_classification_is_complete():
         "plannings",
         "operation_snapshots",
         "analyses",
+        "driver_shift_distribution_recipients",
+        "driver_shift_distributions",
         "driver_shift_planning_published_rows",
         "driver_shift_planning_resolutions",
         "driver_shift_planning_sources",

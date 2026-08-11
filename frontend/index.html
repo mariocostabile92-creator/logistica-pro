@@ -863,6 +863,7 @@
             <button id="driverShiftResolveBtn" type="button" class="secondary" hidden>Risolvi conflitti</button>
             <button id="driverShiftPublishBtn" type="button" hidden>Pubblica turni unificati</button>
             <button id="driverShiftRevisionBtn" type="button" class="secondary" hidden>Crea nuova revisione</button>
+            <button id="driverShiftDistributeBtn" type="button" hidden>Distribuisci turni</button>
           </div>
         </header>
 
@@ -908,6 +909,29 @@
               <span id="driverShiftPaginationStatus" aria-live="polite">0–0 di 0</span>
               <button id="driverShiftNext" type="button" class="secondary">Successive</button>
             </nav>
+          </section>
+
+          <section id="driverShiftDistributionSection" class="driver-shift-distribution" aria-labelledby="driverShiftDistributionTitle" hidden>
+            <header class="driver-shift-subheading">
+              <div>
+                <p class="eyebrow">Distribuzione turni</p>
+                <h4 id="driverShiftDistributionTitle">Accessi personali driver</h4>
+                <p>I destinatari derivano automaticamente dai turni pubblicati.</p>
+              </div>
+              <button id="driverShiftDistributionRefresh" type="button" class="secondary">Aggiorna stato</button>
+            </header>
+            <dl id="driverShiftDistributionSummary" class="driver-shift-distribution-summary"></dl>
+            <div class="driver-shift-distribution-toolbar">
+              <div role="group" aria-label="Filtra destinatari distribuzione">
+                <button type="button" data-distribution-filter="" class="active" aria-pressed="true">Tutti</button>
+                <button type="button" data-distribution-filter="NOT_OPENED" aria-pressed="false">Non visualizzati</button>
+                <button type="button" data-distribution-filter="OPENED" aria-pressed="false">Visualizzati</button>
+                <button type="button" data-distribution-filter="ACKNOWLEDGED" aria-pressed="false">Presa visione</button>
+              </div>
+              <label>Cerca driver<input id="driverShiftDistributionSearch" type="search" autocomplete="off" /></label>
+            </div>
+            <p id="driverShiftDistributionStatus" role="status" aria-live="polite"></p>
+            <div id="driverShiftDistributionRecipients" class="driver-shift-distribution-recipients"></div>
           </section>
         </div>
       </section>
@@ -2424,6 +2448,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="./assets/js/app.js?v=80"></script>
+  <script type="module" src="./assets/js/app.js?v=81"></script>
 </body>
 </html>

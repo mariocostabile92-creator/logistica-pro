@@ -1,0 +1,71 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #10231f;
+  background: #eef3f1;
+  line-height: 1.45;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 0; }
+button { font: inherit; }
+[hidden] { display: none !important; }
+
+.driver-shifts-page {
+  width: min(100%, 42rem);
+  margin: 0 auto;
+  padding: 1rem;
+  min-width: 0;
+}
+
+.driver-shifts-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem 0 1.25rem;
+}
+
+.driver-shifts-header img { width: 3rem; height: auto; object-fit: contain; }
+.driver-shifts-header p,
+.driver-shifts-identity p { margin: 0 0 .2rem; color: #52645f; font-size: .86rem; }
+h1, h2 { margin: 0; line-height: 1.15; }
+h1 { font-size: 1.6rem; }
+
+.driver-shifts-state,
+.driver-shifts-identity,
+.driver-shifts-ack,
+.driver-shift-day {
+  background: #fff;
+  border: 1px solid #c9d4d0;
+  border-radius: .85rem;
+  padding: 1rem;
+}
+
+.driver-shifts-state p,
+.driver-shifts-ack p { margin-bottom: 0; }
+.driver-shifts-list { display: grid; gap: .75rem; margin: 1rem 0; }
+.driver-shift-day { display: grid; gap: .55rem; min-width: 0; }
+.driver-shift-day header { display: flex; justify-content: space-between; gap: 1rem; }
+.driver-shift-day dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0; }
+.driver-shift-day dl div { min-width: 0; }
+.driver-shift-day dt { font-size: .75rem; color: #52645f; }
+.driver-shift-day dd { margin: .1rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
+
+.driver-shifts-ack button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 1rem;
+  border: 0;
+  border-radius: .65rem;
+  background: #187f6f;
+  color: #fff;
+  font-weight: 750;
+  cursor: pointer;
+}
+.driver-shifts-ack button:disabled { opacity: .65; cursor: default; }
+#driverShiftsAckStatus { color: #176b55; font-weight: 700; }
+
+@media (max-width: 430px) {
+  .driver-shifts-page { padding: .75rem; }
+  .driver-shift-day dl { grid-template-columns: 1fr; }
+}

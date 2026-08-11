@@ -60,6 +60,8 @@ class WorkspaceRemovedCounts(BaseModel):
     driver_shift_planning_sources: int = 0
     driver_shift_planning_resolutions: int = 0
     driver_shift_planning_published_rows: int = 0
+    driver_shift_distributions: int = 0
+    driver_shift_distribution_recipients: int = 0
     driver_shift_plannings: int = 0
     workforce_changes: int = 0
     workforce_day_statuses: int = 0
