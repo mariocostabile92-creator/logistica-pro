@@ -6,101 +6,104 @@ import {
   filterDistributionRecipients,
   renderDistributionRecipients,
   renderDistributionSummary,
+  renderManualShareRecipients,
 } from "../assets/js/modules/driver-shift-distribution-presenter.js";
 
 
 const source = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const element = () => ({ innerHTML: "" });
 const recipients = [
-  { id: 1, display_name: "Driver Ready", shift_days_count: 5, readiness: "READY", available_channels: ["PHONE"], access_status: "NOT_OPENED", access_revoked: false },
-  { id: 2, display_name: "Driver Missing", shift_days_count: 4, readiness: "MISSING_CONTACT", available_channels: [], access_status: "NOT_OPENED", access_revoked: false },
-  { id: 3, display_name: "Driver Invalid", shift_days_count: 3, readiness: "INVALID_CONTACT", available_channels: [], access_status: "OPENED", access_revoked: false },
-  { id: 4, display_name: "Driver Ack", shift_days_count: 2, readiness: "READY", available_channels: ["EMAIL"], access_status: "ACKNOWLEDGED", access_revoked: false },
+  { id: 1, workforce_member_id: 11, display_name: "Driver Ready", shift_days_count: 5, readiness: "READY", available_channels: ["PHONE"], access_status: "NOT_OPENED", access_revoked: false },
+  { id: 2, workforce_member_id: 12, display_name: "Driver Missing", shift_days_count: 4, readiness: "MISSING_CONTACT", available_channels: [], access_status: "NOT_OPENED", access_revoked: false },
+  { id: 3, workforce_member_id: 13, display_name: "Driver Invalid", shift_days_count: 3, readiness: "INVALID_CONTACT", available_channels: [], access_status: "OPENED", access_revoked: false },
+  { id: 4, workforce_member_id: 14, display_name: "Driver Ack", shift_days_count: 2, readiness: "READY", available_channels: ["EMAIL"], access_status: "ACKNOWLEDGED", access_revoked: false },
 ];
+const credentials = new Map([[11, "ACTIVE"], [12, "ACTIVE"], [13, "MISSING"], [14, "ACTIVE"]]);
 
 
-test("readiness summary exposes contact counters and selected count", () => {
+test("primary summary uses credential readiness instead of contact counters", () => {
   const target = element();
-  renderDistributionSummary(target, {
-    recipients_total: 143, contact_ready: 137, missing_contact: 5, invalid_contact: 1,
-    opened: 4, acknowledged: 2, not_opened: 139,
-  }, 137);
-  for (const label of ["Destinatari", "Pronti", "Senza contatto", "Non validi", "Selezionati"]) {
+  renderDistributionSummary(
+    target,
+    { recipients_total: 143, opened: 4, acknowledged: 2, not_opened: 139 },
+    { recipients_total: 143, credentials_ready: 137 },
+  );
+  for (const label of ["Destinatari settimana", "Accessi pronti", "Accessi da preparare", "Visualizzati", "Presa visione"]) {
     assert.match(target.innerHTML, new RegExp(label));
   }
-  assert.match(target.innerHTML, /137/);
-});
-
-test("137 ready and 6 exceptions remain distinguishable", () => {
-  const target = element();
-  renderDistributionSummary(target, { recipients_total: 143, contact_ready: 137, missing_contact: 6, invalid_contact: 0 }, 137);
-  assert.match(target.innerHTML, /143/);
-  assert.match(target.innerHTML, /137/);
+  assert.match(target.innerHTML, />137</);
   assert.match(target.innerHTML, />6</);
+  assert.doesNotMatch(target.innerHTML, /Senza contatto|Non validi|Selezionati/);
 });
 
-test("all READY recipients are selected by default", async () => {
+test("all READY contact recipients remain selected only in legacy state", async () => {
   const controller = await source("assets/js/modules/driver-shift-distribution.js");
   assert.match(controller, /readyRecipients\(\)[\s\S]*new Set/);
-  assert.match(controller, /syncSelection\(\{ reset: true \}\)/);
+  assert.match(controller, /renderManualShareRecipients/);
 });
 
-test("recipient can be deselected without rebuilding distribution", async () => {
+test("manual recipient can be deselected without rebuilding distribution", async () => {
   const controller = await source("assets/js/modules/driver-shift-distribution.js");
+  assert.match(controller, /elements\.manualRecipients\.addEventListener\("change"/);
   assert.match(controller, /state\.selected\.delete\(recipientId\)/);
-  assert.match(controller, /state\.selectionDirty = true/);
 });
 
-test("select all ready has a dedicated action", async () => {
-  const [html, controller] = await Promise.all([source("index.html"), source("assets/js/modules/driver-shift-distribution.js")]);
-  assert.match(html, /id="driverShiftSelectAllReady"/);
-  assert.match(controller, /elements\.selectAll\.addEventListener/);
+test("select all ready action is confined to Manual Share legacy", async () => {
+  const html = await source("index.html");
+  assert.match(html, /id="driverShiftManualShare"[\s\S]*id="driverShiftSelectAllReady"/);
+  assert.doesNotMatch(html, /<div class="driver-shift-selection-tools">[\s\S]*id="driverShiftDistributionRecipients"/);
 });
 
-test("missing contact is not selectable", () => {
+test("primary recipient ignores missing contact when credential is active", () => {
   const target = element();
-  renderDistributionRecipients(target, recipients, new Set([1]));
-  assert.match(target.innerHTML, /data-select-shift-recipient="2"[\s\S]*disabled/);
-  assert.match(target.innerHTML, /Contatto mancante/);
+  renderDistributionRecipients(target, [recipients[1]], credentials);
+  assert.match(target.innerHTML, /Accesso pronto/);
+  assert.doesNotMatch(target.innerHTML, /Contatto mancante|data-select-shift-recipient/);
 });
 
-test("invalid contact has an explicit state", () => {
+test("credential missing is explicit in primary recipient", () => {
   const target = element();
-  renderDistributionRecipients(target, recipients);
-  assert.match(target.innerHTML, /Contatto non valido/);
-  assert.match(target.innerHTML, /data-readiness="INVALID_CONTACT"/);
+  renderDistributionRecipients(target, [recipients[2]], credentials);
+  assert.match(target.innerHTML, /Accesso da preparare/);
+  assert.doesNotMatch(target.innerHTML, /Contatto non valido/);
 });
 
-test("Da sistemare filters missing and invalid contacts", () => {
-  assert.deepEqual(filterDistributionRecipients(recipients, "EXCEPTIONS").map((item) => item.id), [2, 3]);
+test("Accesso da preparare filter uses credentials", () => {
+  assert.deepEqual(filterDistributionRecipients(recipients, "ACCESS_MISSING", "", credentials).map((item) => item.id), [3]);
 });
 
-test("contact exceptions deep-link back to Workforce", async () => {
+test("Workforce deep-link remains secondary", async () => {
   const [html, controller] = await Promise.all([source("index.html"), source("assets/js/modules/driver-shift-distribution.js")]);
-  assert.match(html, /id="driverShiftOpenWorkforce"/);
+  assert.match(html, /id="driverShiftIndividualActions"[\s\S]*id="driverShiftOpenWorkforce"/);
   assert.match(controller, /workspace:navigate[\s\S]*view: "workforce"/);
 });
 
-test("batch action bar reports selected count", async () => {
-  const [html, controller] = await Promise.all([source("index.html"), source("assets/js/modules/driver-shift-distribution.js")]);
-  assert.match(html, /id="driverShiftBatchActions"/);
-  assert.match(html, /id="driverShiftSelectedCount"/);
-  assert.match(controller, /elements\.selectedCount\.textContent/);
+test("batch action bar remains inside legacy Manual Share", async () => {
+  const html = await source("index.html");
+  assert.match(html, /id="driverShiftManualShare"[\s\S]*id="driverShiftBatchActions"[\s\S]*id="driverShiftSelectedCount"/);
 });
 
-test("prepare batch calls provider-agnostic backend endpoint", async () => {
+test("manual renderer preserves contact-based eligibility", () => {
+  const target = element();
+  renderManualShareRecipients(target, recipients, new Set([1]));
+  assert.match(target.innerHTML, /data-select-shift-recipient="1"[\s\S]*checked/);
+  assert.match(target.innerHTML, /data-select-shift-recipient="2"[\s\S]*disabled/);
+  assert.match(target.innerHTML, /Contatti non configurati/);
+});
+
+test("prepare batch still calls provider-agnostic backend endpoint", async () => {
   const [api, controller] = await Promise.all([source("assets/js/api.js"), source("assets/js/modules/driver-shift-distribution.js")]);
   assert.match(api, /prepareDriverShiftBatch[\s\S]*prepare-batch/);
   assert.match(controller, /prepareDistributionBatch/);
 });
 
-test("prepared state says batch ready without claiming sends", async () => {
+test("prepared legacy state never claims automatic delivery", async () => {
   const html = await source("index.html");
   assert.match(html, /Batch pronto/);
   assert.match(html, /Nessun messaggio è stato inviato/);
 });
 
-test("CSV export uses a real authenticated download response", async () => {
+test("CSV export remains an authenticated legacy download", async () => {
   const [api, controller] = await Promise.all([source("assets/js/api.js"), source("assets/js/modules/driver-shift-distribution.js")]);
   assert.match(api, /exportDriverShiftBatchCsv[\s\S]*export\.csv/);
   assert.match(controller, /downloadBlob\(result\.blob, result\.filename\)/);
@@ -108,40 +111,41 @@ test("CSV export uses a real authenticated download response", async () => {
 
 test("export never marks a recipient as sent", async () => {
   const controller = await source("assets/js/modules/driver-shift-distribution.js");
-  assert.match(controller, /Nessun destinatario è stato marcato come inviato/);
+  assert.match(controller, /Nessun destinatario Ã¨ stato marcato come inviato|Nessun destinatario è stato marcato come inviato/);
   assert.doesNotMatch(controller, /delivery_status\s*=\s*["']SENT/);
 });
 
-test("acknowledgement counters remain in batch summary", () => {
+test("reading counters stay in the primary summary", () => {
   const target = element();
-  renderDistributionSummary(target, { recipients_total: 4, contact_ready: 2, opened: 2, acknowledged: 1, not_opened: 2 }, 2);
+  renderDistributionSummary(target, { recipients_total: 4, opened: 2, acknowledged: 1, not_opened: 2 }, { recipients_total: 4, credentials_ready: 2 });
   assert.match(target.innerHTML, /Visualizzati/);
   assert.match(target.innerHTML, /Presa visione/);
 });
 
 test("non-opened filter remains available", () => {
-  assert.deepEqual(filterDistributionRecipients(recipients, "NOT_OPENED").map((item) => item.id), [1, 2]);
+  assert.deepEqual(filterDistributionRecipients(recipients, "NOT_OPENED", "", credentials).map((item) => item.id), [1, 2]);
 });
 
 test("search still uses readable name", () => {
-  assert.deepEqual(filterDistributionRecipients(recipients, "", "ack").map((item) => item.id), [4]);
+  assert.deepEqual(filterDistributionRecipients(recipients, "", "ack", credentials).map((item) => item.id), [4]);
 });
 
-test("batch UI fits 390 without fixed canvas", async () => {
+test("legacy batch UI fits 390 without fixed canvas", async () => {
   const css = await source("assets/css/driver-shift-distribution.css");
   assert.match(css, /@media \(max-width: 520px\)/);
   assert.match(css, /driver-shift-batch-actions button[\s\S]*width: 100%/);
   assert.doesNotMatch(css, /width:\s*390px/);
 });
 
-test("no fake WhatsApp button is rendered", async () => {
+test("no fake send action is rendered", async () => {
   const html = await source("index.html");
   assert.doesNotMatch(html, /Invia WhatsApp|Invia SMS|Invia email/);
-  assert.match(html, /Prepara distribuzione/);
+  assert.match(html, /Copia messaggio per il gruppo WhatsApp/);
 });
 
-test("DELIVERY.1 personal fallback actions remain available", async () => {
+test("personal fallback actions remain available inside support details", async () => {
   const presenter = await source("assets/js/modules/driver-shift-distribution-presenter.js");
+  assert.match(presenter, /driver-shift-recipient-support/);
   for (const action of ["data-copy-shift-link", "data-regenerate-shift-link", "data-revoke-shift-link"]) {
     assert.match(presenter, new RegExp(action));
   }

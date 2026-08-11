@@ -27,7 +27,7 @@ import {
   createDriverShiftPlanningState,
   LEGACY_PREVIEW_STATUS,
 } from "./driver-shift-planning-state.js?v=4";
-import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=6";
+import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=7";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 

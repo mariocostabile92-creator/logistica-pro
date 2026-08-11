@@ -30,7 +30,7 @@ export function renderCredentialSummary(element, model) {
         <p class="eyebrow">Credenziali personali</p>
         <h5>Accessi pronti: ${escapeHtml(String(summary.credentials_ready))}/${escapeHtml(String(summary.recipients_total))}</h5>
         <p>${complete
-          ? "Tutti i driver hanno un accesso personale."
+          ? "Tutti i driver della settimana hanno un accesso personale."
           : `${escapeHtml(String(summary.missing))} accessi da preparare.`}</p>
       </div>
       <button type="button" data-prepare-driver-credentials>

@@ -924,21 +924,21 @@
               <div>
                 <p class="eyebrow">Distribuzione turni</p>
                 <h4 id="driverShiftDistributionTitle">Distribuzione turni</h4>
-                <p>I destinatari derivano automaticamente dai turni pubblicati. Nessun invio automatico viene eseguito.</p>
+                <p id="driverShiftDistributionWeekContext" class="driver-shift-week-context">Settimana in caricamento</p>
               </div>
               <button id="driverShiftDistributionRefresh" type="button" class="secondary">Aggiorna stato</button>
             </header>
             <section id="driverShiftPortal" class="driver-shift-portal" aria-labelledby="driverShiftPortalTitle" hidden>
               <div class="driver-shift-portal-heading">
                 <div>
-                  <p class="eyebrow">Accesso driver</p>
-                  <h5 id="driverShiftPortalTitle">Link condiviso</h5>
-                  <p>Un solo link da condividere con tutti i driver.</p>
+                  <p class="eyebrow">Condividi turni</p>
+                  <h5 id="driverShiftPortalTitle">Shared Portal</h5>
+                  <p>Condividi un unico link nel gruppo. Ogni driver vedrà soltanto i propri turni.</p>
                 </div>
                 <span id="driverShiftPortalState" class="driver-shift-portal-state">NON CREATO</span>
               </div>
               <div id="driverShiftPortalEmpty" class="driver-shift-portal-empty">
-                <p>Crea il portale pubblico della distribuzione. In questa fase non mostra ancora turni o dati personali.</p>
+                <p>Genera il link condiviso sicuro per la settimana selezionata.</p>
                 <button id="driverShiftPortalPrepare" type="button">Genera link condiviso</button>
               </div>
               <div id="driverShiftPortalDetails" class="driver-shift-portal-details" hidden>
@@ -956,8 +956,9 @@
               <section id="driverShiftGroupShare" class="driver-shift-group-share" aria-labelledby="driverShiftGroupShareTitle">
                 <div class="driver-shift-group-share-heading">
                   <div>
-                    <p class="eyebrow">Condivisione settimanale</p>
-                    <h6 id="driverShiftGroupShareTitle">Un messaggio per tutto il gruppo</h6>
+                    <p class="eyebrow">Condividi turni</p>
+                    <h6 id="driverShiftGroupShareTitle">Un messaggio per tutto il gruppo WhatsApp</h6>
+                    <p id="driverShiftGroupPeriod">Settimana in caricamento</p>
                   </div>
                   <p id="driverShiftGroupReadiness" class="driver-shift-group-readiness" aria-live="polite">Verifica accessi personali...</p>
                 </div>
@@ -966,6 +967,7 @@
                 <button id="driverShiftPrepareMissingAccesses" type="button" class="secondary" hidden>Prepara accessi mancanti</button>
                 <p id="driverShiftRevisionNotice" class="driver-shift-revision-notice" hidden>Nuovi turni pubblicati. Condividi il nuovo messaggio.</p>
                 <button id="driverShiftGroupMessageCopy" type="button">Copia messaggio per il gruppo WhatsApp</button>
+                <p class="driver-shift-group-helper">Un solo messaggio per tutti i driver.</p>
                 <div id="driverShiftMessageFallback" class="driver-shift-message-fallback" hidden>
                   <label for="driverShiftMessageFallbackText">Copia manualmente questo messaggio</label>
                   <textarea id="driverShiftMessageFallbackText" readonly rows="10"></textarea>
@@ -973,26 +975,39 @@
                 </div>
               </section>
             </section>
-            <section id="driverShiftCredentials" class="driver-shift-credentials" aria-label="Accessi personali driver" hidden></section>
             <section id="driverShiftInitialCredentials" class="driver-shift-initial-output" aria-live="polite" hidden></section>
             <dl id="driverShiftDistributionSummary" class="driver-shift-distribution-summary"></dl>
+            <section class="driver-shift-tracking" aria-labelledby="driverShiftTrackingTitle">
+              <div>
+                <p class="eyebrow">Stato lettura</p>
+                <h5 id="driverShiftTrackingTitle">Tracking della settimana</h5>
+              </div>
+              <dl id="driverShiftTrackingSummary" class="driver-shift-tracking-summary"></dl>
+            </section>
             <div class="driver-shift-distribution-toolbar">
               <div role="group" aria-label="Filtra destinatari distribuzione">
                 <button type="button" data-distribution-filter="" class="active" aria-pressed="true">Tutti</button>
-                <button type="button" data-distribution-filter="READY" aria-pressed="false">Pronti</button>
-                <button type="button" data-distribution-filter="EXCEPTIONS" aria-pressed="false">Da sistemare</button>
+                <button type="button" data-distribution-filter="ACCESS_MISSING" aria-pressed="false">Accesso da preparare</button>
                 <button type="button" data-distribution-filter="NOT_OPENED" aria-pressed="false">Non visualizzati</button>
                 <button type="button" data-distribution-filter="OPENED" aria-pressed="false">Visualizzati</button>
                 <button type="button" data-distribution-filter="ACKNOWLEDGED" aria-pressed="false">Presa visione</button>
               </div>
               <label>Cerca driver<input id="driverShiftDistributionSearch" type="search" autocomplete="off" /></label>
             </div>
-            <div class="driver-shift-selection-tools">
-              <button id="driverShiftSelectAllReady" type="button" class="secondary">Seleziona tutti i pronti</button>
-              <button id="driverShiftOpenWorkforce" type="button" class="quiet">Apri Workforce</button>
-            </div>
             <p id="driverShiftDistributionStatus" role="status" aria-live="polite"></p>
             <div id="driverShiftDistributionRecipients" class="driver-shift-distribution-recipients"></div>
+            <details id="driverShiftIndividualActions" class="driver-shift-individual-actions">
+              <summary>Azioni individuali</summary>
+              <p>Supporto secondario per credenziali e casi in cui il link condiviso non è utilizzabile.</p>
+              <section id="driverShiftCredentials" class="driver-shift-credentials" aria-label="Accessi personali driver" hidden></section>
+              <button id="driverShiftOpenWorkforce" type="button" class="quiet">Apri Workforce</button>
+              <details id="driverShiftManualShare" class="driver-shift-manual-share">
+                <summary>Manual Share legacy</summary>
+                <p>Flusso individuale legacy basato sui contatti configurati. Non è necessario per lo Shared Portal.</p>
+                <div id="driverShiftManualRecipients" class="driver-shift-manual-recipients"></div>
+                <div class="driver-shift-selection-tools">
+                  <button id="driverShiftSelectAllReady" type="button" class="secondary">Seleziona tutti i contatti pronti</button>
+                </div>
             <div id="driverShiftBatchActions" class="driver-shift-batch-actions" hidden>
               <strong><span id="driverShiftSelectedCount">0</span> selezionati</strong>
               <div>
@@ -1010,6 +1025,8 @@
                 <button id="driverShiftBackRecipients" type="button" class="quiet">Torna ai destinatari</button>
               </div>
             </section>
+              </details>
+            </details>
           </section>
         </div>
       </section>
@@ -2584,6 +2601,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=93"></script>
+    <script type="module" src="./assets/js/app.js?v=94"></script>
 </body>
 </html>

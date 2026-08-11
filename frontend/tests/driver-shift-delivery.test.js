@@ -37,10 +37,14 @@ test("prepare distribution is an explicit admin action", async () => {
   assert.match(controller, /elements\.windowConfirm\.addEventListener\("click", \(\) => void prepare\(\)\)/);
 });
 
-test("distribution summary exposes recipients readiness opens and acknowledgements", () => {
+test("distribution summary exposes credential readiness opens and acknowledgements", () => {
   const target = element();
-  renderDistributionSummary(target, { recipients_total: 143, ready: 143, opened: 2, acknowledged: 1, not_opened: 141 });
-  for (const value of ["Destinatari", "Pronti", "Visualizzati", "Presa visione", "Non visualizzati", "143"]) assert.match(target.innerHTML, new RegExp(value));
+  renderDistributionSummary(
+    target,
+    { recipients_total: 143, opened: 2, acknowledged: 1, not_opened: 141 },
+    { recipients_total: 143, credentials_ready: 143 },
+  );
+  for (const value of ["Destinatari settimana", "Accessi pronti", "Visualizzati", "Presa visione", "Non visualizzati", "143"]) assert.match(target.innerHTML, new RegExp(value));
 });
 
 test("recipient list stays compact and day-count based", () => {

@@ -13,9 +13,10 @@ import {
 } from "./driver-shift-planning-api.js?v=8";
 import {
   filterDistributionRecipients,
+  renderManualShareRecipients,
   renderDistributionRecipients,
   renderDistributionSummary,
-} from "./driver-shift-distribution-presenter.js?v=3";
+} from "./driver-shift-distribution-presenter.js?v=4";
 import { initDriverShiftCredentials } from "./driver-shift-credentials.js?v=2";
 import {
   buildDriverShiftGroupMessage,
@@ -98,6 +99,10 @@ export function initDriverShiftDistribution({ getDefaultWindow = () => null } = 
     section: byId("driverShiftDistributionSection"),
     summary: byId("driverShiftDistributionSummary"),
     recipients: byId("driverShiftDistributionRecipients"),
+    manualRecipients: byId("driverShiftManualRecipients"),
+    weekContext: byId("driverShiftDistributionWeekContext"),
+    groupPeriod: byId("driverShiftGroupPeriod"),
+    trackingSummary: byId("driverShiftTrackingSummary"),
     status: byId("driverShiftDistributionStatus"),
     search: byId("driverShiftDistributionSearch"),
     refresh: byId("driverShiftDistributionRefresh"),
@@ -172,13 +177,15 @@ export function initDriverShiftDistribution({ getDefaultWindow = () => null } = 
     elements.section.hidden = false;
     renderPortal();
     syncSelection();
-    renderDistributionSummary(elements.summary, state.model.summary, state.selected.size);
+    renderDistributionSummary(elements.summary, state.model.summary, state.credentialModel?.summary);
     renderDistributionRecipients(
       elements.recipients,
-      filterDistributionRecipients(state.model.recipients, state.filter, state.search),
-      state.selected,
+      filterDistributionRecipients(
+        state.model.recipients, state.filter, state.search, state.credentialStatuses,
+      ),
       state.credentialStatuses,
     );
+    renderManualShareRecipients(elements.manualRecipients, state.model.recipients, state.selected);
     elements.selectedCount.textContent = String(state.selected.size);
     elements.actions.hidden = state.selected.size === 0 || Boolean(state.prepared);
     elements.prepared.hidden = !state.prepared;
@@ -205,17 +212,11 @@ export function initDriverShiftDistribution({ getDefaultWindow = () => null } = 
     elements.portalCopy.disabled = !active;
     elements.portalRevoke.disabled = !active;
     elements.portalRegenerate.hidden = !state.portal;
+    renderWeekContext();
     renderGroupShare();
   }
 
-  function renderGroupSummary(summary, credentialsReady) {
-    const values = [
-      ["Driver", summary?.recipients_total],
-      ["Accessi pronti", credentialsReady],
-      ["Visualizzati", summary?.opened],
-      ["Presa visione", summary?.acknowledged],
-      ["Non visualizzati", summary?.not_opened],
-    ];
+  function renderMetricSummary(element, values) {
     const fragment = document.createDocumentFragment();
     values.forEach(([label, value]) => {
       const item = document.createElement("div");
@@ -226,7 +227,40 @@ export function initDriverShiftDistribution({ getDefaultWindow = () => null } = 
       item.append(term, detail);
       fragment.append(item);
     });
-    elements.groupSummary.replaceChildren(fragment);
+    element.replaceChildren(fragment);
+  }
+
+  function renderGroupSummary(summary, credentialsReady, credentialsMissing) {
+    const values = [
+      ["Destinatari settimana", summary?.recipients_total],
+      ["Accessi pronti", credentialsReady],
+      ["Accessi da preparare", credentialsMissing],
+    ];
+    renderMetricSummary(elements.groupSummary, values);
+    renderMetricSummary(elements.trackingSummary, [
+      ["Visualizzati", summary?.opened],
+      ["Presa visione", summary?.acknowledged],
+      ["Non visualizzati", summary?.not_opened],
+    ]);
+  }
+
+  function formatWeek(periodStart, periodEnd, { includeYear = true } = {}) {
+    if (!periodStart || !periodEnd) return "Settimana non disponibile";
+    const start = new Date(`${periodStart}T12:00:00Z`);
+    const end = new Date(`${periodEnd}T12:00:00Z`);
+    const startDay = new Intl.DateTimeFormat("it-IT", { day: "numeric" }).format(start);
+    const endFormat = new Intl.DateTimeFormat("it-IT", {
+      day: "numeric", month: "long", ...(includeYear ? { year: "numeric" } : {}),
+    });
+    return `${startDay}–${endFormat.format(end)}`;
+  }
+
+  function renderWeekContext() {
+    const distribution = state.model?.distribution;
+    const total = Number(state.model?.summary?.recipients_total || 0);
+    const week = formatWeek(distribution?.period_start, distribution?.period_end);
+    elements.weekContext.textContent = `Settimana: ${week} · ${total} ${total === 1 ? "destinatario" : "destinatari"}`;
+    elements.groupPeriod.textContent = `Settimana ${formatWeek(distribution?.period_start, distribution?.period_end, { includeYear: false })}`;
   }
 
   function renderGroupShare() {
@@ -236,16 +270,19 @@ export function initDriverShiftDistribution({ getDefaultWindow = () => null } = 
     const ready = Number(credentialSummary?.credentials_ready ?? 0);
     const notReady = Math.max(0, total - ready);
     elements.groupReadiness.textContent = credentialSummary
-      ? `Accessi pronti: ${ready}/${total}`
+      ? (notReady === 0
+        ? "Tutti i driver della settimana hanno un accesso personale."
+        : `${notReady} ${notReady === 1 ? "driver non ha" : "driver non hanno"} ancora un accesso personale.`)
       : "Verifica accessi personali...";
     elements.groupWarning.hidden = !credentialSummary || notReady === 0;
     elements.groupWarning.textContent = notReady === 1
       ? "1 driver non ha ancora un accesso personale."
       : `${notReady} driver non hanno ancora un accesso personale.`;
     elements.prepareMissingAccesses.hidden = !credentialSummary || Number(credentialSummary.missing || 0) === 0;
+    elements.prepareMissingAccesses.textContent = `Prepara ${Number(credentialSummary?.missing || 0)} accessi`;
     elements.groupCopy.disabled = !credentialSummary || ready === 0;
     elements.revisionNotice.hidden = !state.newRevision;
-    renderGroupSummary(distributionSummary, ready);
+    renderGroupSummary(distributionSummary, ready, notReady);
   }
 
   function groupMessage() {
@@ -549,7 +586,7 @@ export function initDriverShiftDistribution({ getDefaultWindow = () => null } = 
   });
   elements.openWorkforce.addEventListener("click", () => {
     document.dispatchEvent(new CustomEvent("workspace:navigate", { detail: { view: "workforce" } }));
-    status("Aggiorna telefono o email nel profilo Workforce del driver.", "");
+    status("Aperto Workforce per il supporto individuale.", "");
   });
   elements.prepareBatch.addEventListener("click", () => void prepareBatch());
   elements.exportBatch.addEventListener("click", () => void exportCsv(elements.exportBatch));
@@ -567,7 +604,7 @@ export function initDriverShiftDistribution({ getDefaultWindow = () => null } = 
   document.querySelectorAll("[data-distribution-filter]").forEach((button) => {
     button.addEventListener("click", () => { state.filter = button.dataset.distributionFilter; render(); });
   });
-  elements.recipients.addEventListener("change", (event) => {
+  elements.manualRecipients.addEventListener("change", (event) => {
     const checkbox = event.target.closest("[data-select-shift-recipient]");
     if (!checkbox) return;
     const recipientId = Number(checkbox.dataset.selectShiftRecipient);

@@ -8,7 +8,7 @@ import {
   credentialStatusMap,
   renderCredentialSummary,
   renderInitialCredentials,
-} from "./driver-shift-credentials-presenter.js?v=1";
+} from "./driver-shift-credentials-presenter.js?v=2";
 import { byId, setLoading } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 

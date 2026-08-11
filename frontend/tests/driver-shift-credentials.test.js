@@ -48,7 +48,7 @@ test("all-ready state does not ask for weekly onboarding", () => {
     ...model,
     summary: { ...model.summary, credentials_ready: 200, already_existing: 200, missing: 0 },
   });
-  assert.match(target.innerHTML, /Tutti i driver hanno un accesso personale/);
+  assert.match(target.innerHTML, /Tutti i driver della settimana hanno un accesso personale/);
   assert.doesNotMatch(target.innerHTML, /Prepara 200/);
 });
 

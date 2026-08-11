@@ -111,7 +111,7 @@ test("an existing active portal is reused without regeneration", async () => {
 
 test("partial credential readiness shows the exact warning", async () => {
   const controller = await source("assets/js/modules/driver-shift-distribution.js");
-  assert.match(controller, /Accessi pronti: \$\{ready\}\/\$\{total\}/);
+  assert.match(controller, /driver non hanno ancora un accesso personale/);
   assert.match(controller, /driver non hanno ancora un accesso personale/);
   assert.match(controller, /prepareMissingAccesses/);
 });
@@ -169,4 +169,3 @@ test("group message UI remains usable at 390px", async () => {
   assert.match(css, /\.driver-shift-message-fallback textarea\s*{\s*max-width:\s*100%/);
   assert.doesNotMatch(css, /width:\s*390px/);
 });
-

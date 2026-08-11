@@ -12,8 +12,8 @@ test("ACTIVE distribution exposes one shared access portal section", async () =>
     source("assets/js/modules/driver-shift-distribution.js"),
   ]);
   assert.match(html, /id="driverShiftPortal"/);
-  assert.match(html, /Accesso driver/);
-  assert.match(html, /Un solo link da condividere con tutti i driver/);
+  assert.match(html, /Shared Portal/);
+  assert.match(html, /Condividi un unico link nel gruppo\. Ogni driver vedrÃ  soltanto i propri turni\.|Condividi un unico link nel gruppo\. Ogni driver vedrà soltanto i propri turni\./);
   assert.match(controller, /getSharedPortal/);
   assert.match(controller, /prepareSharedPortal/);
 });
