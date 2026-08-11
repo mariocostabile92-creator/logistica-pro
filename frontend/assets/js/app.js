@@ -1,11 +1,11 @@
 import { getHealth } from "./api.js?v=5";
 import { initMissionControl } from "./modules/mission-control.js?v=7";
-import { initViewNavigation } from "./modules/view-navigation.js?v=54";
+import { initViewNavigation } from "./modules/view-navigation.js?v=56";
 import {
   ensureWorkspaceInitialized,
   initWorkspaceLoader,
   preloadWorkspace,
-} from "./modules/workspace-loader.js?v=87";
+} from "./modules/workspace-loader.js?v=90";
 import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js?v=2";
 import { byId } from "./utils/dom.js";
 import { requireAdministrativeSession } from "./auth/session.js?v=2";

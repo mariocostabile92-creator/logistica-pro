@@ -746,6 +746,25 @@ export async function getDriverShiftPlanningMergePreview(
 }
 
 
+export async function getDriverShiftPlanningLegacyPreview(planningId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/legacy-preview`,
+  ));
+}
+
+
+export async function publishDriverShiftPlanningLegacy(planningId, payload) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/legacy-publish`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  ));
+}
+
+
 export async function resolveDriverShiftPlanningConflict(planningId, conflictKey, payload) {
   return parseResponse(await fetch(
     `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/conflicts/${encodeURIComponent(conflictKey)}`,

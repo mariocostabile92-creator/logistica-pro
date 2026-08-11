@@ -2,15 +2,17 @@ import {
   addSource,
   createPlanning,
   getMergePreview,
+  getLegacyPreview,
   listPlannings,
   removeSource,
   resolveImport,
   replaceSources,
   resolveConflict,
   publishPlanning,
+  publishLegacyPlanning,
   createRevision,
   listWorkforceMembers,
-} from "./driver-shift-planning-api.js?v=4";
+} from "./driver-shift-planning-api.js?v=7";
 import {
   renderMergeRows,
   renderMergeSummary,
@@ -18,8 +20,13 @@ import {
   renderPlanningHeader,
   renderPlanningSelector,
   renderSources,
-} from "./driver-shift-planning-presenter.js?v=3";
-import { createDriverShiftPlanningState } from "./driver-shift-planning-state.js?v=2";
+  renderLegacyPublication,
+  renderLegacyPublishSummary,
+} from "./driver-shift-planning-presenter.js?v=5";
+import {
+  createDriverShiftPlanningState,
+  LEGACY_PREVIEW_STATUS,
+} from "./driver-shift-planning-state.js?v=4";
 import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=5";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
@@ -29,6 +36,20 @@ const FILTERS = new Set([
   "", "DISTINCT_ASSIGNMENT", "EXACT_DUPLICATE", "POTENTIAL_CONFLICT",
   "IDENTITY_CONFLICT", "UNRESOLVED_IDENTITY",
 ]);
+
+
+export function shouldRequestLegacyPreview(planning, preview) {
+  if (planning?.status !== "DRAFT" || !preview) return false;
+  const sources = preview.sources || [];
+  const hasUnavailable = sources.some((source) => (
+    source.status === "UNAVAILABLE_FOR_MERGE"
+  ));
+  const hasMergeable = sources.some((source) => source.status === "AVAILABLE");
+  return hasUnavailable
+    && !hasMergeable
+    && !preview.summary?.ready_to_publish
+    && Number(preview.summary?.total_source_rows || 0) === 0;
+}
 
 
 function presentError(context, error) {
@@ -45,6 +66,8 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
   let searchTimer = null;
   let sourceToRemove = null;
   let distributionController = null;
+  let legacyRequest = 0;
+  let legacyDialogTrigger = null;
 
   const elements = {};
 
@@ -69,7 +92,49 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
       replaceDialog: byId("driverShiftReplaceDialog"),
       removeDialog: byId("driverShiftRemoveDialog"),
       publishDialog: byId("driverShiftPublishDialog"),
+      legacySection: byId("driverShiftLegacyPublication"),
+      legacyDialog: byId("driverShiftLegacyPublishDialog"),
+      legacyDialogSummary: byId("driverShiftLegacyPublishSummary"),
     });
+  }
+
+  function resetLegacyPreview() {
+    legacyRequest += 1;
+    state.legacyPreviewStatus = LEGACY_PREVIEW_STATUS.IDLE;
+    state.legacyPreview = null;
+    state.legacyPublishing = false;
+  }
+
+  async function refreshLegacyPreview() {
+    if (!shouldRequestLegacyPreview(state.planning, state.preview)) {
+      resetLegacyPreview();
+      renderLegacyPublication(
+        elements.legacySection,
+        state.legacyPreviewStatus,
+        state.legacyPreview,
+      );
+      return;
+    }
+    const planningId = state.planning.id;
+    const request = ++legacyRequest;
+    state.legacyPreviewStatus = LEGACY_PREVIEW_STATUS.LOADING;
+    state.legacyPreview = null;
+    render();
+    try {
+      const preview = await getLegacyPreview(planningId);
+      if (request !== legacyRequest || state.planning?.id !== planningId) return;
+      state.legacyPreview = preview;
+      state.legacyPreviewStatus = preview.ready_to_publish && Number(preview.rows_total) > 0
+        ? LEGACY_PREVIEW_STATUS.AVAILABLE
+        : LEGACY_PREVIEW_STATUS.EMPTY;
+    } catch (error) {
+      if (request !== legacyRequest || state.planning?.id !== planningId) return;
+      state.legacyPreview = null;
+      state.legacyPreviewStatus = error?.status === 422
+        ? LEGACY_PREVIEW_STATUS.EMPTY
+        : LEGACY_PREVIEW_STATUS.ERROR;
+    }
+    render();
   }
 
   function renderFilters() {
@@ -116,15 +181,23 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
       state.preview?.planning || state.planning,
       state.preview?.sources?.length || 0,
     );
-    renderSources(elements.sources, state.preview?.sources || []);
+    renderSources(elements.sources, state.preview?.sources || [], {
+      legacyAvailable: state.legacyPreviewStatus === LEGACY_PREVIEW_STATUS.AVAILABLE,
+    });
+    renderLegacyPublication(
+      elements.legacySection,
+      state.legacyPreviewStatus,
+      state.legacyPreview,
+    );
     const isDraft = state.planning.status === "DRAFT";
+    const isLegacyCandidate = shouldRequestLegacyPreview(state.planning, state.preview);
     elements.draftNotice.hidden = !isDraft;
     const blockers = Number(state.preview?.summary?.conflicts_to_resolve || 0);
     const resolveButton = byId("driverShiftResolveBtn");
     const publishButton = byId("driverShiftPublishBtn");
     const revisionButton = byId("driverShiftRevisionBtn");
     resolveButton.hidden = !isDraft || blockers === 0;
-    publishButton.hidden = !isDraft;
+    publishButton.hidden = !isDraft || isLegacyCandidate;
     publishButton.disabled = !state.preview?.summary?.ready_to_publish;
     revisionButton.hidden = state.planning.status !== "ACTIVE";
     if (state.planning.status !== "DRAFT") {
@@ -165,6 +238,10 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
         ? await getMergePreview(state.planning.id, state)
         : null;
       if (!store.completeRequest(request)) return;
+      resetLegacyPreview();
+      if (shouldRequestLegacyPreview(state.planning, state.preview)) {
+        await refreshLegacyPreview();
+      }
       render();
     } catch (error) {
       if (!store.completeRequest(request)) return;
@@ -193,6 +270,10 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
       if (!store.completeRequest(request)) return;
       state.preview = preview;
       state.planning = preview.planning;
+      resetLegacyPreview();
+      if (shouldRequestLegacyPreview(state.planning, state.preview)) {
+        await refreshLegacyPreview();
+      }
       render();
     } catch (error) {
       if (!store.completeRequest(request)) return;
@@ -347,6 +428,58 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
     byId("driverShiftPublishConfirm").focus();
   }
 
+  function restoreLegacyDialogFocus() {
+    const trigger = legacyDialogTrigger;
+    legacyDialogTrigger = null;
+    if (trigger?.isConnected && !trigger.closest("[hidden]")) trigger.focus();
+  }
+
+  function openLegacyPublishDialog(trigger) {
+    if (
+      state.legacyPreviewStatus !== LEGACY_PREVIEW_STATUS.AVAILABLE
+      || !state.legacyPreview
+      || state.legacyPublishing
+    ) return;
+    legacyDialogTrigger = trigger;
+    renderLegacyPublishSummary(elements.legacyDialogSummary, state.legacyPreview);
+    elements.legacyDialog.showModal();
+    byId("driverShiftLegacyPublishConfirm").focus();
+  }
+
+  async function confirmLegacyPublish() {
+    if (!state.planning || !state.legacyPreview || state.legacyPublishing) return;
+    const button = byId("driverShiftLegacyPublishConfirm");
+    const planningId = state.planning.id;
+    const periodStart = state.planning.period_start;
+    state.legacyPublishing = true;
+    setLoading(button, true, "Pubblicazione...");
+    try {
+      await publishLegacyPlanning(planningId, {
+        expected_version: state.legacyPreview.planning?.version ?? state.planning.version,
+        expected_fingerprint: state.legacyPreview.fingerprint,
+      });
+      legacyDialogTrigger = null;
+      elements.legacyDialog.close();
+      await refresh(planningId);
+      await onChanged({ type: "published", planningId, periodStart });
+      setMessage("Turni esistenti pubblicati. Ora puoi distribuirli ai driver.", "success");
+    } catch (error) {
+      if (error?.status === 409) {
+        setMessage(
+          "I turni sono cambiati dall'ultima verifica. Aggiorna la preview e riprova.",
+          "warning",
+        );
+        elements.legacyDialog.close();
+        await refreshLegacyPreview();
+      } else {
+        presentError("workforce.driver-shift-legacy-publish", error);
+      }
+    } finally {
+      state.legacyPublishing = false;
+      setLoading(button, false);
+    }
+  }
+
   async function confirmPublish() {
     if (!state.planning || !state.preview) return;
     const button = byId("driverShiftPublishConfirm");
@@ -435,6 +568,19 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
     byId("driverShiftPublishBtn").addEventListener("click", openPublishDialog);
     byId("driverShiftPublishCancel").addEventListener("click", () => elements.publishDialog.close());
     byId("driverShiftPublishConfirm").addEventListener("click", confirmPublish);
+    elements.legacySection.addEventListener("click", (event) => {
+      const publish = event.target.closest("[data-publish-existing-shifts]");
+      const retry = event.target.closest("[data-retry-legacy-preview]");
+      if (publish) openLegacyPublishDialog(publish);
+      else if (retry) void refreshLegacyPreview();
+    });
+    byId("driverShiftLegacyPublishCancel").addEventListener("click", () => {
+      elements.legacyDialog.close();
+    });
+    byId("driverShiftLegacyPublishConfirm").addEventListener(
+      "click", () => void confirmLegacyPublish(),
+    );
+    elements.legacyDialog.addEventListener("close", restoreLegacyDialogFocus);
     byId("driverShiftRevisionBtn").addEventListener("click", createNewRevision);
     elements.rows.addEventListener("click", (event) => {
       const choose = event.target.closest("[data-resolve-conflict]");
@@ -497,6 +643,7 @@ export function initDriverShiftPlanning({ openImport, onChanged = () => {} }) {
   }
 
   function reset() {
+    legacyRequest += 1;
     store.reset();
     render();
   }

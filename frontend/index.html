@@ -883,6 +883,14 @@
             <ul id="driverShiftPlanningSources" class="driver-shift-source-list"></ul>
           </section>
 
+          <section
+            id="driverShiftLegacyPublication"
+            class="driver-shift-legacy-publication"
+            aria-live="polite"
+            aria-atomic="true"
+            hidden
+          ></section>
+
           <section class="driver-shift-preview" aria-labelledby="driverShiftPreviewTitle">
             <div class="driver-shift-subheading">
               <div>
@@ -1057,6 +1065,25 @@
           <div class="driver-shift-dialog-actions">
             <button id="driverShiftPublishCancel" type="button" class="secondary">Annulla</button>
             <button id="driverShiftPublishConfirm" type="button">Pubblica</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog
+        id="driverShiftLegacyPublishDialog"
+        class="driver-shift-dialog"
+        aria-labelledby="driverShiftLegacyPublishTitle"
+        aria-describedby="driverShiftLegacyPublishDescription"
+      >
+        <div>
+          <p class="eyebrow">Pubblicazione Workforce</p>
+          <h3 id="driverShiftLegacyPublishTitle">Pubblica turni esistenti</h3>
+          <p id="driverShiftLegacyPublishDescription">Stai per pubblicare i turni gi&agrave; presenti nel calendario Workforce.</p>
+          <div id="driverShiftLegacyPublishSummary"></div>
+          <p class="driver-shift-legacy-dialog-assurance">Il calendario Workforce non verr&agrave; modificato.</p>
+          <div class="driver-shift-dialog-actions">
+            <button id="driverShiftLegacyPublishCancel" type="button" class="secondary">Annulla</button>
+            <button id="driverShiftLegacyPublishConfirm" type="button">Pubblica</button>
           </div>
         </div>
       </dialog>
@@ -2528,6 +2555,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=87"></script>
+    <script type="module" src="./assets/js/app.js?v=92"></script>
 </body>
 </html>

@@ -4,12 +4,14 @@ export {
   getCurrentDriverShiftPlanning as getCurrentPlanning,
   getDriverShiftPlanning as getPlanning,
   getDriverShiftPlanningMergePreview as getMergePreview,
+  getDriverShiftPlanningLegacyPreview as getLegacyPreview,
   listDriverShiftPlannings as listPlannings,
   removeDriverShiftPlanningSource as removeSource,
   resolveDriverShiftPlanningImport as resolveImport,
   replaceDriverShiftPlanningSources as replaceSources,
   resolveDriverShiftPlanningConflict as resolveConflict,
   publishDriverShiftPlanning as publishPlanning,
+  publishDriverShiftPlanningLegacy as publishLegacyPlanning,
   createDriverShiftPlanningRevision as createRevision,
   prepareDriverShiftDistribution as prepareDistribution,
   getDriverShiftDistribution as getDistribution,
@@ -27,4 +29,4 @@ export {
   prepareDriverShiftBatch as prepareDistributionBatch,
   exportDriverShiftBatchCsv as exportDistributionBatchCsv,
   listWorkforceMembers,
-} from "../api.js?v=13";
+} from "../api.js?v=15";

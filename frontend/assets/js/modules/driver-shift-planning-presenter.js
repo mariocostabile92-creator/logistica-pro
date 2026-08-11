@@ -145,24 +145,95 @@ export function renderPlanningHeader(element, planning, sourceCount) {
 }
 
 
-export function renderSources(element, sources) {
+export function renderSources(element, sources, { legacyAvailable = false } = {}) {
   if (!sources.length) {
     element.innerHTML = '<li class="driver-shift-empty">Nessuna fonte collegata.</li>';
     return;
   }
   element.innerHTML = sources.map((source) => `
-    <li class="driver-shift-source-card" data-source-id="${source.id}">
+    <li class="driver-shift-source-card ${legacyAvailable && source.status === "UNAVAILABLE_FOR_MERGE" ? "is-legacy-bridged" : ""}" data-source-id="${source.id}">
       <div><strong>${escapeHtml(source.source_filename)}</strong><span>Importato ${escapeHtml(dateTimeLabel(source.imported_at))}</span></div>
       <dl>
         <div><dt>Righe</dt><dd>${source.row_count}</dd></div>
         <div><dt>Periodo rilevato</dt><dd>${escapeHtml(dateLabel(source.date_from))} → ${escapeHtml(dateLabel(source.date_to))}</dd></div>
         <div><dt>Compatibilità</dt><dd>${escapeHtml(source.period_compatibility)}</dd></div>
-        <div><dt>Merge</dt><dd>${source.status === "AVAILABLE" ? "Disponibile" : "Non disponibile"}</dd></div>
+        <div><dt>Merge</dt><dd class="driver-shift-source-merge-value">${source.status === "AVAILABLE" ? "Disponibile" : "Non disponibile"}</dd></div>
       </dl>
       ${source.warnings.map((warning) => `<p>${escapeHtml(warning)}</p>`).join("")}
       <button type="button" class="quiet" data-remove-driver-shift-source="${source.id}">Rimuovi dalla combinazione</button>
     </li>
   `).join("");
+}
+
+
+function countLabel(value) {
+  return new Intl.NumberFormat("it-IT").format(Number(value || 0));
+}
+
+
+export function renderLegacyPublication(element, status, preview = null) {
+  element.hidden = status === "IDLE";
+  if (status === "IDLE") {
+    element.innerHTML = "";
+    return;
+  }
+  if (status === "LOADING") {
+    element.innerHTML = `
+      <div class="driver-shift-legacy-state" role="status">
+        <strong>Verifica turni esistenti&hellip;</strong>
+        <p>Controllo del calendario Workforce in corso.</p>
+      </div>
+    `;
+    return;
+  }
+  if (status === "EMPTY") {
+    element.innerHTML = `
+      <div class="driver-shift-legacy-state">
+        <strong>Turni esistenti non disponibili</strong>
+        <p>I turni di questa fonte non possono essere ricostruiti automaticamente.</p>
+      </div>
+    `;
+    return;
+  }
+  if (status === "ERROR") {
+    element.innerHTML = `
+      <div class="driver-shift-legacy-state" role="alert">
+        <strong>Impossibile verificare i turni esistenti.</strong>
+        <button type="button" class="secondary" data-retry-legacy-preview>Riprova</button>
+      </div>
+    `;
+    return;
+  }
+  element.innerHTML = `
+    <div class="driver-shift-legacy-card">
+      <div class="driver-shift-legacy-heading">
+        <div>
+          <span class="driver-shift-legacy-badge">Origine legacy</span>
+          <h4>Turni esistenti rilevati</h4>
+          <p>I turni sono gi&agrave; presenti nel calendario Workforce e possono essere pubblicati per la distribuzione.</p>
+        </div>
+        <button type="button" data-publish-existing-shifts>Pubblica turni esistenti</button>
+      </div>
+      <dl class="driver-shift-legacy-summary">
+        <div><dt>Driver</dt><dd>${escapeHtml(countLabel(preview?.drivers_total))}</dd></div>
+        <div><dt>Giornate/turni</dt><dd>${escapeHtml(countLabel(preview?.rows_total))}</dd></div>
+        <div><dt>Periodo</dt><dd>${escapeHtml(dateLabel(preview?.period_start))} &ndash; ${escapeHtml(dateLabel(preview?.period_end))}</dd></div>
+      </dl>
+      <p class="driver-shift-legacy-limitation">Questa importazione &egrave; precedente al nuovo sistema multi-file. I turni possono essere distribuiti normalmente, ma la provenienza dettagliata del file originale non &egrave; disponibile.</p>
+    </div>
+  `;
+}
+
+
+export function renderLegacyPublishSummary(element, preview) {
+  element.innerHTML = `
+    <dl class="driver-shift-publish-summary">
+      <div><dt>Periodo</dt><dd>${escapeHtml(dateLabel(preview.period_start))} &ndash; ${escapeHtml(dateLabel(preview.period_end))}</dd></div>
+      <div><dt>Driver coinvolti</dt><dd>${escapeHtml(countLabel(preview.drivers_total))}</dd></div>
+      <div><dt>Giornate/turni</dt><dd>${escapeHtml(countLabel(preview.rows_total))}</dd></div>
+      <div><dt>Origine</dt><dd>Turni esistenti</dd></div>
+    </dl>
+  `;
 }
 
 

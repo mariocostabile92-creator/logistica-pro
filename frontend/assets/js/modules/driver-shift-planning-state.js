@@ -1,4 +1,11 @@
 export const DRIVER_SHIFT_PAGE_SIZE = 25;
+export const LEGACY_PREVIEW_STATUS = Object.freeze({
+  IDLE: "IDLE",
+  LOADING: "LOADING",
+  AVAILABLE: "AVAILABLE",
+  EMPTY: "EMPTY",
+  ERROR: "ERROR",
+});
 
 
 export function createDriverShiftPlanningState() {
@@ -15,6 +22,9 @@ export function createDriverShiftPlanningState() {
     pendingImportMode: null,
     pendingImport: null,
     members: [],
+    legacyPreviewStatus: LEGACY_PREVIEW_STATUS.IDLE,
+    legacyPreview: null,
+    legacyPublishing: false,
   };
 
   function beginRequest() {
@@ -44,6 +54,9 @@ export function createDriverShiftPlanningState() {
       classification: "", search: "", offset: 0,
       loading: false, pendingImportMode: null, pendingImport: null,
       members: [],
+      legacyPreviewStatus: LEGACY_PREVIEW_STATUS.IDLE,
+      legacyPreview: null,
+      legacyPublishing: false,
     });
   }
 
