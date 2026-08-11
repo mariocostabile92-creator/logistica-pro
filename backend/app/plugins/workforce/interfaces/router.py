@@ -72,6 +72,7 @@ from app.plugins.workforce.domain.driver_shift_driver_session import (
     DriverShiftLoginInvalidError,
     DriverShiftLoginRateLimitedError,
     DriverShiftLogoutView,
+    DriverShiftPublicWeek,
     DriverShiftSessionInvalidError,
 )
 from app.plugins.workforce.infrastructure import read_repository
@@ -131,6 +132,20 @@ def _same_origin_public_mutation(request: Request) -> None:
     }
     if origin.rstrip("/") not in expected:
         raise HTTPException(status_code=403, detail="Richiesta non valida.")
+
+
+def _invalid_driver_session_response() -> PlainTextResponse:
+    response = PlainTextResponse(
+        "Sessione driver non valida.",
+        status_code=401,
+        headers=PRIVATE_CACHE_HEADERS,
+    )
+    response.delete_cookie(
+        driver_shift_driver_session_service.SESSION_COOKIE_NAME,
+        path=driver_shift_driver_session_service.SESSION_COOKIE_PATH,
+        samesite=driver_shift_driver_session_service.SESSION_COOKIE_SAMESITE,
+    )
+    return response
 
 
 async def _read_upload(file: UploadFile) -> tuple[bytes, str]:
@@ -567,17 +582,38 @@ def current_driver_shift_session(
     try:
         return driver_shift_driver_session_service.current_session(raw_token)
     except DriverShiftSessionInvalidError:
-        invalid = PlainTextResponse(
-            "Sessione driver non valida.",
-            status_code=401,
-            headers=PRIVATE_CACHE_HEADERS,
-        )
-        invalid.delete_cookie(
-            driver_shift_driver_session_service.SESSION_COOKIE_NAME,
-            path=driver_shift_driver_session_service.SESSION_COOKIE_PATH,
-            samesite=driver_shift_driver_session_service.SESSION_COOKIE_SAMESITE,
-        )
-        return invalid
+        return _invalid_driver_session_response()
+
+
+@public_router.get(
+    "/api/public/driver-shifts/me/shifts",
+    response_model=DriverShiftPublicWeek,
+)
+def current_driver_shift_week(request: Request, response: Response):
+    response.headers.update(PRIVATE_CACHE_HEADERS)
+    raw_token = request.cookies.get(
+        driver_shift_driver_session_service.SESSION_COOKIE_NAME
+    )
+    try:
+        return driver_shift_driver_session_service.current_shifts(raw_token)
+    except DriverShiftSessionInvalidError:
+        return _invalid_driver_session_response()
+
+
+@public_router.post(
+    "/api/public/driver-shifts/me/acknowledge",
+    response_model=DriverShiftPublicWeek,
+)
+def acknowledge_driver_shift_week(request: Request, response: Response):
+    response.headers.update(PRIVATE_CACHE_HEADERS)
+    _same_origin_public_mutation(request)
+    raw_token = request.cookies.get(
+        driver_shift_driver_session_service.SESSION_COOKIE_NAME
+    )
+    try:
+        return driver_shift_driver_session_service.acknowledge_shifts(raw_token)
+    except DriverShiftSessionInvalidError:
+        return _invalid_driver_session_response()
 
 
 @public_router.post(

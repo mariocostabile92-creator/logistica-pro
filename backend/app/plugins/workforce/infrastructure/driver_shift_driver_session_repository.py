@@ -82,60 +82,111 @@ def create_session(
     return session_id
 
 
+def _validated_session(conn, session_token_hash: str, now: str):
+    return conn.execute(
+        """SELECT s.id session_id, s.expires_at, s.organization_id,
+                  s.workforce_member_id, s.distribution_id,
+                  m.display_name, d.period_start, d.period_end,
+                  d.driver_shift_planning_id, d.planning_version,
+                  r.id recipient_id, r.access_status, r.acknowledged_at
+           FROM driver_shift_driver_sessions s
+           JOIN driver_shift_distribution_portals p
+             ON p.id=s.portal_id AND p.organization_id=s.organization_id
+           JOIN driver_shift_distributions d
+             ON d.id=s.distribution_id AND d.organization_id=s.organization_id
+           JOIN driver_shift_driver_credentials c
+             ON c.organization_id=s.organization_id
+            AND c.workforce_member_id=s.workforce_member_id
+           JOIN driver_shift_distribution_recipients r
+             ON r.organization_id=s.organization_id
+            AND r.distribution_id=s.distribution_id
+            AND r.workforce_member_id=s.workforce_member_id
+           JOIN workforce_members m
+             ON m.id=s.workforce_member_id AND m.organization_id=s.organization_id
+           WHERE s.session_token_hash=? AND s.revoked_at IS NULL
+             AND s.expires_at >= ?
+             AND p.status='ACTIVE' AND p.expires_at >= ?
+             AND p.token_generation=s.portal_generation
+             AND d.status IN ('READY', 'DISTRIBUTED')
+             AND c.credential_status='ACTIVE'
+             AND c.generation=s.credential_generation
+             AND r.access_revoked_at IS NULL""",
+        (session_token_hash, now, now),
+    ).fetchone()
+
+
+def _track_open(conn, row, now: str):
+    conn.execute(
+        "UPDATE driver_shift_driver_sessions SET last_seen_at=? WHERE id=?",
+        (now, row["session_id"]),
+    )
+    conn.execute(
+        """UPDATE driver_shift_distribution_recipients
+           SET first_opened_at=COALESCE(first_opened_at, ?), last_opened_at=?,
+               access_status=CASE
+                   WHEN acknowledged_at IS NULL THEN 'OPENED'
+                   ELSE 'ACKNOWLEDGED'
+               END,
+               updated_at=?
+           WHERE id=?""",
+        (now, now, now, row["recipient_id"]),
+    )
+    return conn.execute(
+        """SELECT access_status, acknowledged_at
+           FROM driver_shift_distribution_recipients WHERE id=?""",
+        (row["recipient_id"],),
+    ).fetchone()
+
+
 def session_view(session_token_hash: str) -> dict | None:
     now = utc_now_iso()
     with db_session() as conn:
-        row = conn.execute(
-            """SELECT s.id session_id, s.expires_at, s.organization_id,
-                      m.display_name, d.period_start, d.period_end,
-                      r.id recipient_id, r.access_status
-               FROM driver_shift_driver_sessions s
-               JOIN driver_shift_distribution_portals p
-                 ON p.id=s.portal_id AND p.organization_id=s.organization_id
-               JOIN driver_shift_distributions d
-                 ON d.id=s.distribution_id AND d.organization_id=s.organization_id
-               JOIN driver_shift_driver_credentials c
-                 ON c.organization_id=s.organization_id
-                AND c.workforce_member_id=s.workforce_member_id
-               JOIN driver_shift_distribution_recipients r
-                 ON r.organization_id=s.organization_id
-                AND r.distribution_id=s.distribution_id
-                AND r.workforce_member_id=s.workforce_member_id
-               JOIN workforce_members m
-                 ON m.id=s.workforce_member_id AND m.organization_id=s.organization_id
-               WHERE s.session_token_hash=? AND s.revoked_at IS NULL
-                 AND s.expires_at >= ?
-                 AND p.status='ACTIVE' AND p.expires_at >= ?
-                 AND p.token_generation=s.portal_generation
-                 AND d.status IN ('READY', 'DISTRIBUTED')
-                 AND c.credential_status='ACTIVE'
-                 AND c.generation=s.credential_generation
-                 AND r.access_revoked_at IS NULL""",
-            (session_token_hash, now, now),
-        ).fetchone()
+        row = _validated_session(conn, session_token_hash, now)
         if row is None:
             return None
-        conn.execute(
-            "UPDATE driver_shift_driver_sessions SET last_seen_at=? WHERE id=?",
-            (now, row["session_id"]),
-        )
-        conn.execute(
-            """UPDATE driver_shift_distribution_recipients
-               SET first_opened_at=COALESCE(first_opened_at, ?), last_opened_at=?,
-                   access_status=CASE
-                       WHEN acknowledged_at IS NULL THEN 'OPENED'
-                       ELSE 'ACKNOWLEDGED'
-                   END,
-                   updated_at=?
-               WHERE id=?""",
-            (now, now, now, row["recipient_id"]),
-        )
-        refreshed = conn.execute(
-            "SELECT access_status FROM driver_shift_distribution_recipients WHERE id=?",
-            (row["recipient_id"],),
-        ).fetchone()
+        refreshed = _track_open(conn, row, now)
         result = _dict(row)
         result["access_status"] = str(refreshed["access_status"])
+        result["acknowledged_at"] = refreshed["acknowledged_at"]
+        return result
+
+
+def session_week_data(session_token_hash: str, *, acknowledge: bool = False) -> dict | None:
+    now = utc_now_iso()
+    with db_session() as conn:
+        row = _validated_session(conn, session_token_hash, now)
+        if row is None:
+            return None
+        refreshed = _track_open(conn, row, now)
+        if acknowledge:
+            conn.execute(
+                """UPDATE driver_shift_distribution_recipients
+                   SET acknowledged_at=COALESCE(acknowledged_at, ?),
+                       access_status='ACKNOWLEDGED', last_opened_at=?, updated_at=?
+                   WHERE id=?""",
+                (now, now, now, row["recipient_id"]),
+            )
+            refreshed = conn.execute(
+                """SELECT access_status, acknowledged_at
+                   FROM driver_shift_distribution_recipients WHERE id=?""",
+                (row["recipient_id"],),
+            ).fetchone()
+        published = conn.execute(
+            """SELECT operational_date, status_code, availability, shift_code,
+                      start_time, end_time, station
+               FROM driver_shift_planning_published_rows
+               WHERE organization_id=? AND driver_shift_planning_id=?
+                 AND planning_version=? AND workforce_member_id=?
+               ORDER BY operational_date, id""",
+            (
+                row["organization_id"], row["driver_shift_planning_id"],
+                row["planning_version"], row["workforce_member_id"],
+            ),
+        ).fetchall()
+        result = _dict(row)
+        result["access_status"] = str(refreshed["access_status"])
+        result["acknowledged_at"] = refreshed["acknowledged_at"]
+        result["published_rows"] = [_dict(item) for item in published]
         return result
 
 

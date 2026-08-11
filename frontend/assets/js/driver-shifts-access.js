@@ -1,3 +1,6 @@
+import { formatShiftPeriod, renderDriverShiftWeek } from "./driver-shifts-week.js?v=1";
+
+
 const loading = document.getElementById("driverShiftsAccessLoading");
 const content = document.getElementById("driverShiftsAccessContent");
 const success = document.getElementById("driverShiftsAccessSuccess");
@@ -6,8 +9,15 @@ const form = document.getElementById("driverShiftsLoginForm");
 const loginError = document.getElementById("driverShiftsLoginError");
 const submit = document.getElementById("driverShiftsLoginSubmit");
 const logout = document.getElementById("driverShiftsLogout");
-const welcome = document.getElementById("driverShiftsWelcome");
+const driverName = document.getElementById("driverShiftsDriverName");
 const period = document.getElementById("driverShiftsPeriod");
+const weekStatus = document.getElementById("driverShiftsWeekStatus");
+const weekRoot = document.getElementById("driverShiftsWeek");
+const weekError = document.getElementById("driverShiftsWeekError");
+const weekRetry = document.getElementById("driverShiftsWeekRetry");
+const acknowledgement = document.getElementById("driverShiftsAcknowledgement");
+const acknowledge = document.getElementById("driverShiftsAcknowledge");
+const ackResult = document.getElementById("driverShiftsAckResult");
 
 
 export function tokenFromFragment(fragment = location.hash) {
@@ -23,22 +33,62 @@ function show(target) {
 }
 
 
-function renderSession(session) {
-  welcome.textContent = `Ciao, ${session.driver_name}`;
-  period.textContent = `Periodo ${session.period_start} – ${session.period_end}`;
+function showWeekLoading() {
+  show(success);
+  weekStatus.hidden = false;
+  weekStatus.textContent = "Caricamento turni…";
+  weekRoot.hidden = true;
+  weekError.hidden = true;
+  acknowledgement.hidden = true;
+}
+
+
+function showWeekFailure() {
+  show(success);
+  weekStatus.hidden = true;
+  weekRoot.hidden = true;
+  acknowledgement.hidden = true;
+  weekError.hidden = false;
+}
+
+
+function renderAcknowledgement(week) {
+  acknowledgement.hidden = false;
+  ackResult.hidden = !week.acknowledged;
+  acknowledge.hidden = week.acknowledged;
+  acknowledge.disabled = false;
+}
+
+
+function renderWeek(week) {
+  driverName.textContent = week.driver_name;
+  period.textContent = formatShiftPeriod(week.period_start, week.period_end);
+  renderDriverShiftWeek(weekRoot, week);
+  weekStatus.hidden = true;
+  weekError.hidden = true;
+  weekRoot.hidden = false;
+  renderAcknowledgement(week);
   show(success);
 }
 
 
-async function currentSession() {
-  const response = await fetch("/api/public/driver-shifts/me", {
-    credentials: "include",
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) return false;
-  renderSession(await response.json());
-  return true;
+async function loadWeek({ initial = false } = {}) {
+  if (initial) show(loading);
+  else showWeekLoading();
+  try {
+    const response = await fetch("/api/public/driver-shifts/me/shifts", {
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (response.status === 401) return "invalid";
+    if (!response.ok) throw new Error("DRIVER_SHIFT_WEEK_UNAVAILABLE");
+    renderWeek(await response.json());
+    return "loaded";
+  } catch {
+    showWeekFailure();
+    return "error";
+  }
 }
 
 
@@ -67,12 +117,8 @@ async function validatePortal() {
 
 
 async function initialize() {
-  try {
-    if (await currentSession()) return;
-  } catch {
-    // A missing/expired session is expected on first access.
-  }
-  await validatePortal();
+  const state = await loadWeek({ initial: true });
+  if (state === "invalid") await validatePortal();
 }
 
 
@@ -97,13 +143,47 @@ form.addEventListener("submit", async (event) => {
     });
     if (!response.ok) throw new Error("DRIVER_SHIFT_LOGIN_INVALID");
     form.reset();
-    renderSession(await response.json());
+    const state = await loadWeek();
+    if (state === "invalid") {
+      show(content);
+      loginError.hidden = false;
+    }
   } catch {
+    show(content);
     loginError.hidden = false;
   } finally {
     submit.disabled = false;
     submit.textContent = "Accedi";
   }
+});
+
+
+acknowledge.addEventListener("click", async () => {
+  acknowledge.disabled = true;
+  try {
+    const response = await fetch("/api/public/driver-shifts/me/acknowledge", {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (response.status === 401) {
+      await validatePortal();
+      return;
+    }
+    if (!response.ok) throw new Error("DRIVER_SHIFT_ACK_UNAVAILABLE");
+    renderWeek(await response.json());
+  } catch {
+    acknowledge.disabled = false;
+    weekStatus.hidden = false;
+    weekStatus.textContent = "Impossibile registrare la presa visione. Riprova.";
+  }
+});
+
+
+weekRetry.addEventListener("click", async () => {
+  const state = await loadWeek();
+  if (state === "invalid") await validatePortal();
 });
 
 

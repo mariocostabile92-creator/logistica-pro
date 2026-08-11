@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex,nofollow,noarchive" />
     <meta name="referrer" content="no-referrer" />
     <title>I tuoi turni · Operations Engine</title>
-    <link rel="stylesheet" href="/app/assets/css/driver-shifts-access.css?v=2" />
+    <link rel="stylesheet" href="/app/assets/css/driver-shifts-access.css?v=3" />
   </head>
   <body>
     <main class="driver-shifts-access-shell">
@@ -42,13 +42,30 @@
         </form>
       </section>
 
-      <section id="driverShiftsAccessSuccess" class="driver-shifts-access-card" hidden>
-        <span class="driver-shifts-access-mark driver-shifts-access-mark-success" aria-hidden="true">✓</span>
-        <p class="eyebrow">Accesso eseguito</p>
-        <h1 id="driverShiftsWelcome">Ciao</h1>
-        <p id="driverShiftsPeriod" class="driver-shifts-access-period"></p>
-        <p class="driver-shifts-access-lead">I tuoi turni saranno mostrati qui.</p>
-        <button id="driverShiftsLogout" class="driver-shifts-access-secondary" type="button">Esci</button>
+      <section id="driverShiftsAccessSuccess" class="driver-shifts-access-card driver-shifts-week-card" hidden>
+        <header class="driver-shifts-week-header">
+          <span class="driver-shifts-access-mark" aria-hidden="true">OE</span>
+          <div>
+            <p class="eyebrow">Operations Engine</p>
+            <h1>I tuoi turni</h1>
+          </div>
+        </header>
+        <div class="driver-shifts-week-identity">
+          <h2 id="driverShiftsDriverName"></h2>
+          <p id="driverShiftsPeriod" class="driver-shifts-access-period"></p>
+        </div>
+        <p id="driverShiftsWeekStatus" class="driver-shifts-week-status" aria-live="polite">Caricamento turni…</p>
+        <div id="driverShiftsWeek" class="driver-shifts-week" aria-label="Settimana turni" hidden></div>
+        <div id="driverShiftsWeekError" class="driver-shifts-week-error" role="alert" hidden>
+          <p>Impossibile caricare i turni. Riprova.</p>
+          <button id="driverShiftsWeekRetry" class="driver-shifts-access-secondary" type="button">Riprova</button>
+        </div>
+        <footer id="driverShiftsAcknowledgement" class="driver-shifts-ack" hidden>
+          <p>Conferma soltanto la presa visione dei turni.</p>
+          <button id="driverShiftsAcknowledge" type="button">Ho visto i turni</button>
+          <p id="driverShiftsAckResult" class="driver-shifts-ack-result" aria-live="polite" hidden>✓ Presa visione registrata</p>
+        </footer>
+        <button id="driverShiftsLogout" class="driver-shifts-access-secondary driver-shifts-logout" type="button">Esci</button>
       </section>
 
       <section id="driverShiftsAccessError" class="driver-shifts-access-card driver-shifts-access-state" hidden>
@@ -57,6 +74,6 @@
         <p>Il collegamento non è valido oppure non è più attivo.</p>
       </section>
     </main>
-    <script type="module" src="/app/assets/js/driver-shifts-access.js?v=2"></script>
+    <script type="module" src="/app/assets/js/driver-shifts-access.js?v=3"></script>
   </body>
 </html>

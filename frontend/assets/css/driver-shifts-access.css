@@ -162,6 +162,143 @@ p {
   font-weight: 650;
 }
 
+.driver-shifts-week-card { width: min(100%, 40rem); }
+
+.driver-shifts-week-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.driver-shifts-week-identity {
+  margin: 1.5rem 0 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #d6e1de;
+}
+
+.driver-shifts-week-identity h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.25rem;
+}
+
+.driver-shifts-week-identity .driver-shifts-access-period { margin-top: 0.3rem; }
+
+.driver-shifts-week-status {
+  min-height: 2.5rem;
+  margin: 1rem 0;
+  color: #31534a;
+  font-weight: 700;
+}
+
+.driver-shifts-week {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.driver-shifts-week[hidden],
+.driver-shifts-week-error[hidden],
+.driver-shifts-ack[hidden],
+.driver-shifts-ack-result[hidden],
+.driver-shifts-ack button[hidden] { display: none; }
+
+.driver-shift-day {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #c9d8d4;
+  border-radius: 0.85rem;
+  background: #fbfdfc;
+}
+
+.driver-shift-day time { text-decoration: none; }
+
+.driver-shift-day-title {
+  margin: 0 0 0.65rem;
+  color: #25483f;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.driver-shift-day-entries { display: grid; gap: 0.55rem; }
+
+.driver-shift-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem 0.75rem;
+  align-items: baseline;
+  padding-left: 0.75rem;
+  border-left: 4px solid #117e6b;
+}
+
+.driver-shift-entry.is-absence { border-left-color: #667f78; }
+.driver-shift-entry.is-missing { border-left-color: #aebfba; }
+.driver-shift-entry.is-neutral { border-left-color: #8a9e98; }
+
+.driver-shift-code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #10231f;
+  font-size: 1.15rem;
+}
+
+.driver-shift-time {
+  color: #31534a;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.driver-shift-station {
+  grid-column: 1 / -1;
+  color: #60736e;
+  font-size: 0.82rem;
+}
+
+.driver-shifts-ack {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: 0.85rem;
+  background: #edf6f3;
+}
+
+.driver-shifts-ack p { margin: 0 0 0.75rem; }
+
+.driver-shifts-ack button {
+  width: 100%;
+  min-height: 3rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: #117e6b;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.driver-shifts-ack-result {
+  margin: 0;
+  color: #12634f;
+  font-weight: 800;
+}
+
+.driver-shifts-week-error {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #e7bbb6;
+  border-radius: 0.8rem;
+  background: #fff5f4;
+}
+
+.driver-shifts-week-error p { margin-top: 0; color: #84271e; }
+
+.driver-shifts-logout {
+  display: block;
+  width: auto;
+  min-height: 44px;
+  margin: 1rem auto 0;
+  padding-inline: 1.25rem;
+  border-color: transparent;
+  background: transparent;
+}
+
 .driver-shifts-access-state { text-align: center; }
 .driver-shifts-access-state .driver-shifts-access-mark { margin: 0 auto 1.5rem; }
 .driver-shifts-access-state p { margin-inline: auto; }
@@ -188,4 +325,8 @@ p {
   .driver-shifts-access-card { margin-top: 0.75rem; padding: 1.35rem; border-radius: 1rem; }
   .driver-shifts-access-header { align-items: flex-start; }
   .driver-shifts-access-mark { width: 2.8rem; height: 2.8rem; }
+  .driver-shifts-week-card { margin-top: 0; }
+  .driver-shifts-week-header { align-items: flex-start; }
+  .driver-shift-entry { grid-template-columns: minmax(0, 1fr); }
+  .driver-shift-time, .driver-shift-station { grid-column: 1; }
 }

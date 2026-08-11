@@ -42,11 +42,11 @@ test("successful access renders only safe session fields", async () => {
     source("driver-shifts/access/index.html"), source("assets/js/driver-shifts-access.js"),
   ]);
   assert.match(html, /id="driverShiftsAccessSuccess"/);
-  assert.match(script, /session\.driver_name/);
-  assert.match(script, /session\.period_start/);
-  assert.match(script, /session\.period_end/);
-  assert.match(script, /\/api\/public\/driver-shifts\/me/);
-  assert.doesNotMatch(script, /session\.organization|session\.workforce|session\.credential/);
+  assert.match(script, /week\.driver_name/);
+  assert.match(script, /week\.period_start/);
+  assert.match(script, /week\.period_end/);
+  assert.match(script, /\/api\/public\/driver-shifts\/me\/shifts/);
+  assert.doesNotMatch(script, /week\.organization|week\.workforce|week\.credential/);
 });
 
 
@@ -60,8 +60,8 @@ test("logout is explicit and returns to portal login", async () => {
 
 test("expired sessions fall back to generic portal validation", async () => {
   const script = await source("assets/js/driver-shifts-access.js");
-  assert.match(script, /if \(await currentSession\(\)\) return/);
-  assert.match(script, /await validatePortal\(\)/);
+  assert.match(script, /const state = await loadWeek\(\{ initial: true \}\)/);
+  assert.match(script, /if \(state === "invalid"\) await validatePortal\(\)/);
   assert.doesNotMatch(script, /credential revoked|session expired|distribution superseded/i);
 });
 
