@@ -6,6 +6,7 @@ from app.importers.excel_reader import read_validated_upload
 from app.importers.workbook_profiler.errors import WorkbookProfileError
 from app.plugins.workforce.application import workforce_service
 from app.plugins.workforce.application import consecutivity_policy, override_service
+from app.plugins.workforce.application import driver_shift_planning_service
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
 from app.plugins.workforce.domain.errors import (
@@ -21,6 +22,14 @@ from app.plugins.workforce.domain.models import (
     WorkforceMember,
     WorkforceFoundationSnapshot,
 )
+from app.plugins.workforce.domain.driver_shift_planning import (
+    DriverShiftPlanning,
+    DriverShiftPlanningError,
+    DriverShiftPlanningMergePreview,
+    DriverShiftPlanningNotFoundError,
+    DriverShiftPlanningSource,
+    DriverShiftPlanningSourceNotFoundError,
+)
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.interfaces.schemas import (
     WorkforceCalendarResponse,
@@ -32,6 +41,8 @@ from app.plugins.workforce.interfaces.schemas import (
     WorkforceStatusResponse,
     ConsecutivityOverrideRequest,
     ConsecutivityPolicyRequest,
+    DriverShiftPlanningCreateRequest,
+    DriverShiftPlanningSourceRequest,
 )
 from app.workspace.status_service import (
     DemoWorkspaceResetRequiredError,
@@ -71,6 +82,114 @@ def _require(request: Request, permission: str):
     if not has_permission(user.role, permission):
         raise HTTPException(status_code=403, detail="Operazione Workforce non autorizzata.")
     return user
+
+
+def _planning_error(exc: DriverShiftPlanningError | ValueError) -> HTTPException:
+    if isinstance(
+        exc,
+        (DriverShiftPlanningNotFoundError, DriverShiftPlanningSourceNotFoundError),
+    ):
+        return HTTPException(
+            status_code=404,
+            detail={"code": exc.code, "message": str(exc)},
+        )
+    return HTTPException(
+        status_code=422,
+        detail={
+            "code": getattr(exc, "code", "DRIVER_SHIFT_PLANNING_INVALID"),
+            "message": str(exc),
+        },
+    )
+
+
+@router.post(
+    "/driver-shift-plannings",
+    response_model=DriverShiftPlanning,
+    status_code=201,
+)
+def create_driver_shift_planning(
+    payload: DriverShiftPlanningCreateRequest,
+    request: Request,
+) -> DriverShiftPlanning:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_planning_service.create_driver_shift_planning(
+            user.organization_id,
+            payload.period_start,
+            payload.period_end,
+            payload.label,
+            user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftPlanningError as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-plannings/{planning_id}/sources",
+    response_model=DriverShiftPlanningSource,
+    status_code=201,
+)
+def add_driver_shift_planning_source(
+    planning_id: int,
+    payload: DriverShiftPlanningSourceRequest,
+    request: Request,
+) -> DriverShiftPlanningSource:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_planning_service.add_source(
+            user.organization_id,
+            planning_id,
+            payload.workforce_import_id,
+            actor=user.email,
+            source_order=payload.source_order,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except (DriverShiftPlanningError, ValueError) as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.delete(
+    "/driver-shift-plannings/{planning_id}/sources/{source_id}",
+    status_code=204,
+)
+def remove_driver_shift_planning_source(
+    planning_id: int,
+    source_id: int,
+    request: Request,
+) -> Response:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        driver_shift_planning_service.remove_source(
+            user.organization_id, planning_id, source_id
+        )
+        return Response(status_code=204)
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except (DriverShiftPlanningError, ValueError) as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.get(
+    "/driver-shift-plannings/{planning_id}/merge-preview",
+    response_model=DriverShiftPlanningMergePreview,
+)
+def driver_shift_planning_merge_preview(
+    planning_id: int,
+    request: Request,
+) -> DriverShiftPlanningMergePreview:
+    try:
+        user = _require(request, "workforce:read")
+        return driver_shift_planning_service.merge_preview(
+            user.organization_id, planning_id
+        )
+    except DriverShiftPlanningError as exc:
+        raise _planning_error(exc) from exc
 
 
 @router.get("/status", response_model=WorkforceStatusResponse)

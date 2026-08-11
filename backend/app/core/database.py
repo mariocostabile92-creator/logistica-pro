@@ -33,6 +33,8 @@ _IDENTITY_TABLES = {
     "workforce_day_statuses",
     "workforce_imports",
     "workforce_import_rows",
+    "driver_shift_plannings",
+    "driver_shift_planning_sources",
     "workforce_members",
     "workforce_requirements",
 }

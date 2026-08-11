@@ -821,6 +821,8 @@ def test_operational_and_preserved_table_classification_is_complete():
         "plannings",
         "operation_snapshots",
         "analyses",
+        "driver_shift_planning_sources",
+        "driver_shift_plannings",
         "workforce_import_rows",
         "workforce_changes",
         "workforce_day_statuses",

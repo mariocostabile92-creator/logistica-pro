@@ -228,6 +228,38 @@ def init_schema() -> None:
             CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_imports_id_org
                 ON workforce_imports(id, organization_id);
 
+            CREATE TABLE IF NOT EXISTS driver_shift_plannings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT NOT NULL,
+                label TEXT,
+                period_start TEXT NOT NULL,
+                period_end TEXT NOT NULL,
+                status TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE (id, organization_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS driver_shift_planning_sources (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT NOT NULL,
+                driver_shift_planning_id INTEGER NOT NULL,
+                workforce_import_id INTEGER NOT NULL,
+                source_order INTEGER NOT NULL DEFAULT 0,
+                added_at TEXT NOT NULL,
+                added_by TEXT NOT NULL,
+                status TEXT NOT NULL,
+                FOREIGN KEY (driver_shift_planning_id, organization_id)
+                    REFERENCES driver_shift_plannings(id, organization_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (workforce_import_id, organization_id)
+                    REFERENCES workforce_imports(id, organization_id)
+                    ON DELETE RESTRICT,
+                UNIQUE (driver_shift_planning_id, workforce_import_id)
+            );
+
             CREATE TABLE IF NOT EXISTS workforce_import_rows (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 organization_id TEXT NOT NULL,
@@ -342,6 +374,14 @@ def init_schema() -> None:
                 ON workforce_import_rows(
                     organization_id, resolved_workforce_member_id,
                     operational_date
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_plannings_scope
+                ON driver_shift_plannings(
+                    organization_id, period_start, period_end, status
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_planning_sources_scope
+                ON driver_shift_planning_sources(
+                    organization_id, driver_shift_planning_id, source_order
                 );
 
             CREATE TABLE IF NOT EXISTS workforce_consecutivity_policies (

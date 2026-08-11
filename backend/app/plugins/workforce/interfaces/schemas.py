@@ -93,3 +93,19 @@ class ConsecutivityOverrideRequest(BaseModel):
     def valid_override_date(cls, value: str) -> str:
         date.fromisoformat(value)
         return value
+
+
+class DriverShiftPlanningCreateRequest(BaseModel):
+    period_start: str
+    period_end: str
+    label: str | None = Field(default=None, max_length=160)
+
+    @field_validator("period_start", "period_end")
+    @classmethod
+    def valid_planning_date(cls, value: str) -> str:
+        return date.fromisoformat(value).isoformat()
+
+
+class DriverShiftPlanningSourceRequest(BaseModel):
+    workforce_import_id: int = Field(gt=0)
+    source_order: int | None = Field(default=None, ge=0)
