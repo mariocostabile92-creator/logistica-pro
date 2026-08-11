@@ -32,6 +32,7 @@ _IDENTITY_TABLES = {
     "workforce_changes",
     "workforce_day_statuses",
     "workforce_imports",
+    "workforce_import_rows",
     "workforce_members",
     "workforce_requirements",
 }

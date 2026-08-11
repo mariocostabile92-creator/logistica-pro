@@ -150,10 +150,13 @@ def test_annual_import_reuses_preview_and_meets_local_targets(monkeypatch):
     assert preview.people_detected == MEMBER_COUNT
     assert result.statuses_created == STATUS_COUNT
     assert int(captured_metrics["database_calls"]) <= 60
-    assert int(captured_metrics["bulk_batches"]) == 50
+    assert int(captured_metrics["bulk_batches"]) == 52
     assert table_count("workforce_members") == MEMBER_COUNT
     assert table_count("workforce_day_statuses") == STATUS_COUNT
     assert table_count("workforce_changes") == STATUS_COUNT + MEMBER_COUNT
+    assert table_count("workforce_import_rows") == (
+        STATUS_COUNT + (MEMBER_COUNT * 2)
+    )
 
     response = result.model_dump_json()
     response_data = json.loads(response)

@@ -56,6 +56,7 @@ class WorkspaceRemovedCounts(BaseModel):
     plannings: int = 0
     operation_snapshots: int = 0
     analyses: int = 0
+    workforce_import_rows: int = 0
     workforce_changes: int = 0
     workforce_day_statuses: int = 0
     workforce_requirements: int = 0

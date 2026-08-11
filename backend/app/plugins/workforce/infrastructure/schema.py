@@ -225,6 +225,44 @@ def init_schema() -> None:
                 UNIQUE (organization_id, fingerprint)
             );
 
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_workforce_imports_id_org
+                ON workforce_imports(id, organization_id);
+
+            CREATE TABLE IF NOT EXISTS workforce_import_rows (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT NOT NULL,
+                workforce_import_id INTEGER NOT NULL,
+                source_sheet TEXT NOT NULL,
+                source_row_number INTEGER NOT NULL,
+                source_reference TEXT NOT NULL,
+                source_record_key TEXT NOT NULL,
+                row_kind TEXT NOT NULL,
+                source_external_identifier TEXT,
+                driver_display_name TEXT,
+                transporter_id TEXT,
+                station TEXT,
+                operational_date TEXT,
+                status_code TEXT,
+                availability INTEGER,
+                shift_code TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                notes TEXT,
+                employment_type TEXT,
+                contract_start TEXT,
+                contract_end TEXT,
+                weekly_hours REAL,
+                resolved_workforce_member_id INTEGER,
+                raw_payload TEXT NOT NULL,
+                FOREIGN KEY (workforce_import_id, organization_id)
+                    REFERENCES workforce_imports(id, organization_id)
+                    ON DELETE CASCADE,
+                UNIQUE (
+                    workforce_import_id, source_sheet,
+                    source_row_number, source_record_key
+                )
+            );
+
             CREATE TABLE IF NOT EXISTS workforce_members (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 external_identifier TEXT NOT NULL,
@@ -293,6 +331,18 @@ def init_schema() -> None:
                 ON workforce_requirements(date, operational_unit_id);
             CREATE INDEX IF NOT EXISTS idx_workforce_changes_time
                 ON workforce_changes(timestamp, id);
+            CREATE INDEX IF NOT EXISTS idx_workforce_import_rows_scope
+                ON workforce_import_rows(organization_id, workforce_import_id);
+            CREATE INDEX IF NOT EXISTS idx_workforce_import_rows_identity
+                ON workforce_import_rows(
+                    organization_id, transporter_id,
+                    source_external_identifier
+                );
+            CREATE INDEX IF NOT EXISTS idx_workforce_import_rows_driver_date
+                ON workforce_import_rows(
+                    organization_id, resolved_workforce_member_id,
+                    operational_date
+                );
 
             CREATE TABLE IF NOT EXISTS workforce_consecutivity_policies (
                 organization_id TEXT PRIMARY KEY,

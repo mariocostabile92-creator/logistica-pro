@@ -74,6 +74,32 @@ class ParsedRequirement:
     source: str
 
 
+@dataclass(frozen=True)
+class ParsedWorkforceSourceRow:
+    source_sheet: str
+    source_row_number: int
+    source_reference: str
+    source_record_key: str
+    row_kind: str
+    resolution_identifier: str | None
+    source_external_identifier: str | None
+    driver_display_name: str | None
+    transporter_id: str | None
+    station: str | None
+    operational_date: str | None
+    status_code: str | None
+    availability: bool | None
+    shift_code: str | None
+    start_time: str | None
+    end_time: str | None
+    notes: str | None
+    employment_type: str | None
+    contract_start: str | None
+    contract_end: str | None
+    weekly_hours: float | None
+    raw_payload: dict[str, object]
+
+
 @dataclass
 class ParsedWorkforceWorkbook:
     fingerprint: str
@@ -81,6 +107,7 @@ class ParsedWorkforceWorkbook:
     members: list[ParsedMember] = field(default_factory=list)
     statuses: list[ParsedStatus] = field(default_factory=list)
     requirements: list[ParsedRequirement] = field(default_factory=list)
+    source_rows: list[ParsedWorkforceSourceRow] = field(default_factory=list)
     metrics: dict[str, float] = field(default_factory=dict)
 
 
@@ -220,6 +247,46 @@ def _value(row: list[Any], columns: list[Column], target: str) -> Any:
     return None
 
 
+TRANSPORTER_ID_ALIASES = {
+    "t id", "tid", "transporter id", "transporter external id",
+}
+
+
+def _source_value(
+    row: list[Any],
+    columns: list[Column],
+    aliases: set[str],
+) -> Any:
+    for column in columns:
+        if (
+            normalize_text(column.label) in aliases
+            and column.index < len(row)
+        ):
+            return row[column.index]
+    return None
+
+
+def _text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
+
+
+def _raw_payload(**values: Any) -> dict[str, object]:
+    payload: dict[str, object] = {}
+    for key, value in values.items():
+        if not _present(value):
+            continue
+        if isinstance(value, datetime):
+            payload[key] = value.isoformat()
+        elif isinstance(value, date):
+            payload[key] = value.isoformat()
+        elif isinstance(value, (str, int, float, bool)):
+            payload[key] = value
+        else:
+            payload[key] = str(value)
+    return payload
+
+
 def _status_mapping() -> dict[str, str]:
     values = workforce_status_configuration()
     configured = values.get("external_mappings", {})
@@ -294,6 +361,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
     members: dict[str, dict[str, object]] = {}
     statuses: dict[tuple[str, str], dict[str, object]] = {}
     requirements: dict[tuple[str, str], ParsedRequirement] = {}
+    source_rows: list[ParsedWorkforceSourceRow] = []
     sheets: list[WorkforceImportSheet] = []
     mappings: list[WorkforceMapping] = []
     excluded_rows = 0
@@ -336,7 +404,10 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                 continue
             display_name = str(_value(row, columns, "display_name") or "").strip()
             raw_identifier = _value(row, columns, "external_identifier")
-            if not display_name and not raw_identifier:
+            transporter_id = _text(
+                _source_value(row, columns, TRANSPORTER_ID_ALIASES)
+            )
+            if not display_name and not raw_identifier and not transporter_id:
                 if responsibility == "requirements":
                     display_name = ""
                 else:
@@ -344,6 +415,66 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     continue
             identifier = _member_identifier(raw_identifier, display_name) if (display_name or raw_identifier) else ""
             source = f"{sheet.name}:row:{excel_row}"
+            source_external_identifier = _text(raw_identifier)
+            station = _text(_value(row, columns, "operational_unit_id"))
+            employment_type = _employment_type(
+                _value(row, columns, "employment_type")
+            )
+            contract_start = _strict_date(
+                _value(row, columns, "contract_start")
+            )
+            contract_end = _strict_date(
+                _value(row, columns, "contract_end")
+            )
+            raw_weekly_hours = _value(row, columns, "weekly_hours")
+            try:
+                source_weekly_hours = (
+                    float(raw_weekly_hours)
+                    if _present(raw_weekly_hours)
+                    else None
+                )
+            except (TypeError, ValueError):
+                source_weekly_hours = None
+
+            if identifier or transporter_id:
+                source_rows.append(ParsedWorkforceSourceRow(
+                    source_sheet=sheet.name,
+                    source_row_number=excel_row,
+                    source_reference=source,
+                    source_record_key="identity",
+                    row_kind="identity",
+                    resolution_identifier=identifier or None,
+                    source_external_identifier=source_external_identifier,
+                    driver_display_name=display_name or None,
+                    transporter_id=transporter_id,
+                    station=station,
+                    operational_date=None,
+                    status_code=None,
+                    availability=None,
+                    shift_code=None,
+                    start_time=None,
+                    end_time=None,
+                    notes=_text(_value(row, columns, "notes")),
+                    employment_type=employment_type,
+                    contract_start=contract_start,
+                    contract_end=contract_end,
+                    weekly_hours=source_weekly_hours,
+                    raw_payload=_raw_payload(
+                        source_external_identifier=raw_identifier,
+                        driver_display_name=display_name,
+                        transporter_id=transporter_id,
+                        station=station,
+                        employment_type=_value(
+                            row, columns, "employment_type"
+                        ),
+                        contract_start=_value(
+                            row, columns, "contract_start"
+                        ),
+                        contract_end=_value(row, columns, "contract_end"),
+                        weekly_hours=raw_weekly_hours,
+                        notes=_value(row, columns, "notes"),
+                    ),
+                ))
 
             if identifier:
                 current = members.get(identifier, {})
@@ -372,9 +503,9 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
 
             explicit_date = _strict_date(_value(row, columns, "date"))
             raw_status = _value(row, columns, "status_code") or _value(row, columns, "shift_code")
-            if identifier and explicit_date and _present(raw_status):
+            if (identifier or transporter_id) and explicit_date and _present(raw_status):
                 status, inferred_shift = _canonical_status(raw_status, status_mapping)
-                statuses[(identifier, explicit_date)] = {
+                status_values = {
                     "status_code": status,
                     "availability": status in {"available", "available_limited", "scheduled"},
                     "shift_code": str(_value(row, columns, "shift_code") or inferred_shift or "").strip() or None,
@@ -383,8 +514,45 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     "notes": str(_value(row, columns, "notes") or "").strip() or None,
                     "source_reference": source,
                 }
+                if identifier:
+                    statuses[(identifier, explicit_date)] = status_values
+                source_rows.append(ParsedWorkforceSourceRow(
+                    source_sheet=sheet.name,
+                    source_row_number=excel_row,
+                    source_reference=source,
+                    source_record_key=f"shift:{explicit_date}:explicit",
+                    row_kind="shift",
+                    resolution_identifier=identifier or None,
+                    source_external_identifier=source_external_identifier,
+                    driver_display_name=display_name or None,
+                    transporter_id=transporter_id,
+                    station=station,
+                    operational_date=explicit_date,
+                    status_code=status_values["status_code"],
+                    availability=status_values["availability"],
+                    shift_code=status_values["shift_code"],
+                    start_time=status_values["start_time"],
+                    end_time=status_values["end_time"],
+                    notes=status_values["notes"],
+                    employment_type=employment_type,
+                    contract_start=contract_start,
+                    contract_end=contract_end,
+                    weekly_hours=source_weekly_hours,
+                    raw_payload=_raw_payload(
+                        source_external_identifier=raw_identifier,
+                        driver_display_name=display_name,
+                        transporter_id=transporter_id,
+                        station=station,
+                        operational_date=explicit_date,
+                        source_status_or_shift=raw_status,
+                        source_shift_code=_value(row, columns, "shift_code"),
+                        start_time=_value(row, columns, "start_time"),
+                        end_time=_value(row, columns, "end_time"),
+                        notes=_value(row, columns, "notes"),
+                    ),
+                ))
 
-            if identifier:
+            if identifier or transporter_id:
                 for column in columns:
                     if not column.date_value or column.index >= len(row):
                         continue
@@ -392,7 +560,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     if not _present(cell):
                         continue
                     status, shift = _canonical_status(cell, status_mapping)
-                    statuses[(identifier, column.date_value)] = {
+                    status_values = {
                         "status_code": status,
                         "availability": status in {"available", "available_limited", "scheduled"},
                         "shift_code": shift,
@@ -401,6 +569,41 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                         "notes": None,
                         "source_reference": source,
                     }
+                    if identifier:
+                        statuses[(identifier, column.date_value)] = status_values
+                    source_rows.append(ParsedWorkforceSourceRow(
+                        source_sheet=sheet.name,
+                        source_row_number=excel_row,
+                        source_reference=source,
+                        source_record_key=(
+                            f"shift:{column.date_value}:column:{column.index}"
+                        ),
+                        row_kind="shift",
+                        resolution_identifier=identifier or None,
+                        source_external_identifier=source_external_identifier,
+                        driver_display_name=display_name or None,
+                        transporter_id=transporter_id,
+                        station=station,
+                        operational_date=column.date_value,
+                        status_code=status_values["status_code"],
+                        availability=status_values["availability"],
+                        shift_code=status_values["shift_code"],
+                        start_time=None,
+                        end_time=None,
+                        notes=None,
+                        employment_type=employment_type,
+                        contract_start=contract_start,
+                        contract_end=contract_end,
+                        weekly_hours=source_weekly_hours,
+                        raw_payload=_raw_payload(
+                            source_external_identifier=raw_identifier,
+                            driver_display_name=display_name,
+                            transporter_id=transporter_id,
+                            station=station,
+                            operational_date=column.date_value,
+                            source_status_or_shift=cell,
+                        ),
+                    ))
 
             required = _value(row, columns, "required_resources")
             requirement_date = explicit_date
@@ -464,5 +667,6 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         members=[ParsedMember(identifier, values) for identifier, values in members.items()],
         statuses=[ParsedStatus(identifier, day, values) for (identifier, day), values in statuses.items()],
         requirements=list(requirements.values()),
+        source_rows=source_rows,
         metrics=metrics,
     )

@@ -821,6 +821,7 @@ def test_operational_and_preserved_table_classification_is_complete():
         "plannings",
         "operation_snapshots",
         "analyses",
+        "workforce_import_rows",
         "workforce_changes",
         "workforce_day_statuses",
         "workforce_requirements",

@@ -15,6 +15,7 @@ from app.utils.date_utils import utc_now_iso
 
 DEFAULT_CHUNK_SIZE = 2000
 LOOKUP_CHUNK_SIZE = 500
+SOURCE_ROW_CHUNK_SIZE = 25000
 MEMBER_FIELDS = (
     "display_name",
     "role",
@@ -561,6 +562,71 @@ def _persist_requirements(
     return len(insert_rows)
 
 
+def _persist_source_rows(
+    conn,
+    parsed: ParsedWorkforceWorkbook,
+    workforce_import_id: int,
+    member_ids: dict[str, int],
+    metrics: dict[str, float],
+    chunk_size: int,
+) -> int:
+    organization_id = current_organization_id()
+    rows = [
+        (
+            organization_id,
+            workforce_import_id,
+            item.source_sheet,
+            item.source_row_number,
+            item.source_reference,
+            item.source_record_key,
+            item.row_kind,
+            item.source_external_identifier,
+            item.driver_display_name,
+            item.transporter_id,
+            item.station,
+            item.operational_date,
+            item.status_code,
+            (
+                int(item.availability)
+                if item.availability is not None
+                else None
+            ),
+            item.shift_code,
+            item.start_time,
+            item.end_time,
+            item.notes,
+            item.employment_type,
+            item.contract_start,
+            item.contract_end,
+            item.weekly_hours,
+            member_ids.get(item.resolution_identifier or ""),
+            _json(item.raw_payload),
+        )
+        for item in parsed.source_rows
+    ]
+    _executemany(
+        conn,
+        metrics,
+        """
+        INSERT INTO workforce_import_rows (
+            organization_id, workforce_import_id, source_sheet,
+            source_row_number, source_reference, source_record_key,
+            row_kind, source_external_identifier, driver_display_name,
+            transporter_id, station, operational_date, status_code,
+            availability, shift_code, start_time, end_time, notes,
+            employment_type, contract_start, contract_end, weekly_hours,
+            resolved_workforce_member_id, raw_payload
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?
+        )
+        """,
+        rows,
+        max(chunk_size, SOURCE_ROW_CHUNK_SIZE),
+    )
+    return len(rows)
+
+
 def apply_import(
     parsed: ParsedWorkforceWorkbook,
     *,
@@ -667,7 +733,7 @@ def apply_import(
             "excluded_rows": parsed.preview.excluded_rows,
             "confirmation_columns": parsed.preview.confirmation_columns,
         }
-        _execute(
+        import_cursor = _execute(
             conn,
             timings,
             """
@@ -690,6 +756,17 @@ def apply_import(
                 organization_id,
             ),
         )
+        workforce_import_id = int(import_cursor.lastrowid)
+        started = perf_counter()
+        _persist_source_rows(
+            conn,
+            parsed,
+            workforce_import_id,
+            member_ids,
+            timings,
+            chunk_size,
+        )
+        timings["persist_source_rows"] = perf_counter() - started
         timings["finalize"] = perf_counter() - finalize_started
         before_commit = perf_counter()
 
