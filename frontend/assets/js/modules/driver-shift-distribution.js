@@ -2,11 +2,15 @@ import {
   exportDistributionBatchCsv,
   getDistribution,
   getRecipientAccessLink,
+  getSharedPortal,
   prepareDistribution,
   prepareDistributionBatch,
   regenerateRecipientAccess,
+  regenerateSharedPortal,
   revokeRecipientAccess,
-} from "./driver-shift-planning-api.js?v=4";
+  revokeSharedPortal,
+  prepareSharedPortal,
+} from "./driver-shift-planning-api.js?v=5";
 import {
   filterDistributionRecipients,
   renderDistributionRecipients,
@@ -55,6 +59,7 @@ export function initDriverShiftDistribution() {
     selected: new Set(),
     selectionDirty: false,
     prepared: null,
+    portal: null,
   };
   const elements = {
     entry: byId("driverShiftDistributeBtn"),
@@ -75,6 +80,16 @@ export function initDriverShiftDistribution() {
     copyBatch: byId("driverShiftCopyBatch"),
     exportPrepared: byId("driverShiftExportPrepared"),
     backRecipients: byId("driverShiftBackRecipients"),
+    portal: byId("driverShiftPortal"),
+    portalEmpty: byId("driverShiftPortalEmpty"),
+    portalDetails: byId("driverShiftPortalDetails"),
+    portalInput: byId("driverShiftPortalLink"),
+    portalState: byId("driverShiftPortalState"),
+    portalExpiry: byId("driverShiftPortalExpiry"),
+    portalPrepare: byId("driverShiftPortalPrepare"),
+    portalCopy: byId("driverShiftPortalCopy"),
+    portalRevoke: byId("driverShiftPortalRevoke"),
+    portalRegenerate: byId("driverShiftPortalRegenerate"),
   };
 
   function status(message = "", tone = "") {
@@ -100,6 +115,7 @@ export function initDriverShiftDistribution() {
       return;
     }
     elements.section.hidden = false;
+    renderPortal();
     syncSelection();
     renderDistributionSummary(elements.summary, state.model.summary, state.selected.size);
     renderDistributionRecipients(
@@ -118,6 +134,33 @@ export function initDriverShiftDistribution() {
     });
   }
 
+  function renderPortal() {
+    elements.portal.hidden = !state.model;
+    if (!state.model) return;
+    const active = state.portal?.status === "ACTIVE" && Boolean(state.portal.access_url);
+    elements.portalEmpty.hidden = Boolean(state.portal);
+    elements.portalDetails.hidden = !state.portal;
+    elements.portalInput.value = active ? state.portal.access_url : "";
+    elements.portalState.textContent = state.portal?.status || "NON CREATO";
+    elements.portalState.dataset.status = state.portal?.status || "MISSING";
+    elements.portalExpiry.textContent = state.portal?.expires_at
+      ? `Valido fino al ${new Intl.DateTimeFormat("it-IT", { dateStyle: "medium" }).format(new Date(state.portal.expires_at))}`
+      : "";
+    elements.portalCopy.disabled = !active;
+    elements.portalRevoke.disabled = !active;
+    elements.portalRegenerate.hidden = !state.portal;
+  }
+
+  async function loadPortal({ quietMissing = false } = {}) {
+    if (!state.model) return;
+    try {
+      state.portal = await getSharedPortal(state.model.distribution.id);
+    } catch (error) {
+      if (quietMissing && error?.status === 404) state.portal = null;
+      else throw error;
+    }
+  }
+
   async function load({ quietMissing = false } = {}) {
     if (!state.planning || state.planning.status !== "ACTIVE") return;
     const request = ++state.request;
@@ -129,8 +172,10 @@ export function initDriverShiftDistribution() {
       if (changed) {
         state.selectionDirty = false;
         state.prepared = null;
+        state.portal = null;
         syncSelection({ reset: true });
       }
+      await loadPortal({ quietMissing: true });
       render();
     } catch (error) {
       if (request !== state.request) return;
@@ -140,6 +185,56 @@ export function initDriverShiftDistribution() {
         return;
       }
       status(userErrorPresentation("workforce.driver-shift-distribution", error).message, "error");
+    }
+  }
+
+  async function preparePortal() {
+    setLoading(elements.portalPrepare, true, "Creazione...");
+    try {
+      state.portal = await prepareSharedPortal(state.model.distribution.id);
+      renderPortal();
+      status("Link condiviso pronto. Nessun turno personale è visibile nel portale.", "success");
+    } catch (error) {
+      status(userErrorPresentation("workforce.driver-shift-portal", error).message, "error");
+    } finally {
+      setLoading(elements.portalPrepare, false);
+    }
+  }
+
+  async function copyPortal() {
+    if (!state.portal?.access_url) return;
+    setLoading(elements.portalCopy, true, "Copia...");
+    try {
+      await copyText(state.portal.access_url);
+      status("Link condiviso copiato. Puoi condividerlo una sola volta con tutti i driver.", "success");
+    } finally {
+      setLoading(elements.portalCopy, false);
+    }
+  }
+
+  async function revokePortal() {
+    setLoading(elements.portalRevoke, true, "Revoca...");
+    try {
+      state.portal = await revokeSharedPortal(state.model.distribution.id);
+      renderPortal();
+      status("Portale condiviso revocato.", "success");
+    } catch (error) {
+      status(userErrorPresentation("workforce.driver-shift-portal", error).message, "error");
+    } finally {
+      setLoading(elements.portalRevoke, false);
+    }
+  }
+
+  async function regeneratePortal() {
+    setLoading(elements.portalRegenerate, true, "Rigenera...");
+    try {
+      state.portal = await regenerateSharedPortal(state.model.distribution.id);
+      renderPortal();
+      status("Nuovo link condiviso pronto. Il precedente non è più valido.", "success");
+    } catch (error) {
+      status(userErrorPresentation("workforce.driver-shift-portal", error).message, "error");
+    } finally {
+      setLoading(elements.portalRegenerate, false);
     }
   }
 
@@ -233,6 +328,10 @@ export function initDriverShiftDistribution() {
   }
 
   elements.entry.addEventListener("click", prepare);
+  elements.portalPrepare.addEventListener("click", () => void preparePortal());
+  elements.portalCopy.addEventListener("click", () => void copyPortal());
+  elements.portalRevoke.addEventListener("click", () => void revokePortal());
+  elements.portalRegenerate.addEventListener("click", () => void regeneratePortal());
   elements.refresh.addEventListener("click", () => load());
   elements.search.addEventListener("input", () => { state.search = elements.search.value; render(); });
   elements.selectAll.addEventListener("click", () => {
@@ -287,6 +386,7 @@ export function initDriverShiftDistribution() {
       elements.entry.hidden = planning?.status !== "ACTIVE";
       if (planning?.status !== "ACTIVE") {
         state.model = null;
+        state.portal = null;
         state.selected.clear();
         state.request += 1;
         render();
@@ -295,6 +395,7 @@ export function initDriverShiftDistribution() {
         state.selected.clear();
         state.selectionDirty = false;
         state.prepared = null;
+        state.portal = null;
         render();
         void load({ quietMissing: true });
       }

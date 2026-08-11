@@ -6,6 +6,7 @@ from app.auth.tenant_context import bind_organization, reset_organization
 from app.core.database import db_session
 from app.main import app
 from app.plugins.workforce.application import driver_shift_distribution_service as service
+from app.plugins.workforce.application import driver_shift_portal_service
 from app.plugins.workforce.domain.driver_shift_distribution import DriverShiftDistributionError
 from app.workspace.reset_service import reset_workspace
 
@@ -261,7 +262,10 @@ def test_prepare_300_recipients_uses_batch_generation():
 
 def test_workspace_reset_includes_distribution_tables():
     planning_id, _ = _scenario(1)
-    service.prepare_distribution(ORG, planning_id, "qa@test")
+    distribution = service.prepare_distribution(ORG, planning_id, "qa@test")
+    driver_shift_portal_service.prepare_portal(
+        ORG, distribution.distribution.id, "qa@test",
+    )
     tenant = bind_organization(ORG)
     try:
         result = reset_workspace(actor="qa@test")
@@ -269,5 +273,7 @@ def test_workspace_reset_includes_distribution_tables():
         reset_organization(tenant)
     assert result.removed_counts.driver_shift_distributions == 1
     assert result.removed_counts.driver_shift_distribution_recipients == 1
+    assert result.removed_counts.driver_shift_distribution_portals == 1
     with db_session() as conn:
         assert conn.execute("SELECT COUNT(*) total FROM driver_shift_distributions").fetchone()["total"] == 0
+        assert conn.execute("SELECT COUNT(*) total FROM driver_shift_distribution_portals").fetchone()["total"] == 0

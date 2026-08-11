@@ -159,6 +159,10 @@ def prepare_distribution(
                 f"UPDATE driver_shift_distribution_recipients SET access_revoked_at=COALESCE(access_revoked_at, ?), updated_at=? WHERE organization_id=? AND distribution_id IN ({placeholders})",
                 (now, now, organization_id, *previous_ids),
             )
+            conn.execute(
+                f"UPDATE driver_shift_distribution_portals SET status='REVOKED', revoked_at=COALESCE(revoked_at, ?), updated_at=? WHERE organization_id=? AND distribution_id IN ({placeholders})",
+                (now, now, organization_id, *previous_ids),
+            )
         cursor = conn.execute(
             """INSERT INTO driver_shift_distributions (
                    organization_id, driver_shift_planning_id, planning_version,

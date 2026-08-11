@@ -39,6 +39,7 @@ _IDENTITY_TABLES = {
     "driver_shift_planning_published_rows",
     "driver_shift_distributions",
     "driver_shift_distribution_recipients",
+    "driver_shift_distribution_portals",
     "workforce_members",
     "workforce_requirements",
 }

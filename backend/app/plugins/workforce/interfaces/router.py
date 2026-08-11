@@ -11,6 +11,7 @@ from app.plugins.workforce.application import workforce_service
 from app.plugins.workforce.application import consecutivity_policy, override_service
 from app.plugins.workforce.application import driver_shift_planning_service
 from app.plugins.workforce.application import driver_shift_distribution_service
+from app.plugins.workforce.application import driver_shift_portal_service
 from app.plugins.workforce.application.contact_coverage_service import contact_coverage
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
@@ -51,6 +52,12 @@ from app.plugins.workforce.domain.driver_shift_distribution import (
     DriverShiftPreparedBatch,
 )
 from app.plugins.workforce.domain.contact_coverage import WorkforceContactCoverage
+from app.plugins.workforce.domain.driver_shift_portal import (
+    DriverShiftPortalAccess,
+    DriverShiftPortalAvailability,
+    DriverShiftPortalInvalidError,
+    DriverShiftPortalNotFoundError,
+)
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.interfaces.schemas import (
     WorkforceCalendarResponse,
@@ -69,6 +76,7 @@ from app.plugins.workforce.interfaces.schemas import (
     DriverShiftPlanningResolutionRequest,
     DriverShiftPlanningPublishRequest,
     DriverShiftBatchPrepareRequest,
+    DriverShiftPortalTokenRequest,
 )
 from app.workspace.status_service import (
     DemoWorkspaceResetRequiredError,
@@ -82,6 +90,10 @@ router = APIRouter(
 )
 public_router = APIRouter(tags=["public-driver-shifts"])
 DRIVER_SHIFTS_PAGE = Path(__file__).resolve().parents[5] / "frontend" / "driver-shifts" / "index.html"
+DRIVER_SHIFTS_ACCESS_PAGE = (
+    Path(__file__).resolve().parents[5]
+    / "frontend" / "driver-shifts" / "access" / "index.html"
+)
 PRIVATE_CACHE_HEADERS = {
     "Cache-Control": "no-store, private, max-age=0",
     "Pragma": "no-cache",
@@ -288,10 +300,103 @@ def export_driver_shift_batch(
         raise _distribution_error(exc) from exc
 
 
+@router.get(
+    "/driver-shift-distributions/{distribution_id}/portal",
+    response_model=DriverShiftPortalAccess,
+)
+def get_driver_shift_portal(
+    distribution_id: int, request: Request,
+) -> DriverShiftPortalAccess:
+    try:
+        user = _require(request, "workforce:read")
+        return driver_shift_portal_service.get_portal(
+            user.organization_id, distribution_id,
+        )
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-distributions/{distribution_id}/portal",
+    response_model=DriverShiftPortalAccess,
+)
+def prepare_driver_shift_portal(
+    distribution_id: int, request: Request,
+) -> DriverShiftPortalAccess:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_portal_service.prepare_portal(
+            user.organization_id, distribution_id, user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-distributions/{distribution_id}/portal/revoke",
+    response_model=DriverShiftPortalAccess,
+)
+def revoke_driver_shift_portal(
+    distribution_id: int, request: Request,
+) -> DriverShiftPortalAccess:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_portal_service.revoke_portal(
+            user.organization_id, distribution_id, user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-distributions/{distribution_id}/portal/regenerate",
+    response_model=DriverShiftPortalAccess,
+)
+def regenerate_driver_shift_portal(
+    distribution_id: int, request: Request,
+) -> DriverShiftPortalAccess:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_portal_service.regenerate_portal(
+            user.organization_id, distribution_id, user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
 @public_router.get("/app/driver-shifts", include_in_schema=False)
 @public_router.get("/app/driver-shifts/", include_in_schema=False)
 def driver_shifts_public_page() -> FileResponse:
     return FileResponse(DRIVER_SHIFTS_PAGE, headers=PRIVATE_CACHE_HEADERS)
+
+
+@public_router.get("/app/driver-shifts/access", include_in_schema=False)
+@public_router.get("/app/driver-shifts/access/", include_in_schema=False)
+def driver_shifts_access_page() -> FileResponse:
+    return FileResponse(DRIVER_SHIFTS_ACCESS_PAGE, headers=PRIVATE_CACHE_HEADERS)
+
+
+@public_router.post(
+    "/api/public/driver-shifts/access/validate",
+    response_model=DriverShiftPortalAvailability,
+)
+def validate_driver_shift_portal(
+    payload: DriverShiftPortalTokenRequest, response: Response,
+) -> DriverShiftPortalAvailability:
+    response.headers.update(PRIVATE_CACHE_HEADERS)
+    try:
+        return driver_shift_portal_service.validate_portal(payload.token)
+    except (DriverShiftPortalNotFoundError, DriverShiftPortalInvalidError) as exc:
+        raise HTTPException(status_code=404, detail="Accesso turni non disponibile.") from exc
 
 
 @public_router.get(

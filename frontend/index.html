@@ -920,6 +920,32 @@
               </div>
               <button id="driverShiftDistributionRefresh" type="button" class="secondary">Aggiorna stato</button>
             </header>
+            <section id="driverShiftPortal" class="driver-shift-portal" aria-labelledby="driverShiftPortalTitle" hidden>
+              <div class="driver-shift-portal-heading">
+                <div>
+                  <p class="eyebrow">Accesso driver</p>
+                  <h5 id="driverShiftPortalTitle">Link condiviso</h5>
+                  <p>Un solo link da condividere con tutti i driver.</p>
+                </div>
+                <span id="driverShiftPortalState" class="driver-shift-portal-state">NON CREATO</span>
+              </div>
+              <div id="driverShiftPortalEmpty" class="driver-shift-portal-empty">
+                <p>Crea il portale pubblico della distribuzione. In questa fase non mostra ancora turni o dati personali.</p>
+                <button id="driverShiftPortalPrepare" type="button">Genera link condiviso</button>
+              </div>
+              <div id="driverShiftPortalDetails" class="driver-shift-portal-details" hidden>
+                <label>
+                  Link condiviso
+                  <input id="driverShiftPortalLink" type="text" readonly autocomplete="off" />
+                </label>
+                <small id="driverShiftPortalExpiry"></small>
+                <div>
+                  <button id="driverShiftPortalCopy" type="button">Copia link</button>
+                  <button id="driverShiftPortalRevoke" type="button" class="quiet">Revoca</button>
+                  <button id="driverShiftPortalRegenerate" type="button" class="secondary">Rigenera</button>
+                </div>
+              </div>
+            </section>
             <dl id="driverShiftDistributionSummary" class="driver-shift-distribution-summary"></dl>
             <div class="driver-shift-distribution-toolbar">
               <div role="group" aria-label="Filtra destinatari distribuzione">
@@ -2481,6 +2507,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=84"></script>
+    <script type="module" src="./assets/js/app.js?v=85"></script>
 </body>
 </html>

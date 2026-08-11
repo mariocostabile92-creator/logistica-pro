@@ -158,3 +158,7 @@ class DriverShiftBatchPrepareRequest(BaseModel):
         if len(value) != len(set(value)):
             raise ValueError("Un destinatario non può essere ripetuto.")
         return value
+
+
+class DriverShiftPortalTokenRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=256)

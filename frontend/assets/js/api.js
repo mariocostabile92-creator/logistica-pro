@@ -817,6 +817,37 @@ export async function regenerateDriverShiftRecipientAccess(distributionId, recip
 }
 
 
+export async function getDriverShiftPortal(distributionId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/portal`,
+  ));
+}
+
+
+export async function prepareDriverShiftPortal(distributionId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/portal`,
+    { method: "POST" },
+  ));
+}
+
+
+export async function revokeDriverShiftPortal(distributionId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/portal/revoke`,
+    { method: "POST" },
+  ));
+}
+
+
+export async function regenerateDriverShiftPortal(distributionId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/portal/regenerate`,
+    { method: "POST" },
+  ));
+}
+
+
 export async function prepareDriverShiftBatch(distributionId, recipientIds = null) {
   return parseResponse(await fetch(
     `${API_BASE}/api/plugins/workforce/v1/driver-shift-distributions/${distributionId}/prepare-batch`,
