@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse
@@ -13,6 +14,7 @@ from app.plugins.workforce.application import driver_shift_planning_service
 from app.plugins.workforce.application import driver_shift_distribution_service
 from app.plugins.workforce.application import driver_shift_portal_service
 from app.plugins.workforce.application import driver_shift_credentials_service
+from app.plugins.workforce.application import driver_shift_driver_session_service
 from app.plugins.workforce.application.contact_coverage_service import contact_coverage
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
@@ -65,6 +67,13 @@ from app.plugins.workforce.domain.driver_shift_credentials import (
     DriverShiftCredentialReadModel,
     DriverShiftCredentialResetResult,
 )
+from app.plugins.workforce.domain.driver_shift_driver_session import (
+    DriverShiftDriverView,
+    DriverShiftLoginInvalidError,
+    DriverShiftLoginRateLimitedError,
+    DriverShiftLogoutView,
+    DriverShiftSessionInvalidError,
+)
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.interfaces.schemas import (
     WorkforceCalendarResponse,
@@ -84,7 +93,9 @@ from app.plugins.workforce.interfaces.schemas import (
     DriverShiftPlanningPublishRequest,
     DriverShiftBatchPrepareRequest,
     DriverShiftPortalTokenRequest,
+    DriverShiftPortalLoginRequest,
 )
+from app.core.config import SETTINGS
 from app.workspace.status_service import (
     DemoWorkspaceResetRequiredError,
     ensure_real_data_write_allowed,
@@ -105,6 +116,21 @@ PRIVATE_CACHE_HEADERS = {
     "Cache-Control": "no-store, private, max-age=0",
     "Pragma": "no-cache",
 }
+
+
+def _same_origin_public_mutation(request: Request) -> None:
+    fetch_site = request.headers.get("sec-fetch-site", "").casefold()
+    if fetch_site == "cross-site":
+        raise HTTPException(status_code=403, detail="Richiesta non valida.")
+    origin = request.headers.get("origin")
+    if not origin:
+        return
+    expected = {
+        f"{urlparse(SETTINGS.base_url).scheme}://{urlparse(SETTINGS.base_url).netloc}",
+        f"{request.url.scheme}://{request.url.netloc}",
+    }
+    if origin.rstrip("/") not in expected:
+        raise HTTPException(status_code=403, detail="Richiesta non valida.")
 
 
 async def _read_upload(file: UploadFile) -> tuple[bytes, str]:
@@ -481,6 +507,98 @@ def validate_driver_shift_portal(
         return driver_shift_portal_service.validate_portal(payload.token)
     except (DriverShiftPortalNotFoundError, DriverShiftPortalInvalidError) as exc:
         raise HTTPException(status_code=404, detail="Accesso turni non disponibile.") from exc
+
+
+@public_router.post(
+    "/api/public/driver-shifts/portal/login",
+    response_model=DriverShiftDriverView,
+)
+def login_driver_shift_portal(
+    payload: DriverShiftPortalLoginRequest,
+    request: Request,
+    response: Response,
+) -> DriverShiftDriverView:
+    response.headers.update(PRIVATE_CACHE_HEADERS)
+    _same_origin_public_mutation(request)
+    client_ip = request.client.host if request.client else "unknown"
+    try:
+        view, raw_token, expires_at = driver_shift_driver_session_service.login(
+            portal_token=payload.portal_token,
+            access_code=payload.access_code,
+            pin=payload.pin,
+            remember_device=payload.remember_device,
+            client_ip=client_ip,
+        )
+    except DriverShiftLoginRateLimitedError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail="Dati di accesso non validi.",
+            headers={"Retry-After": "900", **PRIVATE_CACHE_HEADERS},
+        ) from exc
+    except DriverShiftLoginInvalidError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail="Dati di accesso non validi.",
+            headers=PRIVATE_CACHE_HEADERS,
+        ) from exc
+    response.set_cookie(
+        driver_shift_driver_session_service.SESSION_COOKIE_NAME,
+        raw_token,
+        **driver_shift_driver_session_service.cookie_options(
+            remember_device=payload.remember_device,
+            expires_at=expires_at,
+        ),
+    )
+    return view
+
+
+@public_router.get(
+    "/api/public/driver-shifts/me",
+    response_model=DriverShiftDriverView,
+)
+def current_driver_shift_session(
+    request: Request,
+    response: Response,
+):
+    response.headers.update(PRIVATE_CACHE_HEADERS)
+    raw_token = request.cookies.get(
+        driver_shift_driver_session_service.SESSION_COOKIE_NAME
+    )
+    try:
+        return driver_shift_driver_session_service.current_session(raw_token)
+    except DriverShiftSessionInvalidError:
+        invalid = PlainTextResponse(
+            "Sessione driver non valida.",
+            status_code=401,
+            headers=PRIVATE_CACHE_HEADERS,
+        )
+        invalid.delete_cookie(
+            driver_shift_driver_session_service.SESSION_COOKIE_NAME,
+            path=driver_shift_driver_session_service.SESSION_COOKIE_PATH,
+            samesite=driver_shift_driver_session_service.SESSION_COOKIE_SAMESITE,
+        )
+        return invalid
+
+
+@public_router.post(
+    "/api/public/driver-shifts/logout",
+    response_model=DriverShiftLogoutView,
+)
+def logout_driver_shift_session(
+    request: Request,
+    response: Response,
+) -> DriverShiftLogoutView:
+    response.headers.update(PRIVATE_CACHE_HEADERS)
+    _same_origin_public_mutation(request)
+    driver_shift_driver_session_service.logout(
+        request.cookies.get(driver_shift_driver_session_service.SESSION_COOKIE_NAME)
+    )
+    response.delete_cookie(
+        driver_shift_driver_session_service.SESSION_COOKIE_NAME,
+        path=driver_shift_driver_session_service.SESSION_COOKIE_PATH,
+        samesite=driver_shift_driver_session_service.SESSION_COOKIE_SAMESITE,
+    )
+    return DriverShiftLogoutView()
 
 
 @public_router.get(

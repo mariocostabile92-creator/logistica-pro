@@ -56,6 +56,8 @@ class WorkspaceRemovedCounts(BaseModel):
     plannings: int = 0
     operation_snapshots: int = 0
     analyses: int = 0
+    driver_shift_login_attempts: int = 0
+    driver_shift_driver_sessions: int = 0
     workforce_import_rows: int = 0
     driver_shift_planning_sources: int = 0
     driver_shift_planning_resolutions: int = 0

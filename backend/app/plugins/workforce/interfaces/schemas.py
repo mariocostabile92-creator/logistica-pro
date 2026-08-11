@@ -162,3 +162,10 @@ class DriverShiftBatchPrepareRequest(BaseModel):
 
 class DriverShiftPortalTokenRequest(BaseModel):
     token: str = Field(min_length=1, max_length=256)
+
+
+class DriverShiftPortalLoginRequest(BaseModel):
+    portal_token: str = Field(min_length=1, max_length=256)
+    access_code: str = Field(min_length=1, max_length=64)
+    pin: str = Field(min_length=1, max_length=32)
+    remember_device: bool = False

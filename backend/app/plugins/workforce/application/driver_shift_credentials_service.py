@@ -29,7 +29,12 @@ def normalize_access_code(value: str) -> str:
 
 def _access_code_hash(value: str) -> str:
     key = (SETTINGS.secret_key or "operations-engine-development-driver-shifts").encode("utf-8")
-    return hmac.new(key, normalize_access_code(value).encode("ascii"), hashlib.sha256).hexdigest()
+    return hmac.new(key, normalize_access_code(value).encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def access_code_fingerprint(value: str) -> str:
+    """Return the deterministic, non-reversible credential lookup value."""
+    return _access_code_hash(value)
 
 
 def _new_access_code() -> str:

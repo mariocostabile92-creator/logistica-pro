@@ -489,6 +489,41 @@ def init_schema() -> None:
                 UNIQUE (id, organization_id)
             );
 
+            CREATE TABLE IF NOT EXISTS driver_shift_driver_sessions (
+                id TEXT PRIMARY KEY,
+                session_token_hash TEXT NOT NULL UNIQUE,
+                organization_id TEXT NOT NULL,
+                workforce_member_id INTEGER NOT NULL,
+                distribution_id INTEGER NOT NULL,
+                portal_id INTEGER NOT NULL,
+                portal_generation INTEGER NOT NULL,
+                credential_generation INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                last_seen_at TEXT NOT NULL,
+                revoked_at TEXT,
+                remember_device INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (distribution_id, organization_id)
+                    REFERENCES driver_shift_distributions(id, organization_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (portal_id) REFERENCES driver_shift_distribution_portals(id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (workforce_member_id) REFERENCES workforce_members(id)
+                    ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS driver_shift_login_attempts (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                portal_id INTEGER NOT NULL,
+                access_code_fingerprint TEXT NOT NULL,
+                ip_fingerprint TEXT NOT NULL,
+                attempted_at TEXT NOT NULL,
+                succeeded INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (portal_id) REFERENCES driver_shift_distribution_portals(id)
+                    ON DELETE CASCADE
+            );
+
             CREATE INDEX IF NOT EXISTS idx_workforce_status_date
                 ON workforce_day_statuses(date, workforce_member_id);
             CREATE INDEX IF NOT EXISTS idx_workforce_requirement_date
@@ -544,6 +579,20 @@ def init_schema() -> None:
             CREATE INDEX IF NOT EXISTS idx_driver_shift_credential_scope
                 ON driver_shift_driver_credentials(
                     organization_id, workforce_member_id, credential_status
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_driver_session_token
+                ON driver_shift_driver_sessions(session_token_hash);
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_driver_session_scope
+                ON driver_shift_driver_sessions(
+                    organization_id, workforce_member_id, distribution_id
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_login_attempt_code
+                ON driver_shift_login_attempts(
+                    portal_id, access_code_fingerprint, attempted_at
+                );
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_login_attempt_ip
+                ON driver_shift_login_attempts(
+                    portal_id, ip_fingerprint, attempted_at
                 );
 
             CREATE TABLE IF NOT EXISTS workforce_consecutivity_policies (

@@ -6,29 +6,57 @@
     <meta name="robots" content="noindex,nofollow,noarchive" />
     <meta name="referrer" content="no-referrer" />
     <title>I tuoi turni · Operations Engine</title>
-    <link rel="stylesheet" href="/app/assets/css/driver-shifts-access.css?v=1" />
+    <link rel="stylesheet" href="/app/assets/css/driver-shifts-access.css?v=2" />
   </head>
   <body>
     <main class="driver-shifts-access-shell">
-      <section id="driverShiftsAccessLoading" class="driver-shifts-access-card" aria-live="polite">
+      <section id="driverShiftsAccessLoading" class="driver-shifts-access-card driver-shifts-access-state" aria-live="polite">
         <span class="driver-shifts-access-mark" aria-hidden="true">OE</span>
+        <span class="driver-shifts-access-spinner" aria-hidden="true"></span>
         <p>Verifica accesso in corso…</p>
       </section>
 
       <section id="driverShiftsAccessContent" class="driver-shifts-access-card" hidden>
-        <span class="driver-shifts-access-mark" aria-hidden="true">OE</span>
-        <p class="eyebrow">Operations Engine</p>
-        <h1>I tuoi turni</h1>
-        <p class="driver-shifts-access-lead">Accedi per consultare la tua settimana di lavoro.</p>
-        <p>L’accesso personale sarà richiesto nel passaggio successivo.</p>
+        <header class="driver-shifts-access-header">
+          <span class="driver-shifts-access-mark" aria-hidden="true">OE</span>
+          <div>
+            <p class="eyebrow">Operations Engine</p>
+            <h1>I tuoi turni</h1>
+          </div>
+        </header>
+        <p class="driver-shifts-access-lead">Accedi al portale condiviso della tua organizzazione.</p>
+        <form id="driverShiftsLoginForm" class="driver-shifts-access-form" novalidate>
+          <label for="driverShiftsAccessCode">Codice di accesso</label>
+          <input id="driverShiftsAccessCode" name="access_code" type="text" inputmode="text"
+                 autocomplete="username" autocapitalize="characters" spellcheck="false"
+                 maxlength="64" required />
+          <label for="driverShiftsPin">PIN</label>
+          <input id="driverShiftsPin" name="pin" type="password" inputmode="numeric"
+                 autocomplete="current-password" maxlength="32" required />
+          <label class="driver-shifts-access-remember" for="driverShiftsRemember">
+            <input id="driverShiftsRemember" name="remember_device" type="checkbox" />
+            <span>Ricordami su questo dispositivo</span>
+          </label>
+          <p id="driverShiftsLoginError" class="driver-shifts-access-message" role="alert" hidden>Dati di accesso non validi.</p>
+          <button id="driverShiftsLoginSubmit" type="submit">Accedi</button>
+        </form>
       </section>
 
-      <section id="driverShiftsAccessError" class="driver-shifts-access-card" hidden>
+      <section id="driverShiftsAccessSuccess" class="driver-shifts-access-card" hidden>
+        <span class="driver-shifts-access-mark driver-shifts-access-mark-success" aria-hidden="true">✓</span>
+        <p class="eyebrow">Accesso eseguito</p>
+        <h1 id="driverShiftsWelcome">Ciao</h1>
+        <p id="driverShiftsPeriod" class="driver-shifts-access-period"></p>
+        <p class="driver-shifts-access-lead">I tuoi turni saranno mostrati qui.</p>
+        <button id="driverShiftsLogout" class="driver-shifts-access-secondary" type="button">Esci</button>
+      </section>
+
+      <section id="driverShiftsAccessError" class="driver-shifts-access-card driver-shifts-access-state" hidden>
         <span class="driver-shifts-access-mark" aria-hidden="true">OE</span>
         <h1>Link non disponibile</h1>
         <p>Il collegamento non è valido oppure non è più attivo.</p>
       </section>
     </main>
-    <script type="module" src="/app/assets/js/driver-shifts-access.js?v=1"></script>
+    <script type="module" src="/app/assets/js/driver-shifts-access.js?v=2"></script>
   </body>
 </html>

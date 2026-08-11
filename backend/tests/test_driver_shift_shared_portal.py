@@ -170,6 +170,6 @@ def test_public_landing_is_private_and_contains_no_operational_metadata():
     assert response.headers["cache-control"] == "no-store, private, max-age=0"
     assert response.headers["pragma"] == "no-cache"
     assert "I tuoi turni" in response.text
-    assert "Accedi per consultare la tua settimana di lavoro." in response.text
+    assert "Accedi al portale condiviso della tua organizzazione." in response.text
     for forbidden in ("Mario Rossi", "recipient", "organization_id", "station"):
         assert forbidden not in response.text

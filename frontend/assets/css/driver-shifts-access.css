@@ -12,9 +12,11 @@ body {
   min-width: 0;
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 15% 10%, rgb(22 126 107 / 12%), transparent 32rem),
-    #edf3f1;
+    radial-gradient(circle at 15% 10%, rgb(22 126 107 / 14%), transparent 32rem),
+    linear-gradient(155deg, #f7faf9 0%, #e8f0ed 100%);
 }
+
+button, input { font: inherit; }
 
 .driver-shifts-access-shell {
   display: grid;
@@ -24,33 +26,42 @@ body {
 }
 
 .driver-shifts-access-card {
-  width: min(100%, 32rem);
-  padding: clamp(1.5rem, 6vw, 3rem);
+  width: min(100%, 31rem);
+  padding: clamp(1.5rem, 6vw, 2.75rem);
+  overflow: hidden;
   border: 1px solid #bfd0cb;
-  border-radius: 1rem;
-  background: #fff;
-  box-shadow: 0 1rem 3rem rgb(16 50 42 / 12%);
+  border-radius: 1.2rem;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 1.25rem 3.5rem rgb(16 50 42 / 14%);
 }
 
 .driver-shifts-access-card[hidden] { display: none; }
 
+.driver-shifts-access-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .driver-shifts-access-mark {
   display: grid;
+  flex: 0 0 auto;
   place-items: center;
-  width: 3rem;
-  height: 3rem;
-  margin-bottom: 2rem;
-  border-radius: 0.8rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.9rem;
   background: #117e6b;
   color: #fff;
   font-weight: 850;
   letter-spacing: -0.04em;
 }
 
+.driver-shifts-access-mark-success { font-size: 1.4rem; }
+
 .eyebrow {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.35rem;
   color: #4a625c;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -58,25 +69,123 @@ body {
 
 h1 {
   margin: 0;
-  font-size: clamp(2rem, 10vw, 3rem);
+  overflow-wrap: anywhere;
+  font-size: clamp(1.85rem, 9vw, 2.75rem);
   line-height: 1.05;
   letter-spacing: -0.04em;
 }
 
 p {
-  max-width: 34ch;
+  max-width: 38ch;
   color: #4a625c;
   line-height: 1.55;
 }
 
 .driver-shifts-access-lead {
-  margin-top: 1.5rem;
+  margin: 1.5rem 0;
   color: #10231f;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
+.driver-shifts-access-form { display: grid; gap: 0.65rem; }
+
+.driver-shifts-access-form > label:not(.driver-shifts-access-remember) {
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.driver-shifts-access-form input[type="text"],
+.driver-shifts-access-form input[type="password"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #aebfba;
+  border-radius: 0.65rem;
+  color: #10231f;
+  background: #fff;
+}
+
+.driver-shifts-access-form input:focus-visible {
+  outline: 3px solid rgb(17 126 107 / 22%);
+  border-color: #117e6b;
+}
+
+.driver-shifts-access-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.35rem 0;
+  color: #334d46;
+  font-size: 0.9rem;
+}
+
+.driver-shifts-access-remember input { width: 1.1rem; height: 1.1rem; }
+
+.driver-shifts-access-form button,
+.driver-shifts-access-secondary {
+  width: 100%;
+  min-height: 3rem;
+  margin-top: 0.35rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: #117e6b;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.driver-shifts-access-form button:disabled,
+.driver-shifts-access-secondary:disabled { cursor: wait; opacity: 0.65; }
+
+.driver-shifts-access-secondary {
+  margin-top: 1.25rem;
+  border: 1px solid #aebfba;
+  background: #fff;
+  color: #184b40;
+}
+
+.driver-shifts-access-message {
+  margin: 0.25rem 0;
+  color: #b42318;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.driver-shifts-access-message[hidden] { display: none; }
+
+.driver-shifts-access-period {
+  margin: 1rem 0 0;
+  color: #31534a;
+  font-weight: 650;
+}
+
+.driver-shifts-access-state { text-align: center; }
+.driver-shifts-access-state .driver-shifts-access-mark { margin: 0 auto 1.5rem; }
+.driver-shifts-access-state p { margin-inline: auto; }
+
+.driver-shifts-access-spinner {
+  display: block;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin: 0 auto;
+  border: 2px solid #c6d5d1;
+  border-top-color: #117e6b;
+  border-radius: 50%;
+  animation: driver-shifts-spin 0.8s linear infinite;
+}
+
+@keyframes driver-shifts-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-shifts-access-spinner { animation: none; }
+}
+
 @media (max-width: 430px) {
-  .driver-shifts-access-shell { padding: 0.75rem; }
-  .driver-shifts-access-card { padding: 1.5rem; }
+  .driver-shifts-access-shell { align-items: start; padding: 0.75rem; }
+  .driver-shifts-access-card { margin-top: 0.75rem; padding: 1.35rem; border-radius: 1rem; }
+  .driver-shifts-access-header { align-items: flex-start; }
+  .driver-shifts-access-mark { width: 2.8rem; height: 2.8rem; }
 }

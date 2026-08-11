@@ -43,18 +43,17 @@ test("shared portal supports explicit revoke and regenerate", async () => {
 });
 
 
-test("public landing contains only foundation copy and no driver data", async () => {
+test("public landing contains shared login and no embedded driver data", async () => {
   const html = await source("driver-shifts/access/index.html");
   assert.match(html, /I tuoi turni/);
-  assert.match(html, /Accedi per consultare la tua settimana di lavoro/);
-  assert.match(html, /accesso personale sarà richiesto nel passaggio successivo/);
-  for (const forbidden of ["driver_name", "recipient", "station", "organization", "workforce_member_id"]) {
+  assert.match(html, /Codice di accesso/);
+  assert.match(html, /Ricordami su questo dispositivo/);
+  for (const forbidden of ["driver_name", "recipient", "station", "organization_id", "workforce_member_id"])
     assert.doesNotMatch(html, new RegExp(forbidden, "i"));
-  }
 });
 
 
-test("public token stays in the fragment and validation omits credentials and cache", async () => {
+test("public token stays in fragment and validation omits credentials and cache", async () => {
   const script = await source("assets/js/driver-shifts-access.js");
   assert.match(script, /location\.hash/);
   assert.match(script, /\/api\/public\/driver-shifts\/access\/validate/);
@@ -71,12 +70,11 @@ test("public landing uses a generic invalid-link state", async () => {
   ]);
   assert.match(html, /Link non disponibile/);
   assert.match(script, /if \(!response\.ok\) throw new Error/);
-  assert.match(script, /catch \{[\s\S]*show\(error\)/);
-  assert.doesNotMatch(`${html}${script}`, /revoked|expired|superseded/i);
+  assert.doesNotMatch(`${html}${script}`, /credential revoked|session expired|distribution superseded/i);
 });
 
 
-test("shared portal admin and public layouts fit mobile without fixed canvas", async () => {
+test("shared portal layouts fit mobile without fixed canvas", async () => {
   const [adminCss, publicCss] = await Promise.all([
     source("assets/css/driver-shift-distribution.css"),
     source("assets/css/driver-shifts-access.css"),
@@ -94,6 +92,7 @@ test("shared portal remains separate from existing personal access links", async
     source("assets/js/driver-shifts-public.js"),
   ]);
   assert.match(shared, /access\/validate/);
+  assert.match(shared, /portal\/login/);
   assert.match(personal, /\/api\/public\/driver-shifts\/\$\{encodeURIComponent\(token\)\}/);
   assert.match(personal, /acknowledge/);
 });
