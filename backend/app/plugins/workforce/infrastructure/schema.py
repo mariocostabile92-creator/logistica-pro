@@ -393,6 +393,8 @@ def init_schema() -> None:
                 end_time TEXT,
                 station TEXT,
                 transporter_id TEXT,
+                notes TEXT,
+                provenance_type TEXT NOT NULL DEFAULT 'IMMUTABLE_SOURCE',
                 provenance_summary TEXT NOT NULL,
                 selected_source_row_id INTEGER,
                 published_at TEXT NOT NULL,
@@ -633,6 +635,10 @@ def init_schema() -> None:
             "published_at": "TEXT",
             "published_by": "TEXT",
             "revision_of_planning_id": "INTEGER",
+        })
+        _ensure_columns(conn, "driver_shift_planning_published_rows", {
+            "notes": "TEXT",
+            "provenance_type": "TEXT NOT NULL DEFAULT 'IMMUTABLE_SOURCE'",
         })
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_workforce_member_org ON workforce_members(organization_id, active)"

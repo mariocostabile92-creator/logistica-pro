@@ -11,6 +11,7 @@ from app.importers.workbook_profiler.errors import WorkbookProfileError
 from app.plugins.workforce.application import workforce_service
 from app.plugins.workforce.application import consecutivity_policy, override_service
 from app.plugins.workforce.application import driver_shift_planning_service
+from app.plugins.workforce.application import legacy_canonical_publication_bridge
 from app.plugins.workforce.application import driver_shift_distribution_service
 from app.plugins.workforce.application import driver_shift_portal_service
 from app.plugins.workforce.application import driver_shift_credentials_service
@@ -44,6 +45,9 @@ from app.plugins.workforce.domain.driver_shift_planning import (
     DriverShiftPlanningSource,
     DriverShiftPlanningSourceNotFoundError,
     MergeClassification,
+)
+from app.plugins.workforce.domain.legacy_canonical_publication import (
+    LegacyCanonicalPublicationPreview,
 )
 from app.plugins.workforce.domain.driver_shift_distribution import (
     DriverShiftDistributionError,
@@ -92,6 +96,7 @@ from app.plugins.workforce.interfaces.schemas import (
     DriverShiftPlanningReplaceSourcesRequest,
     DriverShiftPlanningResolutionRequest,
     DriverShiftPlanningPublishRequest,
+    LegacyCanonicalPublishRequest,
     DriverShiftBatchPrepareRequest,
     DriverShiftPortalTokenRequest,
     DriverShiftPortalLoginRequest,
@@ -748,6 +753,48 @@ def publish_driver_shift_planning(
         return driver_shift_planning_service.publish_driver_shift_planning(
             user.organization_id, planning_id, payload.expected_version,
             payload.expected_preview_fingerprint, actor=user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftPlanningError as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.get(
+    "/driver-shift-plannings/{planning_id}/legacy-preview",
+    response_model=LegacyCanonicalPublicationPreview,
+)
+def legacy_canonical_publication_preview(
+    planning_id: int,
+    request: Request,
+) -> LegacyCanonicalPublicationPreview:
+    try:
+        user = _require(request, "workforce:read")
+        return legacy_canonical_publication_bridge.preview(
+            user.organization_id, planning_id
+        )
+    except DriverShiftPlanningError as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-plannings/{planning_id}/legacy-publish",
+    response_model=DriverShiftPlanningPublication,
+)
+def legacy_canonical_publication_publish(
+    planning_id: int,
+    payload: LegacyCanonicalPublishRequest,
+    request: Request,
+) -> DriverShiftPlanningPublication:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return legacy_canonical_publication_bridge.publish(
+            user.organization_id,
+            planning_id,
+            payload.expected_version,
+            payload.expected_fingerprint,
+            actor=user.email,
         )
     except DemoWorkspaceResetRequiredError as exc:
         raise _write_error(exc) from exc

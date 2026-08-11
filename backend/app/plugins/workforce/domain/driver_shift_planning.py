@@ -180,6 +180,8 @@ class DriverShiftPlanningPublishedRow(BaseModel):
     end_time: str | None = None
     station: str | None = None
     transporter_id: str | None = None
+    notes: str | None = None
+    provenance_type: str = "IMMUTABLE_SOURCE"
     provenance_summary: list[dict[str, object]] = Field(default_factory=list)
     selected_source_row_id: int | None = None
     published_at: str

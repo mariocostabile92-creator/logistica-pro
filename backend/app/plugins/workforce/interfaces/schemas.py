@@ -145,6 +145,11 @@ class DriverShiftPlanningPublishRequest(BaseModel):
     expected_preview_fingerprint: str = Field(min_length=64, max_length=64)
 
 
+class LegacyCanonicalPublishRequest(BaseModel):
+    expected_version: int = Field(gt=0)
+    expected_fingerprint: str = Field(min_length=64, max_length=64)
+
+
 class DriverShiftBatchPrepareRequest(BaseModel):
     recipient_ids: list[int] | None = Field(default=None, max_length=500)
 
