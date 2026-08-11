@@ -26,9 +26,11 @@ from app.plugins.workforce.domain.driver_shift_planning import (
     DriverShiftPlanning,
     DriverShiftPlanningError,
     DriverShiftPlanningMergePreview,
+    DriverShiftPlanningList,
     DriverShiftPlanningNotFoundError,
     DriverShiftPlanningSource,
     DriverShiftPlanningSourceNotFoundError,
+    MergeClassification,
 )
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.interfaces.schemas import (
@@ -42,7 +44,9 @@ from app.plugins.workforce.interfaces.schemas import (
     ConsecutivityOverrideRequest,
     ConsecutivityPolicyRequest,
     DriverShiftPlanningCreateRequest,
+    DriverShiftPlanningImportReference,
     DriverShiftPlanningSourceRequest,
+    DriverShiftPlanningReplaceSourcesRequest,
 )
 from app.workspace.status_service import (
     DemoWorkspaceResetRequiredError,
@@ -100,6 +104,67 @@ def _planning_error(exc: DriverShiftPlanningError | ValueError) -> HTTPException
             "message": str(exc),
         },
     )
+
+
+@router.get(
+    "/driver-shift-plannings",
+    response_model=DriverShiftPlanningList,
+)
+def list_driver_shift_plannings(request: Request) -> DriverShiftPlanningList:
+    user = _require(request, "workforce:read")
+    return driver_shift_planning_service.list_driver_shift_plannings(
+        user.organization_id
+    )
+
+
+@router.get(
+    "/driver-shift-plannings/current",
+    response_model=DriverShiftPlanning | None,
+)
+def current_driver_shift_planning(
+    request: Request,
+) -> DriverShiftPlanning | None:
+    user = _require(request, "workforce:read")
+    return driver_shift_planning_service.current_driver_shift_planning(
+        user.organization_id
+    )
+
+
+@router.get(
+    "/driver-shift-plannings/import-reference",
+    response_model=DriverShiftPlanningImportReference,
+)
+def resolve_driver_shift_import_reference(
+    request: Request,
+    fingerprint: str = Query(min_length=1, max_length=128),
+) -> DriverShiftPlanningImportReference:
+    try:
+        user = _require(request, "workforce:read")
+        return DriverShiftPlanningImportReference.model_validate(
+            driver_shift_planning_service.resolve_import_reference(
+                user.organization_id,
+                fingerprint,
+            )
+        )
+    except DriverShiftPlanningError as exc:
+        raise _planning_error(exc) from exc
+
+
+@router.get(
+    "/driver-shift-plannings/{planning_id}",
+    response_model=DriverShiftPlanning,
+)
+def get_driver_shift_planning(
+    planning_id: int,
+    request: Request,
+) -> DriverShiftPlanning:
+    try:
+        user = _require(request, "workforce:read")
+        return driver_shift_planning_service.get_driver_shift_planning(
+            user.organization_id, planning_id
+        )
+    except DriverShiftPlanningError as exc:
+        raise _planning_error(exc) from exc
 
 
 @router.post(
@@ -175,6 +240,30 @@ def remove_driver_shift_planning_source(
         raise _planning_error(exc) from exc
 
 
+@router.put(
+    "/driver-shift-plannings/{planning_id}/sources",
+    response_model=list[DriverShiftPlanningSource],
+)
+def replace_driver_shift_planning_sources(
+    planning_id: int,
+    payload: DriverShiftPlanningReplaceSourcesRequest,
+    request: Request,
+) -> list[DriverShiftPlanningSource]:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_planning_service.replace_sources(
+            user.organization_id,
+            planning_id,
+            payload.workforce_import_ids,
+            actor=user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except (DriverShiftPlanningError, ValueError) as exc:
+        raise _planning_error(exc) from exc
+
+
 @router.get(
     "/driver-shift-plannings/{planning_id}/merge-preview",
     response_model=DriverShiftPlanningMergePreview,
@@ -182,11 +271,20 @@ def remove_driver_shift_planning_source(
 def driver_shift_planning_merge_preview(
     planning_id: int,
     request: Request,
+    classification: MergeClassification | None = Query(default=None),
+    search: str | None = Query(default=None, max_length=160),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
 ) -> DriverShiftPlanningMergePreview:
     try:
         user = _require(request, "workforce:read")
         return driver_shift_planning_service.merge_preview(
-            user.organization_id, planning_id
+            user.organization_id,
+            planning_id,
+            classification=classification,
+            search=search,
+            limit=limit,
+            offset=offset,
         )
     except DriverShiftPlanningError as exc:
         raise _planning_error(exc) from exc

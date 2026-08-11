@@ -1,0 +1,410 @@
+.driver-shift-planning {
+  display: grid;
+  min-width: 0;
+  gap: 18px;
+  margin: 18px 0 22px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.driver-shift-section-heading,
+.driver-shift-planning-header,
+.driver-shift-subheading,
+.driver-shift-actions,
+.driver-shift-planning-meta,
+.driver-shift-dialog-actions,
+.driver-shift-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.driver-shift-section-heading h3,
+.driver-shift-planning-header h3,
+.driver-shift-subheading h4 {
+  margin: 2px 0 4px;
+}
+
+.driver-shift-section-heading p,
+.driver-shift-planning-header p,
+.driver-shift-subheading p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.driver-shift-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.driver-shift-actions label,
+.driver-shift-subheading label,
+.driver-shift-dialog label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.driver-shift-actions button,
+.driver-shift-filters button,
+.driver-shift-pagination button,
+.driver-shift-source-card button,
+.driver-shift-dialog button {
+  min-height: 44px;
+}
+
+.driver-shift-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border: 1px dashed var(--border-strong, var(--border));
+  border-radius: 8px;
+  background: var(--surface-soft, #f7faf9);
+}
+
+.driver-shift-empty p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+.driver-shift-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.driver-shift-planning-header {
+  align-items: flex-start;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.driver-shift-planning-meta {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.driver-shift-draft-badge,
+.driver-shift-classification {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 9px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--warning-text, #755100);
+  background: var(--warning-soft, #fff5d9);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.driver-shift-draft-notice {
+  margin: 12px 0 18px;
+  padding: 11px 13px;
+  border-left: 3px solid var(--warning, #b7791f);
+  color: var(--text-muted);
+  background: var(--warning-soft, #fff8e7);
+}
+
+.driver-shift-source-list,
+.driver-shift-provenance ul,
+.driver-shift-alternatives ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.driver-shift-source-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.driver-shift-source-card,
+.driver-shift-row {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.driver-shift-source-card > div:first-child,
+.driver-shift-row > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.driver-shift-source-card strong,
+.driver-shift-source-card span,
+.driver-shift-row strong,
+.driver-shift-row span,
+.driver-shift-row small {
+  overflow-wrap: anywhere;
+}
+
+.driver-shift-source-card > div:first-child span,
+.driver-shift-row header div span,
+.driver-shift-provenance span,
+.driver-shift-alternatives > span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.driver-shift-source-card dl,
+.driver-shift-row dl,
+.driver-shift-summary {
+  display: grid;
+  gap: 8px;
+  margin: 13px 0;
+}
+
+.driver-shift-source-card dl,
+.driver-shift-row dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.driver-shift-source-card dl div,
+.driver-shift-row dl div,
+.driver-shift-summary div {
+  min-width: 0;
+}
+
+.driver-shift-source-card dt,
+.driver-shift-row dt,
+.driver-shift-summary dt {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.driver-shift-source-card dd,
+.driver-shift-row dd,
+.driver-shift-summary dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 800;
+}
+
+.driver-shift-preview {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.driver-shift-subheading {
+  align-items: flex-end;
+}
+
+.driver-shift-subheading input {
+  width: min(320px, 100%);
+}
+
+.driver-shift-summary {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.driver-shift-summary div {
+  padding: 12px;
+  border-right: 1px solid var(--border);
+}
+
+.driver-shift-summary div:last-child {
+  border-right: 0;
+}
+
+.driver-shift-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.driver-shift-filters button {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.driver-shift-filters button.active {
+  color: var(--button-text, #fff);
+  background: var(--primary);
+}
+
+.driver-shift-rows {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.driver-shift-row[data-classification="POTENTIAL_CONFLICT"],
+.driver-shift-row[data-classification="IDENTITY_CONFLICT"] {
+  border-left: 4px solid var(--critical, #c53030);
+}
+
+.driver-shift-row[data-classification="EXACT_DUPLICATE"] {
+  border-left: 4px solid var(--warning, #b7791f);
+}
+
+.driver-shift-row p {
+  margin: 9px 0;
+  color: var(--text-muted);
+}
+
+.driver-shift-provenance,
+.driver-shift-alternatives {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.driver-shift-provenance li,
+.driver-shift-alternatives li {
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.driver-shift-alternatives li {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--surface-soft, #f7faf9);
+}
+
+.driver-shift-pagination {
+  justify-content: center;
+}
+
+.driver-shift-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.driver-shift-dialog::backdrop {
+  background: rgb(10 30 26 / 55%);
+}
+
+.driver-shift-dialog form,
+.driver-shift-dialog > div {
+  display: grid;
+  gap: 15px;
+}
+
+.driver-shift-dialog h3,
+.driver-shift-dialog p {
+  margin: 3px 0 0;
+}
+
+.driver-shift-period-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.driver-shift-dialog-actions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 1100px) {
+  .driver-shift-section-heading,
+  .driver-shift-subheading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .driver-shift-actions {
+    justify-content: flex-start;
+  }
+
+  .driver-shift-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .driver-shift-summary div {
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 720px) {
+  .driver-shift-planning {
+    padding: 15px;
+  }
+
+  .driver-shift-source-list,
+  .driver-shift-rows {
+    grid-template-columns: 1fr;
+  }
+
+  .driver-shift-planning-header,
+  .driver-shift-empty {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .driver-shift-planning-meta {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .driver-shift-actions,
+  .driver-shift-empty-actions,
+  .driver-shift-dialog-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .driver-shift-actions label,
+  .driver-shift-actions button,
+  .driver-shift-empty-actions button,
+  .driver-shift-dialog-actions button,
+  .driver-shift-subheading label,
+  .driver-shift-subheading input {
+    width: 100%;
+  }
+
+  .driver-shift-period-fields,
+  .driver-shift-source-card dl,
+  .driver-shift-row dl {
+    grid-template-columns: 1fr;
+  }
+
+  .driver-shift-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .driver-shift-pagination {
+    display: grid;
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+}

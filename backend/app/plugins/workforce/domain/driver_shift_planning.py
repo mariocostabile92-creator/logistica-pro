@@ -53,6 +53,8 @@ class DriverShiftPlanningSource(BaseModel):
     driver_shift_planning_id: int
     workforce_import_id: int
     source_filename: str
+    imported_at: str
+    row_count: int = Field(ge=0)
     source_order: int = Field(ge=0)
     added_at: str
     added_by: str
@@ -73,6 +75,9 @@ class MergeSourceReference(BaseModel):
 
 
 class MergeAlternative(BaseModel):
+    source_external_identifier: str | None = None
+    driver_display_name: str | None = None
+    transporter_id: str | None = None
     status_code: str | None = None
     availability: bool | None = None
     shift_code: str | None = None
@@ -103,6 +108,7 @@ class DriverShiftPlanningMergeRow(BaseModel):
 
 class DriverShiftPlanningMergeSummary(BaseModel):
     total_source_rows: int = 0
+    unified_rows: int = 0
     distinct_rows: int = 0
     exact_duplicates: int = 0
     potential_conflicts: int = 0
@@ -115,4 +121,12 @@ class DriverShiftPlanningMergePreview(BaseModel):
     sources: list[DriverShiftPlanningSource] = Field(default_factory=list)
     summary: DriverShiftPlanningMergeSummary
     rows: list[DriverShiftPlanningMergeRow] = Field(default_factory=list)
+    filtered_rows: int = 0
+    offset: int = Field(default=0, ge=0)
+    limit: int | None = Field(default=None, ge=1)
+    has_more: bool = False
 
+
+class DriverShiftPlanningList(BaseModel):
+    items: list[DriverShiftPlanning] = Field(default_factory=list)
+    current: DriverShiftPlanning | None = None

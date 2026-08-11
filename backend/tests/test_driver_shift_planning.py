@@ -327,6 +327,40 @@ def test_read_api_returns_merge_preview_and_write_api_uses_session_organization(
     assert preview.json()["planning"]["organization_id"] == ORG
 
 
+def test_q4_import_reference_api_returns_scoped_source_without_changing_import_contract():
+    import_id = _import("api-reference.xlsx")
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/plugins/workforce/v1/driver-shift-plannings/import-reference",
+        params={"fingerprint": f"fingerprint-{ORG}-api-reference.xlsx"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "workforce_import_id": import_id,
+        "fingerprint": f"fingerprint-{ORG}-api-reference.xlsx",
+        "original_filename": "api-reference.xlsx",
+        "imported_at": "2026-08-11T10:00:00Z",
+    }
+
+
+def test_q4_current_api_returns_current_draft_or_null():
+    client = TestClient(app)
+    empty = client.get(
+        "/api/plugins/workforce/v1/driver-shift-plannings/current"
+    )
+    assert empty.status_code == 200
+    assert empty.json() is None
+
+    planning = _planning()
+    current = client.get(
+        "/api/plugins/workforce/v1/driver-shift-plannings/current"
+    )
+    assert current.status_code == 200
+    assert current.json()["id"] == planning.id
+
+
 def test_workspace_reset_deletes_source_relations_before_plannings_and_imports():
     import_id = _import("Planning_A.xlsx")
     _row(import_id, driver="WF-1", member_id=1)
@@ -400,3 +434,121 @@ def test_merge_100k_source_rows_is_linear_and_reasonable():
     assert preview.summary.exact_duplicates == 50_000
     assert len(preview.rows) == 50_000
     assert elapsed < 15
+
+
+def test_q4_get_list_and_current_planning_are_scoped_and_deterministic():
+    first = _planning("2026-01-01", "2026-01-31")
+    second = _planning("2026-02-01", "2026-02-28")
+    foreign = _planning(
+        "2026-03-01", "2026-03-31", organization_id="other-organization"
+    )
+    collection = service.list_driver_shift_plannings(ORG)
+    assert [item.id for item in collection.items] == [second.id, first.id]
+    assert collection.current.id == second.id
+    assert service.current_driver_shift_planning(ORG).id == second.id
+    assert service.get_driver_shift_planning(ORG, first.id).id == first.id
+    assert foreign.id not in {item.id for item in collection.items}
+    with pytest.raises(DriverShiftPlanningNotFoundError):
+        service.get_driver_shift_planning(ORG, foreign.id)
+
+
+def test_q4_import_reference_resolves_fingerprint_only_inside_organization():
+    own_id = _import("Q4-source.xlsx")
+    _import("Q4-source.xlsx", organization_id="other-organization")
+    fingerprint = f"fingerprint-{ORG}-Q4-source.xlsx"
+
+    reference = service.resolve_import_reference(ORG, fingerprint)
+
+    assert reference["workforce_import_id"] == own_id
+    assert reference["original_filename"] == "Q4-source.xlsx"
+    with pytest.raises(DriverShiftPlanningSourceNotFoundError):
+        service.resolve_import_reference("other-organization", fingerprint)
+
+
+def test_q4_preview_pagination_filter_search_and_summary_are_invariant():
+    first = _import("Q4_A.xlsx")
+    second = _import("Q4_B.xlsx")
+    _row(first, driver="MARIO-1", member_id=1, transporter_id="T-MARIO", row_number=2)
+    _row(first, driver="ANNA-2", member_id=2, transporter_id="T-ANNA", row_number=3)
+    _row(second, driver="MARIO-1", member_id=1, transporter_id="T-MARIO", row_number=8)
+    _row(second, driver="ANNA-2", member_id=2, transporter_id="T-ANNA", shift="S9", row_number=9)
+    _row(second, driver="LUCA-3", member_id=3, transporter_id="T-LUCA", row_number=10)
+    planning = _planning()
+    service.add_source(ORG, planning.id, first)
+    service.add_source(ORG, planning.id, second)
+
+    page = service.merge_preview(ORG, planning.id, limit=1, offset=0)
+    second_page = service.merge_preview(ORG, planning.id, limit=1, offset=1)
+    exact = service.merge_preview(
+        ORG, planning.id,
+        classification=MergeClassification.EXACT_DUPLICATE,
+        limit=10,
+    )
+    driver_search = service.merge_preview(
+        ORG, planning.id, search="Driver MARIO-1", limit=10
+    )
+    tid_search = service.merge_preview(
+        ORG, planning.id, search="T-ANNA", limit=10
+    )
+
+    assert page.filtered_rows == 3
+    assert page.has_more is True
+    assert second_page.offset == 1
+    assert page.summary == second_page.summary == exact.summary
+    assert page.summary.unified_rows == 3
+    assert exact.filtered_rows == 1
+    assert exact.rows[0].classification == MergeClassification.EXACT_DUPLICATE
+    assert driver_search.filtered_rows == 1
+    assert driver_search.rows[0].source_external_identifier == "MARIO-1"
+    assert tid_search.filtered_rows == 1
+    assert tid_search.rows[0].source_external_identifier == "ANNA-2"
+
+
+def test_q4_add_remove_and_replace_recalculate_preview_without_canonical_writes():
+    first = _import("Q4_A.xlsx")
+    second = _import("Q4_B.xlsx")
+    _row(first, driver="WF-1", member_id=1)
+    _row(second, driver="WF-2", member_id=2)
+    planning = _planning()
+    before = _counts()
+    linked = service.add_source(ORG, planning.id, first)
+    assert service.merge_preview(ORG, planning.id).summary.total_source_rows == 1
+    service.add_source(ORG, planning.id, second)
+    assert service.merge_preview(ORG, planning.id).summary.total_source_rows == 2
+    service.remove_source(ORG, planning.id, linked.id)
+    assert service.merge_preview(ORG, planning.id).summary.total_source_rows == 1
+    service.replace_sources(ORG, planning.id, [first])
+    assert service.merge_preview(ORG, planning.id).summary.total_source_rows == 1
+    assert _counts() == before
+
+
+def test_q4_api_exposes_read_replace_and_paginated_preview_but_no_publish(monkeypatch):
+    monkeypatch.setattr(
+        "app.plugins.workforce.interfaces.router.ensure_real_data_write_allowed",
+        lambda: None,
+    )
+    import_id = _import("Q4_API.xlsx")
+    _row(import_id, driver="WF-API", member_id=7, transporter_id="T-API")
+    planning = _planning()
+    client = TestClient(app)
+
+    collection = client.get("/api/plugins/workforce/v1/driver-shift-plannings")
+    detail = client.get(
+        f"/api/plugins/workforce/v1/driver-shift-plannings/{planning.id}"
+    )
+    replaced = client.put(
+        f"/api/plugins/workforce/v1/driver-shift-plannings/{planning.id}/sources",
+        json={"workforce_import_ids": [import_id]},
+    )
+    preview = client.get(
+        f"/api/plugins/workforce/v1/driver-shift-plannings/{planning.id}/merge-preview",
+        params={"search": "T-API", "limit": 1, "offset": 0},
+    )
+    paths = app.openapi()["paths"]
+
+    assert collection.status_code == detail.status_code == replaced.status_code == 200
+    assert collection.json()["current"]["id"] == planning.id
+    assert replaced.json()[0]["row_count"] == 1
+    assert preview.status_code == 200
+    assert preview.json()["filtered_rows"] == 1
+    assert not any("publish" in path or "activate" in path for path in paths if "driver-shift-plannings" in path)

@@ -653,6 +653,92 @@ export async function getLatestPlanning() {
 }
 
 
+export async function listDriverShiftPlannings() {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings`,
+  ));
+}
+
+
+export async function getDriverShiftPlanning(planningId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}`,
+  ));
+}
+
+
+export async function getCurrentDriverShiftPlanning() {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/current`,
+  ));
+}
+
+
+export async function resolveDriverShiftPlanningImport(fingerprint) {
+  const params = new URLSearchParams({ fingerprint });
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/import-reference?${params}`,
+  ));
+}
+
+
+export async function createDriverShiftPlanning(payload) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  ));
+}
+
+
+export async function addDriverShiftPlanningSource(planningId, workforceImportId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/sources`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workforce_import_id: workforceImportId }),
+    },
+  ));
+}
+
+
+export async function replaceDriverShiftPlanningSources(planningId, workforceImportIds) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/sources`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workforce_import_ids: workforceImportIds }),
+    },
+  ));
+}
+
+
+export async function removeDriverShiftPlanningSource(planningId, sourceId) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/sources/${sourceId}`,
+    { method: "DELETE" },
+  ));
+}
+
+
+export async function getDriverShiftPlanningMergePreview(
+  planningId,
+  { classification = "", search = "", limit = 25, offset = 0 } = {},
+) {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (classification) params.set("classification", classification);
+  if (search) params.set("search", search);
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/driver-shift-plannings/${planningId}/merge-preview?${params}`,
+  ));
+}
+
+
 export async function getWorkforceFoundation(operationDate = "") {
   const params = new URLSearchParams();
   if (operationDate) params.set("operation_date", operationDate);

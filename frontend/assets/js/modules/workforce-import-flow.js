@@ -173,10 +173,11 @@ async function confirm(event) {
   startProgress("import");
   try {
     const result = await confirmWorkforceImport(file, importPreview.fingerprint);
+    const confirmedPreview = importPreview;
     importing = false;
     setBusy();
     close({ reset: true });
-    await afterImport(result);
+    await afterImport(result, confirmedPreview);
     notifySuccess(
       `Aggiornamento completato: ${result.members_created + result.members_updated} risorse, `
       + `${result.statuses_created + result.statuses_updated} stati.`,

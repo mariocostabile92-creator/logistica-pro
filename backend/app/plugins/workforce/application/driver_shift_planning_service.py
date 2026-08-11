@@ -13,6 +13,7 @@ from app.plugins.workforce.domain.driver_shift_planning import (
     MergeAlternative,
     MergeClassification,
     MergeSourceReference,
+    DriverShiftPlanningList,
 )
 from app.plugins.workforce.infrastructure import driver_shift_planning_repository as repository
 
@@ -43,6 +44,49 @@ def create_driver_shift_planning(
     return repository.create_planning(
         organization_id, start, end, normalized_label, actor.strip()
     )
+
+
+def get_driver_shift_planning(
+    organization_id: str,
+    logical_planning_id: int,
+) -> DriverShiftPlanning:
+    return repository.get_planning(organization_id, logical_planning_id)
+
+
+def list_driver_shift_plannings(
+    organization_id: str,
+) -> DriverShiftPlanningList:
+    items = repository.list_plannings(organization_id)
+    return DriverShiftPlanningList(
+        items=items,
+        current=items[0] if items else None,
+    )
+
+
+def current_driver_shift_planning(
+    organization_id: str,
+) -> DriverShiftPlanning | None:
+    return list_driver_shift_plannings(organization_id).current
+
+
+def resolve_import_reference(
+    organization_id: str,
+    fingerprint: str,
+) -> dict[str, object]:
+    normalized = fingerprint.strip()
+    if not normalized:
+        raise DriverShiftPlanningSourceNotFoundError(
+            "Fingerprint import non valido."
+        )
+    reference = repository.import_reference_by_fingerprint(
+        organization_id,
+        normalized,
+    )
+    if reference is None:
+        raise DriverShiftPlanningSourceNotFoundError(
+            "Workforce import non trovato nella stessa organizzazione."
+        )
+    return reference
 
 
 def _source_spec(
@@ -168,6 +212,9 @@ def _alternative(
 ) -> MergeAlternative:
     candidate = rows[0]
     return MergeAlternative(
+        source_external_identifier=candidate["source_external_identifier"],
+        driver_display_name=candidate["driver_display_name"],
+        transporter_id=candidate["transporter_id"],
         status_code=candidate["status_code"],
         availability=(
             bool(candidate["availability"])
@@ -185,17 +232,28 @@ def _alternative(
 def merge_preview(
     organization_id: str,
     logical_planning_id: int,
+    *,
+    classification: MergeClassification | None = None,
+    search: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
 ) -> DriverShiftPlanningMergePreview:
+    if offset < 0:
+        raise DriverShiftPlanningError("offset non può essere negativo.")
+    if limit is not None and not 1 <= limit <= 200:
+        raise DriverShiftPlanningError("limit deve essere compreso tra 1 e 200.")
     planning = repository.get_planning(organization_id, logical_planning_id)
     sources = repository.list_sources(organization_id, logical_planning_id)
     source_rows = repository.merge_rows(organization_id, logical_planning_id)
 
     transporter_identities: dict[str, set[str]] = defaultdict(set)
+    transporter_rows: dict[str, list[dict[str, object]]] = defaultdict(list)
     for row in source_rows:
         transporter_id = str(row["transporter_id"] or "").strip().casefold()
         identity = _identity_key(row)
         if transporter_id and identity:
             transporter_identities[transporter_id].add(identity)
+            transporter_rows[transporter_id].append(row)
     conflicting_transporters = {
         value for value, identities in transporter_identities.items()
         if len(identities) > 1
@@ -229,16 +287,26 @@ def merge_preview(
             alternatives[_operational_values(item)].append(item)
 
         if transporter_ids & conflicting_transporters:
-            classification = MergeClassification.IDENTITY_CONFLICT
+            row_classification = MergeClassification.IDENTITY_CONFLICT
         elif identity is None:
-            classification = MergeClassification.UNRESOLVED_IDENTITY
+            row_classification = MergeClassification.UNRESOLVED_IDENTITY
         elif len(alternatives) > 1:
-            classification = MergeClassification.POTENTIAL_CONFLICT
+            row_classification = MergeClassification.POTENTIAL_CONFLICT
         elif len(grouped_rows) > 1:
-            classification = MergeClassification.EXACT_DUPLICATE
+            row_classification = MergeClassification.EXACT_DUPLICATE
         else:
-            classification = MergeClassification.DISTINCT_ASSIGNMENT
-        counters[classification.value] += 1
+            row_classification = MergeClassification.DISTINCT_ASSIGNMENT
+        counters[row_classification.value] += 1
+
+        identity_conflict_rows: list[dict[str, object]] = []
+        if row_classification == MergeClassification.IDENTITY_CONFLICT:
+            seen_identity_rows: set[int] = set()
+            for transporter_id in transporter_ids & conflicting_transporters:
+                for item in transporter_rows[transporter_id]:
+                    item_id = int(item["id"])
+                    if item_id not in seen_identity_rows:
+                        identity_conflict_rows.append(item)
+                        seen_identity_rows.add(item_id)
 
         merged_rows.append(DriverShiftPlanningMergeRow(
             identity_key=identity,
@@ -259,26 +327,52 @@ def merge_preview(
             end_time=candidate["end_time"],
             station=candidate["station"],
             transporter_id=candidate["transporter_id"],
-            classification=classification,
+            classification=row_classification,
             source_references=[_reference(item) for item in grouped_rows],
             conflicting_alternatives=(
                 [_alternative(items) for items in alternatives.values()]
                 if len(alternatives) > 1 else []
-            ),
+            ) if row_classification != MergeClassification.IDENTITY_CONFLICT else [
+                _alternative([item]) for item in identity_conflict_rows
+            ],
         ))
+
+    requested_classification = classification
+    normalized_search = " ".join((search or "").split()).casefold()
+    filtered = [
+        row for row in merged_rows
+        if (
+            requested_classification is None
+            or row.classification == requested_classification
+        )
+        and (
+            not normalized_search
+            or normalized_search in " ".join(filter(None, (
+                row.display_name,
+                row.source_external_identifier,
+                row.transporter_id,
+            ))).casefold()
+        )
+    ]
+    paginated = filtered[offset:] if limit is None else filtered[offset:offset + limit]
 
     return DriverShiftPlanningMergePreview(
         planning=planning,
         sources=sources,
         summary=DriverShiftPlanningMergeSummary(
             total_source_rows=len(source_rows),
+            unified_rows=len(merged_rows),
             distinct_rows=counters[MergeClassification.DISTINCT_ASSIGNMENT.value],
             exact_duplicates=counters[MergeClassification.EXACT_DUPLICATE.value],
             potential_conflicts=counters[MergeClassification.POTENTIAL_CONFLICT.value],
             identity_conflicts=len(conflicting_transporters),
             unresolved_rows=unresolved_source_rows,
         ),
-        rows=merged_rows,
+        rows=paginated,
+        filtered_rows=len(filtered),
+        offset=offset,
+        limit=limit,
+        has_more=(offset + len(paginated)) < len(filtered),
     )
 
 
@@ -289,4 +383,3 @@ def list_identity_rows_for_logical_planning(
     return repository.list_identity_rows_for_logical_planning(
         organization_id, logical_planning_id
     )
-

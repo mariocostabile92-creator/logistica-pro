@@ -839,6 +839,118 @@
         </div>
       </div>
 
+      <section
+        id="driverShiftPlanningSection"
+        class="driver-shift-planning"
+        aria-labelledby="driverShiftPlanningTitle"
+        aria-busy="false"
+        hidden
+      >
+        <header class="driver-shift-section-heading">
+          <div>
+            <p class="eyebrow">Workforce · Turni driver</p>
+            <h3 id="driverShiftPlanningTitle">Fonti turni</h3>
+            <p>Combina più file in una preview verificabile prima della futura pubblicazione.</p>
+          </div>
+          <div class="driver-shift-actions">
+            <label id="driverShiftPlanningSelectorWrap" hidden>
+              Planning corrente
+              <select id="driverShiftPlanningSelector"></select>
+            </label>
+            <button id="driverShiftCreateBtn" type="button" class="secondary">Nuovo planning</button>
+            <button id="driverShiftAddSourceBtn" type="button">Aggiungi file turni</button>
+            <button id="driverShiftReplaceSourcesBtn" type="button" class="secondary">Sostituisci fonti</button>
+          </div>
+        </header>
+
+        <div id="driverShiftPlanningState" class="driver-shift-empty" aria-live="polite"></div>
+
+        <div id="driverShiftPlanningWorkspace" hidden>
+          <div id="driverShiftPlanningHeader" class="driver-shift-planning-header"></div>
+          <p class="driver-shift-draft-notice">
+            Questa combinazione è una BOZZA e non modifica ancora i turni operativi.
+            L’ordine delle fonti non risolve automaticamente i conflitti.
+          </p>
+
+          <section aria-labelledby="driverShiftSourcesTitle">
+            <div class="driver-shift-subheading">
+              <h4 id="driverShiftSourcesTitle">File collegati</h4>
+            </div>
+            <ul id="driverShiftPlanningSources" class="driver-shift-source-list"></ul>
+          </section>
+
+          <section class="driver-shift-preview" aria-labelledby="driverShiftPreviewTitle">
+            <div class="driver-shift-subheading">
+              <div>
+                <h4 id="driverShiftPreviewTitle">Preview unificata</h4>
+                <p>Solo consultazione: duplicati e conflitti restano tracciati.</p>
+              </div>
+              <label>
+                Cerca driver o T-ID
+                <input id="driverShiftMergeSearch" type="search" autocomplete="off" />
+              </label>
+            </div>
+            <dl id="driverShiftMergeSummary" class="driver-shift-summary"></dl>
+            <div class="driver-shift-filters" role="group" aria-label="Filtra righe preview">
+              <button type="button" data-driver-shift-filter="" class="active" aria-pressed="true">Tutte</button>
+              <button type="button" data-driver-shift-filter="DISTINCT_ASSIGNMENT" aria-pressed="false">Distinte</button>
+              <button type="button" data-driver-shift-filter="EXACT_DUPLICATE" aria-pressed="false">Duplicati</button>
+              <button type="button" data-driver-shift-filter="POTENTIAL_CONFLICT" aria-pressed="false">Conflitti</button>
+              <button type="button" data-driver-shift-filter="IDENTITY_CONFLICT" aria-pressed="false">Identità</button>
+              <button type="button" data-driver-shift-filter="UNRESOLVED_IDENTITY" aria-pressed="false">Non risolte</button>
+            </div>
+            <div id="driverShiftMergeRows" class="driver-shift-rows" aria-live="polite"></div>
+            <nav class="driver-shift-pagination" aria-label="Pagine preview turni">
+              <button id="driverShiftPrevious" type="button" class="secondary">Precedenti</button>
+              <span id="driverShiftPaginationStatus" aria-live="polite">0–0 di 0</span>
+              <button id="driverShiftNext" type="button" class="secondary">Successive</button>
+            </nav>
+          </section>
+        </div>
+      </section>
+
+      <dialog id="driverShiftPlanningDialog" class="driver-shift-dialog" aria-labelledby="driverShiftPlanningDialogTitle">
+        <form id="driverShiftPlanningForm">
+          <header>
+            <div><p class="eyebrow">Planning turni</p><h3 id="driverShiftPlanningDialogTitle">Crea planning</h3></div>
+          </header>
+          <p>Il periodo è obbligatorio. Se hai appena importato un file, il range rilevato è proposto ma resta modificabile.</p>
+          <label>Etichetta<input id="driverShiftPlanningLabel" type="text" maxlength="160" /></label>
+          <div class="driver-shift-period-fields">
+            <label>Data inizio<input id="driverShiftPlanningStart" type="date" required /></label>
+            <label>Data fine<input id="driverShiftPlanningEnd" type="date" required /></label>
+          </div>
+          <div class="driver-shift-dialog-actions">
+            <button id="driverShiftPlanningCancel" type="button" class="secondary">Annulla</button>
+            <button id="driverShiftPlanningSave" type="submit">Crea planning</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="driverShiftReplaceDialog" class="driver-shift-dialog" aria-labelledby="driverShiftReplaceTitle">
+        <div>
+          <p class="eyebrow">Sostituzione fonti</p>
+          <h3 id="driverShiftReplaceTitle">Sostituisci la combinazione</h3>
+          <p>Le fonti precedenti resteranno nello storico import. Verrà modificato soltanto il set del Planning turni in BOZZA.</p>
+          <div class="driver-shift-dialog-actions">
+            <button id="driverShiftReplaceCancel" type="button" class="secondary">Annulla</button>
+            <button id="driverShiftReplaceConfirm" type="button">Seleziona nuovo file</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="driverShiftRemoveDialog" class="driver-shift-dialog" aria-labelledby="driverShiftRemoveTitle">
+        <div>
+          <p class="eyebrow">Planning turni</p>
+          <h3 id="driverShiftRemoveTitle">Rimuovi dalla combinazione?</h3>
+          <p>L’import originale resterà nello storico. Nessun file verrà eliminato.</p>
+          <div class="driver-shift-dialog-actions">
+            <button id="driverShiftRemoveCancel" type="button" class="secondary">Annulla</button>
+            <button id="driverShiftRemoveConfirm" type="button">Rimuovi dalla combinazione</button>
+          </div>
+        </div>
+      </dialog>
+
       <article id="workforceReadyView" class="workforce-workspace" hidden>
         <section class="workforce-foundation" aria-labelledby="workforceFoundationTitle">
           <header class="workforce-foundation-header">
@@ -2296,6 +2408,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-  <script type="module" src="./assets/js/app.js?v=76"></script>
+  <script type="module" src="./assets/js/app.js?v=77"></script>
 </body>
 </html>

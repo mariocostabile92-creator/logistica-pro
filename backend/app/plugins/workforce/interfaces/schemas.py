@@ -109,3 +109,23 @@ class DriverShiftPlanningCreateRequest(BaseModel):
 class DriverShiftPlanningSourceRequest(BaseModel):
     workforce_import_id: int = Field(gt=0)
     source_order: int | None = Field(default=None, ge=0)
+
+
+class DriverShiftPlanningImportReference(BaseModel):
+    workforce_import_id: int = Field(gt=0)
+    fingerprint: str
+    original_filename: str
+    imported_at: str
+
+
+class DriverShiftPlanningReplaceSourcesRequest(BaseModel):
+    workforce_import_ids: list[int] = Field(min_length=1, max_length=100)
+
+    @field_validator("workforce_import_ids")
+    @classmethod
+    def valid_import_ids(cls, value: list[int]) -> list[int]:
+        if any(item <= 0 for item in value):
+            raise ValueError("Gli ID import devono essere positivi.")
+        if len(set(value)) != len(value):
+            raise ValueError("Una source non può essere ripetuta.")
+        return value

@@ -36,6 +36,8 @@ def _source(row) -> DriverShiftPlanningSource:
         "driver_shift_planning_id": row["driver_shift_planning_id"],
         "workforce_import_id": row["workforce_import_id"],
         "source_filename": row["source_filename"],
+        "imported_at": row["imported_at"],
+        "row_count": int(row["row_count"] or 0),
         "source_order": row["source_order"],
         "added_at": row["added_at"],
         "added_by": row["added_by"],
@@ -84,6 +86,26 @@ def get_planning(organization_id: str, planning_id: int) -> DriverShiftPlanning:
     return _planning(row)
 
 
+def list_plannings(organization_id: str) -> list[DriverShiftPlanning]:
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM driver_shift_plannings
+            WHERE organization_id = ?
+            ORDER BY
+                CASE status
+                    WHEN 'DRAFT' THEN 0
+                    WHEN 'ACTIVE' THEN 1
+                    ELSE 2
+                END,
+                updated_at DESC,
+                id DESC
+            """,
+            (organization_id,),
+        ).fetchall()
+    return [_planning(row) for row in rows]
+
+
 def source_facts(organization_id: str, workforce_import_id: int) -> dict[str, object] | None:
     with db_session() as conn:
         row = conn.execute(
@@ -106,6 +128,23 @@ def source_facts(organization_id: str, workforce_import_id: int) -> dict[str, ob
     return ({key: row[key] for key in row.keys()} if row else None)
 
 
+def import_reference_by_fingerprint(
+    organization_id: str,
+    fingerprint: str,
+) -> dict[str, object] | None:
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT id AS workforce_import_id, fingerprint,
+                   original_filename, imported_at
+            FROM workforce_imports
+            WHERE organization_id = ? AND fingerprint = ?
+            """,
+            (organization_id, fingerprint),
+        ).fetchone()
+    return ({key: row[key] for key in row.keys()} if row else None)
+
+
 def list_sources(
     organization_id: str,
     planning_id: int,
@@ -115,6 +154,8 @@ def list_sources(
         rows = conn.execute(
             """
             SELECT s.*, i.original_filename AS source_filename,
+                   i.imported_at,
+                   COUNT(r.id) AS row_count,
                    MIN(r.operational_date) AS date_from,
                    MAX(r.operational_date) AS date_to,
                    p.period_start, p.period_end
@@ -134,7 +175,7 @@ def list_sources(
               AND s.driver_shift_planning_id = ?
             GROUP BY s.id, s.organization_id, s.driver_shift_planning_id,
                      s.workforce_import_id, s.source_order, s.added_at,
-                     s.added_by, s.status, i.original_filename,
+                     s.added_by, s.status, i.original_filename, i.imported_at,
                      p.period_start, p.period_end
             ORDER BY s.source_order, s.id
             """,

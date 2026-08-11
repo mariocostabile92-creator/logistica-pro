@@ -35,6 +35,7 @@ import {
   initWorkforceFoundation,
   renderWorkforceFoundation,
 } from "./workforce-foundation.js?v=2";
+import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=1";
 
 
 const PAGE_STATES = Object.freeze({
@@ -56,6 +57,7 @@ let activeTab = "calendar";
 let anomalyLimit = ANOMALY_PAGE_SIZE;
 let workforceImportFlow = null;
 let workforceDetailPanel = null;
+let driverShiftPlanning = null;
 let feedbackTimeout = null;
 let selectedCellKey = null;
 
@@ -354,7 +356,10 @@ async function loadCalendar(range = null) {
 async function refresh() {
   setPageState(PAGE_STATES.IMPORTING);
   try {
-    const status = await getWorkforceStatus();
+    const [status] = await Promise.all([
+      getWorkforceStatus(),
+      driverShiftPlanning?.refresh(),
+    ]);
     currentStatus = status;
     calendarLoaded = false;
     loaded = true;
@@ -519,7 +524,8 @@ export function initWorkforcePage() {
     onSelectionCleared: () => { selectedCellKey = null; },
   });
   workforceImportFlow = initWorkforceImportFlow({
-    onImported: async () => {
+    onImported: async (result, preview) => {
+      await driverShiftPlanning?.handleImported(result, preview);
       calendarLoaded = false;
       document.dispatchEvent(new CustomEvent("workforce:data-imported", {
         detail: { datasetType: "workforce" },
@@ -527,6 +533,9 @@ export function initWorkforcePage() {
       await refresh();
     },
     onSuccess: showWorkforceFeedback,
+  });
+  driverShiftPlanning = initDriverShiftPlanning({
+    openImport: () => workforceImportFlow.open(),
   });
   byId("workforceRefreshBtn").addEventListener("click", () => {
     loadFromAnchor(byId("workforceDatePicker").value);
@@ -593,6 +602,7 @@ export function initWorkforcePage() {
     currentData = { members: [], statuses: [], coverage: [] };
     selectedCellKey = null;
     workforceImportFlow.reset();
+    driverShiftPlanning.reset();
     refresh();
   });
 }
