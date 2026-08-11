@@ -17,6 +17,10 @@ import {
   renderDistributionSummary,
 } from "./driver-shift-distribution-presenter.js?v=3";
 import { initDriverShiftCredentials } from "./driver-shift-credentials.js?v=1";
+import {
+  buildDriverShiftGroupMessage,
+  copyGroupMessage,
+} from "./driver-shift-group-message.js?v=1";
 import { byId, setLoading } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 
@@ -61,7 +65,9 @@ export function initDriverShiftDistribution() {
     selectionDirty: false,
     prepared: null,
     portal: null,
+    credentialModel: null,
     credentialStatuses: new Map(),
+    newRevision: false,
   };
   const elements = {
     entry: byId("driverShiftDistributeBtn"),
@@ -92,6 +98,14 @@ export function initDriverShiftDistribution() {
     portalCopy: byId("driverShiftPortalCopy"),
     portalRevoke: byId("driverShiftPortalRevoke"),
     portalRegenerate: byId("driverShiftPortalRegenerate"),
+    groupReadiness: byId("driverShiftGroupReadiness"),
+    groupSummary: byId("driverShiftGroupSummary"),
+    groupWarning: byId("driverShiftGroupWarning"),
+    prepareMissingAccesses: byId("driverShiftPrepareMissingAccesses"),
+    revisionNotice: byId("driverShiftRevisionNotice"),
+    groupCopy: byId("driverShiftGroupMessageCopy"),
+    messageFallback: byId("driverShiftMessageFallback"),
+    messageFallbackText: byId("driverShiftMessageFallbackText"),
   };
 
   function status(message = "", tone = "") {
@@ -101,7 +115,8 @@ export function initDriverShiftDistribution() {
 
   const credentialsController = initDriverShiftCredentials({
     status,
-    onChanged(_model, statusMap) {
+    onChanged(model, statusMap) {
+      state.credentialModel = model;
       state.credentialStatuses = statusMap;
       if (state.model) render();
     },
@@ -160,6 +175,106 @@ export function initDriverShiftDistribution() {
     elements.portalCopy.disabled = !active;
     elements.portalRevoke.disabled = !active;
     elements.portalRegenerate.hidden = !state.portal;
+    renderGroupShare();
+  }
+
+  function renderGroupSummary(summary, credentialsReady) {
+    const values = [
+      ["Driver", summary?.recipients_total],
+      ["Accessi pronti", credentialsReady],
+      ["Visualizzati", summary?.opened],
+      ["Presa visione", summary?.acknowledged],
+      ["Non visualizzati", summary?.not_opened],
+    ];
+    const fragment = document.createDocumentFragment();
+    values.forEach(([label, value]) => {
+      const item = document.createElement("div");
+      const term = document.createElement("dt");
+      const detail = document.createElement("dd");
+      term.textContent = label;
+      detail.textContent = String(value ?? 0);
+      item.append(term, detail);
+      fragment.append(item);
+    });
+    elements.groupSummary.replaceChildren(fragment);
+  }
+
+  function renderGroupShare() {
+    const credentialSummary = state.credentialModel?.summary;
+    const distributionSummary = state.model?.summary;
+    const total = Number(credentialSummary?.recipients_total ?? distributionSummary?.recipients_total ?? 0);
+    const ready = Number(credentialSummary?.credentials_ready ?? 0);
+    const notReady = Math.max(0, total - ready);
+    elements.groupReadiness.textContent = credentialSummary
+      ? `Accessi pronti: ${ready}/${total}`
+      : "Verifica accessi personali...";
+    elements.groupWarning.hidden = !credentialSummary || notReady === 0;
+    elements.groupWarning.textContent = notReady === 1
+      ? "1 driver non ha ancora un accesso personale."
+      : `${notReady} driver non hanno ancora un accesso personale.`;
+    elements.prepareMissingAccesses.hidden = !credentialSummary || Number(credentialSummary.missing || 0) === 0;
+    elements.groupCopy.disabled = !credentialSummary || ready === 0;
+    elements.revisionNotice.hidden = !state.newRevision;
+    renderGroupSummary(distributionSummary, ready);
+  }
+
+  function groupMessage() {
+    return buildDriverShiftGroupMessage({
+      periodStart: state.model.distribution.period_start,
+      periodEnd: state.model.distribution.period_end,
+      sharedPortalUrl: state.portal.access_url,
+    });
+  }
+
+  function showMessageFallback(message) {
+    elements.messageFallbackText.value = message;
+    elements.messageFallback.hidden = false;
+    elements.messageFallbackText.focus();
+    elements.messageFallbackText.select();
+  }
+
+  function clearMessageFallback() {
+    elements.messageFallback.hidden = true;
+    elements.messageFallbackText.value = "";
+  }
+
+  async function ensureActivePortal() {
+    if (state.portal?.status === "ACTIVE" && state.portal.access_url) return true;
+    if (state.portal) {
+      status("Il link condiviso non è attivo. Rigeneralo prima di copiare il messaggio.", "error");
+      return false;
+    }
+    state.portal = await prepareSharedPortal(state.model.distribution.id);
+    renderPortal();
+    const active = state.portal?.status === "ACTIVE" && Boolean(state.portal.access_url);
+    if (!active) status("Il link condiviso non è attivo. Rigeneralo prima di copiare il messaggio.", "error");
+    return active;
+  }
+
+  async function copyGroupMessageForWhatsApp() {
+    const credentialSummary = state.credentialModel?.summary;
+    if (!credentialSummary || Number(credentialSummary.credentials_ready || 0) === 0) {
+      status("Prepara almeno un accesso personale prima di copiare il messaggio.", "error");
+      return;
+    }
+    setLoading(elements.groupCopy, true, "Preparazione...");
+    try {
+      if (!await ensureActivePortal()) return;
+      const message = groupMessage();
+      elements.messageFallback.hidden = true;
+      elements.messageFallbackText.value = "";
+      if (await copyGroupMessage(message)) {
+        status("Messaggio copiato. Ora puoi incollarlo nel gruppo WhatsApp.", "success");
+      } else {
+        showMessageFallback(message);
+        status("Copia automatica non disponibile. Copia il messaggio dal campo mostrato.", "");
+      }
+    } catch (error) {
+      status(userErrorPresentation("workforce.driver-shift-group-message", error).message, "error");
+    } finally {
+      setLoading(elements.groupCopy, false);
+      renderGroupShare();
+    }
   }
 
   async function loadPortal({ quietMissing = false } = {}) {
@@ -184,6 +299,8 @@ export function initDriverShiftDistribution() {
         state.selectionDirty = false;
         state.prepared = null;
         state.portal = null;
+        state.credentialModel = null;
+        clearMessageFallback();
         syncSelection({ reset: true });
       }
       await loadPortal({ quietMissing: true });
@@ -257,6 +374,7 @@ export function initDriverShiftDistribution() {
       state.model = await prepareDistribution(state.planning.id);
       state.selectionDirty = false;
       state.prepared = null;
+      clearMessageFallback();
       syncSelection({ reset: true });
       credentialsController.setDistribution(state.model.distribution);
       render();
@@ -345,6 +463,10 @@ export function initDriverShiftDistribution() {
   elements.portalCopy.addEventListener("click", () => void copyPortal());
   elements.portalRevoke.addEventListener("click", () => void revokePortal());
   elements.portalRegenerate.addEventListener("click", () => void regeneratePortal());
+  elements.groupCopy.addEventListener("click", () => void copyGroupMessageForWhatsApp());
+  elements.prepareMissingAccesses.addEventListener("click", () => (
+    void credentialsController.prepareMissing(elements.prepareMissingAccesses)
+  ));
   elements.refresh.addEventListener("click", () => load());
   elements.search.addEventListener("input", () => { state.search = elements.search.value; render(); });
   elements.selectAll.addEventListener("click", () => {
@@ -402,12 +524,19 @@ export function initDriverShiftDistribution() {
 
   return {
     setPlanning(planning) {
+      if (state.planning?.id && planning?.id && state.planning.id !== planning.id) {
+        state.newRevision = true;
+      } else if (!planning) {
+        state.newRevision = false;
+      }
       const changed = state.planning?.id !== planning?.id || state.planning?.status !== planning?.status;
       state.planning = planning;
       elements.entry.hidden = planning?.status !== "ACTIVE";
       if (planning?.status !== "ACTIVE") {
         state.model = null;
         state.portal = null;
+        state.credentialModel = null;
+        clearMessageFallback();
         state.credentialStatuses = new Map();
         credentialsController.setDistribution(null);
         state.selected.clear();
@@ -419,6 +548,8 @@ export function initDriverShiftDistribution() {
         state.selectionDirty = false;
         state.prepared = null;
         state.portal = null;
+        state.credentialModel = null;
+        clearMessageFallback();
         state.credentialStatuses = new Map();
         credentialsController.setDistribution(null);
         render();

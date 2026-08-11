@@ -156,6 +156,7 @@ export function initDriverShiftCredentials({ onChanged = () => {}, status = () =
       void load();
     },
     refresh: load,
+    prepareMissing: prepare,
     statusMap: () => credentialStatusMap(state.model),
     reset,
     revoke,

@@ -37,7 +37,7 @@ import {
   initWorkforceFoundation,
   renderWorkforceFoundation,
 } from "./workforce-foundation.js?v=2";
-import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=9";
+import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=10";
 
 
 const PAGE_STATES = Object.freeze({

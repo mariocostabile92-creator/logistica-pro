@@ -940,11 +940,30 @@
                 </label>
                 <small id="driverShiftPortalExpiry"></small>
                 <div>
-                  <button id="driverShiftPortalCopy" type="button">Copia link</button>
+                  <button id="driverShiftPortalCopy" type="button" class="secondary">Copia solo link</button>
                   <button id="driverShiftPortalRevoke" type="button" class="quiet">Revoca</button>
                   <button id="driverShiftPortalRegenerate" type="button" class="secondary">Rigenera</button>
                 </div>
               </div>
+              <section id="driverShiftGroupShare" class="driver-shift-group-share" aria-labelledby="driverShiftGroupShareTitle">
+                <div class="driver-shift-group-share-heading">
+                  <div>
+                    <p class="eyebrow">Condivisione settimanale</p>
+                    <h6 id="driverShiftGroupShareTitle">Un messaggio per tutto il gruppo</h6>
+                  </div>
+                  <p id="driverShiftGroupReadiness" class="driver-shift-group-readiness" aria-live="polite">Verifica accessi personali...</p>
+                </div>
+                <dl id="driverShiftGroupSummary" class="driver-shift-group-summary" aria-label="Riepilogo distribuzione"></dl>
+                <p id="driverShiftGroupWarning" class="driver-shift-group-warning" hidden></p>
+                <button id="driverShiftPrepareMissingAccesses" type="button" class="secondary" hidden>Prepara accessi mancanti</button>
+                <p id="driverShiftRevisionNotice" class="driver-shift-revision-notice" hidden>Nuovi turni pubblicati. Condividi il nuovo messaggio.</p>
+                <button id="driverShiftGroupMessageCopy" type="button">Copia messaggio per il gruppo WhatsApp</button>
+                <div id="driverShiftMessageFallback" class="driver-shift-message-fallback" hidden>
+                  <label for="driverShiftMessageFallbackText">Copia manualmente questo messaggio</label>
+                  <textarea id="driverShiftMessageFallbackText" readonly rows="10"></textarea>
+                  <p>La copia automatica non è disponibile. Il messaggio è selezionato e pronto per la copia manuale.</p>
+                </div>
+              </section>
             </section>
             <section id="driverShiftCredentials" class="driver-shift-credentials" aria-label="Accessi personali driver" hidden></section>
             <section id="driverShiftInitialCredentials" class="driver-shift-initial-output" aria-live="polite" hidden></section>
@@ -2509,6 +2528,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=86"></script>
+    <script type="module" src="./assets/js/app.js?v=87"></script>
 </body>
 </html>
