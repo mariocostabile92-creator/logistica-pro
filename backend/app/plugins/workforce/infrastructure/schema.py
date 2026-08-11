@@ -471,6 +471,24 @@ def init_schema() -> None:
                 UNIQUE (organization_id, distribution_id)
             );
 
+            CREATE TABLE IF NOT EXISTS driver_shift_driver_credentials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT NOT NULL,
+                workforce_member_id INTEGER NOT NULL,
+                credential_status TEXT NOT NULL,
+                access_code_hash TEXT NOT NULL UNIQUE,
+                pin_hash TEXT NOT NULL,
+                generation INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                reset_at TEXT,
+                revoked_at TEXT,
+                FOREIGN KEY (workforce_member_id) REFERENCES workforce_members(id)
+                    ON DELETE CASCADE,
+                UNIQUE (organization_id, workforce_member_id),
+                UNIQUE (id, organization_id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_workforce_status_date
                 ON workforce_day_statuses(date, workforce_member_id);
             CREATE INDEX IF NOT EXISTS idx_workforce_requirement_date
@@ -523,6 +541,10 @@ def init_schema() -> None:
                 );
             CREATE INDEX IF NOT EXISTS idx_driver_shift_portal_token
                 ON driver_shift_distribution_portals(token_hash);
+            CREATE INDEX IF NOT EXISTS idx_driver_shift_credential_scope
+                ON driver_shift_driver_credentials(
+                    organization_id, workforce_member_id, credential_status
+                );
 
             CREATE TABLE IF NOT EXISTS workforce_consecutivity_policies (
                 organization_id TEXT PRIMARY KEY,

@@ -12,6 +12,7 @@ from app.plugins.workforce.application import consecutivity_policy, override_ser
 from app.plugins.workforce.application import driver_shift_planning_service
 from app.plugins.workforce.application import driver_shift_distribution_service
 from app.plugins.workforce.application import driver_shift_portal_service
+from app.plugins.workforce.application import driver_shift_credentials_service
 from app.plugins.workforce.application.contact_coverage_service import contact_coverage
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
@@ -57,6 +58,12 @@ from app.plugins.workforce.domain.driver_shift_portal import (
     DriverShiftPortalAvailability,
     DriverShiftPortalInvalidError,
     DriverShiftPortalNotFoundError,
+)
+from app.plugins.workforce.domain.driver_shift_credentials import (
+    DriverShiftCredentialMutationResult,
+    DriverShiftCredentialPrepareResult,
+    DriverShiftCredentialReadModel,
+    DriverShiftCredentialResetResult,
 )
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.interfaces.schemas import (
@@ -157,6 +164,83 @@ def _distribution_error(exc: DriverShiftDistributionError) -> HTTPException:
         status_code=status,
         detail={"code": exc.code, "message": str(exc)},
     )
+
+
+@router.get(
+    "/driver-shift-distributions/{distribution_id}/credentials",
+    response_model=DriverShiftCredentialReadModel,
+)
+def get_driver_shift_credentials(
+    distribution_id: int, request: Request,
+) -> DriverShiftCredentialReadModel:
+    try:
+        user = _require(request, "workforce:read")
+        return driver_shift_credentials_service.credential_status(
+            user.organization_id, distribution_id,
+        )
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
+@router.post(
+    "/driver-shift-distributions/{distribution_id}/credentials/prepare",
+    response_model=DriverShiftCredentialPrepareResult,
+)
+def prepare_driver_shift_credentials(
+    distribution_id: int, request: Request, response: Response,
+) -> DriverShiftCredentialPrepareResult:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        result = driver_shift_credentials_service.prepare_credentials(
+            user.organization_id, distribution_id, user.email,
+        )
+        response.headers.update(PRIVATE_CACHE_HEADERS)
+        return result
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
+@router.post(
+    "/credentials/{workforce_member_id}/reset",
+    response_model=DriverShiftCredentialResetResult,
+)
+def reset_driver_shift_credential(
+    workforce_member_id: int, request: Request, response: Response,
+) -> DriverShiftCredentialResetResult:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        result = driver_shift_credentials_service.reset_credential(
+            user.organization_id, workforce_member_id, user.email,
+        )
+        response.headers.update(PRIVATE_CACHE_HEADERS)
+        return result
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
+
+
+@router.post(
+    "/credentials/{workforce_member_id}/revoke",
+    response_model=DriverShiftCredentialMutationResult,
+)
+def revoke_driver_shift_credential(
+    workforce_member_id: int, request: Request,
+) -> DriverShiftCredentialMutationResult:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return driver_shift_credentials_service.revoke_credential(
+            user.organization_id, workforce_member_id, user.email,
+        )
+    except DemoWorkspaceResetRequiredError as exc:
+        raise _write_error(exc) from exc
+    except DriverShiftDistributionError as exc:
+        raise _distribution_error(exc) from exc
 
 
 @router.post(

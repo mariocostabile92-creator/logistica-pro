@@ -20,7 +20,11 @@ export {
   prepareDriverShiftPortal as prepareSharedPortal,
   revokeDriverShiftPortal as revokeSharedPortal,
   regenerateDriverShiftPortal as regenerateSharedPortal,
+  getDriverShiftCredentials as getCredentials,
+  prepareDriverShiftCredentials as prepareCredentials,
+  resetDriverShiftCredential as resetCredential,
+  revokeDriverShiftCredential as revokeCredential,
   prepareDriverShiftBatch as prepareDistributionBatch,
   exportDriverShiftBatchCsv as exportDistributionBatchCsv,
   listWorkforceMembers,
-} from "../api.js?v=12";
+} from "../api.js?v=13";

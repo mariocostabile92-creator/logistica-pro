@@ -20,7 +20,7 @@ import {
   renderSources,
 } from "./driver-shift-planning-presenter.js?v=3";
 import { createDriverShiftPlanningState } from "./driver-shift-planning-state.js?v=2";
-import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=3";
+import { initDriverShiftDistribution } from "./driver-shift-distribution.js?v=4";
 import { byId, setLoading, setMessage } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 

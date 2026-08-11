@@ -1,4 +1,5 @@
 import { escapeHtml } from "../utils/dom.js";
+import { credentialLabel } from "./driver-shift-credentials-presenter.js?v=1";
 
 
 const ACCESS_LABELS = Object.freeze({
@@ -53,12 +54,16 @@ export function renderDistributionSummary(element, summary, selectedCount = 0) {
 }
 
 
-export function renderDistributionRecipients(element, recipients, selectedIds = new Set()) {
+export function renderDistributionRecipients(
+  element, recipients, selectedIds = new Set(), credentialStatuses = new Map(),
+) {
   if (!recipients.length) {
     element.innerHTML = '<p class="driver-shift-distribution-empty">Nessun destinatario corrisponde ai filtri.</p>';
     return;
   }
-  element.innerHTML = recipients.map((recipient) => `
+  element.innerHTML = recipients.map((recipient) => {
+    const credentialStatus = credentialStatuses.get(Number(recipient.workforce_member_id)) || "MISSING";
+    return `
     <article class="driver-shift-recipient" data-recipient-id="${recipient.id}">
       <label class="driver-shift-recipient-select">
         <input type="checkbox" data-select-shift-recipient="${recipient.id}"
@@ -70,6 +75,13 @@ export function renderDistributionRecipients(element, recipients, selectedIds = 
         <strong>${escapeHtml(recipient.display_name)}</strong>
         <span>${recipient.shift_days_count} ${recipient.shift_days_count === 1 ? "giornata" : "giornate"}</span>
         <small>${escapeHtml((recipient.available_channels || []).join(" · ") || "Nessun canale disponibile")}</small>
+        <span class="driver-shift-credential-state" data-credential-status="${escapeHtml(credentialStatus)}">${escapeHtml(credentialLabel(credentialStatus))}</span>
+        ${credentialStatus !== "MISSING" ? `
+          <div class="driver-shift-credential-actions">
+            ${credentialStatus !== "REVOKED" ? `<button type="button" class="secondary" data-reset-driver-credential="${recipient.workforce_member_id}">Reimposta PIN</button>` : ""}
+            ${credentialStatus !== "REVOKED" ? `<button type="button" class="quiet" data-revoke-driver-credential="${recipient.workforce_member_id}">Revoca accesso</button>` : ""}
+          </div>
+        ` : ""}
       </div>
       <div class="driver-shift-recipient-state">
         <span data-readiness="${escapeHtml(recipient.readiness)}">${escapeHtml(READINESS_LABELS[recipient.readiness] || "Da verificare")}</span>
@@ -82,5 +94,6 @@ export function renderDistributionRecipients(element, recipients, selectedIds = 
         <button type="button" class="quiet" data-revoke-shift-link="${recipient.id}" ${recipient.access_revoked ? "disabled" : ""}>Revoca</button>
       </div>
     </article>
-  `).join("");
+  `;
+  }).join("");
 }

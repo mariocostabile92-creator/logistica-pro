@@ -40,6 +40,7 @@ _IDENTITY_TABLES = {
     "driver_shift_distributions",
     "driver_shift_distribution_recipients",
     "driver_shift_distribution_portals",
+    "driver_shift_driver_credentials",
     "workforce_members",
     "workforce_requirements",
 }

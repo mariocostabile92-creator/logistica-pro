@@ -63,6 +63,7 @@ class WorkspaceRemovedCounts(BaseModel):
     driver_shift_distributions: int = 0
     driver_shift_distribution_recipients: int = 0
     driver_shift_distribution_portals: int = 0
+    driver_shift_driver_credentials: int = 0
     driver_shift_plannings: int = 0
     workforce_changes: int = 0
     workforce_day_statuses: int = 0

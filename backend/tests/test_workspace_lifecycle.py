@@ -822,6 +822,7 @@ def test_operational_and_preserved_table_classification_is_complete():
         "plannings",
         "operation_snapshots",
         "analyses",
+        "driver_shift_driver_credentials",
         "driver_shift_distribution_portals",
         "driver_shift_distribution_recipients",
         "driver_shift_distributions",

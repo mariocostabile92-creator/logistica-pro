@@ -10,12 +10,13 @@ import {
   revokeRecipientAccess,
   revokeSharedPortal,
   prepareSharedPortal,
-} from "./driver-shift-planning-api.js?v=5";
+} from "./driver-shift-planning-api.js?v=6";
 import {
   filterDistributionRecipients,
   renderDistributionRecipients,
   renderDistributionSummary,
-} from "./driver-shift-distribution-presenter.js?v=2";
+} from "./driver-shift-distribution-presenter.js?v=3";
+import { initDriverShiftCredentials } from "./driver-shift-credentials.js?v=1";
 import { byId, setLoading } from "../utils/dom.js";
 import { userErrorPresentation } from "../utils/errors.js";
 
@@ -60,6 +61,7 @@ export function initDriverShiftDistribution() {
     selectionDirty: false,
     prepared: null,
     portal: null,
+    credentialStatuses: new Map(),
   };
   const elements = {
     entry: byId("driverShiftDistributeBtn"),
@@ -97,6 +99,14 @@ export function initDriverShiftDistribution() {
     elements.status.dataset.tone = tone;
   }
 
+  const credentialsController = initDriverShiftCredentials({
+    status,
+    onChanged(_model, statusMap) {
+      state.credentialStatuses = statusMap;
+      if (state.model) render();
+    },
+  });
+
   function readyRecipients() {
     return (state.model?.recipients || []).filter((recipient) => (
       recipient.readiness === "READY" && !recipient.access_revoked
@@ -122,6 +132,7 @@ export function initDriverShiftDistribution() {
       elements.recipients,
       filterDistributionRecipients(state.model.recipients, state.filter, state.search),
       state.selected,
+      state.credentialStatuses,
     );
     elements.selectedCount.textContent = String(state.selected.size);
     elements.actions.hidden = state.selected.size === 0 || Boolean(state.prepared);
@@ -176,6 +187,7 @@ export function initDriverShiftDistribution() {
         syncSelection({ reset: true });
       }
       await loadPortal({ quietMissing: true });
+      credentialsController.setDistribution(state.model.distribution);
       render();
     } catch (error) {
       if (request !== state.request) return;
@@ -246,6 +258,7 @@ export function initDriverShiftDistribution() {
       state.selectionDirty = false;
       state.prepared = null;
       syncSelection({ reset: true });
+      credentialsController.setDistribution(state.model.distribution);
       render();
       status("Distribuzione pronta. Nessun messaggio è stato inviato.", "success");
     } catch (error) {
@@ -374,9 +387,17 @@ export function initDriverShiftDistribution() {
     const copy = event.target.closest("[data-copy-shift-link]");
     const regenerateButton = event.target.closest("[data-regenerate-shift-link]");
     const revokeButton = event.target.closest("[data-revoke-shift-link]");
+    const resetCredentialButton = event.target.closest("[data-reset-driver-credential]");
+    const revokeCredentialButton = event.target.closest("[data-revoke-driver-credential]");
     if (copy) void copyRecipientLink(Number(copy.dataset.copyShiftLink), copy);
     else if (regenerateButton) void regenerate(Number(regenerateButton.dataset.regenerateShiftLink), regenerateButton);
     else if (revokeButton) void revoke(Number(revokeButton.dataset.revokeShiftLink), revokeButton);
+    else if (resetCredentialButton) void credentialsController.reset(
+      Number(resetCredentialButton.dataset.resetDriverCredential), resetCredentialButton,
+    );
+    else if (revokeCredentialButton) void credentialsController.revoke(
+      Number(revokeCredentialButton.dataset.revokeDriverCredential), revokeCredentialButton,
+    );
   });
 
   return {
@@ -387,6 +408,8 @@ export function initDriverShiftDistribution() {
       if (planning?.status !== "ACTIVE") {
         state.model = null;
         state.portal = null;
+        state.credentialStatuses = new Map();
+        credentialsController.setDistribution(null);
         state.selected.clear();
         state.request += 1;
         render();
@@ -396,6 +419,8 @@ export function initDriverShiftDistribution() {
         state.selectionDirty = false;
         state.prepared = null;
         state.portal = null;
+        state.credentialStatuses = new Map();
+        credentialsController.setDistribution(null);
         render();
         void load({ quietMissing: true });
       }
