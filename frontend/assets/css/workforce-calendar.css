@@ -361,6 +361,147 @@
   box-shadow: inset 0 0 0 1px var(--accent-strong);
 }
 
+.workforce-week-copy-open {
+  border-color: #6f938b;
+}
+
+.workforce-week-copy-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(820px, calc(100vh - 32px));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #8baaa3;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 24px 70px rgb(8 35 29 / 28%);
+}
+
+.workforce-week-copy-dialog::backdrop {
+  background: rgb(11 29 25 / 58%);
+}
+
+.workforce-week-copy-dialog > header,
+.workforce-week-copy-dialog > footer {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.workforce-week-copy-dialog > header {
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-week-copy-dialog > header h3,
+.workforce-week-copy-dialog > header p {
+  margin: 2px 0 0;
+}
+
+.workforce-week-copy-dialog > header p {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.workforce-week-copy-dialog > footer {
+  border-top: 1px solid var(--border);
+}
+
+.workforce-week-copy-periods,
+.workforce-week-copy-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 20px 0;
+}
+
+.workforce-week-copy-periods > div,
+.workforce-week-copy-summary > span {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #f7faf9;
+}
+
+.workforce-week-copy-periods span,
+.workforce-week-copy-summary small {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workforce-week-copy-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workforce-week-copy-rows {
+  display: grid;
+  max-height: min(430px, calc(100vh - 350px));
+  margin: 16px 20px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.workforce-week-copy-row {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.8fr) minmax(220px, 1.4fr) minmax(130px, 0.7fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-week-copy-row:last-child {
+  border-bottom: 0;
+}
+
+.workforce-week-copy-row > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.workforce-week-copy-row span,
+.workforce-week-copy-row small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.workforce-week-copy-row b {
+  color: #17644f;
+  font-size: 11px;
+}
+
+.workforce-week-copy-row b.is-overwrite {
+  color: #a15b09;
+}
+
+.workforce-week-copy-row b.is-missing {
+  color: var(--text-muted);
+}
+
+.workforce-week-copy-row.has-overwrite {
+  background: #fff8eb;
+}
+
+.workforce-week-copy-row.is-missing {
+  background: #f7f8f8;
+}
+
+.workforce-week-copy-error {
+  margin: 0 20px 16px;
+  padding: 10px 12px;
+  border-left: 3px solid #b62b2b;
+  background: #fff0f0;
+  color: #8d2020;
+  font-weight: 700;
+}
+
 .workforce-multi-day-context,
 .workforce-multi-day-bar label {
   display: grid;
@@ -437,7 +578,48 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .workforce-quick-selection-actions button[data-workforce-quick-selection="week"],
   .workforce-quick-selection-actions button:last-child {
     grid-column: 1 / -1;
+  }
+
+  .workforce-quick-selection-actions .workforce-week-copy-open {
+    grid-column: 1 / -1;
+  }
+
+  .workforce-week-copy-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  .workforce-week-copy-dialog > header,
+  .workforce-week-copy-dialog > footer {
+    padding: 14px;
+  }
+
+  .workforce-week-copy-periods,
+  .workforce-week-copy-summary {
+    grid-template-columns: minmax(0, 1fr);
+    margin-right: 14px;
+    margin-left: 14px;
+  }
+
+  .workforce-week-copy-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workforce-week-copy-rows {
+    max-height: calc(100vh - 390px);
+    margin-right: 14px;
+    margin-left: 14px;
+  }
+
+  .workforce-week-copy-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .workforce-week-copy-dialog > footer button {
+    min-height: 44px;
   }
 }

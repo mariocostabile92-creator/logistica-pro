@@ -9,6 +9,7 @@ from app.auth.permission_service import has_permission
 from app.importers.excel_reader import read_validated_upload
 from app.importers.workbook_profiler.errors import WorkbookProfileError
 from app.plugins.workforce.application import workforce_service
+from app.plugins.workforce.application import week_copy_service
 from app.plugins.workforce.application import consecutivity_policy, override_service
 from app.plugins.workforce.application import driver_shift_planning_service
 from app.plugins.workforce.application import legacy_canonical_publication_bridge
@@ -31,6 +32,11 @@ from app.plugins.workforce.domain.models import (
     WorkforceImportResult,
     WorkforceMember,
     WorkforceFoundationSnapshot,
+)
+from app.plugins.workforce.domain.week_copy import (
+    WorkforceWeekCopyConflictError,
+    WorkforceWeekCopyPreview,
+    WorkforceWeekCopyResult,
 )
 from app.plugins.workforce.domain.driver_shift_planning import (
     DriverShiftPlanning,
@@ -88,6 +94,7 @@ from app.plugins.workforce.interfaces.schemas import (
     WorkforceDayStatusBatchRequest,
     WorkforceDayStatusBatchResponse,
     WorkforceDayStatusRequest,
+    WorkforceWeekCopyRequest,
     WorkforceMembersResponse,
     WorkforceMemberUpdateRequest,
     WorkforceStatusResponse,
@@ -1166,6 +1173,51 @@ def update_day_statuses_batch(
             user.organization_id,
         )
         return WorkforceDayStatusBatchResponse(items=items)
+    except (
+        DemoWorkspaceResetRequiredError,
+        WorkforceMemberNotFoundError,
+        WorkforceValidationError,
+    ) as exc:
+        raise _write_error(exc) from exc
+
+
+@router.get("/week-copy/preview", response_model=WorkforceWeekCopyPreview)
+def preview_week_copy(
+    http_request: Request,
+    workforce_member_id: int = Query(gt=0),
+    target_week_start: str = Query(),
+) -> WorkforceWeekCopyPreview:
+    try:
+        user = _require(http_request, "workforce:write")
+        return week_copy_service.preview(
+            workforce_member_id,
+            target_week_start,
+            user.organization_id,
+        )
+    except (WorkforceMemberNotFoundError, WorkforceValidationError) as exc:
+        raise _write_error(exc) from exc
+
+
+@router.post("/week-copy", response_model=WorkforceWeekCopyResult)
+def apply_week_copy(
+    request: WorkforceWeekCopyRequest,
+    http_request: Request,
+) -> WorkforceWeekCopyResult:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(http_request, "workforce:write")
+        return week_copy_service.apply(
+            request.workforce_member_id,
+            request.target_week_start,
+            request.expected_fingerprint,
+            request.actor,
+            user.organization_id,
+        )
+    except WorkforceWeekCopyConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "message": str(exc)},
+        ) from exc
     except (
         DemoWorkspaceResetRequiredError,
         WorkforceMemberNotFoundError,

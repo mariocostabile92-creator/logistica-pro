@@ -1,4 +1,5 @@
 import {
+  applyWorkforceWeekCopy,
   downloadWorkforceExport,
   getWorkforceCalendar,
   getWorkforceCoverage,
@@ -6,10 +7,11 @@ import {
   getWorkforceFoundation,
   getWorkforceStatus,
   listWorkforceMembers,
+  previewWorkforceWeekCopy,
   saveWorkforceDayStatus,
   saveWorkforceDayStatusesBatch,
   updateWorkforceMember,
-} from "../api.js?v=17";
+} from "../api.js?v=18";
 import {
   byId,
   renderViewState,
@@ -29,6 +31,10 @@ import {
   workforceQuickSelection,
   workforceQuickSelectionActive,
 } from "./workforce-multi-day-editor.js?v=3";
+import {
+  renderWorkforceWeekCopyPreview,
+  workforceWeekCopySummary,
+} from "./workforce-week-copy.js?v=1";
 import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=4";
 import { initWorkforceImportFlow } from "./workforce-import-flow.js";
 import {
@@ -77,6 +83,7 @@ let multiDayEditing = {
   anchorDate: null,
   trigger: null,
 };
+let weekCopyPreview = null;
 
 
 function errorMessage(context, error) {
@@ -248,6 +255,7 @@ function renderMultiDayBar() {
   const quickSelection = byId("workforceQuickSelection");
   const weekDates = workforceCalendarDatesForActiveRange();
   quickSelection.hidden = viewMode !== "week";
+  byId("workforceWeekCopyOpen").hidden = viewMode !== "week";
   quickSelection.querySelectorAll("[data-workforce-quick-selection]").forEach((button) => {
     button.setAttribute("aria-pressed", String(workforceQuickSelectionActive(
       multiDayEditing.selectedDates,
@@ -258,6 +266,117 @@ function renderMultiDayBar() {
   byId("workforceMultiDayDriver").textContent = member.display_name;
   byId("workforceMultiDayCount").textContent = `${count} ${count === 1 ? "giorno selezionato" : "giorni selezionati"}`;
   byId("workforceMultiDayApply").disabled = count === 0 || !byId("workforceMultiDayChoice").value;
+}
+
+
+function setWeekCopyError(message = "") {
+  const element = byId("workforceWeekCopyError");
+  element.textContent = message;
+  element.hidden = !message;
+}
+
+
+function renderWeekCopyPreview(preview) {
+  const summary = workforceWeekCopySummary(preview);
+  byId("workforceWeekCopySourcePeriod").textContent = periodLabel(
+    preview.source_week_start,
+    preview.source_week_end,
+  );
+  byId("workforceWeekCopyTargetPeriod").textContent = periodLabel(
+    preview.target_week_start,
+    preview.target_week_end,
+  );
+  byId("workforceWeekCopySummary").innerHTML = `
+    <span><small>Da copiare</small><strong>${summary.copiedCount}</strong></span>
+    <span><small>Mancanti</small><strong>${summary.missingCount}</strong></span>
+    <span><small>Sostituzioni</small><strong>${summary.overwriteCount}</strong></span>
+  `;
+  renderWorkforceWeekCopyPreview(byId("workforceWeekCopyRows"), preview);
+  byId("workforceWeekCopyConfirm").disabled = summary.copiedCount === 0;
+}
+
+
+async function openWeekCopyPreview() {
+  const member = multiDayMember();
+  if (!member || viewMode !== "week") return;
+  const button = byId("workforceWeekCopyOpen");
+  setLoading(button, true, "Preparazione...");
+  setWeekCopyError();
+  try {
+    weekCopyPreview = await previewWorkforceWeekCopy(
+      member.workforce_member_id,
+      byId("workforceDateFrom").value,
+    );
+    byId("workforceWeekCopyDriver").textContent = member.display_name;
+    renderWeekCopyPreview(weekCopyPreview);
+    byId("workforceWeekCopyDialog").showModal();
+  } catch (error) {
+    errorMessage("workforce.week-copy-preview", error);
+  } finally {
+    setLoading(button, false);
+  }
+}
+
+
+function closeWeekCopyPreview() {
+  const dialog = byId("workforceWeekCopyDialog");
+  if (dialog.open) dialog.close();
+  weekCopyPreview = null;
+  setWeekCopyError();
+}
+
+
+async function applyWeekCopy() {
+  if (!weekCopyPreview || !multiDayMember()) return;
+  const button = byId("workforceWeekCopyConfirm");
+  const memberId = Number(multiDayEditing.memberId);
+  const targetWeekStart = weekCopyPreview.target_week_start;
+  setLoading(button, true, "Copia in corso...");
+  setWeekCopyError();
+  try {
+    await applyWorkforceWeekCopy({
+      workforce_member_id: memberId,
+      target_week_start: targetWeekStart,
+      expected_fingerprint: weekCopyPreview.fingerprint,
+    });
+    closeWeekCopyPreview();
+    await loadCalendar({
+      dateFrom: targetWeekStart,
+      dateTo: addDays(targetWeekStart, 6),
+    });
+    const member = currentData.members.find((item) => (
+      Number(item.workforce_member_id) === memberId
+    ));
+    if (member) {
+      const trigger = byId("workforceCalendar").querySelector(
+        `[data-workforce-member-edit="${memberId}"]`,
+      );
+      startMultiDayEditing(member, trigger);
+    }
+    showWorkforceFeedback("Settimana copiata.");
+  } catch (error) {
+    if (isExpectedApiError(error, {
+      statuses: [409],
+      codes: ["WORKFORCE_WEEK_COPY_STALE"],
+    })) {
+      try {
+        weekCopyPreview = await previewWorkforceWeekCopy(memberId, targetWeekStart);
+        renderWeekCopyPreview(weekCopyPreview);
+      } catch (refreshError) {
+        errorMessage("workforce.week-copy-refresh", refreshError);
+      }
+      setWeekCopyError(
+        "I turni sono cambiati dall'anteprima. Controlla nuovamente la settimana.",
+      );
+    } else {
+      const message = errorMessage("workforce.week-copy-apply", error);
+      setWeekCopyError(message);
+    }
+  } finally {
+    setLoading(button, false);
+    button.disabled = !weekCopyPreview
+      || workforceWeekCopySummary(weekCopyPreview).copiedCount === 0;
+  }
 }
 
 
@@ -290,6 +409,7 @@ function clearMultiDayEditing({ restoreFocus = false, rerender = true } = {}) {
     trigger: null,
   };
   byId("workforceMultiDayBar").hidden = true;
+  closeWeekCopyPreview();
   if (rerender && currentData.members.length) renderData();
   if (restoreFocus) trigger?.focus?.();
 }
@@ -734,6 +854,18 @@ export function initWorkforcePage() {
   });
   byId("workforceMultiDayApply").addEventListener("click", () => {
     void applyMultiDayStatus();
+  });
+  byId("workforceWeekCopyOpen").addEventListener("click", () => {
+    void openWeekCopyPreview();
+  });
+  byId("workforceWeekCopyConfirm").addEventListener("click", () => {
+    void applyWeekCopy();
+  });
+  byId("workforceWeekCopyCancel").addEventListener("click", closeWeekCopyPreview);
+  byId("workforceWeekCopyClose").addEventListener("click", closeWeekCopyPreview);
+  byId("workforceWeekCopyDialog").addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeWeekCopyPreview();
   });
   byId("workforceQuickSelection").querySelectorAll("[data-workforce-quick-selection]")
     .forEach((button) => {

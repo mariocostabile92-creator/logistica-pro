@@ -662,6 +662,26 @@ export async function saveWorkforceDayStatusesBatch(payload) {
 }
 
 
+export async function previewWorkforceWeekCopy(workforceMemberId, targetWeekStart) {
+  const query = new URLSearchParams({
+    workforce_member_id: String(workforceMemberId),
+    target_week_start: targetWeekStart,
+  });
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/week-copy/preview?${query}`,
+  ));
+}
+
+
+export async function applyWorkforceWeekCopy(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/week-copy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+
 export async function getWorkforceContactCoverage() {
   return parseResponse(await fetch(
     `${API_BASE}/api/plugins/workforce/v1/contact-coverage`,

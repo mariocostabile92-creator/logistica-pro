@@ -102,6 +102,18 @@ class WorkforceDayStatusBatchResponse(BaseModel):
     items: list[WorkforceDayStatus]
 
 
+class WorkforceWeekCopyRequest(BaseModel):
+    workforce_member_id: int = Field(gt=0)
+    target_week_start: str
+    expected_fingerprint: str = Field(min_length=64, max_length=64)
+    actor: str = Field(default="local_operator", min_length=1, max_length=120)
+
+    @field_validator("target_week_start")
+    @classmethod
+    def valid_target_week_start(cls, value: str) -> str:
+        return date.fromisoformat(value).isoformat()
+
+
 class ConsecutivityPolicyRequest(BaseModel):
     warning_threshold: int = Field(default=5, ge=1, le=30)
     rest_required_threshold: int = Field(default=6, ge=2, le=31)

@@ -332,6 +332,9 @@ def _save_batch_status(
     actor: str,
     organization_id: str,
     now: str,
+    *,
+    reason: str = "manual_bulk_update",
+    source: str = "manual",
 ):
     row = conn.execute(
         """
@@ -403,8 +406,8 @@ def _save_batch_status(
         actor=actor,
         before=before,
         after={**after, "date": values["date"]},
-        reason="manual_bulk_update",
-        source="manual",
+        reason=reason,
+        source=source,
         timestamp=now,
         organization_id=organization_id,
     )

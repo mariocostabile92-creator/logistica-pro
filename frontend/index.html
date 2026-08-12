@@ -1308,6 +1308,7 @@
                   <button type="button" class="quiet" data-workforce-quick-selection="weekdays" aria-pressed="false">Lun–Ven</button>
                   <button type="button" class="quiet" data-workforce-quick-selection="weekend" aria-pressed="false">Weekend</button>
                   <button type="button" class="quiet" data-workforce-quick-selection="week" aria-pressed="false">Tutta la settimana</button>
+                  <button id="workforceWeekCopyOpen" type="button" class="quiet workforce-week-copy-open">Copia settimana precedente</button>
                 </div>
               </div>
               <div class="workforce-multi-day-context">
@@ -1328,6 +1329,32 @@
                 <button id="workforceMultiDayApply" type="button" disabled>Applica</button>
               </div>
             </section>
+
+            <dialog
+              id="workforceWeekCopyDialog"
+              class="workforce-week-copy-dialog"
+              aria-labelledby="workforceWeekCopyTitle"
+            >
+              <header>
+                <div>
+                  <span class="eyebrow">Modifica turni</span>
+                  <h3 id="workforceWeekCopyTitle">Copia settimana</h3>
+                  <p id="workforceWeekCopyDriver"></p>
+                </div>
+                <button id="workforceWeekCopyClose" type="button" class="quiet" aria-label="Chiudi">Chiudi</button>
+              </header>
+              <div class="workforce-week-copy-periods">
+                <div><span>Da</span><strong id="workforceWeekCopySourcePeriod">--</strong></div>
+                <div><span>A</span><strong id="workforceWeekCopyTargetPeriod">--</strong></div>
+              </div>
+              <div id="workforceWeekCopySummary" class="workforce-week-copy-summary"></div>
+              <div id="workforceWeekCopyRows" class="workforce-week-copy-rows"></div>
+              <p id="workforceWeekCopyError" class="workforce-week-copy-error" role="alert" hidden></p>
+              <footer>
+                <button id="workforceWeekCopyCancel" type="button" class="quiet">Annulla</button>
+                <button id="workforceWeekCopyConfirm" type="button">Copia settimana</button>
+              </footer>
+            </dialog>
 
             <button
               id="workforceDetailBackdrop"
@@ -2629,6 +2656,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=97"></script>
+    <script type="module" src="./assets/js/app.js?v=98"></script>
 </body>
 </html>

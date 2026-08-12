@@ -344,7 +344,7 @@ test("import flow forwards persisted fingerprint result and detected preview", a
 test("workspace loader loads Q5 styles only with Workforce", async () => {
   const loader = await source("assets/js/modules/workspace-loader.js");
   assert.match(loader, /driver-shift-planning\.css\?v=4/);
-  assert.match(loader, /import\("\.\/workforce-page\.js\?v=30"\)/);
+  assert.match(loader, /import\("\.\/workforce-page\.js\?v=31"\)/);
 });
 
 
