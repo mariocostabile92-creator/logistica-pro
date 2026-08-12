@@ -22,6 +22,25 @@ function createAttentionState() {
 }
 
 
+function createFollowupState() {
+  return {
+    phase: "idle",
+    data: null,
+    error: null,
+    transporterExternalId: null,
+    dialog: {
+      phase: "closed",
+      mode: null,
+      context: null,
+      item: null,
+      note: "",
+      closeNote: "",
+      error: null,
+    },
+  };
+}
+
+
 export function createDspQualityState({ canImport = false } = {}) {
   return {
     phase: "loading",
@@ -37,6 +56,7 @@ export function createDspQualityState({ canImport = false } = {}) {
     overviewVisible: false,
     notice: null,
     attention: createAttentionState(),
+    followups: createFollowupState(),
     metrics: {
       phase: "idle",
       data: null,
@@ -108,6 +128,7 @@ export function applyDspQualityEvent(state, event) {
         notice: event.notice || null,
         error: null,
         attention: createAttentionState(),
+        followups: createFollowupState(),
         metrics: { ...state.metrics, phase: "idle", data: null, error: null, filter: "all", search: "" },
         drivers: {
           ...state.drivers,
@@ -127,6 +148,7 @@ export function applyDspQualityEvent(state, event) {
         phase: state.history?.items?.length ? "available" : "loading",
         error: null,
         attention: createAttentionState(),
+        followups: createFollowupState(),
         metrics: { ...state.metrics, phase: "idle", data: null, error: null },
         drivers: { ...state.drivers, phase: "idle", data: null, error: null, selectedRowId: null, reconciliation: createReconciliationState() },
       };
@@ -141,6 +163,7 @@ export function applyDspQualityEvent(state, event) {
         notice: event.notice || null,
         section: state.section || "overview",
         attention: createAttentionState(),
+        followups: createFollowupState(),
         metrics: { ...state.metrics, phase: "idle", data: null, error: null, filter: "all", search: "" },
         drivers: {
           ...state.drivers,
@@ -240,6 +263,127 @@ export function applyDspQualityEvent(state, event) {
       return {
         ...state,
         attention: { ...state.attention, detail: createAttentionState().detail },
+      };
+    case "followups-started":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          phase: "loading",
+          error: null,
+          transporterExternalId: event.transporterExternalId || null,
+        },
+      };
+    case "followups-completed":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          phase: "available",
+          data: event.data,
+          error: null,
+          transporterExternalId: event.transporterExternalId || null,
+        },
+      };
+    case "followups-failed":
+      return {
+        ...state,
+        followups: { ...state.followups, phase: "error", error: event.message },
+      };
+    case "followup-create-opened":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          dialog: {
+            phase: "editing",
+            mode: "create",
+            context: event.context,
+            item: null,
+            note: "",
+            closeNote: "",
+            error: null,
+          },
+        },
+      };
+    case "followup-note-changed":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          dialog: { ...state.followups.dialog, note: event.note },
+        },
+      };
+    case "followup-close-note-changed":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          dialog: { ...state.followups.dialog, closeNote: event.note },
+        },
+      };
+    case "followup-save-started":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          dialog: { ...state.followups.dialog, phase: "saving", error: null },
+        },
+      };
+    case "followup-detail-started":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          dialog: {
+            phase: "loading",
+            mode: "detail",
+            context: null,
+            item: null,
+            note: "",
+            closeNote: "",
+            error: null,
+          },
+        },
+      };
+    case "followup-detail-completed":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          dialog: {
+            ...state.followups.dialog,
+            phase: "available",
+            mode: "detail",
+            item: event.item,
+            error: null,
+          },
+        },
+      };
+    case "followup-dialog-failed":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          dialog: {
+            ...state.followups.dialog,
+            phase: state.followups.dialog.mode === "create" ? "editing" : "error",
+            error: event.message,
+          },
+        },
+      };
+    case "followup-close-started":
+      return {
+        ...state,
+        followups: {
+          ...state.followups,
+          dialog: { ...state.followups.dialog, phase: "closing", error: null },
+        },
+      };
+    case "followup-dialog-closed":
+      return {
+        ...state,
+        followups: { ...state.followups, dialog: createFollowupState().dialog },
       };
     case "metrics-started":
       return { ...state, metrics: { ...state.metrics, phase: "loading", error: null } };

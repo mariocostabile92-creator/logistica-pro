@@ -30,6 +30,19 @@ from app.plugins.dsp_quality.application.driver_history_models import (
 from app.plugins.dsp_quality.application.driver_history_service import (
     get_driver_history,
 )
+from app.plugins.dsp_quality.application.followup_models import (
+    QualityFollowupCloseRequest,
+    QualityFollowupCreateRequest,
+    QualityFollowupCreateResult,
+    QualityFollowupList,
+    QualityFollowupReadModel,
+)
+from app.plugins.dsp_quality.application.followup_service import (
+    close_followup,
+    create_followup,
+    get_followup,
+    list_followups,
+)
 from app.plugins.dsp_quality.application.history_models import QualityScorecardHistory
 from app.plugins.dsp_quality.application.history_service import (
     ensure_scorecard,
@@ -186,6 +199,79 @@ def driver_quality_history(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+def _followup_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, LookupError):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, RuntimeError):
+        return HTTPException(status_code=409, detail=str(exc))
+    return HTTPException(status_code=422, detail=str(exc))
+
+
+@router.post("/followups", response_model=QualityFollowupCreateResult)
+def create_quality_followup(
+    payload: QualityFollowupCreateRequest,
+    request: Request,
+):
+    _require_import_permission(request)
+    try:
+        return create_followup(
+            request.state.user.organization_id,
+            payload,
+            actor=request.state.user.id,
+        )
+    except (ValueError, LookupError, RuntimeError) as exc:
+        raise _followup_error(exc) from exc
+
+
+@router.get("/followups", response_model=QualityFollowupList)
+def quality_followups(
+    request: Request,
+    status: str | None = Query(default=None),
+    transporter_external_id: str | None = Query(default=None, max_length=180),
+    metric_key: str | None = Query(default=None, max_length=180),
+):
+    _require_read_permission(request)
+    try:
+        return list_followups(
+            request.state.user.organization_id,
+            status=status,
+            transporter_external_id=transporter_external_id,
+            metric_key=metric_key,
+        )
+    except ValueError as exc:
+        raise _followup_error(exc) from exc
+
+
+@router.get("/followups/{followup_id}", response_model=QualityFollowupReadModel)
+def quality_followup(followup_id: str, request: Request):
+    _require_read_permission(request)
+    try:
+        return get_followup(request.state.user.organization_id, followup_id)
+    except LookupError as exc:
+        raise _followup_error(exc) from exc
+
+
+@router.post(
+    "/followups/{followup_id}/close",
+    response_model=QualityFollowupReadModel,
+)
+def close_quality_followup(
+    followup_id: str,
+    payload: QualityFollowupCloseRequest,
+    request: Request,
+):
+    _require_import_permission(request)
+    try:
+        return close_followup(
+            request.state.user.organization_id,
+            followup_id,
+            actor=request.state.user.id,
+            note=payload.note,
+        )
+    except (LookupError, RuntimeError) as exc:
+        raise _followup_error(exc) from exc
 
 
 @router.get("/scorecards/{scorecard_id}", response_model=QualityLatestOverview)

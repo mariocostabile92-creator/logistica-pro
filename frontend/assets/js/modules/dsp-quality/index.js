@@ -1,7 +1,11 @@
 import { can } from "../../auth/state.js";
 import {
   applyExactTransporterIdentitySource,
+  closeQualityFollowup,
+  createQualityFollowup,
   deleteTransporterMapping,
+  getQualityFollowup,
+  getQualityFollowups,
   getQualityDrivers,
   getQualityAttention,
   getQualityDriverHistory,
@@ -15,14 +19,14 @@ import {
   previewTransporterIdentitySource,
   putTransporterMapping,
   searchQualityWorkforceCandidates,
-} from "./api.js?v=9";
+} from "./api.js?v=10";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
 import {
   mapWithConcurrency,
   validateIdentitySourceFile,
 } from "./identity-source.js?v=3";
-import { renderDspQuality } from "./presenter.js?v=14";
-import { defaultHistoryMetricKey } from "./driver-history-presenter.js?v=1";
+import { renderDspQuality } from "./presenter.js?v=15";
+import { defaultHistoryMetricKey } from "./driver-history-presenter.js?v=2";
 import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=11";
 import {
   currentSuggestion,
@@ -32,7 +36,7 @@ import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=11";
+} from "./state.js?v=12";
 
 
 let initialized = false;
@@ -52,6 +56,9 @@ let attentionRequestVersion = 0;
 let attentionRequestController = null;
 let driverHistoryRequestVersion = 0;
 let driverHistoryRequestController = null;
+let followupRequestVersion = 0;
+let followupRequestController = null;
+let followupMutationController = null;
 let reconciliationRequestController = null;
 let candidateRequestController = null;
 let candidateRequestVersion = 0;
@@ -90,7 +97,10 @@ async function loadLatest({ scorecardId = state.selectedScorecardId, notice = nu
       commit({ type: "latest-completed", latest, notice });
       if (state.section === "metrics") void loadMetrics();
       if (state.section === "drivers") void loadDrivers();
-      if (state.section === "attention") void loadAttention();
+      if (state.section === "attention") {
+        void loadAttention();
+        void loadFollowups({ force: true });
+      }
     }
     return latest;
   } catch (error) {
@@ -222,6 +232,37 @@ async function loadAttention({ force = false } = {}) {
 }
 
 
+async function loadFollowups({ transporterExternalId = null, force = false } = {}) {
+  const current = state.followups || {};
+  if (!force
+    && current.transporterExternalId === transporterExternalId
+    && ["loading", "available"].includes(current.phase)) return current.data;
+  const version = ++followupRequestVersion;
+  followupRequestController?.abort();
+  followupRequestController = new AbortController();
+  commit({ type: "followups-started", transporterExternalId });
+  try {
+    const data = await getQualityFollowups({
+      transporterExternalId,
+      signal: followupRequestController.signal,
+    });
+    if (version === followupRequestVersion) {
+      commit({ type: "followups-completed", data, transporterExternalId });
+    }
+    return data;
+  } catch (error) {
+    if (error?.name === "AbortError") return null;
+    if (version === followupRequestVersion) {
+      commit({
+        type: "followups-failed",
+        message: "Impossibile caricare i follow-up Quality. Riprova.",
+      });
+    }
+    return null;
+  }
+}
+
+
 async function loadDriverHistory(transporterExternalId, { force = false } = {}) {
   const scorecardId = state.selectedScorecardId;
   if (!scorecardId || !transporterExternalId) return;
@@ -246,6 +287,7 @@ async function loadDriverHistory(transporterExternalId, { force = false } = {}) 
         data,
         metricKey: defaultHistoryMetricKey(data),
       });
+      await loadFollowups({ transporterExternalId, force: true });
     }
   } catch (error) {
     if (error?.name === "AbortError") return;
@@ -264,11 +306,130 @@ function closeDriverHistory() {
   driverHistoryRequestController?.abort();
   driverHistoryRequestVersion += 1;
   commit({ type: "driver-history-closed" });
+  void loadFollowups({ transporterExternalId: null, force: true });
   requestAnimationFrame(() => {
     [...root.querySelectorAll("[data-quality-attention-driver]")]
       .find(item => item.dataset.qualityAttentionDriver === transporterExternalId)
       ?.focus();
   });
+}
+
+
+function followupError(error, fallback) {
+  const detail = error?.detail;
+  return typeof detail === "string" && detail.trim() ? detail : fallback;
+}
+
+
+function followupContext(transporterExternalId, metricKey) {
+  const driver = (state.attention?.data?.drivers || []).find(
+    item => item.transporter_external_id === transporterExternalId,
+  );
+  const history = state.attention?.detail?.data;
+  const focus = (driver?.focus || history?.summary?.current_focus || []).find(
+    item => item.metric_key === metricKey,
+  );
+  if (!focus || !state.selectedScorecardId) return null;
+  const period = state.attention?.data?.current_period || history?.anchor_period || {};
+  return {
+    transporterExternalId,
+    driverDisplayName: driver?.display_name || history?.workforce_display_name || transporterExternalId,
+    metricKey,
+    metricLabel: focus.label,
+    current: focus.current,
+    unit: focus.unit,
+    scorecardId: state.selectedScorecardId,
+    periodLabel: period.week && period.year ? `Week ${period.week} · ${period.year}` : "Settimana selezionata",
+  };
+}
+
+
+function openFollowupCreate(transporterExternalId, metricKey) {
+  const context = followupContext(transporterExternalId, metricKey);
+  if (!context) return;
+  commit({ type: "followup-create-opened", context });
+  requestAnimationFrame(() => root.querySelector("[data-quality-followup-note]")?.focus());
+}
+
+
+async function saveFollowup() {
+  const dialog = state.followups?.dialog || {};
+  const context = dialog.context;
+  if (dialog.mode !== "create" || dialog.phase === "saving" || !context || !dialog.note?.trim()) return;
+  followupMutationController?.abort();
+  followupMutationController = new AbortController();
+  commit({ type: "followup-save-started" });
+  try {
+    const result = await createQualityFollowup({
+      transporter_external_id: context.transporterExternalId,
+      scorecard_id: context.scorecardId,
+      metric_key: context.metricKey,
+      note: dialog.note.trim(),
+    }, { signal: followupMutationController.signal });
+    await loadFollowups({
+      transporterExternalId: state.attention?.detail?.phase !== "closed"
+        ? context.transporterExternalId
+        : null,
+      force: true,
+    });
+    commit({ type: "followup-detail-completed", item: result.item });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "followup-dialog-failed",
+      message: followupError(error, "Impossibile creare il follow-up Quality."),
+    });
+  }
+}
+
+
+async function openFollowupDetail(followupId) {
+  if (!followupId) return;
+  followupMutationController?.abort();
+  followupMutationController = new AbortController();
+  commit({ type: "followup-detail-started" });
+  try {
+    const item = await getQualityFollowup(followupId, {
+      signal: followupMutationController.signal,
+    });
+    commit({ type: "followup-detail-completed", item });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "followup-dialog-failed",
+      message: followupError(error, "Impossibile aprire il follow-up Quality."),
+    });
+  }
+}
+
+
+async function closeCurrentFollowup() {
+  const dialog = state.followups?.dialog || {};
+  const item = dialog.item;
+  if (!item || dialog.phase === "closing") return;
+  followupMutationController?.abort();
+  followupMutationController = new AbortController();
+  commit({ type: "followup-close-started" });
+  try {
+    const closed = await closeQualityFollowup(
+      item.id,
+      { note: dialog.closeNote?.trim() || null },
+      { signal: followupMutationController.signal },
+    );
+    await loadFollowups({
+      transporterExternalId: state.attention?.detail?.phase !== "closed"
+        ? item.transporter_external_id
+        : null,
+      force: true,
+    });
+    commit({ type: "followup-detail-completed", item: closed });
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    commit({
+      type: "followup-dialog-failed",
+      message: followupError(error, "Impossibile chiudere il follow-up Quality."),
+    });
+  }
 }
 
 
@@ -805,6 +966,21 @@ function bindEvents() {
       );
     }
     if (event.target.closest("[data-quality-driver-history-back]")) closeDriverHistory();
+    const followupCreate = event.target.closest("[data-quality-followup-create]");
+    if (followupCreate) {
+      openFollowupCreate(
+        followupCreate.dataset.qualityFollowupDriver,
+        followupCreate.dataset.qualityFollowupCreate,
+      );
+    }
+    const followupId = event.target.closest("[data-quality-followup-open]")?.dataset.qualityFollowupOpen;
+    if (followupId) void openFollowupDetail(followupId);
+    if (event.target.closest("[data-quality-followup-save]")) void saveFollowup();
+    if (event.target.closest("[data-quality-followup-close]")) void closeCurrentFollowup();
+    if (event.target.closest("[data-quality-followup-dialog-close]")) {
+      followupMutationController?.abort();
+      commit({ type: "followup-dialog-closed" });
+    }
     const attentionFilter = event.target.closest("[data-quality-attention-filter]")?.dataset.qualityAttentionFilter;
     if (attentionFilter) commit({ type: "attention-filter-changed", filter: attentionFilter });
     const attentionDriver = event.target.closest("[data-quality-attention-driver]")?.dataset.qualityAttentionDriver;
@@ -911,7 +1087,10 @@ function bindEvents() {
       commit({ type: "section-changed", section });
       if (section === "metrics") void loadMetrics();
       if (section === "drivers") void loadDrivers();
-      if (section === "attention") void loadAttention();
+      if (section === "attention") {
+        void loadAttention();
+        void loadFollowups({ force: true });
+      }
     }
   });
   root.addEventListener("change", (event) => {
@@ -952,6 +1131,8 @@ function bindEvents() {
       latestRequestController?.abort();
       attentionRequestController?.abort();
       driverHistoryRequestController?.abort();
+      followupRequestController?.abort();
+      followupMutationController?.abort();
       driverHistoryRequestVersion += 1;
       metricsRequestController?.abort();
       driversRequestController?.abort();
@@ -969,6 +1150,22 @@ function bindEvents() {
     }
   });
   root.addEventListener("input", (event) => {
+    if (event.target.matches("[data-quality-followup-note]")) {
+      commit({ type: "followup-note-changed", note: event.target.value });
+      requestAnimationFrame(() => {
+        const input = root.querySelector("[data-quality-followup-note]");
+        input?.focus();
+        input?.setSelectionRange?.(state.followups.dialog.note.length, state.followups.dialog.note.length);
+      });
+    }
+    if (event.target.matches("[data-quality-followup-close-note]")) {
+      commit({ type: "followup-close-note-changed", note: event.target.value });
+      requestAnimationFrame(() => {
+        const input = root.querySelector("[data-quality-followup-close-note]");
+        input?.focus();
+        input?.setSelectionRange?.(state.followups.dialog.closeNote.length, state.followups.dialog.closeNote.length);
+      });
+    }
     if (event.target.matches("[data-quality-attention-search]")) {
       commit({ type: "attention-search-changed", search: event.target.value });
       requestAnimationFrame(() => {
@@ -1020,6 +1217,12 @@ function bindEvents() {
     }
   });
   root.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && state.followups?.dialog?.phase !== "closed") {
+      event.preventDefault();
+      followupMutationController?.abort();
+      commit({ type: "followup-dialog-closed" });
+      return;
+    }
     const review = suggestionReviewState();
     if (review.open) {
       if (event.key === "Escape") {

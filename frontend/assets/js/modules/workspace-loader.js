@@ -25,7 +25,7 @@ const STYLES = {
     "driver-shift-distribution.css?v=6",
     "driver-shift-credentials.css?v=1",
   ],
-  dsp: ["dsp-workspace.css?v=6", "dsp-quality.css?v=15"],
+  dsp: ["dsp-workspace.css?v=6", "dsp-quality.css?v=16"],
   fleet: [
     "fleet.css",
     "fleet-sync.css",
@@ -135,7 +135,7 @@ const WORKSPACE_PREPARERS = {
   },
   dsp: async () => {
     const [module] = await Promise.all([
-      import("./dsp-shell/index.js?v=18"),
+      import("./dsp-shell/index.js?v=19"),
       loadWorkspaceStyles("dsp"),
     ]);
     return async () => {

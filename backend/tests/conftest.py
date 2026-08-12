@@ -111,6 +111,8 @@ def reset_database():
     init_execution_attempt_schema()
     with db_session() as conn:
         conn.execute("DELETE FROM dsp_quality_standard_rules")
+        conn.execute("DELETE FROM dsp_quality_followup_events")
+        conn.execute("DELETE FROM dsp_quality_followups")
         conn.execute("DELETE FROM dsp_quality_focus_areas")
         conn.execute("DELETE FROM dsp_quality_working_hour_exceptions")
         conn.execute("DELETE FROM dsp_quality_transporter_observations")

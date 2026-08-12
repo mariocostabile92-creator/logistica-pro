@@ -1,4 +1,10 @@
-import { qualityDriverHistoryMarkup } from "./driver-history-presenter.js?v=1";
+import { qualityDriverHistoryMarkup } from "./driver-history-presenter.js?v=2";
+import {
+  followupActionMarkup,
+  followupDialogMarkup,
+  followupListMarkup,
+  followupSummaryMarkup,
+} from "./followup-presenter.js?v=1";
 
 
 const escapeHtml = value => String(value ?? "")
@@ -53,18 +59,22 @@ function filtersMarkup(view) {
 }
 
 
-function focusMarkup(items = []) {
+function focusMarkup(items = [], driver = null, view = {}) {
   if (!items.length) return "";
   return `<ul class="dsp-quality-attention-focus" aria-label="Focus settimanali">
     ${items.map(item => `<li>
-      <strong>${escapeHtml(item.label)}</strong>
-      <span>${escapeHtml(item.reason)}</span>
+      <span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.reason)}</small></span>
+      ${driver ? followupActionMarkup(view.followups, {
+        transporterExternalId: driver.transporter_external_id,
+        metricKey: item.metric_key,
+        canWrite: view.canWrite,
+      }) : ""}
     </li>`).join("")}
   </ul>`;
 }
 
 
-function driverCard(driver) {
+function driverCard(driver, view) {
   return `<article class="dsp-quality-attention-card" data-attention-status="${driver.status}">
     <header>
       <div><strong>${escapeHtml(driver.display_name)}</strong><span>${escapeHtml(driver.transporter_external_id)}</span></div>
@@ -75,7 +85,7 @@ function driverCard(driver) {
       <div><dt>Migliorate</dt><dd>${Number(driver.improved_metrics || 0)}</dd></div>
       <div><dt>Confrontabili</dt><dd>${Number(driver.comparable_metrics || 0)}</dd></div>
     </dl>
-    ${focusMarkup(driver.focus)}
+    ${focusMarkup(driver.focus, driver, view)}
     <p class="dsp-quality-attention-reason">${escapeHtml(driver.reasons?.join(" ") || "Nessuna evidenza disponibile.")}</p>
     <button type="button" class="secondary" data-quality-attention-driver="${escapeHtml(driver.transporter_external_id)}">Vedi andamento</button>
   </article>`;
@@ -99,7 +109,7 @@ function dspSignalsMarkup(signals = []) {
 function visibleDrivers(view) {
   const query = String(view.search || "").trim().toLocaleLowerCase("it");
   const filtered = (view.data?.drivers || []).filter(driver => {
-    if (view.filter !== "all" && driver.status !== view.filter) return false;
+    if ((view.filter || "all") !== "all" && driver.status !== view.filter) return false;
     if (!query) return true;
     return `${driver.display_name} ${driver.transporter_external_id}`
       .toLocaleLowerCase("it").includes(query);
@@ -116,7 +126,11 @@ function visibleDrivers(view) {
 
 export function qualityAttentionMarkup(view = {}) {
   if (view.detail?.phase && view.detail.phase !== "closed") {
-    return qualityDriverHistoryMarkup(view.detail);
+    return qualityDriverHistoryMarkup({
+      ...view.detail,
+      followups: view.followups,
+      canWrite: view.canWrite,
+    });
   }
   if (view.phase === "loading") return '<div class="dsp-quality-selection-loading" role="status">Calcolo delle attenzioni operative…</div>';
   if (view.phase === "error") return `<div class="dsp-quality-error-state" role="alert"><strong>Attenzione Quality non disponibile</strong><span>${escapeHtml(view.error)}</span></div><button type="button" data-quality-attention-retry>Riprova</button>`;
@@ -126,13 +140,16 @@ export function qualityAttentionMarkup(view = {}) {
   return `<section class="dsp-quality-attention" aria-labelledby="qualityAttentionTitle">
     <header><p class="eyebrow">Lettura operativa</p><h3 id="qualityAttentionTitle">Attenzione Quality</h3><p>Segnali oggettivi derivati dalla settimana selezionata e dalla precedente scorecard realmente disponibile.</p></header>
     ${summaryMarkup(data)}
+    ${followupSummaryMarkup(view.followups)}
     <section class="dsp-quality-dsp-attention" aria-labelledby="qualityDspSignalsTitle">
       <h4 id="qualityDspSignalsTitle">Attenzioni DSP</h4>${dspSignalsMarkup(data.dsp_signals)}
     </section>
     ${filtersMarkup(view)}
     <section class="dsp-quality-driver-attention" aria-labelledby="qualityDriverAttentionTitle">
       <div><h4 id="qualityDriverAttentionTitle">Driver</h4><span>Massimo 10 risultati per categoria</span></div>
-      ${drivers.length ? `<div class="dsp-quality-attention-grid">${drivers.map(driverCard).join("")}</div>` : '<p class="dsp-quality-neutral">Nessun driver corrisponde ai filtri.</p>'}
+      ${drivers.length ? `<div class="dsp-quality-attention-grid">${drivers.map(driver => driverCard(driver, view)).join("")}</div>` : '<p class="dsp-quality-neutral">Nessun driver corrisponde ai filtri.</p>'}
     </section>
+    <section class="dsp-quality-followups" aria-labelledby="qualityFollowupListTitle"><div><p class="eyebrow">Follow-up operativi</p><h4 id="qualityFollowupListTitle">Follow-up Quality</h4></div>${followupListMarkup(view.followups)}</section>
+    ${followupDialogMarkup(view.followups?.dialog, { canWrite: view.canWrite })}
   </section>`;
 }

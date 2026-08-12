@@ -144,6 +144,71 @@ export async function getQualityDriverHistory(
 }
 
 
+export async function getQualityFollowups(
+  {
+    status = null,
+    transporterExternalId = null,
+    metricKey = null,
+    signal,
+    fetcher = globalThis.fetch,
+  } = {},
+) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (transporterExternalId) params.set("transporter_external_id", transporterExternalId);
+  if (metricKey) params.set("metric_key", metricKey);
+  const query = params.size ? `?${params}` : "";
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/followups${query}`,
+    { method: "GET", signal },
+  ));
+}
+
+
+export async function getQualityFollowup(
+  followupId,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/followups/${encodeURIComponent(followupId)}`,
+    { method: "GET", signal },
+  ));
+}
+
+
+export async function createQualityFollowup(
+  payload,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/followups`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
+export async function closeQualityFollowup(
+  followupId,
+  payload = {},
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/followups/${encodeURIComponent(followupId)}/close`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+  ));
+}
+
+
 export async function getTransporterReconciliation(
   { scorecardId = null, signal, fetcher = globalThis.fetch } = {},
 ) {

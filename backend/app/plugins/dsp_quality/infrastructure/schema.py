@@ -202,6 +202,48 @@ def init_schema() -> None:
                 FOREIGN KEY (metric_key) REFERENCES dsp_quality_metric_definitions(metric_key)
             );
 
+            CREATE TABLE IF NOT EXISTS dsp_quality_followups (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                transporter_external_id TEXT NOT NULL,
+                workforce_member_id INTEGER,
+                created_from_scorecard_id TEXT NOT NULL,
+                created_from_week INTEGER NOT NULL,
+                created_from_year INTEGER NOT NULL,
+                metric_key TEXT NOT NULL,
+                baseline_value TEXT NOT NULL,
+                baseline_direction TEXT NOT NULL,
+                baseline_status TEXT NOT NULL,
+                note TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                target_review_scorecard_id TEXT,
+                reviewed_at TEXT,
+                review_result TEXT,
+                closed_at TEXT,
+                closed_by TEXT,
+                close_note TEXT,
+                FOREIGN KEY (workforce_member_id) REFERENCES workforce_members(id),
+                FOREIGN KEY (created_from_scorecard_id) REFERENCES dsp_quality_scorecards(id),
+                FOREIGN KEY (target_review_scorecard_id) REFERENCES dsp_quality_scorecards(id),
+                FOREIGN KEY (metric_key) REFERENCES dsp_quality_metric_definitions(metric_key)
+            );
+
+            CREATE TABLE IF NOT EXISTS dsp_quality_followup_events (
+                id TEXT PRIMARY KEY,
+                followup_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                transporter_external_id TEXT NOT NULL,
+                metric_key TEXT NOT NULL,
+                scorecard_id TEXT,
+                details TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (followup_id) REFERENCES dsp_quality_followups(id)
+            );
+
             CREATE TABLE IF NOT EXISTS dsp_quality_standard_rules (
                 id TEXT PRIMARY KEY,
                 standard_set_id TEXT NOT NULL,
@@ -226,6 +268,19 @@ def init_schema() -> None:
                 ON dsp_quality_transporter_rows(transporter_external_id, revision_id);
             CREATE INDEX IF NOT EXISTS idx_workforce_external_identity_lookup
                 ON workforce_external_identities(organization_id, source, external_id);
+            CREATE INDEX IF NOT EXISTS idx_quality_followups_org_status
+                ON dsp_quality_followups(organization_id, status, created_at);
+            CREATE INDEX IF NOT EXISTS idx_quality_followups_driver
+                ON dsp_quality_followups(
+                    organization_id, transporter_external_id, created_at
+                );
+            CREATE INDEX IF NOT EXISTS idx_quality_followup_events
+                ON dsp_quality_followup_events(followup_id, created_at);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_quality_followups_active_unique
+                ON dsp_quality_followups(
+                    organization_id, transporter_external_id,
+                    metric_key, created_from_scorecard_id
+                ) WHERE status <> 'CLOSED';
             """
         )
         ensure_column(

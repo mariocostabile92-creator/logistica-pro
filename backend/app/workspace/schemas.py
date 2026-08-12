@@ -32,6 +32,8 @@ class WorkspaceRemovedCounts(BaseModel):
     attachments: int = 0
     workforce_external_identity_events: int = 0
     workforce_external_identities: int = 0
+    dsp_quality_followup_events: int = 0
+    dsp_quality_followups: int = 0
     dsp_quality_transporter_observations: int = 0
     dsp_quality_focus_areas: int = 0
     dsp_quality_working_hour_exceptions: int = 0

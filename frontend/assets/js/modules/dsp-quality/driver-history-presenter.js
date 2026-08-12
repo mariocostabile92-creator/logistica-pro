@@ -1,3 +1,9 @@
+import {
+  followupDialogMarkup,
+  historyFollowupsMarkup,
+} from "./followup-presenter.js?v=1";
+
+
 const escapeHtml = value => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -174,7 +180,21 @@ function timelineMetric(entry, metricKey) {
 }
 
 
-function timelineMarkup(data, metricKey) {
+function timelineFollowups(entry, followups) {
+  const events = [];
+  for (const item of followups?.data?.items || []) {
+    if (item.baseline?.scorecard_id === entry.scorecard_id) {
+      events.push(`<span><strong>Follow-up ${escapeHtml(item.metric_label)}</strong> aperto</span>`);
+    }
+    if (item.review?.period?.scorecard_id === entry.scorecard_id) {
+      events.push(`<span><strong>Follow-up ${escapeHtml(item.metric_label)}</strong> ${escapeHtml(COMPARISON_LABELS[item.review.result] || item.review.message)}</span>`);
+    }
+  }
+  return events.length ? `<div class="dsp-quality-history-followup-events">${events.join("")}</div>` : "";
+}
+
+
+function timelineMarkup(data, metricKey, followups) {
   return `<section class="dsp-quality-history-timeline" aria-labelledby="qualityHistoryTimelineTitle">
     <h4 id="qualityHistoryTimelineTitle">Andamento settimana per settimana</h4>
     <ol>${(data.timeline || []).map(entry => {
@@ -186,6 +206,7 @@ function timelineMarkup(data, metricKey) {
           ${Number(entry.customer_escalations || 0) > 0 ? `<p class="dsp-quality-history-escalation"><strong>${number(entry.customer_escalations)}</strong> Customer Escalation${Number(entry.customer_escalations) === 1 ? "" : "s"}</p>` : ""}
           <div class="dsp-quality-history-week-metrics">${metricKeys.map(key => timelineMetric(entry, key)).join("")}</div>
           <div class="dsp-quality-history-week-focus"><strong>Focus</strong>${focusMarkup(entry.weekly_focus)}</div>
+          ${timelineFollowups(entry, followups)}
           <p>${escapeHtml((entry.reasons || []).join(" ") || "Nessun confronto disponibile.")}</p>
         </article>
       </li>`;
@@ -214,9 +235,15 @@ function availableMarkup(view) {
       <div><dt>Customer Escalations recenti</dt><dd>${number(summary.recent_customer_escalations)}</dd></div>
     </dl>
     <section class="dsp-quality-history-current-focus"><h4>Focus attuale</h4>${focusMarkup(focus)}</section>
+    ${historyFollowupsMarkup(view.followups, {
+      transporterExternalId: data.transporter_external_id,
+      canWrite: view.canWrite,
+      focus,
+    })}
     <section aria-labelledby="qualityHistoryTrendsTitle"><h4 id="qualityHistoryTrendsTitle">Trend deterministici</h4>${trendSummaryMarkup(data)}</section>
     ${chartMarkup(data, metricKey)}
-    ${timelineMarkup(data, metricKey)}
+    ${timelineMarkup(data, metricKey, view.followups)}
+    ${followupDialogMarkup(view.followups?.dialog, { canWrite: view.canWrite })}
   </section>`;
 }
 

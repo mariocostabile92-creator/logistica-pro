@@ -4,7 +4,7 @@ import {
 } from "./import.js";
 import { qualityMetricsMarkup } from "./metrics-presenter.js?v=3";
 import { qualityDriversMarkup } from "./drivers-presenter.js?v=7";
-import { qualityAttentionMarkup } from "./attention-presenter.js?v=2";
+import { qualityAttentionMarkup } from "./attention-presenter.js?v=3";
 import { mountSuggestionReview } from "./suggestion-review-presenter.js?v=2";
 
 
@@ -275,7 +275,11 @@ export function qualityAvailableMarkup(view) {
       <div class="dsp-quality-section-panel" role="tabpanel">
         ${!view.latest ? '<div class="dsp-quality-selection-loading" role="status" aria-live="polite">Caricamento settimana selezionata…</div>'
           : section === "overview" ? persistedOverview(view.latest)
-          : section === "attention" ? qualityAttentionMarkup(view.attention)
+          : section === "attention" ? qualityAttentionMarkup({
+            ...view.attention,
+            followups: view.followups,
+            canWrite: view.canImport,
+          })
           : section === "metrics" ? qualityMetricsMarkup(view.metrics)
           : qualityDriversMarkup(view.drivers)}
       </div>

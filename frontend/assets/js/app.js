@@ -5,7 +5,7 @@ import {
   ensureWorkspaceInitialized,
   initWorkspaceLoader,
   preloadWorkspace,
-} from "./modules/workspace-loader.js?v=99";
+} from "./modules/workspace-loader.js?v=100";
 import { initWorkspaceLifecycle } from "./modules/workspace-lifecycle.js?v=2";
 import { byId } from "./utils/dom.js";
 import { requireAdministrativeSession } from "./auth/session.js?v=2";
