@@ -414,6 +414,7 @@ def test_openapi_preserves_existing_paths_and_adds_only_two_briefing_routes():
                     "/api/dsp-quality/scorecards/latest/drivers",
                     "/api/dsp-quality/scorecards/latest/attention",
                     "/api/dsp-quality/scorecards/{scorecard_id}/attention",
+                    "/api/dsp-quality/drivers/{transporter_external_id}/history",
                 "/api/planning/readiness",
                 "/api/planning/conflicts",
                 "/api/planning/timeline",

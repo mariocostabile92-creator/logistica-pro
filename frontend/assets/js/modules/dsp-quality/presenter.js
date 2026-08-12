@@ -4,7 +4,7 @@ import {
 } from "./import.js";
 import { qualityMetricsMarkup } from "./metrics-presenter.js?v=3";
 import { qualityDriversMarkup } from "./drivers-presenter.js?v=7";
-import { qualityAttentionMarkup } from "./attention-presenter.js?v=1";
+import { qualityAttentionMarkup } from "./attention-presenter.js?v=2";
 import { mountSuggestionReview } from "./suggestion-review-presenter.js?v=2";
 
 

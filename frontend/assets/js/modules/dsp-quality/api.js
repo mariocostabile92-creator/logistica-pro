@@ -126,6 +126,24 @@ export async function getQualityAttention(
 }
 
 
+export async function getQualityDriverHistory(
+  transporterExternalId,
+  {
+    scorecardId = null,
+    limit = 52,
+    signal,
+    fetcher = globalThis.fetch,
+  } = {},
+) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (scorecardId) params.set("scorecard_id", scorecardId);
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/drivers/${encodeURIComponent(transporterExternalId)}/history?${params}`,
+    { method: "GET", signal },
+  ));
+}
+
+
 export async function getTransporterReconciliation(
   { scorecardId = null, signal, fetcher = globalThis.fetch } = {},
 ) {

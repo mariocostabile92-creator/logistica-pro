@@ -1201,6 +1201,223 @@
   }
 }
 
+/* DSP.Q11 — single-Transporter historical detail */
+.dsp-quality-driver-history { display: grid; gap: 1rem; min-width: 0; }
+.dsp-quality-history-back { justify-self: start; }
+.dsp-quality-history-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, .8fr);
+  gap: 1rem;
+  align-items: start;
+  padding: 1.1rem;
+  border: 1px solid var(--border, #cbd5d1);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+.dsp-quality-history-header h3,
+.dsp-quality-history-header p { margin: 0; }
+.dsp-quality-history-header code { overflow-wrap: anywhere; }
+.dsp-quality-history-header dl,
+.dsp-quality-history-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+  margin: 0;
+}
+.dsp-quality-history-header dl > div,
+.dsp-quality-history-kpis > div {
+  min-width: 0;
+  padding: .7rem;
+  border-radius: 9px;
+  background: #f3f7f5;
+}
+.dsp-quality-history-header dt,
+.dsp-quality-history-kpis dt { color: #53645f; font-size: .75rem; }
+.dsp-quality-history-header dd,
+.dsp-quality-history-kpis dd {
+  margin: .25rem 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.dsp-quality-history-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dsp-quality-history-kpis dd { font-size: 1.35rem; }
+.dsp-quality-history-current-focus,
+.dsp-quality-driver-history > section[aria-labelledby="qualityHistoryTrendsTitle"],
+.dsp-quality-history-chart,
+.dsp-quality-history-timeline {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--border, #cbd5d1);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+.dsp-quality-history-current-focus h4,
+.dsp-quality-driver-history > section h4 { margin: 0 0 .75rem; }
+.dsp-quality-history-focus {
+  display: grid;
+  gap: .55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dsp-quality-history-focus li {
+  display: grid;
+  gap: .2rem;
+  padding-left: .7rem;
+  border-left: 3px solid #147d6f;
+}
+.dsp-quality-history-focus span { color: #53645f; font-size: .86rem; }
+.dsp-quality-history-trends {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .7rem;
+}
+.dsp-quality-history-trends article {
+  display: grid;
+  gap: .25rem;
+  padding: .8rem;
+  border-radius: 9px;
+  background: #edf7f4;
+}
+.dsp-quality-history-trends article[data-trend="recurring"] {
+  background: #fff2eb;
+  border-left: 3px solid #b44620;
+}
+.dsp-quality-history-trends span { color: #53645f; font-size: .84rem; }
+.dsp-quality-history-chart > div:first-child {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: end;
+}
+.dsp-quality-history-chart label {
+  display: grid;
+  gap: .3rem;
+  min-width: min(280px, 100%);
+}
+.dsp-quality-history-chart select { min-height: 44px; max-width: 100%; }
+.dsp-quality-history-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 220px;
+  margin-top: .5rem;
+  overflow: visible;
+}
+.dsp-quality-history-chart svg polyline {
+  stroke: #147d6f;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dsp-quality-history-chart svg circle {
+  fill: #fff;
+  stroke: #147d6f;
+  stroke-width: 3;
+}
+.dsp-quality-history-chart svg text { fill: #53645f; font-size: 13px; }
+.dsp-quality-history-chart svg .chart-gap { fill: #7b8783; font-size: 12px; }
+.dsp-quality-history-chart svg .chart-axis { stroke: #aebbb7; stroke-width: 1; }
+.dsp-quality-history-chart > p { margin: 0; color: #53645f; font-size: .8rem; }
+.dsp-quality-history-timeline > ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dsp-quality-history-timeline > ol > li {
+  position: relative;
+  padding: 0 0 1rem 1.5rem;
+  border-left: 2px solid #c7d8d3;
+}
+.dsp-quality-history-timeline > ol > li::before {
+  content: "";
+  position: absolute;
+  top: 1.15rem;
+  left: -.42rem;
+  width: .7rem;
+  height: .7rem;
+  border: 2px solid #147d6f;
+  border-radius: 50%;
+  background: #fff;
+}
+.dsp-quality-history-timeline article {
+  display: grid;
+  gap: .75rem;
+  min-width: 0;
+  padding: .9rem;
+  border: 1px solid #d5dfdc;
+  border-radius: 10px;
+}
+.dsp-quality-history-timeline article > header {
+  display: flex;
+  gap: .75rem;
+  justify-content: space-between;
+  align-items: start;
+}
+.dsp-quality-history-timeline article > header > div { display: grid; }
+.dsp-quality-history-escalation {
+  margin: 0;
+  padding: .65rem;
+  border-left: 3px solid #b44620;
+  background: #fff2eb;
+}
+.dsp-quality-history-week-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+}
+.dsp-quality-history-metric {
+  display: grid;
+  gap: .18rem;
+  min-width: 0;
+  padding: .65rem;
+  border-radius: 8px;
+  background: #f3f7f5;
+}
+.dsp-quality-history-metric > span:not(.trend-label) { font-size: 1.05rem; font-weight: 700; }
+.dsp-quality-history-metric small { color: #53645f; }
+.trend-label {
+  justify-self: start;
+  padding: .18rem .42rem;
+  border-radius: 999px;
+  background: #dceee9;
+  font-size: .72rem;
+  font-weight: 700;
+}
+.trend-label.recurring { color: #8c3216; background: #ffe2d5; }
+.dsp-quality-history-week-focus { display: grid; gap: .45rem; }
+
+@media (max-width: 800px) {
+  .dsp-quality-history-header { grid-template-columns: 1fr; }
+  .dsp-quality-history-kpis,
+  .dsp-quality-history-week-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 480px) {
+  .dsp-quality-history-header,
+  .dsp-quality-history-current-focus,
+  .dsp-quality-driver-history > section[aria-labelledby="qualityHistoryTrendsTitle"],
+  .dsp-quality-history-chart,
+  .dsp-quality-history-timeline { padding: .8rem; }
+  .dsp-quality-history-header dl,
+  .dsp-quality-history-kpis,
+  .dsp-quality-history-trends,
+  .dsp-quality-history-week-metrics { grid-template-columns: 1fr; }
+  .dsp-quality-history-chart > div:first-child {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .dsp-quality-history-chart svg { min-height: 180px; }
+  .dsp-quality-history-timeline > ol > li { padding-left: 1rem; }
+  .dsp-quality-history-timeline article > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .dsp-quality-history-back { width: 100%; min-height: 44px; }
+}
+
 .dsp-quality-drivers {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

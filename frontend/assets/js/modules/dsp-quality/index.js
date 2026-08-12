@@ -4,6 +4,7 @@ import {
   deleteTransporterMapping,
   getQualityDrivers,
   getQualityAttention,
+  getQualityDriverHistory,
   getQualityMetrics,
   getQualityScorecard,
   getQualityScorecardHistory,
@@ -14,13 +15,14 @@ import {
   previewTransporterIdentitySource,
   putTransporterMapping,
   searchQualityWorkforceCandidates,
-} from "./api.js?v=8";
+} from "./api.js?v=9";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
 import {
   mapWithConcurrency,
   validateIdentitySourceFile,
 } from "./identity-source.js?v=3";
-import { renderDspQuality } from "./presenter.js?v=13";
+import { renderDspQuality } from "./presenter.js?v=14";
+import { defaultHistoryMetricKey } from "./driver-history-presenter.js?v=1";
 import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=11";
 import {
   currentSuggestion,
@@ -30,7 +32,7 @@ import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=10";
+} from "./state.js?v=11";
 
 
 let initialized = false;
@@ -48,6 +50,8 @@ let driversRequestVersion = 0;
 let driversRequestController = null;
 let attentionRequestVersion = 0;
 let attentionRequestController = null;
+let driverHistoryRequestVersion = 0;
+let driverHistoryRequestController = null;
 let reconciliationRequestController = null;
 let candidateRequestController = null;
 let candidateRequestVersion = 0;
@@ -215,6 +219,56 @@ async function loadAttention({ force = false } = {}) {
       commit({ type: "attention-failed", message: "Impossibile caricare le attenzioni Quality. Riprova." });
     }
   }
+}
+
+
+async function loadDriverHistory(transporterExternalId, { force = false } = {}) {
+  const scorecardId = state.selectedScorecardId;
+  if (!scorecardId || !transporterExternalId) return;
+  const detail = state.attention?.detail || {};
+  if (!force
+    && detail.transporterExternalId === transporterExternalId
+    && ["loading", "available"].includes(detail.phase)) return;
+  const version = ++driverHistoryRequestVersion;
+  driverHistoryRequestController?.abort();
+  driverHistoryRequestController = new AbortController();
+  commit({ type: "driver-history-started", transporterExternalId });
+  try {
+    const data = await getQualityDriverHistory(transporterExternalId, {
+      scorecardId,
+      signal: driverHistoryRequestController.signal,
+    });
+    if (version === driverHistoryRequestVersion
+      && scorecardId === state.selectedScorecardId
+      && state.attention?.detail?.transporterExternalId === transporterExternalId) {
+      commit({
+        type: "driver-history-completed",
+        data,
+        metricKey: defaultHistoryMetricKey(data),
+      });
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    if (version === driverHistoryRequestVersion) {
+      commit({
+        type: "driver-history-failed",
+        message: "Impossibile caricare lo storico Quality del driver. Riprova.",
+      });
+    }
+  }
+}
+
+
+function closeDriverHistory() {
+  const transporterExternalId = state.attention?.detail?.transporterExternalId;
+  driverHistoryRequestController?.abort();
+  driverHistoryRequestVersion += 1;
+  commit({ type: "driver-history-closed" });
+  requestAnimationFrame(() => {
+    [...root.querySelectorAll("[data-quality-attention-driver]")]
+      .find(item => item.dataset.qualityAttentionDriver === transporterExternalId)
+      ?.focus();
+  });
 }
 
 
@@ -744,17 +798,18 @@ function bindEvents() {
     if (event.target.closest("[data-quality-metrics-retry]")) void loadMetrics({ force: true });
     if (event.target.closest("[data-quality-drivers-retry]")) void loadDrivers({ force: true });
     if (event.target.closest("[data-quality-attention-retry]")) void loadAttention({ force: true });
+    if (event.target.closest("[data-quality-driver-history-retry]")) {
+      void loadDriverHistory(
+        state.attention?.detail?.transporterExternalId,
+        { force: true },
+      );
+    }
+    if (event.target.closest("[data-quality-driver-history-back]")) closeDriverHistory();
     const attentionFilter = event.target.closest("[data-quality-attention-filter]")?.dataset.qualityAttentionFilter;
     if (attentionFilter) commit({ type: "attention-filter-changed", filter: attentionFilter });
     const attentionDriver = event.target.closest("[data-quality-attention-driver]")?.dataset.qualityAttentionDriver;
     if (attentionDriver) {
-      commit({ type: "section-changed", section: "drivers" });
-      void loadDrivers().then(() => {
-        const row = (state.drivers?.data?.rows || []).find(
-          item => item.transporter_external_id === attentionDriver,
-        );
-        if (row) commit({ type: "driver-opened", rowId: row.row_id });
-      });
+      void loadDriverHistory(attentionDriver);
     }
     if (event.target.closest("[data-quality-reconciliation-open]")) void openReconciliation();
     if (event.target.closest("[data-quality-reconciliation-close]")) commit({ type: "reconciliation-closed" });
@@ -896,12 +951,20 @@ function bindEvents() {
       if (!scorecardId || scorecardId === state.selectedScorecardId) return;
       latestRequestController?.abort();
       attentionRequestController?.abort();
+      driverHistoryRequestController?.abort();
+      driverHistoryRequestVersion += 1;
       metricsRequestController?.abort();
       driversRequestController?.abort();
       reconciliationRequestController?.abort();
       commit({ type: "scorecard-selection-changed", scorecardId });
       void loadLatest({ scorecardId }).finally(() => {
         requestAnimationFrame(() => root.querySelector("[data-quality-scorecard-select]")?.focus());
+      });
+    }
+    if (event.target.matches("[data-quality-driver-history-metric]")) {
+      commit({
+        type: "driver-history-metric-changed",
+        metricKey: event.target.value,
       });
     }
   });

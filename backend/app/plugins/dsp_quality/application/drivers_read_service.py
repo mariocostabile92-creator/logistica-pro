@@ -127,6 +127,42 @@ def _metric_item(
     )
 
 
+def build_driver_performance_row(
+    row: dict,
+    previous_row: dict | None = None,
+    previous_period: dict | None = None,
+) -> QualityDriverPerformanceRow:
+    """Build the canonical Q7 driver row used by current and historical reads."""
+    mapping_status = row["mapping_status"]
+    workforce_member_id = row["workforce_member_id"]
+    display_name = row["workforce_display_name"]
+    if mapping_status == "MATCHED" and (not workforce_member_id or not display_name):
+        mapping_status = "AMBIGUOUS"
+        workforce_member_id = None
+        display_name = None
+    return QualityDriverPerformanceRow(
+        row_id=row["row_id"],
+        row_index=row["row_index"],
+        transporter_external_id=row["transporter_external_id"],
+        mapping_status=mapping_status,
+        workforce_member_id=(
+            workforce_member_id if mapping_status == "MATCHED" else None
+        ),
+        workforce_display_name=(
+            display_name if mapping_status == "MATCHED" else None
+        ),
+        metrics=[
+            _metric_item(
+                key,
+                row["metrics"].get(key),
+                previous_row["metrics"].get(key) if previous_row else None,
+                previous_period,
+            )
+            for key in DRIVER_METRIC_KEYS
+        ],
+    )
+
+
 def get_drivers(
     organization_id: str,
     scorecard_id: str | None = None,
@@ -148,30 +184,7 @@ def get_drivers(
     rows = []
     for row in current_groups.values():
         previous_row = previous_by_external_id.get(row["transporter_external_id"])
-        mapping_status = row["mapping_status"]
-        workforce_member_id = row["workforce_member_id"]
-        display_name = row["workforce_display_name"]
-        if mapping_status == "MATCHED" and (not workforce_member_id or not display_name):
-            mapping_status = "AMBIGUOUS"
-            workforce_member_id = None
-            display_name = None
-        rows.append(QualityDriverPerformanceRow(
-            row_id=row["row_id"],
-            row_index=row["row_index"],
-            transporter_external_id=row["transporter_external_id"],
-            mapping_status=mapping_status,
-            workforce_member_id=workforce_member_id if mapping_status == "MATCHED" else None,
-            workforce_display_name=display_name if mapping_status == "MATCHED" else None,
-            metrics=[
-                _metric_item(
-                    key,
-                    row["metrics"].get(key),
-                    previous_row["metrics"].get(key) if previous_row else None,
-                    previous,
-                )
-                for key in DRIVER_METRIC_KEYS
-            ],
-        ))
+        rows.append(build_driver_performance_row(row, previous_row, previous))
 
     summary = QualityDriversSummary(
         total=len(rows),

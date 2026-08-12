@@ -1,3 +1,6 @@
+import { qualityDriverHistoryMarkup } from "./driver-history-presenter.js?v=1";
+
+
 const escapeHtml = value => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -112,6 +115,9 @@ function visibleDrivers(view) {
 
 
 export function qualityAttentionMarkup(view = {}) {
+  if (view.detail?.phase && view.detail.phase !== "closed") {
+    return qualityDriverHistoryMarkup(view.detail);
+  }
   if (view.phase === "loading") return '<div class="dsp-quality-selection-loading" role="status">Calcolo delle attenzioni operative…</div>';
   if (view.phase === "error") return `<div class="dsp-quality-error-state" role="alert"><strong>Attenzione Quality non disponibile</strong><span>${escapeHtml(view.error)}</span></div><button type="button" data-quality-attention-retry>Riprova</button>`;
   const data = view.data;
@@ -130,4 +136,3 @@ export function qualityAttentionMarkup(view = {}) {
     </section>
   </section>`;
 }
-

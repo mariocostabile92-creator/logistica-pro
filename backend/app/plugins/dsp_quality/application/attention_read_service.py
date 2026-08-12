@@ -51,7 +51,8 @@ def _focus(metric, reason: str) -> QualityAttentionFocus:
     )
 
 
-def _driver_attention(row) -> QualityDriverAttention:
+def classify_driver_attention(row) -> QualityDriverAttention:
+    """Apply the exclusive, explainable Q10 driver classification rules."""
     comparable = [
         metric for metric in row.metrics
         if metric.metric_key not in VOLUME_ONLY_KEYS
@@ -190,7 +191,7 @@ def get_attention(
     if not drivers_model.available and not metrics_model.available:
         return QualityAttentionReadModel(available=False)
 
-    drivers = [_driver_attention(row) for row in drivers_model.rows]
+    drivers = [classify_driver_attention(row) for row in drivers_model.rows]
     drivers.sort(key=lambda item: (
         STATUS_ORDER[item.status],
         0 if item.escalation_present else 1,
@@ -256,4 +257,3 @@ def get_attention(
 
 def get_latest_attention(organization_id: str) -> QualityAttentionReadModel:
     return get_attention(organization_id)
-

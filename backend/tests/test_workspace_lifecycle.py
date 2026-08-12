@@ -755,6 +755,7 @@ def test_preexisting_openapi_paths_are_byte_compatible():
                 "/api/dsp-quality/scorecards/latest/drivers",
                 "/api/dsp-quality/scorecards/latest/attention",
                 "/api/dsp-quality/scorecards/{scorecard_id}/attention",
+                "/api/dsp-quality/drivers/{transporter_external_id}/history",
             "/api/planning/readiness",
             "/api/planning/conflicts",
             "/api/planning/timeline",

@@ -24,6 +24,12 @@ from app.plugins.dsp_quality.application.attention_read_service import (
     get_attention,
     get_latest_attention,
 )
+from app.plugins.dsp_quality.application.driver_history_models import (
+    QualityDriverHistoryReadModel,
+)
+from app.plugins.dsp_quality.application.driver_history_service import (
+    get_driver_history,
+)
 from app.plugins.dsp_quality.application.history_models import QualityScorecardHistory
 from app.plugins.dsp_quality.application.history_service import (
     ensure_scorecard,
@@ -156,6 +162,30 @@ def latest_scorecard_drivers(request: Request):
 def latest_scorecard_attention(request: Request):
     _require_read_permission(request)
     return get_latest_attention(request.state.user.organization_id)
+
+
+@router.get(
+    "/drivers/{transporter_external_id}/history",
+    response_model=QualityDriverHistoryReadModel,
+)
+def driver_quality_history(
+    transporter_external_id: str,
+    request: Request,
+    scorecard_id: str | None = Query(default=None),
+    limit: int = Query(default=52, ge=1, le=260),
+):
+    _require_read_permission(request)
+    try:
+        return get_driver_history(
+            request.state.user.organization_id,
+            transporter_external_id,
+            scorecard_id=scorecard_id,
+            limit=limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/scorecards/{scorecard_id}", response_model=QualityLatestOverview)
