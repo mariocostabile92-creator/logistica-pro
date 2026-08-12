@@ -25,7 +25,7 @@ const STYLES = {
     "driver-shift-distribution.css?v=6",
     "driver-shift-credentials.css?v=1",
   ],
-  dsp: ["dsp-workspace.css?v=6", "dsp-quality.css?v=12"],
+  dsp: ["dsp-workspace.css?v=6", "dsp-quality.css?v=14"],
   fleet: [
     "fleet.css",
     "fleet-sync.css",

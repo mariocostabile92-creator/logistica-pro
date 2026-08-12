@@ -18,6 +18,13 @@ export function createDspQualityState({ canImport = false } = {}) {
     section: "overview",
     overviewVisible: false,
     notice: null,
+    attention: {
+      phase: "idle",
+      data: null,
+      error: null,
+      filter: "all",
+      search: "",
+    },
     metrics: {
       phase: "idle",
       data: null,
@@ -88,6 +95,7 @@ export function applyDspQualityEvent(state, event) {
         selectedScorecardId: event.scorecardId,
         notice: event.notice || null,
         error: null,
+        attention: { ...state.attention, phase: "idle", data: null, error: null, filter: "all", search: "" },
         metrics: { ...state.metrics, phase: "idle", data: null, error: null, filter: "all", search: "" },
         drivers: {
           ...state.drivers,
@@ -106,6 +114,7 @@ export function applyDspQualityEvent(state, event) {
         ...state,
         phase: state.history?.items?.length ? "available" : "loading",
         error: null,
+        attention: { ...state.attention, phase: "idle", data: null, error: null },
         metrics: { ...state.metrics, phase: "idle", data: null, error: null },
         drivers: { ...state.drivers, phase: "idle", data: null, error: null, selectedRowId: null, reconciliation: createReconciliationState() },
       };
@@ -119,6 +128,7 @@ export function applyDspQualityEvent(state, event) {
         error: null,
         notice: event.notice || null,
         section: state.section || "overview",
+        attention: { ...state.attention, phase: "idle", data: null, error: null, filter: "all", search: "" },
         metrics: { ...state.metrics, phase: "idle", data: null, error: null, filter: "all", search: "" },
         drivers: {
           ...state.drivers,
@@ -156,6 +166,16 @@ export function applyDspQualityEvent(state, event) {
       return { ...state, overviewVisible: true, section: "overview" };
     case "section-changed":
       return { ...state, section: event.section };
+    case "attention-started":
+      return { ...state, attention: { ...state.attention, phase: "loading", error: null } };
+    case "attention-completed":
+      return { ...state, attention: { ...state.attention, phase: "available", data: event.data, error: null } };
+    case "attention-failed":
+      return { ...state, attention: { ...state.attention, phase: "error", error: event.message } };
+    case "attention-filter-changed":
+      return { ...state, attention: { ...state.attention, filter: event.filter } };
+    case "attention-search-changed":
+      return { ...state, attention: { ...state.attention, search: event.search } };
     case "metrics-started":
       return { ...state, metrics: { ...state.metrics, phase: "loading", error: null } };
     case "metrics-completed":

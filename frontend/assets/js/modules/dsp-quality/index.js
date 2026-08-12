@@ -3,6 +3,7 @@ import {
   applyExactTransporterIdentitySource,
   deleteTransporterMapping,
   getQualityDrivers,
+  getQualityAttention,
   getQualityMetrics,
   getQualityScorecard,
   getQualityScorecardHistory,
@@ -13,13 +14,13 @@ import {
   previewTransporterIdentitySource,
   putTransporterMapping,
   searchQualityWorkforceCandidates,
-} from "./api.js?v=7";
+} from "./api.js?v=8";
 import { qualityErrorMessage, validateQualityFile } from "./import.js";
 import {
   mapWithConcurrency,
   validateIdentitySourceFile,
 } from "./identity-source.js?v=3";
-import { renderDspQuality } from "./presenter.js?v=12";
+import { renderDspQuality } from "./presenter.js?v=13";
 import { updateReconciliationCandidateRegion } from "./reconciliation-presenter.js?v=11";
 import {
   currentSuggestion,
@@ -29,7 +30,7 @@ import {
   applyDspQualityEvent,
   createDspQualityState,
   deriveDspQualityView,
-} from "./state.js?v=9";
+} from "./state.js?v=10";
 
 
 let initialized = false;
@@ -45,6 +46,8 @@ let metricsRequestVersion = 0;
 let metricsRequestController = null;
 let driversRequestVersion = 0;
 let driversRequestController = null;
+let attentionRequestVersion = 0;
+let attentionRequestController = null;
 let reconciliationRequestController = null;
 let candidateRequestController = null;
 let candidateRequestVersion = 0;
@@ -83,6 +86,7 @@ async function loadLatest({ scorecardId = state.selectedScorecardId, notice = nu
       commit({ type: "latest-completed", latest, notice });
       if (state.section === "metrics") void loadMetrics();
       if (state.section === "drivers") void loadDrivers();
+      if (state.section === "attention") void loadAttention();
     }
     return latest;
   } catch (error) {
@@ -187,6 +191,28 @@ async function loadDrivers({ force = false } = {}) {
     if (error?.name === "AbortError") return;
     if (version === driversRequestVersion) {
       commit({ type: "drivers-failed", message: "Impossibile caricare le performance driver. Riprova." });
+    }
+  }
+}
+
+
+async function loadAttention({ force = false } = {}) {
+  const scorecardId = state.selectedScorecardId;
+  if (!scorecardId) return;
+  if (!force && ["loading", "available"].includes(state.attention?.phase)) return;
+  const version = ++attentionRequestVersion;
+  attentionRequestController?.abort();
+  attentionRequestController = new AbortController();
+  commit({ type: "attention-started" });
+  try {
+    const data = await getQualityAttention(scorecardId, { signal: attentionRequestController.signal });
+    if (version === attentionRequestVersion && scorecardId === state.selectedScorecardId) {
+      commit({ type: "attention-completed", data });
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    if (version === attentionRequestVersion) {
+      commit({ type: "attention-failed", message: "Impossibile caricare le attenzioni Quality. Riprova." });
     }
   }
 }
@@ -717,6 +743,19 @@ function bindEvents() {
     if (event.target.closest("[data-quality-retry]")) void loadHistory();
     if (event.target.closest("[data-quality-metrics-retry]")) void loadMetrics({ force: true });
     if (event.target.closest("[data-quality-drivers-retry]")) void loadDrivers({ force: true });
+    if (event.target.closest("[data-quality-attention-retry]")) void loadAttention({ force: true });
+    const attentionFilter = event.target.closest("[data-quality-attention-filter]")?.dataset.qualityAttentionFilter;
+    if (attentionFilter) commit({ type: "attention-filter-changed", filter: attentionFilter });
+    const attentionDriver = event.target.closest("[data-quality-attention-driver]")?.dataset.qualityAttentionDriver;
+    if (attentionDriver) {
+      commit({ type: "section-changed", section: "drivers" });
+      void loadDrivers().then(() => {
+        const row = (state.drivers?.data?.rows || []).find(
+          item => item.transporter_external_id === attentionDriver,
+        );
+        if (row) commit({ type: "driver-opened", rowId: row.row_id });
+      });
+    }
     if (event.target.closest("[data-quality-reconciliation-open]")) void openReconciliation();
     if (event.target.closest("[data-quality-reconciliation-close]")) commit({ type: "reconciliation-closed" });
     if (event.target.closest("[data-quality-reconciliation-retry]")) void loadReconciliation();
@@ -817,6 +856,7 @@ function bindEvents() {
       commit({ type: "section-changed", section });
       if (section === "metrics") void loadMetrics();
       if (section === "drivers") void loadDrivers();
+      if (section === "attention") void loadAttention();
     }
   });
   root.addEventListener("change", (event) => {
@@ -855,6 +895,7 @@ function bindEvents() {
       const scorecardId = event.target.value || null;
       if (!scorecardId || scorecardId === state.selectedScorecardId) return;
       latestRequestController?.abort();
+      attentionRequestController?.abort();
       metricsRequestController?.abort();
       driversRequestController?.abort();
       reconciliationRequestController?.abort();
@@ -865,6 +906,14 @@ function bindEvents() {
     }
   });
   root.addEventListener("input", (event) => {
+    if (event.target.matches("[data-quality-attention-search]")) {
+      commit({ type: "attention-search-changed", search: event.target.value });
+      requestAnimationFrame(() => {
+        const input = root.querySelector("[data-quality-attention-search]");
+        input?.focus();
+        input?.setSelectionRange?.(state.attention.search.length, state.attention.search.length);
+      });
+    }
     if (event.target.matches("[data-quality-metrics-search]")) {
       commit({ type: "metrics-search-changed", search: event.target.value });
       requestAnimationFrame(() => {

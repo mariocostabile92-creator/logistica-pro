@@ -19,6 +19,11 @@ from app.plugins.dsp_quality.application.metrics_read_models import QualityLates
 from app.plugins.dsp_quality.application.metrics_read_service import get_latest_metrics, get_metrics
 from app.plugins.dsp_quality.application.drivers_read_models import QualityLatestDrivers
 from app.plugins.dsp_quality.application.drivers_read_service import get_latest_drivers, get_drivers
+from app.plugins.dsp_quality.application.attention_read_models import QualityAttentionReadModel
+from app.plugins.dsp_quality.application.attention_read_service import (
+    get_attention,
+    get_latest_attention,
+)
 from app.plugins.dsp_quality.application.history_models import QualityScorecardHistory
 from app.plugins.dsp_quality.application.history_service import (
     ensure_scorecard,
@@ -147,6 +152,12 @@ def latest_scorecard_drivers(request: Request):
     return get_latest_drivers(request.state.user.organization_id)
 
 
+@router.get("/scorecards/latest/attention", response_model=QualityAttentionReadModel)
+def latest_scorecard_attention(request: Request):
+    _require_read_permission(request)
+    return get_latest_attention(request.state.user.organization_id)
+
+
 @router.get("/scorecards/{scorecard_id}", response_model=QualityLatestOverview)
 def selected_scorecard(scorecard_id: str, request: Request):
     _require_read_permission(request)
@@ -175,6 +186,19 @@ def selected_scorecard_drivers(scorecard_id: str, request: Request):
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return get_drivers(request.state.user.organization_id, scorecard_id)
+
+
+@router.get(
+    "/scorecards/{scorecard_id}/attention",
+    response_model=QualityAttentionReadModel,
+)
+def selected_scorecard_attention(scorecard_id: str, request: Request):
+    _require_read_permission(request)
+    try:
+        ensure_scorecard(request.state.user.organization_id, scorecard_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return get_attention(request.state.user.organization_id, scorecard_id)
 
 
 @router.get(

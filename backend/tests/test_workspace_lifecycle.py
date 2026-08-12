@@ -750,9 +750,11 @@ def test_preexisting_openapi_paths_are_byte_compatible():
         or path.startswith("/api/planning/operations")
         or path
         in {
-            "/api/dsp-quality/scorecards/latest",
-            "/api/dsp-quality/scorecards/latest/metrics",
-            "/api/dsp-quality/scorecards/latest/drivers",
+                "/api/dsp-quality/scorecards/latest",
+                "/api/dsp-quality/scorecards/latest/metrics",
+                "/api/dsp-quality/scorecards/latest/drivers",
+                "/api/dsp-quality/scorecards/latest/attention",
+                "/api/dsp-quality/scorecards/{scorecard_id}/attention",
             "/api/planning/readiness",
             "/api/planning/conflicts",
             "/api/planning/timeline",

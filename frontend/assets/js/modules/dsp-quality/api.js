@@ -105,6 +105,27 @@ export async function getQualityDrivers(
 }
 
 
+export async function getLatestQualityAttention(
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/scorecards/latest/attention`,
+    { method: "GET", signal },
+  ));
+}
+
+
+export async function getQualityAttention(
+  scorecardId,
+  { signal, fetcher = globalThis.fetch } = {},
+) {
+  return parseQualityResponse(await fetcher(
+    `${API_BASE}/api/dsp-quality/scorecards/${encodeURIComponent(scorecardId)}/attention`,
+    { method: "GET", signal },
+  ));
+}
+
+
 export async function getTransporterReconciliation(
   { scorecardId = null, signal, fetcher = globalThis.fetch } = {},
 ) {

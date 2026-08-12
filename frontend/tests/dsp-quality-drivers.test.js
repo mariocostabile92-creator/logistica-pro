@@ -273,8 +273,8 @@ test("cache busting reaches the DSP shell and Q7 Driver module", async () => {
     source("assets/js/modules/dsp-quality/presenter.js"),
   ]);
   assert.match(loader, /dsp-shell\/index\.js\?v=17/);
-  assert.match(shell, /dsp-quality\/index\.js\?v=17/);
-  assert.match(controller, /presenter\.js\?v=12/);
+  assert.match(shell, /dsp-quality\/index\.js\?v=18/);
+  assert.match(controller, /presenter\.js\?v=13/);
   assert.match(presenter, /drivers-presenter\.js\?v=7/);
 });
 

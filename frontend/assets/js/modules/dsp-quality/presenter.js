@@ -4,6 +4,7 @@ import {
 } from "./import.js";
 import { qualityMetricsMarkup } from "./metrics-presenter.js?v=3";
 import { qualityDriversMarkup } from "./drivers-presenter.js?v=7";
+import { qualityAttentionMarkup } from "./attention-presenter.js?v=1";
 import { mountSuggestionReview } from "./suggestion-review-presenter.js?v=2";
 
 
@@ -157,7 +158,7 @@ function importedAt(raw) {
 function persistedSectionTabs(section) {
   return `
     <nav class="dsp-quality-section-tabs" role="tablist" aria-label="Sezioni scorecard">
-      ${[["overview", "Panoramica"], ["metrics", "Metriche"], ["drivers", "Driver"]].map(([key, label]) => `
+      ${[["overview", "Panoramica"], ["attention", "Attenzione"], ["metrics", "Metriche"], ["drivers", "Driver"]].map(([key, label]) => `
         <button type="button" role="tab" data-quality-section="${key}" aria-selected="${section === key}" class="${section === key ? "active" : ""}">${label}</button>
       `).join("")}
     </nav>
@@ -273,8 +274,9 @@ export function qualityAvailableMarkup(view) {
       ${persistedSectionTabs(section)}
       <div class="dsp-quality-section-panel" role="tabpanel">
         ${!view.latest ? '<div class="dsp-quality-selection-loading" role="status" aria-live="polite">Caricamento settimana selezionata…</div>'
-          : section === "overview" ? persistedOverview(view.latest) : section === "metrics"
-          ? qualityMetricsMarkup(view.metrics)
+          : section === "overview" ? persistedOverview(view.latest)
+          : section === "attention" ? qualityAttentionMarkup(view.attention)
+          : section === "metrics" ? qualityMetricsMarkup(view.metrics)
           : qualityDriversMarkup(view.drivers)}
       </div>
     </section>
@@ -321,7 +323,7 @@ function overviewMarkup(view) {
   return `
     <section class="dsp-quality-scorecard-shell" aria-label="Scorecard importata">
       <nav class="dsp-quality-section-tabs" role="tablist" aria-label="Sezioni scorecard">
-        ${[["overview", "Panoramica"], ["metrics", "Metriche"], ["drivers", "Driver"]].map(([key, label]) => `
+        ${[["overview", "Panoramica"], ["attention", "Attenzione"], ["metrics", "Metriche"], ["drivers", "Driver"]].map(([key, label]) => `
           <button type="button" role="tab" data-quality-section="${key}" aria-selected="${section === key}" class="${section === key ? "active" : ""}">${label}</button>
         `).join("")}
       </nav>
