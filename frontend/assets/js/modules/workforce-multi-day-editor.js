@@ -45,6 +45,32 @@ export function nextMultiDaySelection(
 }
 
 
+function sameDateSelection(selectedDates, targetDates) {
+  if (selectedDates.size !== targetDates.length) return false;
+  return targetDates.every((date) => selectedDates.has(date));
+}
+
+
+export function workforceQuickSelection(selectedDates, visibleDates, preset) {
+  const dates = [...visibleDates].filter(Boolean);
+  const targetDates = dates.filter((value) => {
+    const weekday = new Date(`${value}T00:00:00Z`).getUTCDay();
+    if (preset === "weekdays") return weekday >= 1 && weekday <= 5;
+    if (preset === "weekend") return weekday === 0 || weekday === 6;
+    return preset === "week";
+  });
+  return sameDateSelection(selectedDates, targetDates)
+    ? new Set()
+    : new Set(targetDates);
+}
+
+
+export function workforceQuickSelectionActive(selectedDates, visibleDates, preset) {
+  const quickSelection = workforceQuickSelection(new Set(), visibleDates, preset);
+  return sameDateSelection(selectedDates, [...quickSelection]);
+}
+
+
 export function workforceBulkPayload(workforceMemberId, dates, choice) {
   const [kind, rawValue = ""] = String(choice || "").split(":", 2);
   const value = rawValue.trim();

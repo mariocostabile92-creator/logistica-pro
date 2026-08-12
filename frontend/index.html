@@ -1302,6 +1302,14 @@
             </div>
 
             <section id="workforceMultiDayBar" class="workforce-multi-day-bar" aria-live="polite" hidden>
+              <div id="workforceQuickSelection" class="workforce-quick-selection" aria-label="Seleziona rapidamente">
+                <strong>Seleziona rapidamente</strong>
+                <div class="workforce-quick-selection-actions">
+                  <button type="button" class="quiet" data-workforce-quick-selection="weekdays" aria-pressed="false">Lun–Ven</button>
+                  <button type="button" class="quiet" data-workforce-quick-selection="weekend" aria-pressed="false">Weekend</button>
+                  <button type="button" class="quiet" data-workforce-quick-selection="week" aria-pressed="false">Tutta la settimana</button>
+                </div>
+              </div>
               <div class="workforce-multi-day-context">
                 <span>Modifica turni</span>
                 <strong id="workforceMultiDayDriver">Driver</strong>
@@ -2621,6 +2629,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=96"></script>
+    <script type="module" src="./assets/js/app.js?v=97"></script>
 </body>
 </html>

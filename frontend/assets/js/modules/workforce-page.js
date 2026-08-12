@@ -26,7 +26,9 @@ import {
   populateWorkforceBulkChoices,
   workforceBulkPayload,
   workforceNavigationDays,
-} from "./workforce-multi-day-editor.js?v=2";
+  workforceQuickSelection,
+  workforceQuickSelectionActive,
+} from "./workforce-multi-day-editor.js?v=3";
 import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=4";
 import { initWorkforceImportFlow } from "./workforce-import-flow.js";
 import {
@@ -243,9 +245,39 @@ function renderMultiDayBar() {
   const count = multiDayEditing.selectedDates.size;
   byId("workforceMultiDayBar").hidden = !member;
   if (!member) return;
+  const quickSelection = byId("workforceQuickSelection");
+  const weekDates = workforceCalendarDatesForActiveRange();
+  quickSelection.hidden = viewMode !== "week";
+  quickSelection.querySelectorAll("[data-workforce-quick-selection]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(workforceQuickSelectionActive(
+      multiDayEditing.selectedDates,
+      weekDates,
+      button.dataset.workforceQuickSelection,
+    )));
+  });
   byId("workforceMultiDayDriver").textContent = member.display_name;
   byId("workforceMultiDayCount").textContent = `${count} ${count === 1 ? "giorno selezionato" : "giorni selezionati"}`;
   byId("workforceMultiDayApply").disabled = count === 0 || !byId("workforceMultiDayChoice").value;
+}
+
+
+function workforceCalendarDatesForActiveRange() {
+  const dateFrom = byId("workforceDateFrom").value;
+  if (!dateFrom || viewMode !== "week") return [];
+  return Array.from({ length: 7 }, (_, offset) => addDays(dateFrom, offset));
+}
+
+
+function applyQuickSelection(preset) {
+  if (!multiDayMember() || viewMode !== "week") return;
+  const weekDates = workforceCalendarDatesForActiveRange();
+  multiDayEditing.selectedDates = workforceQuickSelection(
+    multiDayEditing.selectedDates,
+    weekDates,
+    preset,
+  );
+  multiDayEditing.anchorDate = null;
+  renderData();
 }
 
 
@@ -703,6 +735,12 @@ export function initWorkforcePage() {
   byId("workforceMultiDayApply").addEventListener("click", () => {
     void applyMultiDayStatus();
   });
+  byId("workforceQuickSelection").querySelectorAll("[data-workforce-quick-selection]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        applyQuickSelection(button.dataset.workforceQuickSelection);
+      });
+    });
   document.querySelectorAll("[data-workforce-view-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       setViewMode(button.dataset.workforceViewMode);

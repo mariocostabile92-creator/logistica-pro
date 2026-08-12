@@ -8,6 +8,8 @@ import {
   workforceBulkChoices,
   workforceBulkPayload,
   workforceNavigationDays,
+  workforceQuickSelection,
+  workforceQuickSelectionActive,
 } from "../assets/js/modules/workforce-multi-day-editor.js";
 
 
@@ -43,6 +45,44 @@ test("multi-day selection toggles cells and shift-click selects a range", () => 
     anchorDate: visible[0],
   });
   assert.deepEqual([...result.selectedDates], visible);
+});
+
+
+test("quick selection chooses weekdays weekend or the complete visible week", () => {
+  const week = [
+    "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13",
+    "2026-08-14", "2026-08-15", "2026-08-16",
+  ];
+  assert.deepEqual([...workforceQuickSelection(new Set(), week, "weekdays")], week.slice(0, 5));
+  assert.deepEqual([...workforceQuickSelection(new Set(), week, "weekend")], week.slice(5));
+  assert.deepEqual([...workforceQuickSelection(new Set(), week, "week")], week);
+});
+
+
+test("quick selection toggles only when it exactly matches the current selection", () => {
+  const week = [
+    "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13",
+    "2026-08-14", "2026-08-15", "2026-08-16",
+  ];
+  const weekdays = workforceQuickSelection(new Set(), week, "weekdays");
+  assert.equal(workforceQuickSelectionActive(weekdays, week, "weekdays"), true);
+  assert.equal(workforceQuickSelection(weekdays, week, "weekdays").size, 0);
+  const partial = new Set(weekdays);
+  partial.delete("2026-08-12");
+  assert.deepEqual([...workforceQuickSelection(partial, week, "weekdays")], week.slice(0, 5));
+});
+
+
+test("manual selection remains composable after a quick selection", () => {
+  const week = [
+    "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13",
+    "2026-08-14", "2026-08-15", "2026-08-16",
+  ];
+  const weekdays = workforceQuickSelection(new Set(), week, "weekdays");
+  const result = nextMultiDaySelection(weekdays, "2026-08-12", week);
+  assert.deepEqual([...result.selectedDates], [
+    "2026-08-10", "2026-08-11", "2026-08-13", "2026-08-14",
+  ]);
 });
 
 
@@ -95,14 +135,34 @@ test("driver-first UI exposes selection action bar, cancel and one batch apply",
   ]);
   for (const id of [
     "workforceMultiDayBar", "workforceMultiDayCount", "workforceMultiDayChoice",
-    "workforceMultiDayCancel", "workforceMultiDayApply",
+    "workforceMultiDayCancel", "workforceMultiDayApply", "workforceQuickSelection",
   ]) assert.match(html, new RegExp(`id="${id}"`));
+  assert.match(html, /data-workforce-quick-selection="weekdays"[^>]*>Lun–Ven/);
+  assert.match(html, /data-workforce-quick-selection="weekend"[^>]*>Weekend/);
+  assert.match(html, /data-workforce-quick-selection="week"[^>]*>Tutta la settimana/);
   assert.match(calendar, /data-workforce-member-schedule/);
   assert.match(calendar, /onToggleMultiDayDate/);
   assert.match(page, /saveWorkforceDayStatusesBatch\(payload\)/);
   assert.match(page, /clearMultiDayEditing\(\{ restoreFocus: true \}\)/);
   assert.match(api, /\/day-status\/batch/);
   assert.doesNotMatch(page, /for\s*\([^)]*selectedDates[^)]*\)[\s\S]{0,160}saveWorkforceDayStatus/);
+});
+
+
+test("quick selection stays scoped to the editing driver and resets on week change", async () => {
+  const page = await source("assets/js/modules/workforce-page.js");
+  assert.match(page, /if \(!multiDayMember\(\) \|\| viewMode !== "week"\) return/);
+  assert.match(page, /multiDayEditing\.selectedDates = workforceQuickSelection/);
+  assert.doesNotMatch(page, /applyQuickSelection[\s\S]{0,500}memberId\s*=/);
+  assert.match(page, /async function loadCalendar[\s\S]{0,300}clearMultiDayEditing\(\{ rerender: false \}\)/);
+});
+
+
+test("quick shortcuts are hidden outside week mode and never apply a shift", async () => {
+  const page = await source("assets/js/modules/workforce-page.js");
+  assert.match(page, /quickSelection\.hidden = viewMode !== "week"/);
+  assert.match(page, /function applyQuickSelection[\s\S]{0,500}renderData\(\)/);
+  assert.doesNotMatch(page, /function applyQuickSelection[\s\S]{0,500}saveWorkforceDayStatusesBatch/);
 });
 
 
@@ -113,6 +173,8 @@ test("selection is visible beyond color and mobile action bar has no overflow", 
   assert.match(css, /@media \(max-width: 520px\)[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(css, /max-height: calc\(100vh - 90px\)/);
   assert.match(css, /overflow-y: auto/);
+  assert.match(css, /\.workforce-quick-selection-actions button[\s\S]*?min-height: 44px/);
+  assert.match(css, /@media \(max-width: 520px\)[\s\S]*?\.workforce-quick-selection-actions[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
 
