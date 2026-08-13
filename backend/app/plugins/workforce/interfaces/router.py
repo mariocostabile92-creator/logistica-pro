@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse
 
+from app.auth.domain import Role
 from app.auth.permission_service import has_permission
 
 from app.importers.excel_reader import read_validated_upload
@@ -18,6 +19,7 @@ from app.plugins.workforce.application import driver_shift_portal_service
 from app.plugins.workforce.application import driver_shift_credentials_service
 from app.plugins.workforce.application import driver_shift_driver_session_service
 from app.plugins.workforce.application import coverage_service
+from app.plugins.workforce.application import legacy_coverage_backfill_service
 from app.plugins.workforce.application import day_member_batch_service
 from app.plugins.workforce.application.contact_coverage_service import contact_coverage
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
@@ -71,6 +73,10 @@ from app.plugins.workforce.domain.driver_shift_distribution import (
 )
 from app.plugins.workforce.domain.contact_coverage import WorkforceContactCoverage
 from app.plugins.workforce.domain.coverage import DailyCoverageResponse
+from app.plugins.workforce.domain.legacy_coverage_backfill import (
+    LegacyCoverageBackfillPreview,
+    LegacyCoverageBackfillResult,
+)
 from app.plugins.workforce.domain.driver_shift_portal import (
     DriverShiftPortalAccess,
     DriverShiftPortalAvailability,
@@ -1147,6 +1153,80 @@ def planning_coverage(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/planning/coverage/backfill/preview",
+    response_model=LegacyCoverageBackfillPreview,
+)
+async def preview_legacy_coverage_backfill(
+    request: Request,
+    file: UploadFile | None = File(default=None),
+    workforce_import_id: int | None = Form(default=None, gt=0),
+) -> LegacyCoverageBackfillPreview:
+    user = _require(request, "workforce:write")
+    if user.role != Role.ADMINISTRATOR:
+        raise HTTPException(
+            status_code=403,
+            detail="La preview del backfill legacy richiede un account Amministratore.",
+        )
+    try:
+        content: bytes | None = None
+        filename: str | None = None
+        if file is not None:
+            content, filename = await _read_upload(file)
+        return legacy_coverage_backfill_service.preview(
+            user.organization_id,
+            content=content,
+            filename=filename,
+            workforce_import_id=workforce_import_id,
+        )
+    except (
+        WorkbookProfileError,
+        legacy_coverage_backfill_service.LegacyCoverageBackfillError,
+    ) as exc:
+        raise _write_error(exc) from exc
+
+
+@router.post(
+    "/planning/coverage/backfill",
+    response_model=LegacyCoverageBackfillResult,
+)
+async def apply_legacy_coverage_backfill(
+    request: Request,
+    file: UploadFile = File(...),
+    workforce_import_id: int = Form(..., gt=0),
+    expected_preview_fingerprint: str = Form(
+        ..., min_length=64, max_length=64, pattern="^[0-9a-f]{64}$"
+    ),
+) -> LegacyCoverageBackfillResult:
+    user = _require(request, "workforce:write")
+    if user.role != Role.ADMINISTRATOR:
+        raise HTTPException(
+            status_code=403,
+            detail="Il backfill legacy richiede un account Amministratore.",
+        )
+    try:
+        ensure_real_data_write_allowed()
+        content, filename = await _read_upload(file)
+        return legacy_coverage_backfill_service.apply(
+            user.organization_id,
+            content=content,
+            filename=filename,
+            workforce_import_id=workforce_import_id,
+            expected_preview_fingerprint=expected_preview_fingerprint,
+        )
+    except legacy_coverage_backfill_service.LegacyCoverageBackfillConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "LEGACY_COVERAGE_PREVIEW_CONFLICT", "message": str(exc)},
+        ) from exc
+    except (
+        DemoWorkspaceResetRequiredError,
+        WorkbookProfileError,
+        legacy_coverage_backfill_service.LegacyCoverageBackfillError,
+    ) as exc:
+        raise _write_error(exc) from exc
 
 
 @router.get("/contact-coverage", response_model=WorkforceContactCoverage)

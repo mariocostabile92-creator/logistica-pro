@@ -13,6 +13,7 @@ class CoverageStatus(str, Enum):
 
 class CoverageSource(str, Enum):
     IMPORT = "IMPORT"
+    LEGACY_IMPORT_BACKFILL = "LEGACY_IMPORT_BACKFILL"
     MANUAL = "MANUAL"
 
 
