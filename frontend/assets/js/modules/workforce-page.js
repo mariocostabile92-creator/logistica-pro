@@ -11,7 +11,7 @@ import {
   saveWorkforceDayStatus,
   saveWorkforceDayStatusesBatch,
   updateWorkforceMember,
-} from "../api.js?v=19";
+} from "../api.js?v=20";
 import {
   byId,
   renderViewState,
@@ -58,6 +58,7 @@ import {
 } from "./workforce-foundation.js?v=3";
 import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=16";
 import { initWorkforceMemberCreate } from "./workforce-member-create.js?v=2";
+import { createPlanningCoverageBoard } from "./workforce-coverage-board.js?v=1";
 
 
 const PAGE_STATES = Object.freeze({
@@ -81,6 +82,7 @@ let workforceImportFlow = null;
 let workforceDetailPanel = null;
 let driverShiftPlanning = null;
 let workforceMemberCreate = null;
+let planningCoverageBoard = null;
 let feedbackTimeout = null;
 let selectedCellKey = null;
 let multiDayEditing = {
@@ -488,6 +490,7 @@ function renderData() {
       multiDayDates: multiDayEditing.selectedDates,
       onStartMultiDayEdit: startMultiDayEditing,
       onToggleMultiDayDate: toggleMultiDayDate,
+      onDayFocus: (date) => planningCoverageBoard?.focusDate(date),
     },
   );
   renderMultiDayBar();
@@ -522,6 +525,7 @@ function focusSelectedCell() {
 
 
 async function refreshCoverageAfterStatusSave(dateFrom, dateTo) {
+  const planningRefresh = planningCoverageBoard?.refresh();
   try {
     const coverage = await getWorkforceCoverage(dateFrom, dateTo);
     if (
@@ -540,6 +544,7 @@ async function refreshCoverageAfterStatusSave(dateFrom, dateTo) {
   } catch (error) {
     errorMessage("workforce.load-calendar", error);
   }
+  await planningRefresh;
 }
 
 
@@ -593,6 +598,7 @@ async function loadCalendar(range = null) {
       <span class="skeleton-block"></span>
     </div>
   `;
+  void planningCoverageBoard?.load(dateFrom, dateTo);
   try {
     const [members, calendar, coverage, foundation, contactCoverage] = await Promise.all([
       listWorkforceMembers(),
@@ -836,6 +842,17 @@ function handleTabKeydown(event) {
 
 export function initWorkforcePage() {
   initWorkforceFoundation();
+  planningCoverageBoard = createPlanningCoverageBoard({
+    container: byId("planningCoverageBoard"),
+    liveRegion: byId("planningCoverageLive"),
+    onDayFocus: (date) => {
+      const cell = byId("workforceCalendar").querySelector(
+        `[data-workforce-date="${date}"]`,
+      );
+      cell?.focus({ preventScroll: true });
+      cell?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    },
+  });
   workforceDetailPanel = initWorkforceDetailPanel({
     getStatuses: () => currentData.statuses,
     onSelectionCleared: () => { selectedCellKey = null; },
@@ -891,7 +908,10 @@ export function initWorkforcePage() {
   byId("workforceStatusEditor").addEventListener("submit", submitStatus);
   byId("workforceMemberEditor").addEventListener("submit", submitMember);
   byId("workforceMultiDayChoice").addEventListener("change", renderMultiDayBar);
-  byId("workforcePlanningCycleFilter").addEventListener("change", renderData);
+  byId("workforcePlanningCycleFilter").addEventListener("change", (event) => {
+    planningCoverageBoard.setCycleFilter(event.target.value);
+    renderData();
+  });
   byId("workforcePlanningActivityFilter").addEventListener("change", renderData);
   byId("workforceMultiDayCancel").addEventListener("click", () => {
     clearMultiDayEditing({ restoreFocus: true });

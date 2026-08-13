@@ -1329,6 +1329,27 @@
           aria-labelledby="workforceCalendarTab"
           data-workforce-panel="calendar"
         >
+          <section
+            id="planningCoverageBoard"
+            class="planning-coverage-board"
+            aria-labelledby="planningCoverageBoardTitle"
+          >
+            <header class="planning-coverage-board-header">
+              <div>
+                <p class="eyebrow">Forecast &amp; Coverage</p>
+                <h3 id="planningCoverageBoardTitle">Copertura settimanale</h3>
+                <p>Forecast Amazon, requisito +10% e assegnazioni effettive.</p>
+              </div>
+              <div class="planning-coverage-board-status">
+                <span data-coverage-loading hidden>Aggiornamento copertura…</span>
+                <small data-coverage-updated></small>
+              </div>
+            </header>
+            <p class="planning-coverage-board-error" data-coverage-error role="alert" hidden></p>
+            <div class="planning-coverage-weekly-summary" data-coverage-summary aria-label="Riepilogo settimanale per bucket"></div>
+            <div class="planning-coverage-days" data-coverage-days aria-label="Copertura giornaliera"></div>
+            <p id="planningCoverageLive" class="visually-hidden" aria-live="polite"></p>
+          </section>
           <div id="workforceDesk" class="workforce-desk">
             <div class="workforce-calendar-stage">
               <div id="workforceCalendar" class="workforce-calendar-wrap"></div>
@@ -2698,6 +2719,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=104"></script>
+    <script type="module" src="./assets/js/app.js?v=105"></script>
 </body>
 </html>

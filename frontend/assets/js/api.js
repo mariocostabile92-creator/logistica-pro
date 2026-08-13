@@ -653,6 +653,15 @@ export async function getLatestPlanning() {
 }
 
 
+export async function getPlanningCoverage(dateFrom, dateTo, cycle = "") {
+  const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+  if (cycle) params.set("cycle", cycle);
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/planning/coverage?${params}`,
+  ));
+}
+
+
 export async function createWorkforceMember(payload) {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/members`, {
     method: "POST",

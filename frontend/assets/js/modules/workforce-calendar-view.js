@@ -205,6 +205,7 @@ export function renderWorkforceCalendar(
     multiDayDates = new Set(),
     onStartMultiDayEdit = () => {},
     onToggleMultiDayDate = () => {},
+    onDayFocus = () => {},
   } = {},
 ) {
   const dates = workforceCalendarDates(statuses, mode, dateFrom, dateTo);
@@ -236,6 +237,7 @@ export function renderWorkforceCalendar(
   statusButtons.forEach((button) => {
     button.addEventListener("click", (event) => {
       const memberId = Number(button.dataset.workforceMemberId);
+      onDayFocus(button.dataset.workforceDate);
       if (editingMemberId) {
         if (memberId !== Number(editingMemberId)) return;
         onToggleMultiDayDate({
