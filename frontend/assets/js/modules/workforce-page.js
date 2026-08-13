@@ -11,7 +11,7 @@ import {
   saveWorkforceDayStatus,
   saveWorkforceDayStatusesBatch,
   updateWorkforceMember,
-} from "../api.js?v=20";
+} from "../api.js?v=21";
 import {
   byId,
   renderViewState,
@@ -59,6 +59,7 @@ import {
 import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=16";
 import { initWorkforceMemberCreate } from "./workforce-member-create.js?v=2";
 import { createPlanningCoverageBoard } from "./workforce-coverage-board.js?v=1";
+import { createWorkforceDayPlanner } from "./workforce-day-planner.js?v=2";
 
 
 const PAGE_STATES = Object.freeze({
@@ -83,6 +84,7 @@ let workforceDetailPanel = null;
 let driverShiftPlanning = null;
 let workforceMemberCreate = null;
 let planningCoverageBoard = null;
+let workforceDayPlanner = null;
 let feedbackTimeout = null;
 let selectedCellKey = null;
 let multiDayEditing = {
@@ -544,7 +546,7 @@ async function refreshCoverageAfterStatusSave(dateFrom, dateTo) {
   } catch (error) {
     errorMessage("workforce.load-calendar", error);
   }
-  await planningRefresh;
+  return planningRefresh ? await planningRefresh : null;
 }
 
 
@@ -617,6 +619,7 @@ async function loadCalendar(range = null) {
     renderWorkforceContactCoverage(byId("workforceContactCoverage"), contactCoverage);
     anomalyLimit = ANOMALY_PAGE_SIZE;
     renderData();
+    workforceDayPlanner?.refresh();
     calendarLoaded = true;
   } catch (error) {
     byId("workforceCalendar").innerHTML = `
@@ -725,7 +728,7 @@ async function submitStatus(event) {
     renderData();
     window.requestAnimationFrame(focusSelectedCell);
     showWorkforceFeedback("Modifica salvata");
-    refreshCoverageAfterStatusSave(
+    await refreshCoverageAfterStatusSave(
       byId("workforceDateFrom").value,
       byId("workforceDateTo").value,
     );
@@ -764,7 +767,7 @@ async function applyMultiDayStatus() {
     byId("workforceMultiDayActivity").value = "";
     renderData();
     showWorkforceFeedback(`${count} ${count === 1 ? "giorno aggiornato" : "giorni aggiornati"}`);
-    refreshCoverageAfterStatusSave(
+    await refreshCoverageAfterStatusSave(
       byId("workforceDateFrom").value,
       byId("workforceDateTo").value,
     );
@@ -845,12 +848,43 @@ export function initWorkforcePage() {
   planningCoverageBoard = createPlanningCoverageBoard({
     container: byId("planningCoverageBoard"),
     liveRegion: byId("planningCoverageLive"),
+    onCoverageChange: () => workforceDayPlanner?.refresh(),
     onDayFocus: (date) => {
+      workforceDayPlanner?.focusDate(date);
       const cell = byId("workforceCalendar").querySelector(
         `[data-workforce-date="${date}"]`,
       );
       cell?.focus({ preventScroll: true });
       cell?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    },
+  });
+  workforceDayPlanner = createWorkforceDayPlanner({
+    container: byId("workforceDayPlanner"),
+    liveRegion: byId("workforceDayPlannerLive"),
+    getData: () => currentData,
+    getRange: () => ({
+      dateFrom: byId("workforceDateFrom").value,
+      dateTo: byId("workforceDateTo").value,
+    }),
+    getCoverage: () => planningCoverageBoard?.getState().coverageData,
+    onNavigate: async (date) => {
+      const dateFrom = byId("workforceDateFrom").value;
+      const dateTo = byId("workforceDateTo").value;
+      if (!dateFrom || date < dateFrom || date > dateTo) {
+        await loadCalendar(periodForAnchor(date));
+      }
+      planningCoverageBoard?.focusDate(date);
+    },
+    onApplied: async (result) => {
+      result.items.forEach(updateCurrentStatus);
+      renderData();
+      showWorkforceFeedback(
+        `${result.applied_count} assegnazioni salvate${result.skipped_count ? `, ${result.skipped_count} mantenute` : ""}`,
+      );
+      return refreshCoverageAfterStatusSave(
+        byId("workforceDateFrom").value,
+        byId("workforceDateTo").value,
+      );
     },
   });
   workforceDetailPanel = initWorkforceDetailPanel({
@@ -898,6 +932,12 @@ export function initWorkforcePage() {
   });
   byId("workforcePreviousBtn").addEventListener("click", () => shiftCalendar(-1));
   byId("workforceNextBtn").addEventListener("click", () => shiftCalendar(1));
+  byId("workforceDayPlannerOpen").addEventListener("click", () => {
+    workforceDayPlanner.open(
+      planningCoverageBoard?.getState().coverageFocusedDate
+        || byId("workforceDateFrom").value,
+    );
+  });
   byId("workforceExportBtn").addEventListener("click", async () => {
     try {
       await downloadWorkforceExport();

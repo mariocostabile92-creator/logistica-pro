@@ -1,4 +1,4 @@
-import { getPlanningCoverage } from "../api.js?v=20";
+import { getPlanningCoverage } from "../api.js?v=21";
 import { escapeHtml } from "../utils/dom.js";
 import {
   completePlanningCoverageLoad,
@@ -104,6 +104,7 @@ export function createPlanningCoverageBoard({
   liveRegion,
   fetchCoverage = getPlanningCoverage,
   onDayFocus = () => {},
+  onCoverageChange = () => {},
 }) {
   let state = createPlanningCoverageState();
   let dateFrom = "";
@@ -127,11 +128,13 @@ export function createPlanningCoverageBoard({
         state.coverageFocusedDate = dateFrom;
       }
       render();
+      onCoverageChange(response);
       return response;
     } catch (error) {
       if (sequence !== requestSequence) return null;
       state = failPlanningCoverageLoad(state, error);
       render();
+      onCoverageChange(null);
       return null;
     }
   }

@@ -9,6 +9,7 @@ from app.plugins.workforce.domain.models import (
     WorkforceDayStatus,
     WorkforceMember,
 )
+from app.plugins.workforce.domain.day_member_batch import DayMemberOverwritePolicy
 
 
 class WorkforceStatusResponse(BaseModel):
@@ -127,6 +128,37 @@ class WorkforceDayStatusBatchRequest(BaseModel):
 
 class WorkforceDayStatusBatchResponse(BaseModel):
     items: list[WorkforceDayStatus]
+
+
+class WorkforceDayMemberBatchRequest(BaseModel):
+    operational_date: str
+    workforce_member_ids: list[int] = Field(min_length=1, max_length=200)
+    status_code: str = Field(min_length=1, max_length=80)
+    availability: bool | None = None
+    shift_code: str | None = Field(default=None, max_length=80)
+    operational_activity: str | None = Field(default=None, max_length=160)
+    start_time: str | None = Field(default=None, max_length=20)
+    end_time: str | None = Field(default=None, max_length=20)
+    notes: str | None = Field(default=None, max_length=1000)
+    source_reference: str = Field(default="manual_day_planning", max_length=240)
+    overwrite_policy: DayMemberOverwritePolicy = DayMemberOverwritePolicy.APPLY_TO_EMPTY_ONLY
+    confirm_overwrite: bool = False
+    confirm_unavailable_override: bool = False
+    actor: str = Field(default="local_operator", min_length=1, max_length=120)
+
+    @field_validator("operational_date")
+    @classmethod
+    def valid_operational_date(cls, value: str) -> str:
+        return date.fromisoformat(value).isoformat()
+
+    @field_validator("workforce_member_ids")
+    @classmethod
+    def valid_member_ids(cls, values: list[int]) -> list[int]:
+        if any(value <= 0 for value in values):
+            raise ValueError("Gli ID driver devono essere positivi.")
+        if len(values) != len(set(values)):
+            raise ValueError("Un driver non puo essere selezionato due volte.")
+        return values
 
 
 class WorkforceWeekCopyRequest(BaseModel):

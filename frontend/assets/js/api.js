@@ -680,6 +680,15 @@ export async function saveWorkforceDayStatusesBatch(payload) {
 }
 
 
+export async function saveWorkforceDayMemberBatch(payload) {
+  return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/day-status/batch-members`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }));
+}
+
+
 export async function previewWorkforceWeekCopy(workforceMemberId, targetWeekStart) {
   const query = new URLSearchParams({
     workforce_member_id: String(workforceMemberId),

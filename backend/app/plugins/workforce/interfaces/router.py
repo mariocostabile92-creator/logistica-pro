@@ -18,10 +18,12 @@ from app.plugins.workforce.application import driver_shift_portal_service
 from app.plugins.workforce.application import driver_shift_credentials_service
 from app.plugins.workforce.application import driver_shift_driver_session_service
 from app.plugins.workforce.application import coverage_service
+from app.plugins.workforce.application import day_member_batch_service
 from app.plugins.workforce.application.contact_coverage_service import contact_coverage
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
 from app.plugins.workforce.domain.errors import (
+    WorkforceDayMemberBatchConflictError,
     WorkforceImportError,
     WorkforceMemberNotFoundError,
     WorkforceStatusNotFoundError,
@@ -34,6 +36,7 @@ from app.plugins.workforce.domain.models import (
     WorkforceMember,
     WorkforceFoundationSnapshot,
 )
+from app.plugins.workforce.domain.day_member_batch import DayMemberBatchResult
 from app.plugins.workforce.domain.week_copy import (
     WorkforceWeekCopyConflictError,
     WorkforceWeekCopyPreview,
@@ -95,6 +98,7 @@ from app.plugins.workforce.interfaces.schemas import (
     WorkforceCoverageResponse,
     WorkforceDayStatusBatchRequest,
     WorkforceDayStatusBatchResponse,
+    WorkforceDayMemberBatchRequest,
     WorkforceDayStatusRequest,
     WorkforceWeekCopyRequest,
     WorkforceMembersResponse,
@@ -1211,6 +1215,32 @@ def update_day_statuses_batch(
             user.organization_id,
         )
         return WorkforceDayStatusBatchResponse(items=items)
+    except (
+        DemoWorkspaceResetRequiredError,
+        WorkforceMemberNotFoundError,
+        WorkforceValidationError,
+    ) as exc:
+        raise _write_error(exc) from exc
+
+
+@router.post("/day-status/batch-members", response_model=DayMemberBatchResult)
+def update_day_statuses_for_members(
+    request: WorkforceDayMemberBatchRequest,
+    http_request: Request,
+) -> DayMemberBatchResult:
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(http_request, "workforce:write")
+        return day_member_batch_service.apply(
+            request.model_dump(exclude={"actor"}, exclude_unset=True),
+            request.actor,
+            user.organization_id,
+        )
+    except WorkforceDayMemberBatchConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "message": str(exc), **exc.details},
+        ) from exc
     except (
         DemoWorkspaceResetRequiredError,
         WorkforceMemberNotFoundError,

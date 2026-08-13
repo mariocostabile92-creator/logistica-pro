@@ -1,0 +1,412 @@
+.workforce-day-planner-open {
+  min-height: 44px;
+  margin-left: auto;
+}
+
+.workforce-day-planner {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid #82a69d;
+  border-radius: 8px;
+  background: #f7faf9;
+  box-shadow: 0 12px 28px rgb(14 50 42 / 10%);
+}
+
+.workforce-day-planner[hidden] {
+  display: none;
+}
+
+.workforce-day-planner-header,
+.workforce-day-navigation,
+.workforce-day-list-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workforce-day-planner-header h3,
+.workforce-day-planner-header p {
+  margin: 3px 0 0;
+}
+
+.workforce-day-planner-header h3 {
+  text-transform: capitalize;
+}
+
+.workforce-day-planner-header > div:first-child {
+  min-width: 0;
+}
+
+.workforce-day-week-progress {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(82px, 1fr));
+  gap: 6px;
+  margin: 16px 0 10px;
+  overflow-x: auto;
+}
+
+.workforce-day-week-progress button {
+  display: flex;
+  min-height: 48px;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.workforce-day-week-progress button.is-active {
+  border-color: var(--accent-strong);
+  background: #e5f1ed;
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+
+.workforce-day-week-progress .is-complete b { color: #0b6b55; }
+.workforce-day-week-progress .is-requirement_gap b { color: #a7680a; }
+.workforce-day-week-progress .is-forecast_gap b { color: #b53c35; }
+.workforce-day-week-progress .is-no_forecast b { color: var(--text-muted); }
+
+.workforce-day-navigation {
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.workforce-day-navigation button {
+  min-height: 44px;
+}
+
+.workforce-day-coverage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workforce-day-coverage-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-top: 4px solid #71807b;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.workforce-day-coverage-card.is-under-forecast { border-top-color: #b53c35; }
+.workforce-day-coverage-card.is-forecast-covered { border-top-color: #c47b0d; }
+.workforce-day-coverage-card.is-requirement-covered { border-top-color: #0c755e; }
+
+.workforce-day-coverage-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.workforce-day-coverage-card dl div {
+  min-width: 0;
+}
+
+.workforce-day-coverage-card dt,
+.workforce-day-coverage-card dd {
+  margin: 0;
+}
+
+.workforce-day-coverage-card dt,
+.workforce-day-coverage-card small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.workforce-day-counts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #fff;
+}
+
+.workforce-day-counts div {
+  padding: 11px 13px;
+  border-right: 1px solid var(--border);
+}
+
+.workforce-day-counts div:last-child { border-right: 0; }
+.workforce-day-counts dt { color: var(--text-muted); font-size: 11px; }
+.workforce-day-counts dd { margin: 3px 0 0; font-size: 20px; font-weight: 850; }
+
+.workforce-day-tools {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 0.4fr);
+  gap: 10px;
+}
+
+.workforce-day-tools label,
+.workforce-day-action-bar label,
+.workforce-day-inline-editor label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.workforce-day-action-control {
+  display: grid;
+  gap: 5px;
+}
+
+.workforce-day-action-control > label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.workforce-day-tools input,
+.workforce-day-tools select,
+.workforce-day-action-bar input,
+.workforce-day-action-bar select,
+.workforce-day-inline-editor input,
+.workforce-day-inline-editor select {
+  width: 100%;
+  min-height: 44px;
+}
+
+.workforce-day-action-control input,
+.workforce-day-action-control select {
+  width: 100%;
+  min-height: 44px;
+}
+
+.workforce-day-fast-filters {
+  display: flex;
+  gap: 7px;
+  margin: 10px 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.workforce-day-fast-filters button {
+  min-height: 44px;
+  flex: 0 0 auto;
+  border-color: #93aaa4;
+  background: #fff;
+  color: var(--text);
+}
+
+.workforce-day-fast-filters button[aria-pressed="true"] {
+  border-color: var(--accent-strong);
+  background: #dfeee9;
+  color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+
+.workforce-day-list-heading {
+  padding: 10px 4px;
+}
+
+.workforce-day-list-heading label {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+}
+
+.workforce-day-driver-list {
+  max-height: min(580px, 62vh);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  background: #fff;
+  scrollbar-gutter: stable;
+}
+
+.workforce-day-driver {
+  display: grid;
+  grid-template-columns: 44px minmax(180px, 1.2fr) minmax(150px, 0.8fr) minmax(150px, 0.8fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 11px;
+  border-bottom: 1px solid var(--border);
+}
+
+.workforce-day-driver:last-child { border-bottom: 0; }
+.workforce-day-driver.is-selected { background: #e8f3ef; box-shadow: inset 4px 0 #0b6655; }
+.workforce-day-driver.has-warning { box-shadow: inset 4px 0 #bd6c19; }
+.workforce-day-driver.is-selected.has-warning { box-shadow: inset 4px 0 #0b6655, inset 8px 0 #bd6c19; }
+
+.workforce-day-driver-select {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+}
+
+.workforce-day-driver-select input {
+  width: 20px;
+  height: 20px;
+}
+
+.workforce-day-driver-identity,
+.workforce-day-driver-meta,
+.workforce-day-driver-assignment {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.workforce-day-driver-identity strong,
+.workforce-day-driver-identity small,
+.workforce-day-driver-meta span,
+.workforce-day-driver-assignment strong,
+.workforce-day-driver-assignment small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workforce-day-driver small,
+.workforce-day-driver-meta {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.workforce-day-availability {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #edf0ef;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.workforce-day-availability.is-available { background: #dff1e8; color: #095c49; }
+.workforce-day-availability.is-unavailable { background: #f7e5e2; color: #9b2f2a; }
+.workforce-day-availability.is-rest { background: #e8ecef; color: #43525b; }
+
+.workforce-day-inline-editor {
+  display: grid;
+  grid-column: 2 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid #98b3ac;
+  border-radius: 5px;
+  background: #f4f8f7;
+}
+
+.workforce-day-quick-assign {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.workforce-day-quick-assign button,
+.workforce-day-action-picks button {
+  min-height: 44px;
+  padding-inline: 11px;
+}
+
+.workforce-day-action-picks {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.workforce-day-inline-editor button { min-height: 44px; }
+
+.workforce-day-action-bar {
+  position: sticky;
+  bottom: 10px;
+  z-index: 9;
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) repeat(4, minmax(150px, 0.7fr)) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid #5c9185;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 15px 36px rgb(13 50 42 / 22%);
+}
+
+.workforce-day-action-bar[hidden] { display: none; }
+.workforce-day-action-bar > div:first-child { display: grid; gap: 4px; }
+.workforce-day-action-bar small { color: var(--text-muted); font-size: 11px; }
+.workforce-day-action-bar > div:last-child { display: flex; gap: 7px; }
+.workforce-day-action-bar button { min-height: 44px; }
+
+.workforce-day-error {
+  margin: 12px 0 0;
+  color: #a32e2a;
+  font-weight: 700;
+}
+
+.workforce-day-confirm {
+  width: min(520px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid #8baaa3;
+  border-radius: 8px;
+}
+
+.workforce-day-confirm::backdrop { background: rgb(11 29 25 / 58%); }
+.workforce-day-confirm h3 { margin-top: 0; }
+.workforce-day-confirm > div { display: flex; gap: 8px; justify-content: flex-end; }
+.workforce-day-confirm button { min-height: 44px; }
+
+@media (max-width: 1100px) {
+  .workforce-day-action-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .workforce-day-action-bar > div:first-child { grid-column: 1 / -1; }
+  .workforce-day-driver { grid-template-columns: 44px minmax(180px, 1fr) minmax(130px, 0.7fr) auto auto; }
+  .workforce-day-driver-assignment { grid-column: 2 / 4; }
+}
+
+@media (max-width: 780px) {
+  .workforce-day-planner { padding: 12px; }
+  .workforce-day-coverage { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .workforce-day-coverage-card { min-width: min(76vw, 300px); scroll-snap-align: start; }
+  .workforce-day-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .workforce-day-counts div { border-bottom: 1px solid var(--border); }
+  .workforce-day-tools { grid-template-columns: 1fr; }
+  .workforce-day-driver { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .workforce-day-driver-meta,
+  .workforce-day-driver-assignment { grid-column: 2 / 4; }
+  .workforce-day-availability { grid-column: 2; justify-self: start; }
+  .workforce-day-inline-editor { grid-column: 1 / -1; grid-template-columns: 1fr; }
+  .workforce-day-action-bar { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 520px) {
+  .workforce-day-planner { margin-inline: -4px; padding: 10px; overflow: clip; }
+  .workforce-day-planner-header { align-items: start; }
+  .workforce-day-planner-header h3 { font-size: 20px; }
+  .workforce-day-navigation { display: grid; grid-template-columns: 1fr 1fr; }
+  .workforce-day-navigation button { padding-inline: 8px; }
+  .workforce-day-week-progress { grid-template-columns: repeat(7, 92px); }
+  .workforce-day-coverage-card { min-width: calc(100vw - 64px); }
+  .workforce-day-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workforce-day-counts div:nth-child(even) { border-right: 0; }
+  .workforce-day-fast-filters { margin-inline: -2px; }
+  .workforce-day-driver-list { max-height: 55vh; }
+  .workforce-day-driver { grid-template-columns: 44px minmax(0, 1fr); }
+  .workforce-day-driver > button { grid-column: 2; width: 100%; min-height: 44px; }
+  .workforce-day-driver-meta,
+  .workforce-day-driver-assignment,
+  .workforce-day-availability { grid-column: 2; }
+  .workforce-day-action-bar {
+    grid-template-columns: 1fr;
+    bottom: 4px;
+    max-height: 76vh;
+    overflow-y: auto;
+  }
+  .workforce-day-action-bar > div:last-child { display: grid; grid-template-columns: 1fr 1fr; }
+  .workforce-day-action-bar > div:last-child button { width: 100%; }
+  .workforce-day-planner-open { width: 100%; margin-left: 0; }
+}

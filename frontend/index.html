@@ -1268,6 +1268,7 @@
             <button type="button" data-workforce-view-mode="week" class="active">Settimana</button>
             <button type="button" data-workforce-view-mode="person">Persona</button>
           </div>
+          <button id="workforceDayPlannerOpen" type="button" class="workforce-day-planner-open">Pianifica giornata</button>
         </div>
 
         <dl id="workforceSummary" class="workforce-kpis" aria-label="Indicatori del periodo">
@@ -1329,6 +1330,8 @@
           aria-labelledby="workforceCalendarTab"
           data-workforce-panel="calendar"
         >
+          <section id="workforceDayPlanner" class="workforce-day-planner" aria-label="Pianifica giornata" hidden></section>
+          <p id="workforceDayPlannerLive" class="visually-hidden" aria-live="polite"></p>
           <section
             id="planningCoverageBoard"
             class="planning-coverage-board"
@@ -2719,6 +2722,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=105"></script>
+    <script type="module" src="./assets/js/app.js?v=107"></script>
 </body>
 </html>
