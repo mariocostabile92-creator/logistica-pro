@@ -97,6 +97,7 @@ from app.plugins.workforce.interfaces.schemas import (
     WorkforceWeekCopyRequest,
     WorkforceMembersResponse,
     WorkforceMemberUpdateRequest,
+    WorkforceMemberCreateRequest,
     WorkforceStatusResponse,
     ConsecutivityOverrideRequest,
     ConsecutivityPolicyRequest,
@@ -999,6 +1000,20 @@ def status(request: Request) -> WorkforceStatusResponse:
 def members(request: Request) -> WorkforceMembersResponse:
     user = _require(request, "workforce:read")
     return WorkforceMembersResponse(items=workforce_service.list_members(user.organization_id))
+
+
+@router.post("/members", response_model=WorkforceMember, status_code=201)
+def create_member(payload: WorkforceMemberCreateRequest, request: Request):
+    try:
+        ensure_real_data_write_allowed()
+        user = _require(request, "workforce:write")
+        return workforce_service.create_member(
+            payload.model_dump(exclude={"actor"}, mode="json"),
+            payload.actor or user.email,
+            user.organization_id,
+        )
+    except (DemoWorkspaceResetRequiredError, WorkforceValidationError) as exc:
+        raise _write_error(exc) from exc
 
 
 @router.get("/foundation", response_model=WorkforceFoundationSnapshot)

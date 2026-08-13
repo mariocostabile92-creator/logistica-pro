@@ -10,6 +10,12 @@ class WorkforceValueOrigin(str, Enum):
     MANUAL = "manual"
 
 
+class OperationalCycle(str, Enum):
+    NEXT_DAY = "NEXT_DAY"
+    SAME_DAY = "SAME_DAY"
+    NOT_SET = "NOT_SET"
+
+
 class WorkforceMember(BaseModel):
     workforce_member_id: int
     external_identifier: str
@@ -19,6 +25,7 @@ class WorkforceMember(BaseModel):
     role: str | None = None
     station: str | None = None
     employment_type: str | None = None
+    operational_cycle: OperationalCycle = OperationalCycle.NOT_SET
     contract_start: str | None = None
     contract_end: str | None = None
     weekly_hours: float | None = Field(default=None, ge=0)
@@ -110,6 +117,9 @@ class WorkforceImportPreview(BaseModel):
     date_to: str | None = None
     shift_codes: list[str] = Field(default_factory=list)
     contracts_detected: int = Field(default=0, ge=0)
+    next_day_detected: int = Field(default=0, ge=0)
+    same_day_detected: int = Field(default=0, ge=0)
+    operational_cycle_unrecognized: int = Field(default=0, ge=0)
     absences_detected: int = Field(default=0, ge=0)
     excluded_rows: int = Field(default=0, ge=0)
     phone_detected: int = Field(default=0, ge=0)
@@ -149,6 +159,7 @@ class WorkforceDriverReadiness(BaseModel):
     role: str | None = None
     station: str | None = None
     contract: str | None = None
+    operational_cycle: OperationalCycle = OperationalCycle.NOT_SET
     availability_status: str
     availability_label: str
     callability_status: str

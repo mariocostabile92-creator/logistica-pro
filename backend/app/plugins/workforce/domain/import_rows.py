@@ -24,6 +24,7 @@ class WorkforceImportRow(BaseModel):
     end_time: str | None = None
     notes: str | None = None
     employment_type: str | None = None
+    operational_cycle: str | None = None
     contract_start: str | None = None
     contract_end: str | None = None
     weekly_hours: float | None = None

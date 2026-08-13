@@ -95,6 +95,10 @@ def list_members(organization_id: str | None = None):
     return read_repository.list_members(organization_id)
 
 
+def create_member(values: dict[str, object], actor: str, organization_id: str = "default"):
+    return write_repository.create_member(values, actor, organization_id)
+
+
 def list_calendar(date_from: str | None = None, date_to: str | None = None, member_id: int | None = None, organization_id: str | None = None):
     return read_repository.list_statuses(date_from, date_to, member_id, organization_id)
 
@@ -153,6 +157,22 @@ def save_day_statuses_batch(
 def update_member(member_id: int, changes: dict[str, object], actor: str, organization_id: str = "default"):
     if not changes:
         raise WorkforceValidationError("Nessuna modifica specificata.")
+    if "operational_cycle" in changes:
+        changes["operational_cycle"] = getattr(
+            changes["operational_cycle"], "value", changes["operational_cycle"]
+        )
+    if "first_name" in changes or "last_name" in changes:
+        member = next(
+            (
+                item for item in read_repository.list_members(organization_id)
+                if item.workforce_member_id == member_id
+            ),
+            None,
+        )
+        if member:
+            first_name = changes.get("first_name", member.first_name) or ""
+            last_name = changes.get("last_name", member.last_name) or ""
+            changes["display_name"] = f"{first_name} {last_name}".strip()
     return write_repository.update_member(member_id, changes, actor, organization_id)
 
 

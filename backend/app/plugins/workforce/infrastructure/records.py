@@ -21,6 +21,11 @@ def member_from_row(row) -> WorkforceMember:
         role=row["role"],
         station=row["station"] if "station" in keys else None,
         employment_type=row["employment_type"],
+        operational_cycle=(
+            row["operational_cycle"]
+            if "operational_cycle" in keys and row["operational_cycle"]
+            else "NOT_SET"
+        ),
         contract_start=row["contract_start"],
         contract_end=row["contract_end"],
         weekly_hours=row["weekly_hours"],

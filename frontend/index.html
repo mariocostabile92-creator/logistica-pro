@@ -762,13 +762,37 @@
             Preparazione delle persone convocabili per il Planning Driver.
           </p>
         </div>
-        <div id="workforceHeaderActions" class="workforce-header-actions" hidden>
+        <div class="workforce-header-actions">
+          <button id="workforceNewMemberBtn" type="button">+ Nuovo driver</button>
+          <span id="workforceHeaderActions" class="workforce-header-actions" hidden>
           <button id="workforceImportToggle" type="button" class="secondary">
             Aggiorna da Excel
           </button>
           <button id="workforceExportBtn" type="button" class="quiet">Esporta</button>
+          </span>
         </div>
       </div>
+
+      <dialog id="workforceMemberCreateDialog" class="workforce-member-create-dialog" aria-labelledby="workforceMemberCreateTitle">
+        <form id="workforceMemberCreateForm">
+          <header>
+            <div><p class="eyebrow">Anagrafica Workforce</p><h3 id="workforceMemberCreateTitle">Nuovo driver</h3></div>
+            <button id="workforceNewMemberClose" type="button" class="quiet">Chiudi</button>
+          </header>
+          <div class="workforce-member-create-grid">
+            <label>Nome<input id="workforceNewFirstName" type="text" maxlength="80" required /></label>
+            <label>Cognome<input id="workforceNewLastName" type="text" maxlength="80" required /></label>
+            <label>Identificatore esterno <small>(opzionale)</small><input id="workforceNewExternalId" type="text" maxlength="120" /></label>
+            <label>Stato<select id="workforceNewMemberActive"><option value="true">Attivo</option><option value="false">Inattivo</option></select></label>
+            <label>Telefono <small>(opzionale)</small><input id="workforceNewPhone" type="tel" maxlength="40" autocomplete="tel" /></label>
+            <label>Email <small>(opzionale)</small><input id="workforceNewEmail" type="email" maxlength="254" autocomplete="email" /></label>
+            <label>Contratto <small>(opzionale)</small><input id="workforceNewEmploymentType" type="text" maxlength="120" autocomplete="off" /></label>
+            <label>Ciclo operativo<select id="workforceNewOperationalCycle"><option value="NOT_SET">Non impostato</option><option value="NEXT_DAY">Next Day</option><option value="SAME_DAY">Same Day</option></select></label>
+            <label class="workforce-member-create-notes">Note operative <small>(opzionali)</small><textarea id="workforceNewNotes" maxlength="1000"></textarea></label>
+          </div>
+          <footer><button id="workforceNewMemberCancel" type="button" class="quiet">Annulla</button><button id="workforceNewMemberSave" type="submit">Crea driver</button></footer>
+        </form>
+      </dialog>
 
       <button
         id="workforceImportBackdrop"
@@ -1155,6 +1179,7 @@
               <label>Ruolo<select id="workforceRoleFilter"><option value="all">Tutti</option></select></label>
               <label>Station<select id="workforceStationFilter"><option value="all">Tutte</option></select></label>
               <label>Contratto<select id="workforceContractFilter"><option value="all">Tutti</option></select></label>
+              <label>Ciclo<select id="workforceCycleFilter"><option value="all">Tutti</option><option value="NEXT_DAY">Next Day</option><option value="SAME_DAY">Same Day</option><option value="NOT_SET">Non impostato</option></select></label>
               <details class="workforce-consecutivity-filters">
                 <summary>Filtri consecutivita</summary>
                 <div>
@@ -1424,6 +1449,8 @@
                   <div><dt>Ruolo</dt><dd id="workforceMemberDetailRole">--</dd></div>
                   <div><dt>Station</dt><dd id="workforceMemberDetailStation">--</dd></div>
                   <div><dt>Contratto</dt><dd id="workforceMemberDetailContract">--</dd></div>
+                  <div><dt>Ciclo operativo</dt><dd id="workforceMemberDetailCycle">--</dd></div>
+                  <div><dt>Stato</dt><dd id="workforceMemberDetailActive">--</dd></div>
                   <div><dt>Telefono</dt><dd id="workforceMemberDetailPhone">--</dd></div>
                   <div><dt>Email</dt><dd id="workforceMemberDetailEmail">--</dd></div>
                   <div><dt>Capability</dt><dd id="workforceMemberDetailCapabilities">--</dd></div>
@@ -1446,6 +1473,8 @@
                 <label>Ruolo<input id="workforceMemberRole" type="text" maxlength="120" /></label>
                 <label>Station<input id="workforceMemberStation" type="text" maxlength="120" /></label>
                 <label>Contratto<input id="workforceEmploymentType" type="text" maxlength="120" /></label>
+                <label>Ciclo operativo<select id="workforceOperationalCycle"><option value="NOT_SET">Non impostato</option><option value="NEXT_DAY">Next Day</option><option value="SAME_DAY">Same Day</option></select></label>
+                <label>Stato<select id="workforceMemberActive"><option value="true">Attivo</option><option value="false">Inattivo</option></select></label>
                 <label>Telefono<input id="workforceMemberPhone" type="tel" maxlength="40" autocomplete="tel" /></label>
                 <label>Email<input id="workforceMemberEmail" type="email" maxlength="254" autocomplete="email" /></label>
                 <label>Fine contratto<input id="workforceContractEnd" type="date" /></label>
@@ -2656,6 +2685,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=102"></script>
+    <script type="module" src="./assets/js/app.js?v=103"></script>
 </body>
 </html>

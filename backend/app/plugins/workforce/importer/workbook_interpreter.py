@@ -40,6 +40,10 @@ FIELD_ALIASES = {
         "contratto", "tipo contratto", "employment type", "full time", "part time",
         "p time", "percentuale part time",
     ),
+    "operational_cycle": (
+        "operational cycle", "ciclo operativo", "service cycle", "delivery cycle",
+        "next day same day",
+    ),
     "contract_start": ("inizio contratto", "data assunzione", "contract start"),
     "contract_end": (
         "fine contratto", "scadenza contratto", "contract end", "data cessazione",
@@ -115,6 +119,7 @@ class ParsedWorkforceSourceRow:
     end_time: str | None
     notes: str | None
     employment_type: str | None
+    operational_cycle: str | None
     contract_start: str | None
     contract_end: str | None
     weekly_hours: float | None
@@ -255,7 +260,10 @@ def _responsibility(name: str, columns: list[Column]) -> str:
         term in normalized_name for term in ("fabbisogno", "coverage", "copertura")
     ):
         return "requirements"
-    if targets & {"contract_start", "contract_end", "weekly_hours", "employment_type"}:
+    if targets & {
+        "contract_start", "contract_end", "weekly_hours", "employment_type",
+        "operational_cycle",
+    }:
         return "contracts"
     if any(column.date_value for column in columns) or targets & {"date", "shift_code", "status_code"}:
         return "schedule"
@@ -371,6 +379,17 @@ def _employment_type(value: Any, current: object = None) -> str | None:
     return str(value).strip() or None
 
 
+def _operational_cycle(value: Any) -> tuple[str | None, bool]:
+    if not _present(value):
+        return None, False
+    compact = re.sub(r"[^A-Z0-9]", "", str(value).upper())
+    if compact in {"NEXTDAY", "ND"}:
+        return "NEXT_DAY", False
+    if compact in {"SAMEDAY", "SD"}:
+        return "SAME_DAY", False
+    return None, True
+
+
 def _contact_state() -> dict[str, object]:
     return {
         "phone": None,
@@ -450,6 +469,8 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
     mappings: list[WorkforceMapping] = []
     excluded_rows = 0
     anomalies: list[str] = []
+    operational_cycle_invalid = 0
+    operational_cycle_conflicts: set[str] = set()
 
     for sheet in workbook.sheets:
         profile_started = perf_counter()
@@ -522,6 +543,14 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
             employment_type = _employment_type(
                 _value(row, columns, "employment_type")
             )
+            operational_cycle, cycle_invalid = _operational_cycle(
+                _value(row, columns, "operational_cycle")
+            )
+            if cycle_invalid:
+                operational_cycle_invalid += 1
+                anomalies.append(
+                    f"Ciclo operativo non riconosciuto in {sheet.name}, riga {excel_row}."
+                )
             contract_start = _strict_date(
                 _value(row, columns, "contract_start")
             )
@@ -558,6 +587,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     end_time=None,
                     notes=_text(_value(row, columns, "notes")),
                     employment_type=employment_type,
+                    operational_cycle=operational_cycle,
                     contract_start=contract_start,
                     contract_end=contract_end,
                     weekly_hours=source_weekly_hours,
@@ -569,6 +599,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                         employment_type=_value(
                             row, columns, "employment_type"
                         ),
+                        operational_cycle=_value(row, columns, "operational_cycle"),
                         contract_start=_value(
                             row, columns, "contract_start"
                         ),
@@ -580,6 +611,12 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
 
             if identifier:
                 current = members.get(identifier, {})
+                current_cycle = current.get("operational_cycle")
+                if operational_cycle and current_cycle and operational_cycle != current_cycle:
+                    operational_cycle_conflicts.add(identifier)
+                    anomalies.append(
+                        f"Conflitto ciclo operativo per {identifier}: NEXT_DAY e SAME_DAY nello stesso file."
+                    )
                 weekly_hours = _value(row, columns, "weekly_hours")
                 try:
                     weekly_hours = float(weekly_hours) if _present(weekly_hours) else current.get("weekly_hours")
@@ -594,6 +631,11 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     "employment_type": _employment_type(
                         _value(row, columns, "employment_type"),
                         current.get("employment_type"),
+                    ),
+                    "operational_cycle": (
+                        None
+                        if identifier in operational_cycle_conflicts
+                        else operational_cycle or current_cycle
                     ),
                     "contract_start": _strict_date(_value(row, columns, "contract_start")) or current.get("contract_start"),
                     "contract_end": _strict_date(_value(row, columns, "contract_end")) or current.get("contract_end"),
@@ -637,6 +679,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     end_time=status_values["end_time"],
                     notes=status_values["notes"],
                     employment_type=employment_type,
+                    operational_cycle=operational_cycle,
                     contract_start=contract_start,
                     contract_end=contract_end,
                     weekly_hours=source_weekly_hours,
@@ -694,6 +737,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                         end_time=None,
                         notes=None,
                         employment_type=employment_type,
+                        operational_cycle=operational_cycle,
                         contract_start=contract_start,
                         contract_end=contract_end,
                         weekly_hours=source_weekly_hours,
@@ -771,6 +815,9 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         date_to=dates[-1] if dates else None,
         shift_codes=shift_codes,
         contracts_detected=sum(bool(item.get("employment_type") or item.get("contract_end")) for item in members.values()),
+        next_day_detected=sum(item.get("operational_cycle") == "NEXT_DAY" for item in members.values()),
+        same_day_detected=sum(item.get("operational_cycle") == "SAME_DAY" for item in members.values()),
+        operational_cycle_unrecognized=(operational_cycle_invalid + len(operational_cycle_conflicts)),
         absences_detected=sum(item.get("status_code") in absence_codes for item in statuses.values()),
         excluded_rows=excluded_rows,
         confirmation_columns=confirmation_columns,

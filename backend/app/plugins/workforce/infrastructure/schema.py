@@ -9,6 +9,7 @@ PROFILE_COLUMNS = {
     "is_reserve": "INTEGER NOT NULL DEFAULT 0",
     "phone": "TEXT",
     "email": "TEXT",
+    "operational_cycle": "TEXT NOT NULL DEFAULT 'NOT_SET'",
     "organization_id": "TEXT NOT NULL DEFAULT 'default'",
 }
 
@@ -57,6 +58,7 @@ def _migrate_sqlite_scoped_uniqueness(conn) -> None:
                     display_name TEXT NOT NULL,
                     role TEXT,
                     employment_type TEXT,
+                    operational_cycle TEXT NOT NULL DEFAULT 'NOT_SET',
                     contract_start TEXT,
                     contract_end TEXT,
                     weekly_hours REAL,
@@ -75,12 +77,13 @@ def _migrate_sqlite_scoped_uniqueness(conn) -> None:
                 );
                 INSERT INTO workforce_members (
                     id, external_identifier, display_name, role, employment_type,
-                    contract_start, contract_end, weekly_hours, capabilities,
+                    operational_cycle, contract_start, contract_end, weekly_hours, capabilities,
                     active, source_reference, created_at, updated_at, first_name,
                     last_name, station, operational_notes, is_reserve,
                     organization_id
                 )
                 SELECT id, external_identifier, display_name, role, employment_type,
+                       'NOT_SET',
                        contract_start, contract_end, weekly_hours, capabilities,
                        active, source_reference, created_at, updated_at, first_name,
                        last_name, station, operational_notes, is_reserve,
@@ -370,6 +373,7 @@ def init_schema() -> None:
                 end_time TEXT,
                 notes TEXT,
                 employment_type TEXT,
+                operational_cycle TEXT,
                 contract_start TEXT,
                 contract_end TEXT,
                 weekly_hours REAL,
@@ -390,6 +394,7 @@ def init_schema() -> None:
                 display_name TEXT NOT NULL,
                 role TEXT,
                 employment_type TEXT,
+                operational_cycle TEXT NOT NULL DEFAULT 'NOT_SET',
                 contract_start TEXT,
                 contract_end TEXT,
                 weekly_hours REAL,
@@ -729,6 +734,9 @@ def init_schema() -> None:
         _ensure_columns(conn, "driver_shift_planning_published_rows", {
             "notes": "TEXT",
             "provenance_type": "TEXT NOT NULL DEFAULT 'IMMUTABLE_SOURCE'",
+        })
+        _ensure_columns(conn, "workforce_import_rows", {
+            "operational_cycle": "TEXT",
         })
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_workforce_member_org ON workforce_members(organization_id, active)"

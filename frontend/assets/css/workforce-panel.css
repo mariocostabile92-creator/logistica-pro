@@ -250,6 +250,86 @@ body[data-active-workspace="workforce"] .message.success {
   font-size: 14px;
 }
 
+.workforce-member-create-dialog {
+  width: min(680px, calc(100% - 32px));
+  max-height: calc(100vh - 40px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgb(14 27 23 / 25%);
+}
+
+.workforce-member-create-dialog::backdrop {
+  background: rgb(18 29 26 / 58%);
+}
+
+.workforce-member-create-dialog form {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.workforce-member-create-dialog header,
+.workforce-member-create-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workforce-member-create-dialog h3 {
+  margin: 4px 0 0;
+}
+
+.workforce-member-create-dialog footer {
+  justify-content: flex-end;
+}
+
+.workforce-member-create-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workforce-member-create-grid label {
+  min-width: 0;
+}
+
+.workforce-member-create-grid small {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.workforce-member-create-notes {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 420px) {
+  .workforce-member-create-dialog {
+    width: calc(100% - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  .workforce-member-create-dialog form {
+    padding: 16px;
+  }
+
+  .workforce-member-create-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workforce-member-create-notes {
+    grid-column: auto;
+  }
+
+  .workforce-member-create-dialog footer button {
+    min-height: 44px;
+  }
+}
+
 .workforce-damage-summary {
   display: grid;
   gap: 10px;

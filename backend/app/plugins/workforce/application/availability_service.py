@@ -157,6 +157,7 @@ def foundation_snapshot(
             role=member.role,
             station=member.station,
             contract=member.employment_type,
+            operational_cycle=member.operational_cycle,
             availability_status=status,
             availability_label=AVAILABILITY_LABELS[status],
             callability_status=str(decision["status"]),

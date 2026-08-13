@@ -151,6 +151,26 @@
   color: #1d5d8d !important;
 }
 
+.workforce-cycle-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #edf1ef;
+  color: #41534d;
+  font-size: 12px;
+}
+
+.workforce-cycle-badge[data-cycle="NEXT_DAY"] {
+  background: #e8f0f7;
+  color: #245d8c;
+}
+
+.workforce-cycle-badge[data-cycle="SAME_DAY"] {
+  background: #e4f2ec;
+  color: #12634f;
+}
+
 .workforce-driver-detail-button {
   min-height: 38px;
 }

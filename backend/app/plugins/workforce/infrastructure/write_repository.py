@@ -1,10 +1,12 @@
 import json
+from uuid import uuid4
 
 from app.core.config import SETTINGS
 from app.core.database import db_session
 from app.plugins.workforce.domain.errors import (
     WorkforceMemberNotFoundError,
     WorkforceStatusNotFoundError,
+    WorkforceValidationError,
 )
 from app.plugins.workforce.infrastructure.records import (
     member_from_row,
@@ -87,6 +89,7 @@ def _member_values(row) -> dict[str, object]:
         "role": row["role"],
         "station": row["station"],
         "employment_type": row["employment_type"],
+        "operational_cycle": row["operational_cycle"] or "NOT_SET",
         "contract_start": row["contract_start"],
         "contract_end": row["contract_end"],
         "weekly_hours": row["weekly_hours"],
@@ -98,6 +101,115 @@ def _member_values(row) -> dict[str, object]:
         "active": bool(row["active"]),
         "source_reference": row["source_reference"],
     }
+
+
+def create_member(
+    values: dict[str, object],
+    actor: str,
+    organization_id: str = "default",
+):
+    now = utc_now_iso()
+    first_name = " ".join(str(values["first_name"]).split())
+    last_name = " ".join(str(values["last_name"]).split())
+    identifier = str(values.get("external_identifier") or "").strip()
+    if not identifier:
+        identifier = f"manual-{uuid4().hex[:16]}"
+    after = {
+        "display_name": f"{first_name} {last_name}".strip(),
+        "first_name": first_name,
+        "last_name": last_name,
+        "role": values.get("role") or "driver",
+        "station": values.get("station"),
+        "employment_type": values.get("employment_type"),
+        "operational_cycle": getattr(
+            values.get("operational_cycle"), "value", values.get("operational_cycle")
+        ) or "NOT_SET",
+        "contract_start": None,
+        "contract_end": None,
+        "weekly_hours": None,
+        "capabilities": [],
+        "operational_notes": values.get("operational_notes"),
+        "phone": values.get("phone"),
+        "email": values.get("email"),
+        "is_reserve": False,
+        "active": bool(values.get("active", True)),
+        "source_reference": "manual",
+    }
+    with db_session() as conn:
+        collision = conn.execute(
+            """
+            SELECT id FROM workforce_members
+            WHERE organization_id = ?
+              AND LOWER(TRIM(external_identifier)) = LOWER(TRIM(?))
+            """,
+            (organization_id, identifier),
+        ).fetchone()
+        if collision:
+            raise WorkforceValidationError(
+                "L'identificatore esterno e gia utilizzato in questa organizzazione."
+            )
+        cursor = conn.execute(
+            """
+            INSERT INTO workforce_members (
+                external_identifier, display_name, first_name, last_name,
+                role, station, employment_type, operational_cycle,
+                contract_start, contract_end, weekly_hours, capabilities,
+                operational_notes, phone, email, is_reserve, active,
+                source_reference, created_at, updated_at, organization_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                identifier, after["display_name"], first_name, last_name,
+                after["role"], after["station"], after["employment_type"],
+                after["operational_cycle"], None, None, None, "[]",
+                after["operational_notes"], after["phone"], after["email"],
+                0, int(after["active"]), "manual", now, now, organization_id,
+            ),
+        )
+        member_id = int(cursor.lastrowid)
+        _change(
+            conn,
+            entity_type="member",
+            entity_id=str(member_id),
+            actor=actor,
+            before=None,
+            after=after,
+            reason="driver_created",
+            source="manual",
+            timestamp=now,
+            organization_id=organization_id,
+        )
+        if after["operational_cycle"] != "NOT_SET":
+            _change(
+                conn,
+                entity_type="member",
+                entity_id=str(member_id),
+                actor=actor,
+                before={"operational_cycle": "NOT_SET"},
+                after={"operational_cycle": after["operational_cycle"]},
+                reason="operational_cycle_changed",
+                source="manual",
+                timestamp=now,
+                organization_id=organization_id,
+            )
+        if after["employment_type"]:
+            _change(
+                conn,
+                entity_type="member",
+                entity_id=str(member_id),
+                actor=actor,
+                before={"employment_type": None},
+                after={"employment_type": after["employment_type"]},
+                reason="contract_changed",
+                source="manual",
+                timestamp=now,
+                organization_id=organization_id,
+            )
+        row = conn.execute(
+            "SELECT * FROM workforce_members WHERE id = ? AND organization_id = ?",
+            (member_id, organization_id),
+        ).fetchone()
+    return member_from_row(row)
 
 
 def _status_values(row) -> dict[str, object]:
@@ -141,7 +253,7 @@ def update_member(
                 """
                 UPDATE workforce_members
                 SET display_name = ?, first_name = ?, last_name = ?,
-                    role = ?, station = ?, employment_type = ?,
+                    role = ?, station = ?, employment_type = ?, operational_cycle = ?,
                     contract_start = ?, contract_end = ?, weekly_hours = ?,
                     capabilities = ?, operational_notes = ?, phone = ?, email = ?, is_reserve = ?,
                     active = ?, updated_at = ?
@@ -154,6 +266,7 @@ def update_member(
                     after["role"],
                     after["station"],
                     after["employment_type"],
+                    after["operational_cycle"],
                     after["contract_start"],
                     after["contract_end"],
                     after["weekly_hours"],
@@ -180,6 +293,32 @@ def update_member(
                 timestamp=now,
                 organization_id=organization_id,
             )
+            if before["operational_cycle"] != after["operational_cycle"]:
+                _change(
+                    conn,
+                    entity_type="member",
+                    entity_id=str(member_id),
+                    actor=actor,
+                    before={"operational_cycle": before["operational_cycle"]},
+                    after={"operational_cycle": after["operational_cycle"]},
+                    reason="operational_cycle_changed",
+                    source="manual",
+                    timestamp=now,
+                    organization_id=organization_id,
+                )
+            if before["employment_type"] != after["employment_type"]:
+                _change(
+                    conn,
+                    entity_type="member",
+                    entity_id=str(member_id),
+                    actor=actor,
+                    before={"employment_type": before["employment_type"]},
+                    after={"employment_type": after["employment_type"]},
+                    reason="contract_changed",
+                    source="manual",
+                    timestamp=now,
+                    organization_id=organization_id,
+                )
             if before["phone"] != after["phone"]:
                 _change(
                     conn,

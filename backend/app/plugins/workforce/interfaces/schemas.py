@@ -3,6 +3,7 @@ from datetime import date
 from pydantic import BaseModel, Field, field_validator
 
 from app.plugins.workforce.domain.models import (
+    OperationalCycle,
     WorkforceChange,
     WorkforceCoverage,
     WorkforceDayStatus,
@@ -39,6 +40,7 @@ class WorkforceMemberUpdateRequest(BaseModel):
     role: str | None = Field(default=None, max_length=120)
     station: str | None = Field(default=None, max_length=120)
     employment_type: str | None = Field(default=None, max_length=120)
+    operational_cycle: OperationalCycle | None = None
     contract_start: str | None = None
     contract_end: str | None = None
     weekly_hours: float | None = Field(default=None, ge=0, le=168)
@@ -75,6 +77,29 @@ class WorkforceDayStatusRequest(BaseModel):
     def valid_date(cls, value: str) -> str:
         date.fromisoformat(value)
         return value
+
+
+class WorkforceMemberCreateRequest(BaseModel):
+    first_name: str = Field(min_length=1, max_length=80)
+    last_name: str = Field(min_length=1, max_length=80)
+    external_identifier: str | None = Field(default=None, min_length=1, max_length=120)
+    role: str | None = Field(default="driver", max_length=120)
+    station: str | None = Field(default=None, max_length=120)
+    employment_type: str | None = Field(default=None, max_length=120)
+    operational_cycle: OperationalCycle = OperationalCycle.NOT_SET
+    phone: str | None = Field(default=None, max_length=40)
+    email: str | None = Field(default=None, max_length=254)
+    operational_notes: str | None = Field(default=None, max_length=1000)
+    active: bool = True
+    actor: str = Field(default="local_operator", min_length=1, max_length=120)
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def normalized_required_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("Nome e cognome sono obbligatori.")
+        return normalized
 
 
 class WorkforceDayStatusBatchRequest(BaseModel):

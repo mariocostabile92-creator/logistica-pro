@@ -16,6 +16,12 @@ function readableDate(value) {
 }
 
 
+function operationalCycleLabel(value) {
+  return ({ NEXT_DAY: "Next Day", SAME_DAY: "Same Day", NOT_SET: "Non impostato" })[value]
+    || "Non impostato";
+}
+
+
 export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () => {} }) {
   let selectedMember = null;
   let preserveSelectionOnClose = false;
@@ -109,6 +115,8 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     byId("workforceMemberRole").value = member.role || "";
     byId("workforceMemberStation").value = member.station || "";
     byId("workforceEmploymentType").value = member.employment_type || "";
+    byId("workforceOperationalCycle").value = member.operational_cycle || "NOT_SET";
+    byId("workforceMemberActive").value = String(Boolean(member.active));
     byId("workforceMemberPhone").value = member.phone || "";
     byId("workforceMemberEmail").value = member.email || "";
     byId("workforceContractEnd").value = member.contract_end || "";
@@ -128,6 +136,8 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     byId("workforceMemberDetailRole").textContent = member.role || "Non disponibile";
     byId("workforceMemberDetailStation").textContent = member.station || "Non disponibile";
     byId("workforceMemberDetailContract").textContent = member.employment_type || "Non disponibile";
+    byId("workforceMemberDetailCycle").textContent = operationalCycleLabel(member.operational_cycle);
+    byId("workforceMemberDetailActive").textContent = member.active ? "Attivo" : "Inattivo";
     byId("workforceMemberDetailPhone").textContent = member.phone || "Non disponibile";
     byId("workforceMemberDetailEmail").textContent = member.email || "Non disponibile";
     byId("workforceMemberDetailCapabilities").textContent = member.capabilities.length

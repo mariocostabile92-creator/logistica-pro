@@ -3,6 +3,7 @@ import { CONSECUTIVITY_FILTERS, matchesConsecutivity } from "../workforce-consec
 export const EMPTY_FILTERS = Object.freeze({
   query: "", callability: "all", availability: "all",
   role: "all", station: "all", contract: "all", reserve: false,
+  cycle: "all",
   ...CONSECUTIVITY_FILTERS,
 });
 
@@ -25,6 +26,7 @@ export function selectAvailabilityDrivers(state) {
     const searchable = [
       driver.display_name, driver.external_identifier, driver.role,
       driver.station, driver.contract, driver.callability_reason,
+      driver.operational_cycle,
       ...(driver.capabilities || []),
     ].filter(Boolean).join(" ").toLocaleLowerCase("it");
     const callability = filters.callability === "all"
@@ -37,6 +39,7 @@ export function selectAvailabilityDrivers(state) {
       && (filters.role === "all" || driver.role === filters.role)
       && (filters.station === "all" || driver.station === filters.station)
       && (filters.contract === "all" || driver.contract === filters.contract)
+      && (filters.cycle === "all" || driver.operational_cycle === filters.cycle)
       && (!filters.reserve || driver.is_reserve)
       && matchesConsecutivity(driver, filters);
   });

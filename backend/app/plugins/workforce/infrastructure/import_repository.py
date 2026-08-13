@@ -20,6 +20,7 @@ MEMBER_FIELDS = (
     "display_name",
     "role",
     "employment_type",
+    "operational_cycle",
     "contract_start",
     "contract_end",
     "weekly_hours",
@@ -97,6 +98,7 @@ def _member_values(row) -> dict[str, object]:
         "display_name": row["display_name"],
         "role": row["role"],
         "employment_type": row["employment_type"],
+        "operational_cycle": row["operational_cycle"] or "NOT_SET",
         "contract_start": row["contract_start"],
         "contract_end": row["contract_end"],
         "weekly_hours": row["weekly_hours"],
@@ -297,6 +299,7 @@ def _persist_members(
         if row is None:
             phone = _import_contact(item, "phone")
             email = _import_contact(item, "email")
+            values["operational_cycle"] = values.get("operational_cycle") or "NOT_SET"
             after = {**values, "phone": phone, "email": email}
             insert_rows.append(
                 (
@@ -304,6 +307,7 @@ def _persist_members(
                     values["display_name"],
                     values.get("role"),
                     values.get("employment_type"),
+                    values["operational_cycle"],
                     values.get("contract_start"),
                     values.get("contract_end"),
                     values.get("weekly_hours"),
@@ -349,6 +353,9 @@ def _persist_members(
             for field in MEMBER_FIELDS
             if field not in {"phone", "email"}
         }
+        after["operational_cycle"] = (
+            values.get("operational_cycle") or before["operational_cycle"]
+        )
         after["phone"] = _import_contact(item, "phone", before["phone"])
         after["email"] = _import_contact(item, "email", before["email"])
         if before == after:
@@ -358,6 +365,7 @@ def _persist_members(
                 after["display_name"],
                 after["role"],
                 after["employment_type"],
+                after["operational_cycle"],
                 after["contract_start"],
                 after["contract_end"],
                 after["weekly_hours"],
@@ -396,17 +404,33 @@ def _persist_members(
                 "email_changed",
                 after["source_reference"],
             ))
+        if before["operational_cycle"] != after["operational_cycle"]:
+            audit_specs.append((
+                item.external_identifier,
+                {"operational_cycle": before["operational_cycle"]},
+                {"operational_cycle": after["operational_cycle"]},
+                "operational_cycle_changed",
+                after["source_reference"],
+            ))
+        if before["employment_type"] != after["employment_type"]:
+            audit_specs.append((
+                item.external_identifier,
+                {"employment_type": before["employment_type"]},
+                {"employment_type": after["employment_type"]},
+                "contract_changed",
+                after["source_reference"],
+            ))
 
     _executemany(
         conn,
         metrics,
         """
         INSERT INTO workforce_members (
-            external_identifier, display_name, role, employment_type,
+            external_identifier, display_name, role, employment_type, operational_cycle,
             contract_start, contract_end, weekly_hours, capabilities,
             phone, email, active, source_reference, created_at, updated_at,
             organization_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         insert_rows,
         chunk_size,
@@ -416,7 +440,7 @@ def _persist_members(
         metrics,
         """
         UPDATE workforce_members
-        SET display_name = ?, role = ?, employment_type = ?,
+        SET display_name = ?, role = ?, employment_type = ?, operational_cycle = ?,
             contract_start = ?, contract_end = ?, weekly_hours = ?,
             capabilities = ?, phone = ?, email = ?, active = ?,
             source_reference = ?, updated_at = ?
@@ -677,6 +701,7 @@ def _persist_source_rows(
             item.end_time,
             item.notes,
             item.employment_type,
+            item.operational_cycle,
             item.contract_start,
             item.contract_end,
             item.weekly_hours,
@@ -695,11 +720,11 @@ def _persist_source_rows(
             row_kind, source_external_identifier, driver_display_name,
             transporter_id, station, operational_date, status_code,
             availability, shift_code, start_time, end_time, notes,
-            employment_type, contract_start, contract_end, weekly_hours,
+            employment_type, operational_cycle, contract_start, contract_end, weekly_hours,
             resolved_workforce_member_id, raw_payload
         ) VALUES (
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?
         )
         """,
         rows,
@@ -810,6 +835,9 @@ def apply_import(
             "date_to": parsed.preview.date_to,
             "status_count": len(parsed.statuses),
             "contracts_detected": parsed.preview.contracts_detected,
+            "next_day_detected": parsed.preview.next_day_detected,
+            "same_day_detected": parsed.preview.same_day_detected,
+            "operational_cycle_unrecognized": parsed.preview.operational_cycle_unrecognized,
             "absences_detected": parsed.preview.absences_detected,
             "excluded_rows": parsed.preview.excluded_rows,
             "phone_detected": parsed.preview.phone_detected,

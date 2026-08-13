@@ -167,6 +167,9 @@ export function renderWorkforceImportPreview(preview) {
       <div><span>Risorse</span><strong>${integer(preview.people_detected)}</strong></div>
       <div><span>Periodo</span><strong>${escapeHtml(preview.date_from || "Non rilevato")} - ${escapeHtml(preview.date_to || "--")}</strong></div>
       <div><span>Contratti</span><strong>${integer(preview.contracts_detected)}</strong></div>
+      <div><span>Next Day</span><strong>${integer(preview.next_day_detected)}</strong></div>
+      <div><span>Same Day</span><strong>${integer(preview.same_day_detected)}</strong></div>
+      <div><span>Ciclo non riconosciuto</span><strong>${integer(preview.operational_cycle_unrecognized)}</strong></div>
       <div><span>Assenze</span><strong>${integer(preview.absences_detected)}</strong></div>
       <div><span>Righe escluse</span><strong>${integer(preview.excluded_rows)}</strong></div>
       <div><span>Telefono rilevato</span><strong>${integer(preview.phone_detected)}</strong></div>

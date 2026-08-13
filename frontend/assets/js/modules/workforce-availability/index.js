@@ -1,4 +1,4 @@
 export {
   initAvailabilityPresenter as initWorkforceFoundation,
   presentAvailabilitySnapshot as renderWorkforceFoundation,
-} from "./availability-presenter.js?v=2";
+} from "./availability-presenter.js?v=3";

@@ -1,6 +1,6 @@
-import { availabilityCard } from "./availability-card.js?v=2";
+import { availabilityCard } from "./availability-card.js?v=3";
 import { KPI_FILTERS, renderAvailabilityKpis } from "./availability-kpi.js?v=2";
-import { createAvailabilityState, reduceAvailabilityState, selectAvailabilityDrivers } from "./availability-state.js?v=2";
+import { createAvailabilityState, reduceAvailabilityState, selectAvailabilityDrivers } from "./availability-state.js?v=3";
 import { createAvailabilityDetail } from "./availability-detail.js?v=2";
 import {
   CONSECUTIVITY_BINDINGS,
@@ -55,6 +55,7 @@ export function initAvailabilityPresenter() {
     workforceFoundationSearch: "query", workforceCallabilityFilter: "callability",
     workforceAvailabilityFilter: "availability", workforceRoleFilter: "role",
     workforceStationFilter: "station", workforceContractFilter: "contract",
+    workforceCycleFilter: "cycle",
     ...CONSECUTIVITY_BINDINGS,
   };
   for (const [id, name] of Object.entries(bindings)) {

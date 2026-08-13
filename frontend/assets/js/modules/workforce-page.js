@@ -11,7 +11,7 @@ import {
   saveWorkforceDayStatus,
   saveWorkforceDayStatusesBatch,
   updateWorkforceMember,
-} from "../api.js?v=18";
+} from "../api.js?v=19";
 import {
   byId,
   renderViewState,
@@ -35,7 +35,7 @@ import {
   renderWorkforceWeekCopyPreview,
   workforceWeekCopySummary,
 } from "./workforce-week-copy.js?v=1";
-import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=4";
+import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=5";
 import { initWorkforceImportFlow } from "./workforce-import-flow.js";
 import {
   renderWorkforceAnomalies,
@@ -51,8 +51,9 @@ import { renderWorkforceContactCoverage } from "./workforce-contact-coverage.js?
 import {
   initWorkforceFoundation,
   renderWorkforceFoundation,
-} from "./workforce-foundation.js?v=2";
+} from "./workforce-foundation.js?v=3";
 import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=16";
+import { initWorkforceMemberCreate } from "./workforce-member-create.js?v=2";
 
 
 const PAGE_STATES = Object.freeze({
@@ -75,6 +76,7 @@ let anomalyLimit = ANOMALY_PAGE_SIZE;
 let workforceImportFlow = null;
 let workforceDetailPanel = null;
 let driverShiftPlanning = null;
+let workforceMemberCreate = null;
 let feedbackTimeout = null;
 let selectedCellKey = null;
 let multiDayEditing = {
@@ -749,6 +751,8 @@ async function submitMember(event) {
       role: byId("workforceMemberRole").value.trim() || null,
       station: byId("workforceMemberStation").value.trim() || null,
       employment_type: byId("workforceEmploymentType").value.trim() || null,
+      operational_cycle: byId("workforceOperationalCycle").value,
+      active: byId("workforceMemberActive").value === "true",
       phone: byId("workforceMemberPhone").value.trim() || null,
       email: byId("workforceMemberEmail").value.trim() || null,
       contract_end: byId("workforceContractEnd").value || null,
@@ -815,6 +819,13 @@ export function initWorkforcePage() {
       await refresh();
     },
     onSuccess: showWorkforceFeedback,
+  });
+  workforceMemberCreate = initWorkforceMemberCreate({
+    onCreated: async () => {
+      await refresh();
+      showWorkforceFeedback("Driver creato");
+    },
+    onError: (error) => errorMessage("workforce.create-member", error),
   });
   driverShiftPlanning = initDriverShiftPlanning({
     openImport: () => workforceImportFlow.open(),
