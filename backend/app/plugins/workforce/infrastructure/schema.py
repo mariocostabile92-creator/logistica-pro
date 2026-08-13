@@ -18,6 +18,9 @@ SCOPED_COLUMNS = {
     "workforce_day_statuses": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
     "workforce_requirements": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
     "workforce_changes": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
+    "workforce_daily_coverage_requirements": {
+        "organization_id": "TEXT NOT NULL DEFAULT 'default'"
+    },
 }
 
 DAY_STATUS_COLUMNS = {"operational_activity": "TEXT"}
@@ -442,6 +445,28 @@ def init_schema() -> None:
                 UNIQUE (organization_id, date, operational_unit_id)
             );
 
+            CREATE TABLE IF NOT EXISTS workforce_daily_coverage_requirements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                organization_id TEXT NOT NULL,
+                operational_date TEXT NOT NULL,
+                station TEXT,
+                station_key TEXT NOT NULL DEFAULT '',
+                operational_cycle TEXT NOT NULL,
+                coverage_segment TEXT NOT NULL DEFAULT '',
+                forecast_routes INTEGER NOT NULL,
+                reserve_percentage INTEGER NOT NULL,
+                required_capacity INTEGER NOT NULL,
+                source TEXT NOT NULL,
+                source_reference TEXT,
+                source_identity TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE (
+                    organization_id, operational_date, station_key,
+                    operational_cycle, coverage_segment, source_identity
+                )
+            );
+
             CREATE TABLE IF NOT EXISTS workforce_changes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 entity_type TEXT NOT NULL,
@@ -630,6 +655,11 @@ def init_schema() -> None:
                 ON workforce_day_statuses(date, workforce_member_id);
             CREATE INDEX IF NOT EXISTS idx_workforce_requirement_date
                 ON workforce_requirements(date, operational_unit_id);
+            CREATE INDEX IF NOT EXISTS idx_workforce_daily_coverage_scope
+                ON workforce_daily_coverage_requirements(
+                    organization_id, operational_date, operational_cycle,
+                    coverage_segment, updated_at
+                );
             CREATE INDEX IF NOT EXISTS idx_workforce_changes_time
                 ON workforce_changes(timestamp, id);
             CREATE INDEX IF NOT EXISTS idx_workforce_import_rows_scope
@@ -760,6 +790,7 @@ def init_schema() -> None:
             for table in (
                 "workforce_imports", "workforce_members",
                 "workforce_day_statuses", "workforce_requirements",
+                "workforce_daily_coverage_requirements",
                 "workforce_changes",
             ):
                 conn.execute(

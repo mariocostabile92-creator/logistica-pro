@@ -10,6 +10,9 @@ from app.plugins.workforce.domain.models import WorkforceImportResult
 from app.plugins.workforce.importer.workbook_interpreter import (
     ParsedWorkforceWorkbook,
 )
+from app.plugins.workforce.infrastructure.coverage_repository import (
+    persist_imported_requirements,
+)
 from app.utils.date_utils import utc_now_iso
 
 
@@ -808,6 +811,20 @@ def apply_import(
         timings["persist_requirements"] = perf_counter() - started
 
         started = perf_counter()
+        (
+            coverage_requirements_created,
+            coverage_requirements_updated,
+        ) = persist_imported_requirements(
+            conn,
+            parsed.coverage_requirements,
+            organization_id=organization_id,
+            now=now,
+        )
+        timings["persist_daily_coverage_requirements"] = (
+            perf_counter() - started
+        )
+
+        started = perf_counter()
         _executemany(
             conn,
             timings,
@@ -831,6 +848,8 @@ def apply_import(
             statuses_created=created_statuses,
             statuses_updated=updated_statuses,
             requirements_created=requirements_created,
+            coverage_requirements_created=coverage_requirements_created,
+            coverage_requirements_updated=coverage_requirements_updated,
             sheets_imported=[
                 item.name
                 for item in parsed.preview.sheets
@@ -847,6 +866,7 @@ def apply_import(
             "next_day_detected": parsed.preview.next_day_detected,
             "same_day_detected": parsed.preview.same_day_detected,
             "operational_cycle_unrecognized": parsed.preview.operational_cycle_unrecognized,
+            "coverage_requirements_detected": parsed.preview.coverage_requirements_detected,
             "absences_detected": parsed.preview.absences_detected,
             "excluded_rows": parsed.preview.excluded_rows,
             "phone_detected": parsed.preview.phone_detected,

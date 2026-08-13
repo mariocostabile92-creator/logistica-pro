@@ -121,6 +121,7 @@ class WorkforceImportPreview(BaseModel):
     next_day_detected: int = Field(default=0, ge=0)
     same_day_detected: int = Field(default=0, ge=0)
     operational_cycle_unrecognized: int = Field(default=0, ge=0)
+    coverage_requirements_detected: int = Field(default=0, ge=0)
     absences_detected: int = Field(default=0, ge=0)
     excluded_rows: int = Field(default=0, ge=0)
     phone_detected: int = Field(default=0, ge=0)
@@ -140,6 +141,8 @@ class WorkforceImportResult(BaseModel):
     statuses_created: int = 0
     statuses_updated: int = 0
     requirements_created: int = 0
+    coverage_requirements_created: int = 0
+    coverage_requirements_updated: int = 0
     sheets_imported: list[str] = Field(default_factory=list)
 
 

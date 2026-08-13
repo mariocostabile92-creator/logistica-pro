@@ -843,6 +843,7 @@ def test_operational_and_preserved_table_classification_is_complete():
         "workforce_import_rows",
         "workforce_changes",
         "workforce_day_statuses",
+        "workforce_daily_coverage_requirements",
         "workforce_requirements",
         "workforce_members",
         "workforce_imports",

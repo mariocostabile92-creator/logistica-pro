@@ -31,6 +31,7 @@ _IDENTITY_TABLES = {
     "plannings",
     "workforce_changes",
     "workforce_day_statuses",
+    "workforce_daily_coverage_requirements",
     "workforce_imports",
     "workforce_import_rows",
     "driver_shift_plannings",

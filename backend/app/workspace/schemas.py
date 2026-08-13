@@ -71,6 +71,7 @@ class WorkspaceRemovedCounts(BaseModel):
     driver_shift_plannings: int = 0
     workforce_changes: int = 0
     workforce_day_statuses: int = 0
+    workforce_daily_coverage_requirements: int = 0
     workforce_requirements: int = 0
     workforce_members: int = 0
     workforce_imports: int = 0

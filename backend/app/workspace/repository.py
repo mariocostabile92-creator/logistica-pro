@@ -50,6 +50,7 @@ OPERATIONAL_DELETE_ORDER = (
     "workforce_import_rows",
     "workforce_changes",
     "workforce_day_statuses",
+    "workforce_daily_coverage_requirements",
     "workforce_requirements",
     "workforce_members",
     "workforce_imports",
@@ -110,6 +111,7 @@ DIRECT_OPERATIONAL_TABLES = frozenset(
         "workforce_import_rows",
         "workforce_changes",
         "workforce_day_statuses",
+        "workforce_daily_coverage_requirements",
         "workforce_requirements",
         "workforce_members",
         "workforce_imports",
@@ -525,6 +527,7 @@ def read_inventory() -> dict[str, Any]:
             non_demo_relational_data
             or counts["workforce_members"] > 0
             or counts["workforce_day_statuses"] > 0
+            or counts["workforce_daily_coverage_requirements"] > 0
             or counts["workforce_imports"] > 0
             or (
                 counts["analyses"] > 0
@@ -541,6 +544,7 @@ def read_inventory() -> dict[str, Any]:
                 "fleet_assets",
                 "workforce_members",
                 "workforce_day_statuses",
+                "workforce_daily_coverage_requirements",
                 "workforce_imports",
                 "fleet_sync_runs",
                 "daily_briefings",

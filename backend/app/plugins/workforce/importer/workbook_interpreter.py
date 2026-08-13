@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from functools import lru_cache
 from hashlib import sha256
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import re
 from time import perf_counter
 from typing import Any
@@ -18,6 +19,10 @@ from app.plugins.workforce.domain.models import (
 from app.plugins.workforce.domain.driver_shift_contact import (
     normalize_email,
     normalize_phone,
+)
+from app.plugins.workforce.domain.coverage import (
+    CoverageSource,
+    ImportedDailyCoverageRequirement,
 )
 from app.utils.text_normalizer import compact_key, normalize_text
 
@@ -137,6 +142,9 @@ class ParsedWorkforceWorkbook:
     members: list[ParsedMember] = field(default_factory=list)
     statuses: list[ParsedStatus] = field(default_factory=list)
     requirements: list[ParsedRequirement] = field(default_factory=list)
+    coverage_requirements: list[ImportedDailyCoverageRequirement] = field(
+        default_factory=list
+    )
     source_rows: list[ParsedWorkforceSourceRow] = field(default_factory=list)
     metrics: dict[str, float] = field(default_factory=dict)
 
@@ -387,11 +395,119 @@ def _operational_cycle(value: Any) -> tuple[str | None, bool]:
     if not _present(value):
         return None, False
     compact = re.sub(r"[^A-Z0-9]", "", str(value).upper())
-    if compact in {"NEXTDAY", "ND"}:
+    if compact in {"NEXT", "NEXTDAY", "ND"}:
         return "NEXT_DAY", False
-    if compact in {"SAMEDAY", "SD"}:
+    if compact in {"SAMEDAY", "SD", "MATTINO", "POMERIGGIO"}:
         return "SAME_DAY", False
     return None, True
+
+
+def _source_operational_cycle(
+    explicit_value: Any,
+    source_shift_group: Any,
+) -> tuple[str | None, bool]:
+    if _present(explicit_value):
+        return _operational_cycle(explicit_value)
+    compact = re.sub(r"[^A-Z0-9]", "", str(source_shift_group or "").upper())
+    if compact in {"NEXT", "NEXTDAY", "ND"}:
+        return "NEXT_DAY", False
+    if compact in {"MATTINO", "POMERIGGIO", "SAMEDAY", "SD"}:
+        return "SAME_DAY", False
+    return None, False
+
+
+_COVERAGE_LABELS = {
+    "forecast": ("NEXT_DAY", None),
+    "forecast same day a": ("SAME_DAY", "A"),
+    "forecast same day b c": ("SAME_DAY", "B_C"),
+}
+_DEFAULT_RESERVE_PERCENTAGE = 10
+
+
+def _excel_column_name(zero_based_index: int) -> str:
+    value = zero_based_index + 1
+    result = ""
+    while value:
+        value, remainder = divmod(value - 1, 26)
+        result = chr(65 + remainder) + result
+    return result
+
+
+def _forecast_routes(value: Any) -> int | None:
+    if isinstance(value, bool) or not _present(value):
+        return None
+    try:
+        numeric = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
+    if numeric < 0 or numeric != numeric.to_integral_value():
+        return None
+    return int(numeric)
+
+
+def _required_capacity(forecast_routes: int, reserve_percentage: int) -> int:
+    multiplier = (Decimal(100) + Decimal(reserve_percentage)) / Decimal(100)
+    return int(
+        (Decimal(forecast_routes) * multiplier).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+    )
+
+
+def _coverage_requirements(
+    sheets: tuple[Any, ...],
+    fingerprint: str,
+) -> list[ImportedDailyCoverageRequirement]:
+    parsed: list[ImportedDailyCoverageRequirement] = []
+    for sheet in sheets:
+        if normalize_text(sheet.name) != "planning":
+            continue
+        label_rows: dict[tuple[str, str | None], int] = {}
+        for row_index, row in enumerate(sheet.rows[:40]):
+            for value in row:
+                bucket = _COVERAGE_LABELS.get(normalize_text(value))
+                if bucket is not None:
+                    label_rows[bucket] = row_index
+        if not label_rows:
+            continue
+        dated_rows: list[tuple[int, dict[int, str]]] = []
+        for row_index, row in enumerate(sheet.rows[:50]):
+            dates = {
+                column_index: normalized
+                for column_index, value in enumerate(row)
+                if (normalized := _strict_date(value)) is not None
+            }
+            if dates:
+                dated_rows.append((row_index, dates))
+        if not dated_rows:
+            continue
+        _, date_columns = max(dated_rows, key=lambda item: len(item[1]))
+        for (cycle, segment), row_index in label_rows.items():
+            row = sheet.rows[row_index]
+            for column_index, operational_date in date_columns.items():
+                if column_index >= len(row):
+                    continue
+                forecast = _forecast_routes(row[column_index])
+                if forecast is None:
+                    continue
+                source_reference = (
+                    f"{sheet.name}!{_excel_column_name(column_index)}{row_index + 1}"
+                )
+                parsed.append(ImportedDailyCoverageRequirement(
+                    operational_date=operational_date,
+                    station=None,
+                    operational_cycle=cycle,
+                    coverage_segment=segment,
+                    forecast_routes=forecast,
+                    reserve_percentage=_DEFAULT_RESERVE_PERCENTAGE,
+                    required_capacity=_required_capacity(
+                        forecast, _DEFAULT_RESERVE_PERCENTAGE
+                    ),
+                    source=CoverageSource.IMPORT.value,
+                    source_reference=source_reference,
+                    source_identity=f"import:{fingerprint}",
+                ))
+    return parsed
 
 
 def _contact_state() -> dict[str, object]:
@@ -463,6 +579,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
     metrics = dict(workbook.metrics)
     metrics.update({"profile": 0.0, "normalize": 0.0, "validate": 0.0})
     fingerprint = sha256(content).hexdigest()
+    coverage_requirements = _coverage_requirements(workbook.sheets, fingerprint)
     status_mapping = _status_mapping()
     members: dict[str, dict[str, object]] = {}
     member_contacts: dict[str, dict[str, object]] = {}
@@ -547,8 +664,9 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
             employment_type = _employment_type(
                 _value(row, columns, "employment_type")
             )
-            operational_cycle, cycle_invalid = _operational_cycle(
-                _value(row, columns, "operational_cycle")
+            operational_cycle, cycle_invalid = _source_operational_cycle(
+                _value(row, columns, "operational_cycle"),
+                _value(row, columns, "shift_code"),
             )
             if cycle_invalid:
                 operational_cycle_invalid += 1
@@ -828,6 +946,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         next_day_detected=sum(item.get("operational_cycle") == "NEXT_DAY" for item in members.values()),
         same_day_detected=sum(item.get("operational_cycle") == "SAME_DAY" for item in members.values()),
         operational_cycle_unrecognized=(operational_cycle_invalid + len(operational_cycle_conflicts)),
+        coverage_requirements_detected=len(coverage_requirements),
         absences_detected=sum(item.get("status_code") in absence_codes for item in statuses.values()),
         excluded_rows=excluded_rows,
         confirmation_columns=confirmation_columns,
@@ -853,6 +972,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         ],
         statuses=[ParsedStatus(identifier, day, values) for (identifier, day), values in statuses.items()],
         requirements=list(requirements.values()),
+        coverage_requirements=coverage_requirements,
         source_rows=source_rows,
         metrics=metrics,
     )

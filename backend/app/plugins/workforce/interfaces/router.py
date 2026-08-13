@@ -17,6 +17,7 @@ from app.plugins.workforce.application import driver_shift_distribution_service
 from app.plugins.workforce.application import driver_shift_portal_service
 from app.plugins.workforce.application import driver_shift_credentials_service
 from app.plugins.workforce.application import driver_shift_driver_session_service
+from app.plugins.workforce.application import coverage_service
 from app.plugins.workforce.application.contact_coverage_service import contact_coverage
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
 from app.plugins.workforce.application.foundation_service import foundation_snapshot
@@ -66,6 +67,7 @@ from app.plugins.workforce.domain.driver_shift_distribution import (
     DriverShiftPreparedBatch,
 )
 from app.plugins.workforce.domain.contact_coverage import WorkforceContactCoverage
+from app.plugins.workforce.domain.coverage import DailyCoverageResponse
 from app.plugins.workforce.domain.driver_shift_portal import (
     DriverShiftPortalAccess,
     DriverShiftPortalAvailability,
@@ -1120,6 +1122,27 @@ def coverage(
     return WorkforceCoverageResponse(
         items=workforce_service.coverage(date_from, date_to)
     )
+
+
+@router.get("/planning/coverage", response_model=DailyCoverageResponse)
+def planning_coverage(
+    request: Request,
+    date_from: str = Query(...),
+    date_to: str = Query(...),
+    cycle: str | None = Query(
+        default=None, pattern="^(NEXT_DAY|SAME_DAY)$"
+    ),
+) -> DailyCoverageResponse:
+    user = _require(request, "workforce:read")
+    try:
+        return coverage_service.daily_coverage(
+            user.organization_id,
+            date_from,
+            date_to,
+            cycle,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/contact-coverage", response_model=WorkforceContactCoverage)

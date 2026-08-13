@@ -170,6 +170,8 @@ def test_annual_import_reuses_preview_and_meets_local_targets(monkeypatch):
         "statuses_created",
         "statuses_updated",
         "requirements_created",
+        "coverage_requirements_created",
+        "coverage_requirements_updated",
         "sheets_imported",
     }
 
@@ -284,6 +286,7 @@ def test_bulk_failure_rolls_back_members_statuses_audit_and_import(monkeypatch):
         "workforce_imports",
         "workforce_members",
         "workforce_day_statuses",
+        "workforce_daily_coverage_requirements",
         "workforce_changes",
     ):
         assert table_count(table) == 0
