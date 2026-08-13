@@ -125,7 +125,7 @@ const WORKSPACE_PREPARERS = {
   },
   workforce: async () => {
     const [module] = await Promise.all([
-    import("./workforce-page.js?v=33"),
+    import("./workforce-page.js?v=34"),
       loadWorkspaceStyles("workforce"),
     ]);
     return async () => {

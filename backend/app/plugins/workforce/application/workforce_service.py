@@ -133,6 +133,7 @@ def _normalized_day_status(values: dict[str, object]) -> dict[str, object]:
 
 
 def save_day_status(values: dict[str, object], actor: str, status_id: int | None = None, organization_id: str = "default"):
+    values["_operational_activity_provided"] = "operational_activity" in values
     normalized = _normalized_day_status(values)
     return write_repository.save_manual_status(normalized, actor, status_id, organization_id)
 
@@ -142,6 +143,7 @@ def save_day_statuses_batch(
     actor: str,
     organization_id: str = "default",
 ):
+    values["_operational_activity_provided"] = "operational_activity" in values
     normalized = _normalized_day_status(values)
     dates = [str(item) for item in normalized.pop("dates", [])]
     if not dates or len(set(dates)) != len(dates):

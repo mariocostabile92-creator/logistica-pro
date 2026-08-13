@@ -19,6 +19,7 @@ STATUS_FIELDS = (
     "status_code",
     "availability",
     "shift_code",
+    "operational_activity",
     "start_time",
     "end_time",
     "notes",
@@ -217,6 +218,7 @@ def _status_values(row) -> dict[str, object]:
         "status_code": row["status_code"],
         "availability": bool(row["availability"]),
         "shift_code": row["shift_code"],
+        "operational_activity": row["operational_activity"],
         "start_time": row["start_time"],
         "end_time": row["end_time"],
         "notes": row["notes"],
@@ -392,6 +394,8 @@ def save_manual_status(
             row["organization_id"] if row else organization_id
         )
         after = {field: values.get(field) for field in STATUS_FIELDS}
+        if row and not values.get("_operational_activity_provided"):
+            after["operational_activity"] = before["operational_activity"]
         after["source_reference"] = str(
             values.get("source_reference") or "manual"
         )
@@ -401,6 +405,7 @@ def save_manual_status(
                 """
                 UPDATE workforce_day_statuses
                 SET status_code = ?, availability = ?, shift_code = ?,
+                    operational_activity = ?,
                     start_time = ?, end_time = ?, notes = ?,
                     source_reference = ?, observed_or_confirmed = ?,
                     updated_at = ?
@@ -410,6 +415,7 @@ def save_manual_status(
                     after["status_code"],
                     int(bool(after["availability"])),
                     after["shift_code"],
+                    after["operational_activity"],
                     after["start_time"],
                     after["end_time"],
                     after["notes"],
@@ -425,10 +431,10 @@ def save_manual_status(
                 """
                 INSERT INTO workforce_day_statuses (
                     workforce_member_id, date, status_code, availability,
-                    shift_code, start_time, end_time, notes,
+                    shift_code, operational_activity, start_time, end_time, notes,
                     source_reference, observed_or_confirmed, updated_at,
                     organization_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     values["workforce_member_id"],
@@ -436,6 +442,7 @@ def save_manual_status(
                     after["status_code"],
                     int(bool(after["availability"])),
                     after["shift_code"],
+                    after["operational_activity"],
                     after["start_time"],
                     after["end_time"],
                     after["notes"],
@@ -484,6 +491,8 @@ def _save_batch_status(
     ).fetchone()
     before = _status_values(row) if row else None
     after = {field: values.get(field) for field in STATUS_FIELDS}
+    if row and not values.get("_operational_activity_provided"):
+        after["operational_activity"] = before["operational_activity"]
     after["source_reference"] = str(
         values.get("source_reference") or "manual_bulk"
     )
@@ -493,6 +502,7 @@ def _save_batch_status(
             """
             UPDATE workforce_day_statuses
             SET status_code = ?, availability = ?, shift_code = ?,
+                operational_activity = ?,
                 start_time = ?, end_time = ?, notes = ?,
                 source_reference = ?, observed_or_confirmed = ?,
                 updated_at = ?
@@ -502,6 +512,7 @@ def _save_batch_status(
                 after["status_code"],
                 int(bool(after["availability"])),
                 after["shift_code"],
+                after["operational_activity"],
                 after["start_time"],
                 after["end_time"],
                 after["notes"],
@@ -517,10 +528,10 @@ def _save_batch_status(
             """
             INSERT INTO workforce_day_statuses (
                 workforce_member_id, date, status_code, availability,
-                shift_code, start_time, end_time, notes,
+                shift_code, operational_activity, start_time, end_time, notes,
                 source_reference, observed_or_confirmed, updated_at,
                 organization_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["workforce_member_id"],
@@ -528,6 +539,7 @@ def _save_batch_status(
                 after["status_code"],
                 int(bool(after["availability"])),
                 after["shift_code"],
+                after["operational_activity"],
                 after["start_time"],
                 after["end_time"],
                 after["notes"],

@@ -20,6 +20,8 @@ SCOPED_COLUMNS = {
     "workforce_changes": {"organization_id": "TEXT NOT NULL DEFAULT 'default'"},
 }
 
+DAY_STATUS_COLUMNS = {"operational_activity": "TEXT"}
+
 
 def _sqlite_table_definition(conn, table: str) -> str:
     row = conn.execute(
@@ -353,6 +355,7 @@ def init_schema() -> None:
             );
 
             CREATE TABLE IF NOT EXISTS workforce_import_rows (
+                operational_activity TEXT,
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 organization_id TEXT NOT NULL,
                 workforce_import_id INTEGER NOT NULL,
@@ -408,6 +411,7 @@ def init_schema() -> None:
             );
 
             CREATE TABLE IF NOT EXISTS workforce_day_statuses (
+                operational_activity TEXT,
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 workforce_member_id INTEGER NOT NULL,
                 date TEXT NOT NULL,
@@ -472,6 +476,7 @@ def init_schema() -> None:
             );
 
             CREATE TABLE IF NOT EXISTS driver_shift_planning_published_rows (
+                operational_activity TEXT,
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 organization_id TEXT NOT NULL,
                 driver_shift_planning_id INTEGER NOT NULL,
@@ -726,16 +731,19 @@ def init_schema() -> None:
         _ensure_profile_columns(conn)
         for table, columns in SCOPED_COLUMNS.items():
             _ensure_columns(conn, table, columns)
+        _ensure_columns(conn, "workforce_day_statuses", DAY_STATUS_COLUMNS)
         _ensure_columns(conn, "driver_shift_plannings", {
             "published_at": "TEXT",
             "published_by": "TEXT",
             "revision_of_planning_id": "INTEGER",
         })
         _ensure_columns(conn, "driver_shift_planning_published_rows", {
+            "operational_activity": "TEXT",
             "notes": "TEXT",
             "provenance_type": "TEXT NOT NULL DEFAULT 'IMMUTABLE_SOURCE'",
         })
         _ensure_columns(conn, "workforce_import_rows", {
+            "operational_activity": "TEXT",
             "operational_cycle": "TEXT",
         })
         conn.execute(

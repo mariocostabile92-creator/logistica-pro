@@ -34,6 +34,7 @@ STATUS_FIELDS = (
     "status_code",
     "availability",
     "shift_code",
+    "operational_activity",
     "start_time",
     "end_time",
     "notes",
@@ -115,6 +116,7 @@ def _status_values(row) -> dict[str, object]:
         "status_code": row["status_code"],
         "availability": bool(row["availability"]),
         "shift_code": row["shift_code"],
+        "operational_activity": row["operational_activity"],
         "start_time": row["start_time"],
         "end_time": row["end_time"],
         "notes": row["notes"],
@@ -507,6 +509,7 @@ def _persist_statuses(
                     values["status_code"],
                     int(bool(values["availability"])),
                     values.get("shift_code"),
+                    values.get("operational_activity"),
                     values.get("start_time"),
                     values.get("end_time"),
                     values.get("notes"),
@@ -519,6 +522,8 @@ def _persist_statuses(
             continue
         before = _status_values(row)
         after = {field: values.get(field) for field in STATUS_FIELDS}
+        if after["operational_activity"] is None:
+            after["operational_activity"] = before["operational_activity"]
         if before == after:
             continue
         update_rows.append(
@@ -526,6 +531,7 @@ def _persist_statuses(
                 after["status_code"],
                 int(bool(after["availability"])),
                 after["shift_code"],
+                after["operational_activity"],
                 after["start_time"],
                 after["end_time"],
                 after["notes"],
@@ -544,9 +550,9 @@ def _persist_statuses(
         """
         INSERT INTO workforce_day_statuses (
             workforce_member_id, date, status_code, availability,
-            shift_code, start_time, end_time, notes, source_reference,
+            shift_code, operational_activity, start_time, end_time, notes, source_reference,
             observed_or_confirmed, updated_at, organization_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         insert_rows,
         chunk_size,
@@ -556,7 +562,7 @@ def _persist_statuses(
         metrics,
         """
         UPDATE workforce_day_statuses
-        SET status_code = ?, availability = ?, shift_code = ?,
+        SET status_code = ?, availability = ?, shift_code = ?, operational_activity = ?,
             start_time = ?, end_time = ?, notes = ?, source_reference = ?,
             observed_or_confirmed = ?, updated_at = ?
         WHERE id = ? AND organization_id = ?
@@ -582,6 +588,8 @@ def _persist_statuses(
             values = dict(item.values)
             before = _status_values(previous) if previous is not None else None
             after = {field: values.get(field) for field in STATUS_FIELDS}
+            if before is not None and after["operational_activity"] is None:
+                after["operational_activity"] = before["operational_activity"]
             if before == after:
                 continue
             if before is None:
@@ -697,6 +705,7 @@ def _persist_source_rows(
                 else None
             ),
             item.shift_code,
+            item.operational_activity,
             item.start_time,
             item.end_time,
             item.notes,
@@ -719,12 +728,12 @@ def _persist_source_rows(
             source_row_number, source_reference, source_record_key,
             row_kind, source_external_identifier, driver_display_name,
             transporter_id, station, operational_date, status_code,
-            availability, shift_code, start_time, end_time, notes,
+            availability, shift_code, operational_activity, start_time, end_time, notes,
             employment_type, operational_cycle, contract_start, contract_end, weekly_hours,
             resolved_workforce_member_id, raw_payload
         ) VALUES (
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?
         )
         """,
         rows,

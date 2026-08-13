@@ -1,5 +1,5 @@
 import { byId, escapeHtml } from "../utils/dom.js";
-import { workforceTimeLabel } from "./workforce-calendar-view.js?v=3";
+import { workforceTimeLabel } from "./workforce-calendar-view.js?v=4";
 import { createWorkforceSurface } from "./workforce-surface.js";
 import { workforceStatusLabel } from "./workforce-view.js";
 import { createWorkforceDamageSummary } from "./workforce-damage-summary.js?v=1";
@@ -89,6 +89,7 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     byId("workforceStatusDateLabel").textContent = readableDate(status?.date || date);
     const selectedChoice = selectStatusChoice(status?.status_code || "unknown");
     byId("workforceShiftCode").value = status?.shift_code || "";
+    byId("workforceOperationalActivity").value = status?.operational_activity || "";
     populateShiftOptions(status?.shift_code || "");
     byId("workforceStartTime").value = status?.start_time || "";
     byId("workforceEndTime").value = status?.end_time || "";

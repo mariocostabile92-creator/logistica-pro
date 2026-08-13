@@ -1272,6 +1272,9 @@
 
         <dl id="workforceSummary" class="workforce-kpis" aria-label="Indicatori del periodo">
           <div data-kpi="resources"><dt>Risorse</dt><dd id="workforceMemberCount">0</dd></div>
+          <div data-kpi="next-day"><dt>Next Day</dt><dd id="workforceNextDayCount">0</dd></div>
+          <div data-kpi="same-day"><dt>Same Day</dt><dd id="workforceSameDayCount">0</dd></div>
+          <div data-kpi="cycle-not-set"><dt>Ciclo non impostato</dt><dd id="workforceCycleNotSetCount">0</dd></div>
           <div data-kpi="scheduled"><dt>Programmate</dt><dd id="workforceScheduledCount">0</dd></div>
           <div data-kpi="available"><dt>Disponibili</dt><dd id="workforceAvailableCount">0</dd></div>
           <div data-kpi="rest"><dt>Riposo</dt><dd id="workforceRestCount">0</dd></div>
@@ -1282,6 +1285,11 @@
         <p id="workforceRequirementNotice" class="workforce-requirement-notice" hidden>
           Fabbisogno non configurato
         </p>
+        <div class="workforce-planning-filters" aria-label="Filtri Planning Driver">
+          <label>Ciclo<select id="workforcePlanningCycleFilter"><option value="all">Tutti</option><option value="NEXT_DAY">Next Day</option><option value="SAME_DAY">Same Day</option><option value="NOT_SET">Non impostato</option></select></label>
+          <label id="workforcePlanningActivityFilterLabel" hidden>Attività<select id="workforcePlanningActivityFilter"><option value="all">Tutte</option></select></label>
+        </div>
+        <div id="workforceActivitySummary" class="workforce-activity-summary" aria-label="Riepilogo attività" hidden></div>
 
         <div class="workforce-tabs" role="tablist" aria-label="Aree Planning turni">
           <button
@@ -1344,6 +1352,10 @@
               <label>
                 Turno o stato
                 <select id="workforceMultiDayChoice"></select>
+              </label>
+              <label>
+                Attività operativa
+                <input id="workforceMultiDayActivity" type="text" list="workforceOperationalActivityOptions" maxlength="160" placeholder="Facoltativa" autocomplete="off" />
               </label>
               <label>
                 Nota
@@ -1436,6 +1448,8 @@
                   <input id="workforceShiftCode" type="text" list="workforceShiftOptions" maxlength="80" autocomplete="off" />
                   <datalist id="workforceShiftOptions"></datalist>
                 </label>
+                <label>Attività operativa<input id="workforceOperationalActivity" type="text" list="workforceOperationalActivityOptions" maxlength="160" autocomplete="off" /></label>
+                <datalist id="workforceOperationalActivityOptions"></datalist>
                 <label>Nota<input id="workforceStatusNotes" type="text" maxlength="1000" /></label>
                 <div class="workforce-editor-actions">
                   <button id="workforceStatusCancel" type="button" class="quiet">Annulla</button>
@@ -1589,7 +1603,6 @@
           <div><dt>Mezzi assegnati</dt><dd id="dspSummaryVehicles">0</dd></div>
           <div class="dsp-summary-attention"><dt>Criticità</dt><dd id="dspSummaryAttention">0</dd></div>
         </dl>
-
         <div id="dspSourceWarnings" class="dsp-source-warnings" role="status" hidden></div>
 
         <div class="dsp-toolbar">
@@ -2685,6 +2698,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=103"></script>
+    <script type="module" src="./assets/js/app.js?v=104"></script>
 </body>
 </html>

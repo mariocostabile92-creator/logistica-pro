@@ -65,6 +65,9 @@ test("Workforce summary is deterministic and uses backend availability", () => {
   );
   assert.deepEqual(summary, {
     members: 2,
+    nextDay: 0,
+    sameDay: 0,
+    cycleNotSet: 2,
     available: 1,
     scheduled: 1,
     rest: 0,
@@ -304,7 +307,7 @@ test("Workforce polish keeps operational signals compact and accessible", async 
     html.indexOf('id="workforceSection"'),
     html.indexOf('id="fleetPluginSection"'),
   );
-  assert.equal((workforce.match(/data-kpi=/g) || []).length, 7);
+  assert.equal((workforce.match(/data-kpi=/g) || []).length, 10);
   assert.match(calendar, /class="workforce-status-badge"/);
   assert.match(calendarCss, /\.workforce-status-badge::before/);
   assert.match(insights, /covered: "Coperto"/);

@@ -51,6 +51,9 @@ def status_from_row(row) -> WorkforceDayStatus:
         status_code=row["status_code"],
         availability=bool(row["availability"]),
         shift_code=row["shift_code"],
+        operational_activity=(
+            row["operational_activity"] if "operational_activity" in keys else None
+        ),
         start_time=row["start_time"],
         end_time=row["end_time"],
         notes=row["notes"],

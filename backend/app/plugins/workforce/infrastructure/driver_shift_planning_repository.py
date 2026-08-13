@@ -621,13 +621,13 @@ def _apply_canonical_statuses(conn, organization_id: str, planning, projection, 
     conn.executemany(
         """
         INSERT INTO workforce_day_statuses (
-            workforce_member_id, date, status_code, availability, shift_code,
+            workforce_member_id, date, status_code, availability, shift_code, operational_activity,
             start_time, end_time, notes, source_reference,
             observed_or_confirmed, updated_at, organization_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'imported', ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'imported', ?, ?)
         """,
         [(item["workforce_member_id"], item["operational_date"], item["status_code"],
-          int(bool(item["availability"])), item.get("shift_code"), item.get("start_time"),
+          int(bool(item["availability"])), item.get("shift_code"), item.get("operational_activity"), item.get("start_time"),
           item.get("end_time"), item.get("notes"), source_reference, now, organization_id)
          for item in projection],
     )
@@ -669,13 +669,13 @@ def publish_projection(
             INSERT INTO driver_shift_planning_published_rows (
                 organization_id, driver_shift_planning_id, planning_version,
                 workforce_member_id, operational_date, status_code, availability,
-                shift_code, start_time, end_time, station, transporter_id,
+                shift_code, operational_activity, start_time, end_time, station, transporter_id,
                 provenance_summary, selected_source_row_id, published_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [(organization_id, planning_id, expected_version, item["workforce_member_id"],
               item["operational_date"], item["status_code"], int(bool(item["availability"])),
-              item.get("shift_code"), item.get("start_time"), item.get("end_time"),
+              item.get("shift_code"), item.get("operational_activity"), item.get("start_time"), item.get("end_time"),
               item.get("station"), item.get("transporter_id"),
               json.dumps(item["provenance_summary"], ensure_ascii=False, sort_keys=True),
               item.get("selected_source_row_id"), now) for item in projection],

@@ -90,6 +90,9 @@ export function workforceSummary(members, statuses, coverage) {
   ), 0);
   return {
     members: members.length,
+    nextDay: members.filter((item) => item.operational_cycle === "NEXT_DAY").length,
+    sameDay: members.filter((item) => item.operational_cycle === "SAME_DAY").length,
+    cycleNotSet: members.filter((item) => !item.operational_cycle || item.operational_cycle === "NOT_SET").length,
     available,
     scheduled,
     rest,
@@ -98,6 +101,51 @@ export function workforceSummary(members, statuses, coverage) {
     margin: margins.length ? Math.min(...margins) : null,
     coverageConfigured: margins.length > 0,
   };
+}
+
+
+export function workforceOperationalActivities(statuses) {
+  return [...new Set(statuses.map((item) => (
+    String(item.operational_activity || "").trim()
+  )).filter(Boolean))].sort((left, right) => left.localeCompare(right, "it-IT"));
+}
+
+
+export function filterWorkforcePlanningMembers(
+  members,
+  statuses,
+  cycleFilter = "all",
+  activityFilter = "all",
+) {
+  const memberIdsForActivity = new Set(
+    statuses.filter((item) => (
+      activityFilter === "all" || item.operational_activity === activityFilter
+    )).map((item) => Number(item.workforce_member_id)),
+  );
+  return members.filter((member) => (
+    (cycleFilter === "all" || (member.operational_cycle || "NOT_SET") === cycleFilter)
+    && (activityFilter === "all" || memberIdsForActivity.has(Number(member.workforce_member_id)))
+  ));
+}
+
+
+export function workforceActivitySummary(statuses) {
+  return statuses.reduce((summary, item) => {
+    const activity = String(item.operational_activity || "").trim();
+    if (activity) summary[activity] = (summary[activity] || 0) + 1;
+    return summary;
+  }, {});
+}
+
+
+export function renderWorkforceActivitySummary(container, summary) {
+  const entries = Object.entries(summary).sort(([left], [right]) => (
+    left.localeCompare(right, "it-IT")
+  ));
+  container.hidden = entries.length === 0;
+  container.innerHTML = entries.map(([activity, count]) => (
+    `<span><strong>${escapeHtml(activity)}</strong><b>${count}</b></span>`
+  )).join("");
 }
 
 
@@ -115,6 +163,9 @@ export function renderWorkforceLanding(status) {
 
 export function renderWorkforceSummary(summary) {
   document.getElementById("workforceMemberCount").textContent = summary.members;
+  document.getElementById("workforceNextDayCount").textContent = summary.nextDay;
+  document.getElementById("workforceSameDayCount").textContent = summary.sameDay;
+  document.getElementById("workforceCycleNotSetCount").textContent = summary.cycleNotSet;
   document.getElementById("workforceAvailableCount").textContent = summary.available;
   document.getElementById("workforceScheduledCount").textContent = summary.scheduled;
   document.getElementById("workforceRestCount").textContent = summary.rest;
@@ -128,6 +179,9 @@ export function renderWorkforceSummary(summary) {
   document.getElementById("workforceRequirementNotice").hidden = summary.coverageConfigured;
   const priorities = {
     resources: "normal",
+    "next-day": "normal",
+    "same-day": "normal",
+    "cycle-not-set": summary.cycleNotSet > 0 ? "attention" : "normal",
     scheduled: "normal",
     available: "normal",
     rest: "normal",

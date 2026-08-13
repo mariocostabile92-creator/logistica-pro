@@ -34,7 +34,7 @@ def _canonical_rows(
     rows = conn.execute(
         f"""
         SELECT ds.workforce_member_id, ds.date AS operational_date,
-               ds.status_code, ds.availability, ds.shift_code,
+               ds.status_code, ds.availability, ds.shift_code, ds.operational_activity,
                ds.start_time, ds.end_time, ds.notes, ds.source_reference
         FROM workforce_day_statuses ds
         JOIN workforce_members m
@@ -192,9 +192,9 @@ def _insert_published_rows(
         INSERT INTO driver_shift_planning_published_rows (
             organization_id, driver_shift_planning_id, planning_version,
             workforce_member_id, operational_date, status_code, availability,
-            shift_code, start_time, end_time, station, transporter_id, notes,
+            shift_code, operational_activity, start_time, end_time, station, transporter_id, notes,
             provenance_type, provenance_summary, selected_source_row_id, published_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, NULL, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, NULL, ?)
         """,
         [
             (
@@ -206,6 +206,7 @@ def _insert_published_rows(
                 row["status_code"],
                 int(bool(row["availability"])),
                 row.get("shift_code"),
+                row.get("operational_activity"),
                 row.get("start_time"),
                 row.get("end_time"),
                 row.get("notes"),

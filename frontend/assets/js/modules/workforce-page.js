@@ -22,7 +22,7 @@ import { isExpectedApiError, userErrorPresentation } from "../utils/errors.js";
 import {
   renderWorkforceCalendar,
   workforceCellKey,
-} from "./workforce-calendar-view.js?v=3";
+} from "./workforce-calendar-view.js?v=4";
 import {
   nextMultiDaySelection,
   populateWorkforceBulkChoices,
@@ -34,8 +34,8 @@ import {
 import {
   renderWorkforceWeekCopyPreview,
   workforceWeekCopySummary,
-} from "./workforce-week-copy.js?v=1";
-import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=5";
+} from "./workforce-week-copy.js?v=2";
+import { initWorkforceDetailPanel } from "./workforce-detail-panel.js?v=6";
 import { initWorkforceImportFlow } from "./workforce-import-flow.js";
 import {
   renderWorkforceAnomalies,
@@ -43,8 +43,12 @@ import {
 } from "./workforce-insights-view.js";
 import {
   renderWorkforceLanding,
+  renderWorkforceActivitySummary,
   renderWorkforceSummary,
+  filterWorkforcePlanningMembers,
+  workforceActivitySummary,
   workforceCalendarWindow,
+  workforceOperationalActivities,
   workforceSummary,
 } from "./workforce-view.js";
 import { renderWorkforceContactCoverage } from "./workforce-contact-coverage.js?v=1";
@@ -453,9 +457,18 @@ function toggleMultiDayDate({ date, shiftKey, visibleDates }) {
 function renderData() {
   const { members, statuses, coverage } = currentData;
   renderWorkforceSummary(workforceSummary(members, statuses, coverage));
+  renderWorkforceActivitySummary(
+    byId("workforceActivitySummary"),
+    workforceActivitySummary(statuses),
+  );
+  const cycleFilter = byId("workforcePlanningCycleFilter").value;
+  const activityFilter = byId("workforcePlanningActivityFilter").value;
+  const visibleMembers = filterWorkforcePlanningMembers(
+    members, statuses, cycleFilter, activityFilter,
+  );
   renderWorkforceCalendar(
     byId("workforceCalendar"),
-    members,
+    visibleMembers,
     statuses,
     viewMode,
     (details) => {
@@ -548,6 +561,20 @@ function selectedCalendarWindow() {
 }
 
 
+function refreshOperationalActivityControls(statuses) {
+  const activities = workforceOperationalActivities(statuses);
+  const datalist = byId("workforceOperationalActivityOptions");
+  datalist.replaceChildren(...activities.map((activity) => new Option(activity, activity)));
+  const filter = byId("workforcePlanningActivityFilter");
+  const current = filter.value;
+  filter.replaceChildren(new Option("Tutte", "all"), ...activities.map((activity) => (
+    new Option(activity, activity)
+  )));
+  filter.value = activities.includes(current) ? current : "all";
+  byId("workforcePlanningActivityFilterLabel").hidden = activities.length === 0;
+}
+
+
 async function loadCalendar(range = null) {
   if (!currentStatus?.member_count) return;
   const { dateFrom, dateTo } = range || selectedCalendarWindow();
@@ -579,6 +606,7 @@ async function loadCalendar(range = null) {
       statuses: calendar.items,
       coverage: coverage.items,
     };
+    refreshOperationalActivityControls(currentData.statuses);
     renderWorkforceFoundation(foundation);
     renderWorkforceContactCoverage(byId("workforceContactCoverage"), contactCoverage);
     anomalyLimit = ANOMALY_PAGE_SIZE;
@@ -676,6 +704,7 @@ async function submitStatus(event) {
       date: byId("workforceStatusDate").value,
       status_code: selectedStatus?.value || "unknown",
       shift_code: byId("workforceShiftCode").value.trim() || null,
+      operational_activity: byId("workforceOperationalActivity").value.trim() || null,
       start_time: byId("workforceStartTime").value || null,
       end_time: byId("workforceEndTime").value || null,
       notes: byId("workforceStatusNotes").value.trim() || null,
@@ -711,6 +740,7 @@ async function applyMultiDayStatus() {
   );
   if (!payload) return;
   payload.notes = byId("workforceMultiDayNotes").value.trim() || null;
+  payload.operational_activity = byId("workforceMultiDayActivity").value.trim() || null;
   if (payload.status_code === "available_limited" && !payload.notes) {
     setMessage("Aggiungi una motivazione per la disponibilita con limitazioni.", "warning");
     byId("workforceMultiDayNotes").focus();
@@ -725,6 +755,7 @@ async function applyMultiDayStatus() {
     multiDayEditing.anchorDate = null;
     byId("workforceMultiDayChoice").value = "";
     byId("workforceMultiDayNotes").value = "";
+    byId("workforceMultiDayActivity").value = "";
     renderData();
     showWorkforceFeedback(`${count} ${count === 1 ? "giorno aggiornato" : "giorni aggiornati"}`);
     refreshCoverageAfterStatusSave(
@@ -860,6 +891,8 @@ export function initWorkforcePage() {
   byId("workforceStatusEditor").addEventListener("submit", submitStatus);
   byId("workforceMemberEditor").addEventListener("submit", submitMember);
   byId("workforceMultiDayChoice").addEventListener("change", renderMultiDayBar);
+  byId("workforcePlanningCycleFilter").addEventListener("change", renderData);
+  byId("workforcePlanningActivityFilter").addEventListener("change", renderData);
   byId("workforceMultiDayCancel").addEventListener("click", () => {
     clearMultiDayEditing({ restoreFocus: true });
   });

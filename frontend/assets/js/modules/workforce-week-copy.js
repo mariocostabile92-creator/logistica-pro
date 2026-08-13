@@ -20,7 +20,8 @@ export function workforceWeekCopyValueLabel(value) {
   const time = value.start_time || value.end_time
     ? ` · ${value.start_time || "--"}–${value.end_time || "--"}`
     : "";
-  return `${primary}${time}`;
+  const activity = value.operational_activity ? ` · ${value.operational_activity}` : "";
+  return `${primary}${activity}${time}`;
 }
 
 

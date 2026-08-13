@@ -54,6 +54,9 @@ FIELD_ALIASES = {
         "stato", "status", "assenza", "disponibilita", "disponibilita giornaliera",
     ),
     "shift_code": ("turno", "codice turno", "shift", "fascia"),
+    "operational_activity": (
+        "attivita operativa", "attività operativa", "operational activity", "activity",
+    ),
     "start_time": ("inizio turno", "ora inizio", "start time"),
     "end_time": ("fine turno", "ora fine", "end time"),
     "notes": ("note", "annotazioni", "notes"),
@@ -115,6 +118,7 @@ class ParsedWorkforceSourceRow:
     status_code: str | None
     availability: bool | None
     shift_code: str | None
+    operational_activity: str | None
     start_time: str | None
     end_time: str | None
     notes: str | None
@@ -583,6 +587,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     status_code=None,
                     availability=None,
                     shift_code=None,
+                    operational_activity=None,
                     start_time=None,
                     end_time=None,
                     notes=_text(_value(row, columns, "notes")),
@@ -653,6 +658,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     "status_code": status,
                     "availability": status in {"available", "available_limited", "scheduled"},
                     "shift_code": str(_value(row, columns, "shift_code") or inferred_shift or "").strip() or None,
+                    "operational_activity": _text(_value(row, columns, "operational_activity")),
                     "start_time": str(_value(row, columns, "start_time") or "").strip() or None,
                     "end_time": str(_value(row, columns, "end_time") or "").strip() or None,
                     "notes": str(_value(row, columns, "notes") or "").strip() or None,
@@ -675,6 +681,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                     status_code=status_values["status_code"],
                     availability=status_values["availability"],
                     shift_code=status_values["shift_code"],
+                    operational_activity=status_values["operational_activity"],
                     start_time=status_values["start_time"],
                     end_time=status_values["end_time"],
                     notes=status_values["notes"],
@@ -691,6 +698,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                         operational_date=explicit_date,
                         source_status_or_shift=raw_status,
                         source_shift_code=_value(row, columns, "shift_code"),
+                        operational_activity=_value(row, columns, "operational_activity"),
                         start_time=_value(row, columns, "start_time"),
                         end_time=_value(row, columns, "end_time"),
                         notes=_value(row, columns, "notes"),
@@ -709,6 +717,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                         "status_code": status,
                         "availability": status in {"available", "available_limited", "scheduled"},
                         "shift_code": shift,
+                        "operational_activity": None,
                         "start_time": None,
                         "end_time": None,
                         "notes": None,
@@ -733,6 +742,7 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
                         status_code=status_values["status_code"],
                         availability=status_values["availability"],
                         shift_code=status_values["shift_code"],
+                        operational_activity=None,
                         start_time=None,
                         end_time=None,
                         notes=None,

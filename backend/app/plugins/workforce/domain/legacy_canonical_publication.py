@@ -52,6 +52,7 @@ def legacy_canonical_fingerprint(
             str(row["status_code"]),
             bool(row["availability"]),
             row.get("shift_code"),
+            row.get("operational_activity"),
             row.get("start_time"),
             row.get("end_time"),
             row.get("notes"),

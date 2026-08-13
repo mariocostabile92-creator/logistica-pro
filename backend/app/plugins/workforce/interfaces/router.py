@@ -1167,7 +1167,7 @@ def create_day_status(
         ensure_real_data_write_allowed()
         user = _require(http_request, "workforce:write")
         return workforce_service.save_day_status(
-            request.model_dump(exclude={"actor"}), request.actor,
+            request.model_dump(exclude={"actor"}, exclude_unset=True), request.actor,
             organization_id=user.organization_id,
         )
     except (DemoWorkspaceResetRequiredError, WorkforceMemberNotFoundError, WorkforceValidationError) as exc:
@@ -1183,7 +1183,7 @@ def update_day_statuses_batch(
         ensure_real_data_write_allowed()
         user = _require(http_request, "workforce:write")
         items = workforce_service.save_day_statuses_batch(
-            request.model_dump(exclude={"actor"}),
+            request.model_dump(exclude={"actor"}, exclude_unset=True),
             request.actor,
             user.organization_id,
         )

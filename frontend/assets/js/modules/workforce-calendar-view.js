@@ -90,6 +90,7 @@ function statusButton(
   const label = workforceStatusLabel(code);
   const time = workforceTimeLabel(status);
   const primary = status?.shift_code || label;
+  const activity = status?.operational_activity || "";
   const secondary = [status?.shift_code ? label : "", time].filter(Boolean).join(" · ");
   const detail = [label, status?.shift_code, time].filter(Boolean).join(", ");
   const key = workforceCellKey(member.workforce_member_id, day);
@@ -114,17 +115,26 @@ function statusButton(
     >
       <strong class="workforce-status-badge">${escapeHtml(primary)}</strong>
       ${secondary ? `<span>${escapeHtml(secondary)}</span>` : ""}
+      ${activity ? `<small class="workforce-operational-activity">${escapeHtml(activity)}</small>` : ""}
     </button>
   `;
 }
 
 
 function memberButton(member) {
+  const cycle = member.operational_cycle || "NOT_SET";
   return `
     <button type="button" class="workforce-member-button" data-workforce-member-edit="${member.workforce_member_id}">${escapeHtml(member.display_name)}</button>
     <small>${escapeHtml(resourceMeta(member))}</small>
+    <span class="workforce-planning-cycle-badge is-${escapeHtml(cycle.toLowerCase().replaceAll("_", "-"))}">${escapeHtml(operationalCyclePlanningLabel(cycle))}</span>
+    ${cycle === "NOT_SET" ? `<button type="button" class="workforce-complete-profile" data-workforce-member-edit="${member.workforce_member_id}">Completa anagrafica</button>` : ""}
     <button type="button" class="workforce-member-schedule" data-workforce-member-schedule="${member.workforce_member_id}">Modifica turni</button>
   `;
+}
+
+export function operationalCyclePlanningLabel(value) {
+  return ({ NEXT_DAY: "NEXT DAY", SAME_DAY: "SAME DAY", NOT_SET: "CICLO NON IMPOSTATO" })[value]
+    || "CICLO NON IMPOSTATO";
 }
 
 

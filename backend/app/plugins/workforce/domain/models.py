@@ -48,6 +48,7 @@ class WorkforceDayStatus(BaseModel):
     status_code: str
     availability: bool
     shift_code: str | None = None
+    operational_activity: str | None = None
     start_time: str | None = None
     end_time: str | None = None
     notes: str | None = None

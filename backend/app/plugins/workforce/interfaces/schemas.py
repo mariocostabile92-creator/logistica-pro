@@ -61,6 +61,7 @@ class WorkforceMemberUpdateRequest(BaseModel):
 
 
 class WorkforceDayStatusRequest(BaseModel):
+    operational_activity: str | None = Field(default=None, max_length=160)
     workforce_member_id: int = Field(gt=0)
     date: str
     status_code: str = Field(min_length=1, max_length=80)
@@ -103,6 +104,7 @@ class WorkforceMemberCreateRequest(BaseModel):
 
 
 class WorkforceDayStatusBatchRequest(BaseModel):
+    operational_activity: str | None = Field(default=None, max_length=160)
     workforce_member_id: int = Field(gt=0)
     dates: list[str] = Field(min_length=1, max_length=31)
     status_code: str = Field(min_length=1, max_length=80)

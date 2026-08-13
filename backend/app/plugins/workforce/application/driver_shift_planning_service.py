@@ -197,7 +197,7 @@ def _operational_values(row: dict[str, object]) -> tuple[object, ...]:
     return tuple(
         _normalized(row[field])
         for field in (
-            "status_code", "availability", "shift_code", "start_time",
+            "status_code", "availability", "shift_code", "operational_activity", "start_time",
             "end_time", "station", "notes",
         )
     )
@@ -226,7 +226,7 @@ def _preview_fingerprint(planning: DriverShiftPlanning, rows: list[dict[str, obj
                 "id", "workforce_import_id", "source_record_key",
                 "resolved_workforce_member_id", "source_external_identifier",
                 "transporter_id", "operational_date", "status_code", "availability",
-                "shift_code", "start_time", "end_time", "station", "notes",
+                "shift_code", "operational_activity", "start_time", "end_time", "station", "notes",
             )}
             for row in rows
         ],
@@ -254,6 +254,7 @@ def _alternative(
             if candidate["availability"] is not None else None
         ),
         shift_code=candidate["shift_code"],
+        operational_activity=candidate["operational_activity"],
         start_time=candidate["start_time"],
         end_time=candidate["end_time"],
         station=candidate["station"],
@@ -377,6 +378,7 @@ def merge_preview(
                 if candidate["availability"] is not None else None
             ),
             shift_code=candidate["shift_code"],
+            operational_activity=candidate["operational_activity"],
             start_time=candidate["start_time"],
             end_time=candidate["end_time"],
             station=candidate["station"],
@@ -564,6 +566,7 @@ def _projection_from_preview(
             "status_code": status_code,
             "availability": availability,
             "shift_code": raw["shift_code"],
+            "operational_activity": raw["operational_activity"],
             "start_time": raw["start_time"],
             "end_time": raw["end_time"],
             "station": raw["station"],
