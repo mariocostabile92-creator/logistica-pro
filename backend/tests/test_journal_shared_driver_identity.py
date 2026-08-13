@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app.core.database import db_session
 from app.main import app
+from tests.journal_evidence_helpers import upload_required_evidence
 from app.plugins.fleet.damage.application.driver_suggestion_resolver import (
     resolve_driver_suggestion,
 )
@@ -184,6 +185,12 @@ def test_completed_shared_movement_is_resolved_by_journal_suggestion():
     )
     vehicle_id = _asset()
     created = _shared_session(_shared_access())
+    upload_required_evidence(
+        client,
+        JOURNAL,
+        {"id": created["session_id"], "token": created["token"]},
+        "shared-identity",
+    )
     response = client.post(
         f"{JOURNAL}/sessions/{created['session_id']}/complete",
         headers={"X-Journal-Token": str(created["token"])},

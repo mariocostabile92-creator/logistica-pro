@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.core.database import db_session
 from app.main import app
+from tests.journal_evidence_helpers import upload_required_evidence
 
 
 client = TestClient(app)
@@ -72,6 +73,14 @@ def payload(operation="check_out", submission="submission-001"):
 
 
 def complete(open_session, body):
+    with db_session() as conn:
+        current = conn.execute(
+            "SELECT status FROM journal_sessions WHERE id = ?", (open_session["id"],)
+        ).fetchone()
+    if current and current["status"] == "open":
+        upload_required_evidence(
+            client, BASE, open_session, str(body.get("client_submission_id", "required"))
+        )
     return client.post(
         f"{BASE}/sessions/{open_session['id']}/complete",
         headers={"X-Journal-Token": open_session["token"]},
@@ -179,7 +188,11 @@ def test_wrong_token_expired_and_completed_session_reuse():
                 opened["id"],
             ),
         )
-    assert complete(opened, payload()).status_code == 410
+    assert client.post(
+        f"{BASE}/sessions/{opened['id']}/complete",
+        headers={"X-Journal-Token": opened["token"]},
+        json=payload(),
+    ).status_code == 410
 
     opened = session()
     assert complete(
@@ -273,7 +286,7 @@ def test_uploaded_photo_is_attached_to_movement_atomically():
     )
     assert upload.status_code == 201
     receipt = complete(opened, payload()).json()
-    assert len(receipt["media"]) == 1
+    assert len(receipt["media"]) == 2
     with db_session() as conn:
         row = conn.execute(
             "SELECT movement_id FROM movement_media WHERE id = ?",

@@ -201,5 +201,5 @@ def test_shared_entry_page_revalidates_and_serves_new_mobile_module_version():
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-cache"
-    assert "index.js?v=dj6101" in response.text
-    assert "shell.js?v=dj6101" in response.text
+    assert "index.js?v=djh1" in response.text
+    assert "shell.js?v=djh1" in response.text

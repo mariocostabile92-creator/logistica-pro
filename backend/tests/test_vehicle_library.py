@@ -3,6 +3,7 @@ import base64
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.journal_evidence_helpers import upload_required_evidence
 
 
 client = TestClient(app)
@@ -43,7 +44,7 @@ def create_movement(asset, operation, submission, odometer):
     uploaded = client.post(
         f"{JOURNAL}/sessions/{opened['id']}/media",
         headers={"X-Journal-Token": opened["token"]},
-        files={"file": ("mezzo.png", PNG, "image/png")},
+        files={"file": ("mezzo.png", PNG + submission.encode(), "image/png")},
     )
     assert uploaded.status_code == 201
     payload = {
@@ -61,6 +62,7 @@ def create_movement(asset, operation, submission, odometer):
         "client_submission_id": submission,
         "timezone": "Europe/Rome",
     }
+    upload_required_evidence(client, JOURNAL, opened, submission)
     completed = client.post(
         f"{JOURNAL}/sessions/{opened['id']}/complete",
         headers={"X-Journal-Token": opened["token"]},
@@ -106,7 +108,7 @@ def test_vehicle_library_is_read_only_and_serves_existing_photos():
 
     assert photo.status_code == 200
     assert photo.headers["content-type"] == "image/png"
-    assert photo.content == PNG
+    assert photo.content == PNG + b"vl-photo-001"
     assert client.post(
         f"{JOURNAL}/vehicles/{asset['id']}/history"
     ).status_code == 405

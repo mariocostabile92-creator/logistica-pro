@@ -9,6 +9,7 @@ from app.auth.domain import Role
 from app.auth.permission_service import has_permission
 from app.plugins.fleet.journal.domain.operational_day import operational_date
 from app.plugins.fleet.journal.infrastructure.storage import PrivateLocalMediaStorage
+from tests.journal_evidence_helpers import upload_required_evidence
 
 
 client = TestClient(app)
@@ -96,6 +97,7 @@ def test_month_aggregation_reports_anomalies_incomplete_and_media_in_one_snapsho
     headers = {"X-Journal-Token": opened["token"]}
     client.post(f"{BASE}/sessions/{opened['id']}/media", headers=headers,
                 files={"file": ("prova.png", PNG, "image/png")})
+    upload_required_evidence(client, BASE, opened, "month-complete")
     completed = client.post(f"{BASE}/sessions/{opened['id']}/complete", headers=headers, json={
         "odometer_km": 1200, "fuel_percentage": 55,
         "cleanliness_status": "non_compliant", "anomaly_present": True,

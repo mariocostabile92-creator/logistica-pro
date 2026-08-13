@@ -3,6 +3,7 @@ import hmac
 from fastapi import (
     APIRouter,
     File,
+    Form,
     Header,
     HTTPException,
     Response,
@@ -32,7 +33,10 @@ def guarded(call, *args):
     try:
         return call(*args)
     except service.JournalError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=getattr(exc, "detail", str(exc)),
+        ) from exc
 
 
 @router.get("/configuration")
@@ -107,6 +111,9 @@ def session_warnings(
 async def upload_media(
     session_id: str,
     file: UploadFile = File(...),
+    captured_at: str | None = Form(default=None),
+    capture_source: str = Form(default="file"),
+    evidence_slot: str | None = Form(default=None),
     x_journal_token: str | None = Header(default=None),
 ):
     data = await file.read(service.MAX_MEDIA_BYTES + 1)
@@ -117,6 +124,9 @@ async def upload_media(
         file.filename or "photo",
         file.content_type,
         data,
+        captured_at,
+        capture_source,
+        evidence_slot,
     )
 
 

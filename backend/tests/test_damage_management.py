@@ -3,6 +3,7 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.journal_evidence_helpers import upload_required_evidence
 
 client = TestClient(app)
 JOURNAL = "/api/plugins/fleet/v1/journal"
@@ -24,6 +25,7 @@ def anomaly():
         "operation_type": "check_in", "plate": "DM010GE",
         "declared_driver_identifier": "Mario Rossi",
     }).json()
+    upload_required_evidence(client, JOURNAL, opened, "damage-management")
     response = client.post(
         f"{JOURNAL}/sessions/{opened['id']}/complete",
         headers={"X-Journal-Token": opened["token"]},

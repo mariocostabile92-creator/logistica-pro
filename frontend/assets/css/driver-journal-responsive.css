@@ -57,6 +57,9 @@
 }
 
 @media (max-width: 480px) {
+  .evidence-progress,.evidence-capture-actions{grid-template-columns:1fr}
+  .evidence-file-action{grid-column:auto}
+  .evidence-capture-actions .upload-button{min-height:48px;width:100%}
   .journal-workspace {
     width: calc(100% - 24px);
     margin: 16px auto;

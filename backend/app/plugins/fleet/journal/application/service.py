@@ -11,6 +11,14 @@ from app.auth import repository as auth_repository
 from app.auth.tenant_context import current_organization_id
 from app.core.config import SETTINGS
 from app.plugins.fleet.journal.application import shared_access_service
+from app.plugins.fleet.journal.application.evidence_service import (
+    ALLOWED_CAPTURE_SOURCES,
+    EVIDENCE_POLICY_VERSION,
+    REQUIRED_EVIDENCE,
+    classify_freshness,
+    completion_evidence_report,
+    parse_client_capture_time,
+)
 from app.plugins.fleet.journal.application.shared_driver_identity import (
     resolve_shared_driver_identity,
 )
@@ -60,6 +68,16 @@ class JournalConflict(JournalError):
     status_code = 409
 
 
+class JournalEvidenceError(JournalError):
+    def __init__(self, report: dict[str, object]):
+        self.detail = {
+            "code": "JOURNAL_EVIDENCE_INCOMPLETE",
+            "message": "Completa le evidenze obbligatorie prima di inviare il giornale.",
+            **report,
+        }
+        super().__init__(str(self.detail["message"]))
+
+
 class JournalExpired(JournalError):
     status_code = 410
 
@@ -85,6 +103,9 @@ def configuration() -> dict[str, object]:
             "video_enabled": True,
             "accepted_mime_types": list(MEDIA_EXTENSIONS),
             "max_size_bytes": MAX_MEDIA_BYTES,
+            "required": REQUIRED_EVIDENCE,
+            "policy_version": EVIDENCE_POLICY_VERSION,
+            "camera_first": True,
         },
     }
 
@@ -232,6 +253,7 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
             "created_at": now.isoformat(),
             "expires_at": (now + timedelta(hours=4)).isoformat(),
             "organization_id": organization_id,
+            "evidence_policy_version": EVIDENCE_POLICY_VERSION,
             "operational_date": day,
         }
     )
@@ -350,6 +372,7 @@ def create_shared_session(values: dict[str, object]) -> dict[str, object]:
         "driver_surname": driver_surname,
         "operational_date": day,
         "organization_id": organization_id,
+        "evidence_policy_version": EVIDENCE_POLICY_VERSION,
     })
     warnings = _smart_warnings(session)
     session = repository.update_session_warnings(
@@ -423,6 +446,7 @@ def create_managed_session(values: dict[str, object], organization_id: str | Non
         "scheduled_at": scheduled.isoformat(),
         "operational_date": day,
         "organization_id": organization_id,
+        "evidence_policy_version": EVIDENCE_POLICY_VERSION,
     })
     return {
         key: value for key, value in session.items() if key != "token_hash"
@@ -437,9 +461,18 @@ def open_managed_session(session_id: str) -> dict[str, object]:
     session = repository.transition_session(
         session_id, ("generated",), "opened", "opened_at", now
     ) or session
+    token = _managed_token(session_id)
+    media = repository.session_media(session_id)
     return {
         key: value for key, value in session.items() if key != "token_hash"
-    } | {"token": _managed_token(session_id)}
+    } | {
+        "token": token,
+        "media": [
+            item | {"url": f"/api/plugins/fleet/v1/journal/media/{item['id']}?token={token}"}
+            for item in media
+        ],
+        "evidence": completion_evidence_report(session, media),
+    }
 
 
 def mark_managed_session_in_progress(
@@ -516,19 +549,53 @@ def add_media(
     filename: str,
     content_type: str | None,
     data: bytes,
+    captured_at: str | None = None,
+    capture_source: str = "file",
+    evidence_slot: str | None = None,
 ) -> dict[str, object]:
     session = authorize(session_id, token)
     if len(data) > MAX_MEDIA_BYTES:
-        raise JournalError("La foto supera il limite di 8 MB.")
+        raise JournalError("Il file supera il limite di 8 MB.")
     safe_name = _safe_filename(filename)
     verified, media_type = _verified_media(data, content_type, safe_name)
+    evidence_type = "video" if media_type == "video" else "photo"
+    slot = evidence_slot or evidence_type
+    if slot != evidence_type:
+        raise JournalError("Lo slot evidenza non corrisponde al tipo di file.")
+    if capture_source not in ALLOWED_CAPTURE_SOURCES:
+        raise JournalError("Origine acquisizione non valida.")
+    try:
+        capture_time = parse_client_capture_time(captured_at)
+    except ValueError as exc:
+        raise JournalError(str(exc)) from exc
     media_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
+    organization_id = str(session.get("organization_id") or "default")
+    _, received_day = _session_clock(organization_id, now)
+    captured_day = _session_clock(organization_id, capture_time)[1] if capture_time else None
+    freshness_status, freshness_warning = classify_freshness(
+        session=session,
+        received_at=now,
+        received_operational_date=received_day,
+        captured_at=capture_time,
+        captured_operational_date=captured_day,
+        capture_source=capture_source,
+    )
+    digest = hashlib.sha256(data).hexdigest()
+    reused = repository.find_reused_media(
+        organization_id,
+        session_id,
+        digest,
+        int(session["asset_id"]),
+        str(session["declared_driver_identifier"]),
+    )
+    if reused:
+        freshness_warning = "Evidenza già utilizzata in un controllo precedente."
     storage_key = media_storage.save(
         f"{now:%Y/%m}/{media_id}{MEDIA_EXTENSIONS[verified]}", data
     )
     try:
-        return repository.create_media(
+        created, replaced = repository.create_media(
             {
                 "id": media_id,
                 "session_id": session_id,
@@ -537,13 +604,32 @@ def add_media(
                 "storage_key": storage_key,
                 "verified_mime_type": verified,
                 "size_bytes": len(data),
-                "sha256": hashlib.sha256(data).hexdigest(),
-                "organization_id": session.get("organization_id"),
+                "sha256": digest,
+                "organization_id": organization_id,
                 "vehicle_id": session["asset_id"],
                 "original_filename": safe_name,
                 "uploaded_at": now.isoformat(),
+                "evidence_type": evidence_type,
+                "evidence_slot": slot,
+                "captured_at": capture_time.isoformat() if capture_time else None,
+                "received_at": now.isoformat(),
+                "capture_source": capture_source,
+                "freshness_status": freshness_status,
+                "freshness_warning": freshness_warning,
+                "reused_from_media_id": reused["id"] if reused else None,
+                "reuse_detected": bool(reused),
+                "operational_date": session.get("operational_date"),
+                "declared_driver_identifier": session.get("declared_driver_identifier"),
             }
         )
+        if replaced:
+            media_storage.delete(str(replaced["storage_key"]))
+        return created | {
+            "replaced_media_id": replaced["id"] if replaced else None,
+            "evidence": completion_evidence_report(
+                session, repository.session_media(session_id)
+            ),
+        }
     except Exception:
         media_storage.delete(storage_key)
         raise
@@ -579,6 +665,11 @@ def complete(
         return receipt(str(existing["id"]))
     if session["status"] == "completed":
         raise JournalConflict("La sessione è già stata completata.")
+    evidence = completion_evidence_report(
+        session, repository.session_media(session_id)
+    )
+    if not evidence["complete"]:
+        raise JournalEvidenceError(evidence)
     odometer = int(values["odometer_km"])
     fuel = int(values["fuel_percentage"])
     if odometer < 0:

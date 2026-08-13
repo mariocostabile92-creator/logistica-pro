@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.core.database import db_session
 from app.main import app
+from tests.journal_evidence_helpers import upload_required_evidence
 from app.plugins.fleet.damage.application import driver_attribution_service
 from app.plugins.fleet.damage.infrastructure import repository as damage_repository
 from app.plugins.workforce.infrastructure import read_repository
@@ -60,6 +61,7 @@ def _journal_case(driver_identifier: str) -> dict:
             "declared_driver_identifier": driver_identifier,
         },
     ).json()
+    upload_required_evidence(client, JOURNAL, session, f"damage-driver-{driver_identifier}")
     completed = client.post(
         f"{JOURNAL}/sessions/{session['id']}/complete",
         headers={"X-Journal-Token": session["token"]},

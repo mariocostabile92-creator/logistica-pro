@@ -1,11 +1,12 @@
 const BASE = "/api/plugins/fleet/v1/journal";
 
 export class JournalApiError extends Error {
-  constructor(message, { status = 0, code = "JOURNAL_REQUEST_FAILED" } = {}) {
+  constructor(message, { status = 0, code = "JOURNAL_REQUEST_FAILED", details = null } = {}) {
     super(message);
     this.name = "JournalApiError";
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -20,9 +21,15 @@ async function request(path, options = {}) {
   }
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
+    const detail = payload.detail;
     throw new JournalApiError(
-      payload.detail || "Operazione non riuscita. Riprova.",
-      { status: response.status },
+      (detail && typeof detail === "object" ? detail.message : detail)
+        || "Operazione non riuscita. Riprova.",
+      {
+        status: response.status,
+        code: detail?.code || "JOURNAL_REQUEST_FAILED",
+        details: typeof detail === "object" ? detail : null,
+      },
     );
   }
   return response.status === 204 ? null : response.json();
@@ -71,6 +78,13 @@ export const validateSharedAccess = async token => {
 export const getSharedSession = sessionId => request(`/sessions/${encodeURIComponent(sessionId)}`);
 export const markSessionInProgress = (sessionId, token) => request(`/sessions/${encodeURIComponent(sessionId)}/progress`, { method: "POST", headers: {"X-Journal-Token": token} });
 export const checkSessionWarnings = (sessionId, token, odometerKm) => request(`/sessions/${encodeURIComponent(sessionId)}/warnings`, { method: "POST", headers: {"Content-Type": "application/json", "X-Journal-Token": token}, body: JSON.stringify({odometer_km: odometerKm}) });
-export const uploadMedia = (sessionId, token, file) => { const body = new FormData(); body.append("file", file); return request(`/sessions/${sessionId}/media`, { method: "POST", headers: {"X-Journal-Token": token}, body }); };
+export const uploadMedia = (sessionId, token, file, metadata = {}) => {
+  const body = new FormData();
+  body.append("file", file);
+  if (metadata.capturedAt) body.append("captured_at", metadata.capturedAt);
+  body.append("capture_source", metadata.captureSource || "file");
+  if (metadata.evidenceSlot) body.append("evidence_slot", metadata.evidenceSlot);
+  return request(`/sessions/${sessionId}/media`, { method: "POST", headers: {"X-Journal-Token": token}, body });
+};
 export const deleteMedia = (sessionId, token, mediaId) => request(`/sessions/${sessionId}/media/${mediaId}`, { method: "DELETE", headers: {"X-Journal-Token": token} });
 export const completeSession = (sessionId, token, body) => request(`/sessions/${sessionId}/complete`, { method: "POST", headers: {"Content-Type": "application/json", "X-Journal-Token": token}, body: JSON.stringify(body) });

@@ -127,8 +127,11 @@ def list_procedures(
             ).fetchall():
                 equipment[row["movement_id"]].append({key: row[key] for key in row.keys()})
             for row in conn.execute(
-                f"""SELECT id, movement_id, media_type, verified_mime_type,
-                           size_bytes, display_order, original_filename, uploaded_at
+                f"""SELECT id, session_id, movement_id, media_type, verified_mime_type,
+                           size_bytes, display_order, original_filename, uploaded_at,
+                           evidence_type, evidence_slot, captured_at, received_at,
+                           freshness_status, freshness_warning, reuse_detected,
+                           operational_date, vehicle_id
                     FROM movement_media WHERE movement_id IN ({placeholders})
                     ORDER BY movement_id, display_order""",
                 movement_ids,
@@ -141,7 +144,10 @@ def list_procedures(
             placeholders = ",".join("?" for _ in open_session_ids)
             for row in conn.execute(
                 f"""SELECT id, session_id, media_type, verified_mime_type,
-                           size_bytes, display_order, original_filename, uploaded_at
+                           size_bytes, display_order, original_filename, uploaded_at,
+                           evidence_type, evidence_slot, captured_at, received_at,
+                           freshness_status, freshness_warning, reuse_detected,
+                           operational_date, vehicle_id
                     FROM movement_media WHERE session_id IN ({placeholders})
                     ORDER BY session_id, display_order""",
                 open_session_ids,

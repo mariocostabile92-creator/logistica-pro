@@ -72,6 +72,18 @@ def init_schema() -> None:
                 vehicle_id INTEGER,
                 original_filename TEXT,
                 uploaded_at TEXT,
+                evidence_type TEXT,
+                evidence_slot TEXT,
+                captured_at TEXT,
+                received_at TEXT,
+                capture_source TEXT,
+                freshness_status TEXT,
+                freshness_warning TEXT,
+                reused_from_media_id TEXT,
+                reuse_detected INTEGER NOT NULL DEFAULT 0,
+                operational_date TEXT,
+                declared_driver_identifier TEXT,
+                replaced_media_id TEXT,
                 FOREIGN KEY (session_id) REFERENCES journal_sessions(id),
                 FOREIGN KEY (movement_id) REFERENCES asset_movements(id)
             );
@@ -86,6 +98,7 @@ def init_schema() -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_session_org_date ON journal_sessions(organization_id, operational_date)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_movement_org_date ON asset_movements(organization_id, occurred_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_media_org ON movement_media(organization_id, vehicle_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_media_hash ON movement_media(organization_id, sha256)")
         conn.execute(
             """
             UPDATE journal_sessions
@@ -136,6 +149,7 @@ def _ensure_session_columns(conn) -> None:
         "warnings_json": "TEXT NOT NULL DEFAULT '[]'",
         "operational_date": "TEXT",
         "organization_id": "TEXT",
+        "evidence_policy_version": "TEXT",
     }
     if SETTINGS.database_backend == "postgresql":
         for name, definition in columns.items():
@@ -158,6 +172,18 @@ def _ensure_media_columns(conn) -> None:
         "vehicle_id": "INTEGER",
         "original_filename": "TEXT",
         "uploaded_at": "TEXT",
+        "evidence_type": "TEXT",
+        "evidence_slot": "TEXT",
+        "captured_at": "TEXT",
+        "received_at": "TEXT",
+        "capture_source": "TEXT",
+        "freshness_status": "TEXT",
+        "freshness_warning": "TEXT",
+        "reused_from_media_id": "TEXT",
+        "reuse_detected": "INTEGER NOT NULL DEFAULT 0",
+        "operational_date": "TEXT",
+        "declared_driver_identifier": "TEXT",
+        "replaced_media_id": "TEXT",
     }
     if SETTINGS.database_backend == "postgresql":
         for name, definition in columns.items():
@@ -218,8 +244,8 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
                 created_at, expires_at, source, lifecycle_status,
                 scheduled_at, opened_at, in_progress_at, driver_name,
                 driver_surname, warnings_json, operational_date
-                , organization_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                , organization_id, evidence_policy_version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["id"],
@@ -241,6 +267,7 @@ def create_session(values: dict[str, object]) -> dict[str, object]:
                 values.get("warnings_json", "[]"),
                 values.get("operational_date"),
                 values.get("organization_id"),
+                values.get("evidence_policy_version"),
             ),
         )
     return get_session(str(values["id"]))  # type: ignore[return-value]
@@ -306,8 +333,47 @@ def movement_history(asset_id: int) -> list[dict[str, object]]:
     return [_dict(row) for row in rows]  # type: ignore[misc]
 
 
-def create_media(values: dict[str, object]) -> dict[str, object]:
+def find_reused_media(
+    organization_id: str,
+    session_id: str,
+    sha256: str,
+    vehicle_id: int,
+    declared_driver_identifier: str,
+) -> dict[str, object] | None:
     with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT mm.id, mm.session_id, mm.received_at, s.operational_date,
+                   s.plate_snapshot, s.declared_driver_identifier
+            FROM movement_media mm
+            JOIN journal_sessions s ON s.id = mm.session_id
+            WHERE mm.organization_id = ? AND mm.sha256 = ?
+              AND mm.session_id <> ? AND mm.movement_id IS NOT NULL
+              AND (mm.vehicle_id = ? OR s.declared_driver_identifier = ?)
+            ORDER BY COALESCE(mm.received_at, mm.uploaded_at) DESC, mm.id DESC
+            LIMIT 1
+            """,
+            (
+                organization_id,
+                sha256,
+                session_id,
+                vehicle_id,
+                declared_driver_identifier,
+            ),
+        ).fetchone()
+    return _dict(row)
+
+
+def create_media(values: dict[str, object]) -> tuple[dict[str, object], dict[str, object] | None]:
+    with db_session() as conn:
+        replaced = conn.execute(
+            """
+            SELECT * FROM movement_media
+            WHERE session_id = ? AND evidence_slot = ? AND movement_id IS NULL
+            ORDER BY display_order DESC LIMIT 1
+            """,
+            (values["session_id"], values["evidence_slot"]),
+        ).fetchone()
         row = conn.execute(
             """
             SELECT COALESCE(MAX(display_order), -1) + 1
@@ -323,7 +389,11 @@ def create_media(values: dict[str, object]) -> dict[str, object]:
                 id, session_id, movement_id, media_type, phase, storage_key,
                 verified_mime_type, size_bytes, sha256, display_order,
                 organization_id, vehicle_id, original_filename, uploaded_at
-            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                , evidence_type, evidence_slot, captured_at, received_at,
+                capture_source, freshness_status, freshness_warning,
+                reused_from_media_id, reuse_detected, operational_date,
+                declared_driver_identifier, replaced_media_id
+            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["id"],
@@ -339,12 +409,38 @@ def create_media(values: dict[str, object]) -> dict[str, object]:
                 values.get("vehicle_id"),
                 values.get("original_filename"),
                 values.get("uploaded_at"),
+                values.get("evidence_type"),
+                values.get("evidence_slot"),
+                values.get("captured_at"),
+                values.get("received_at"),
+                values.get("capture_source"),
+                values.get("freshness_status"),
+                values.get("freshness_warning"),
+                values.get("reused_from_media_id"),
+                int(bool(values.get("reuse_detected"))),
+                values.get("operational_date"),
+                values.get("declared_driver_identifier"),
+                replaced["id"] if replaced else None,
             ),
         )
-    return get_session_media(
+        if replaced:
+            conn.execute("DELETE FROM movement_media WHERE id = ?", (replaced["id"],))
+    created = get_session_media(
         str(values["session_id"]),
         str(values["id"]),
-    )  # type: ignore[return-value]
+    )
+    assert created is not None
+    return created, _dict(replaced)
+
+
+def session_media(session_id: str) -> list[dict[str, object]]:
+    with db_session() as conn:
+        rows = conn.execute(
+            """SELECT * FROM movement_media
+               WHERE session_id = ? ORDER BY display_order, id""",
+            (session_id,),
+        ).fetchall()
+    return [_dict(row) for row in rows]  # type: ignore[misc]
 
 
 def get_session_media(
@@ -499,7 +595,9 @@ def receipt(movement_id: str) -> dict[str, object] | None:
         media = conn.execute(
             """
             SELECT id, media_type, verified_mime_type, size_bytes,
-                   sha256, display_order
+                   sha256, display_order, evidence_type, evidence_slot,
+                   captured_at, received_at, freshness_status,
+                   freshness_warning, reuse_detected, operational_date
             FROM movement_media
             WHERE movement_id = ?
             ORDER BY display_order
@@ -587,7 +685,9 @@ def asset_history(asset_id: int, organization_id: str | None = None) -> dict[str
             media = conn.execute(
                 f"""
                 SELECT id, movement_id, media_type, verified_mime_type,
-                       size_bytes, display_order
+                       size_bytes, display_order, evidence_type, evidence_slot,
+                       captured_at, received_at, freshness_status,
+                       freshness_warning, reuse_detected, operational_date
                 FROM movement_media
                 WHERE movement_id IN ({placeholders})
                 ORDER BY movement_id, display_order
@@ -625,7 +725,9 @@ def movement_media(media_id: str, organization_id: str | None = None) -> dict[st
             f"""
             SELECT id, movement_id, media_type, storage_key,
                    verified_mime_type, size_bytes, original_filename,
-                   organization_id, vehicle_id, session_id
+                   organization_id, vehicle_id, session_id, evidence_type,
+                   evidence_slot, captured_at, received_at, freshness_status,
+                   freshness_warning, reuse_detected, operational_date
             FROM movement_media
             WHERE id = ? {clause}
             """,

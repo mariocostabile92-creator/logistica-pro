@@ -2,6 +2,7 @@ import { escapeHtml } from "../../utils/dom.js";
 import { facts, infoSection, operationLabel, procedureDateParts } from "./components.js";
 import { liveStatusPresentation } from "./live-overview.js";
 import { driverDisplayName } from "./driver-display.js";
+import { journalMediaSection } from "./media-section.js";
 
 const liveTimeline = item => {
   const events = [
@@ -29,9 +30,7 @@ export function journalLiveDetail(item) {
       ${infoSection("Anomalie", "jcr-anomalies", item.anomaly_present
         ? facts([["Stato", "Anomalia segnalata"], ["Descrizione", item.anomaly_description || "Descrizione non disponibile"]])
         : `<div class="jcr-empty">Nessuna anomalia segnalata.</div>`)}
-      ${infoSection("Allegati", "jcr-attachments-summary", facts([
-        ["Presenti", item.media.length ? "Sì" : "No"], ["Totale", item.media.length],
-      ]))}
+      ${journalMediaSection(item.media, false, item)}
       ${infoSection("Azioni", "jcr-actions-section", `<div class="jcr-actions">
         <button type="button" class="primary" data-jcr-open-archive="${escapeHtml(item.id)}" data-jcr-operational-date="${escapeHtml(item.operational_date)}">Apri GDB completo</button>
         ${item.damage_case_id ? `<button type="button" class="secondary" data-jcr-damage="${item.damage_case_id}">Apri pratica danno</button>` : ""}

@@ -1,7 +1,7 @@
-import { createSharedSession, getSharedSession, listAssets } from "./api.js?v=dj6101";
-import { state } from "./state.js?v=dj4";
-import { escapeHtml } from "../../utils/dom.js?v=dj4";
-import { preparePublicAccess } from "./public-access.js?v=dj6101";
+import { createSharedSession, getSharedSession, listAssets } from "./api.js?v=djh1";
+import { state } from "./state.js?v=djh1";
+import { escapeHtml } from "../../utils/dom.js?v=djh1";
+import { preparePublicAccess } from "./public-access.js?v=djh1";
 
 const $ = id => document.getElementById(id);
 let assetListLoadFailed = false;
@@ -57,6 +57,7 @@ export async function prepareJournalAccess() {
   state.operationType = session.operation_type;
   state.asset = { id: session.asset_id, plate: session.plate_snapshot };
   state.source = "fleet_manager";
+  state.media = session.media || [];
   state.step = 4;
   state.minStep = 4;
   $("driverName").value = name;

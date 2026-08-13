@@ -146,10 +146,10 @@ test("cache busting invalidates every changed Shared Link module", async () => {
     file("assets/js/modules/driver-journal/public-access.js"),
     file("assets/js/modules/driver-journal/media.js"),
   ]);
-  assert.match(html, /index\.js\?v=dj6101/);
-  assert.match(html, /shell\.js\?v=dj6101/);
+  assert.match(html, /index\.js\?v=djh1/);
+  assert.match(html, /shell\.js\?v=djh1/);
   for (const source of [index, flow, access, publicAccess, media]) {
-    assert.match(source, /\?v=dj6101/);
+    assert.match(source, /\?v=djh1/);
   }
 });
 

@@ -1,7 +1,9 @@
-import { checkSessionWarnings, completeSession, findAsset, markSessionInProgress } from "./api.js?v=dj6101";
-import { assetListNeedsRetry, createSpontaneousSession, loadAssetSuggestions } from "./session-access.js?v=dj6101";
-import { state } from "./state.js?v=dj4";
-import { render, renderSummary, renderWarnings, setLoading, showError, showReceipt } from "./renderer.js?v=dj4";
+import { checkSessionWarnings, completeSession, findAsset, markSessionInProgress } from "./api.js?v=djh1";
+import { assetListNeedsRetry, createSpontaneousSession, loadAssetSuggestions } from "./session-access.js?v=djh1";
+import { state } from "./state.js?v=djh1";
+import { evidenceProgress } from "./evidence.js?v=djh1";
+import { updateProgress } from "./media.js?v=djh1";
+import { render, renderSummary, renderWarnings, setLoading, showError, showReceipt } from "./renderer.js?v=djh1";
 
 const $ = id => document.getElementById(id);
 
@@ -45,6 +47,19 @@ async function validateCurrentStep() {
     }
     if ($("anomaly").checked && !$("anomalyDescription").value.trim()) {
       throw new Error("Descrivi l'anomalia.");
+    }
+  }
+  if (state.step === 6) {
+    const evidence = evidenceProgress(
+      state.media,
+      state.configuration?.media?.required || { photo: 1, video: 1 },
+    );
+    if (!evidence.complete) {
+      if (evidence.blocked.length) {
+        throw new Error("Sostituisci le evidenze non valide prima di continuare.");
+      }
+      const labels = evidence.missing.map(type => type === "photo" ? "foto" : "video");
+      throw new Error(`Aggiungi le evidenze obbligatorie mancanti: ${labels.join(" e ")}.`);
     }
   }
   if (state.step === 7 && !$("confirmSummary").checked) {
@@ -142,4 +157,5 @@ export function initFlow() {
   $("fuel").addEventListener("input", () => {
     $("fuelValue").textContent = `${$("fuel").value}%`;
   });
+  $("confirmSummary").addEventListener("change", updateProgress);
 }

@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.core.database import db_session
 from app.main import app
+from tests.journal_evidence_helpers import upload_required_evidence
 
 client = TestClient(app)
 BASE = "/api/plugins/fleet/v1"
@@ -30,6 +31,7 @@ def open_session(vehicle, operation="check_in", driver="Mario Rossi"):
 
 
 def complete(opened, anomaly=False):
+    upload_required_evidence(client, JOURNAL, opened, f"control-{opened['id']}")
     response = client.post(
         f"{JOURNAL}/sessions/{opened['id']}/complete",
         headers={"X-Journal-Token": opened["token"]},

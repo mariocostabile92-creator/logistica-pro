@@ -1,10 +1,10 @@
-import { getConfiguration } from "./api.js?v=dj6101";
-import { initFlow } from "./flow.js?v=dj6101";
-import { initMedia } from "./media.js?v=dj6101";
-import { render, renderEquipment, showError } from "./renderer.js?v=dj4";
-import { clearAccessPresentation, prepareJournalAccess } from "./session-access.js?v=dj6101";
-import { resetState, state } from "./state.js?v=dj4";
-import { publicAccessToken, showPublicAccessError } from "./public-access.js?v=dj6101";
+import { getConfiguration } from "./api.js?v=djh1";
+import { initFlow } from "./flow.js?v=djh1";
+import { initMedia } from "./media.js?v=djh1";
+import { render, renderEquipment, showError } from "./renderer.js?v=djh1";
+import { clearAccessPresentation, prepareJournalAccess } from "./session-access.js?v=djh1";
+import { resetState, state } from "./state.js?v=djh1";
+import { publicAccessToken, showPublicAccessError } from "./public-access.js?v=djh1";
 
 async function start() {
   try {

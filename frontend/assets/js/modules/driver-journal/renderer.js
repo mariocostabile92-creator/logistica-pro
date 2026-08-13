@@ -1,5 +1,6 @@
-import { state } from "./state.js?v=dj4";
-import { escapeHtml } from "../../utils/dom.js?v=dj4";
+import { state } from "./state.js?v=djh1";
+import { escapeHtml } from "../../utils/dom.js?v=djh1";
+import { evidenceProgress } from "./evidence.js?v=djh1";
 
 const $ = id => document.getElementById(id);
 const TOTAL_STEPS = 8;
@@ -16,6 +17,14 @@ export function render() {
   $("navigation").hidden = state.step === 0 || state.step === 8;
   $("backButton").hidden = state.step <= state.minStep;
   $("nextButton").textContent = state.step === 7 ? "Conferma movimentazione" : "Continua";
+  if (state.step === 7) {
+    $("nextButton").disabled = !evidenceProgress(
+      state.media,
+      state.configuration?.media?.required || { photo: 1, video: 1 },
+    ).complete || state.submitting;
+  } else if (!state.submitting) {
+    $("nextButton").disabled = false;
+  }
   $("cleanlinessField").hidden = state.operationType !== "check_in";
 }
 
@@ -49,7 +58,8 @@ export function renderSummary() {
     ["Carburante", `${$("fuel").value}%`],
     ["Dotazioni", equipment.join(", ")],
     ["Anomalia", $("anomaly").checked ? $("anomalyDescription").value : "No"],
-    ["Foto", String(state.media.length)],
+    ["Foto", String(state.media.filter(item => !item.failed && (item.evidence_type === "photo" || item.media_type === "image" || item.file?.type?.startsWith("image/"))).length)],
+    ["Video", String(state.media.filter(item => !item.failed && (item.evidence_type === "video" || item.media_type === "video" || item.file?.type?.startsWith("video/"))).length)],
   ];
   $("summary").innerHTML = pairs.map(([key, value]) =>
     `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`

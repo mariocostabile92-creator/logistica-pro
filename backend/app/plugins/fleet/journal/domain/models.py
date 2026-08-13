@@ -20,6 +20,13 @@ class SessionLifecycleStatus(str, Enum):
     COMPLETED = "completed"
 
 
+class EvidenceFreshnessStatus(str, Enum):
+    VERIFIED_SESSION_CAPTURE = "VERIFIED_SESSION_CAPTURE"
+    SAME_DAY_RECEIVED = "SAME_DAY_RECEIVED"
+    NOT_VERIFIABLE = "NOT_VERIFIABLE"
+    DATE_MISMATCH = "DATE_MISMATCH"
+
+
 class JournalSession(BaseModel):
     id: str
     token_hash: str = Field(exclude=True)
@@ -41,6 +48,7 @@ class JournalSession(BaseModel):
     driver_surname: str | None = None
     warnings_json: str = "[]"
     operational_date: str | None = None
+    evidence_policy_version: str | None = None
 
 
 class AssetMovement(BaseModel):
@@ -83,3 +91,13 @@ class MovementMedia(BaseModel):
     size_bytes: int
     sha256: str
     display_order: int
+    evidence_type: str | None = None
+    evidence_slot: str | None = None
+    captured_at: str | None = None
+    received_at: str | None = None
+    capture_source: str | None = None
+    freshness_status: EvidenceFreshnessStatus | None = None
+    freshness_warning: str | None = None
+    reused_from_media_id: str | None = None
+    reuse_detected: bool = False
+    operational_date: str | None = None

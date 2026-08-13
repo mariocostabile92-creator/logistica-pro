@@ -27,7 +27,7 @@ function completeTimeline(item) {
     [item.created_at, "Generazione", "Procedura creata"],
     [item.opened_at, "Apertura", "Driver Journal aperto"],
     [item.in_progress_at, "Aggiornamento", "Compilazione avviata"],
-    ...item.media.map(media => [media.uploaded_at, "Allegato", media.original_filename || "Media caricato"]),
+    ...item.media.map(media => [media.received_at || media.uploaded_at, "Allegato", media.original_filename || "Media caricato"]),
     [item.anomaly_present ? item.occurred_at : null, "Anomalia", item.anomaly_description || "Anomalia dichiarata"],
     [!item.incomplete ? item.occurred_at : null, "Completamento", "Procedura completata"],
     [item.damage_case_id ? item.damage_case_created_at || item.occurred_at : null, "Pratica danno", item.damage_case_number || "Pratica collegata"],
@@ -59,7 +59,7 @@ export function journalArchiveDetail(item) {
       ${infoSection("Dotazioni e checklist", "jcr-checklist-section", equipmentSection(item))}
       ${infoSection("Anomalie", "jcr-anomalies", damageSection(item))}
       ${warningsSection(item.warnings)}
-      ${journalMediaSection(item.media, Boolean(item.permissions?.delete_media))}
+      ${journalMediaSection(item.media, Boolean(item.permissions?.delete_media), item)}
       ${infoSection("Timeline completa", "jcr-timeline", completeTimeline(item))}
       ${infoSection("Azioni", "jcr-actions-section", `<div class="jcr-actions">
         <button type="button" class="secondary" data-jcr-vehicle="${item.asset_id}">Apri dossier mezzo</button>
