@@ -69,6 +69,7 @@ def snapshot(
         organization_id=str(user.organization_id),
         operational_date=day,
         requested_station=planning_station,
+        coverage_items=workforce_input["coverage"]["items"],
         route_assignments_available=bool(payload["route_data_available"]),
         assigned_vehicles=(
             int(payload["summary"].get("vehicles_assigned") or 0)

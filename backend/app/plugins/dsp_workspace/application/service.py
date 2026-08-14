@@ -137,6 +137,7 @@ def daily_operations_snapshot(
         fleet_capacity = daily_fleet_capacity(
             organization_id=organization_id,
             operational_date=day,
+            coverage_items=coverage_items,
             requested_station=(
                 str(planning_snapshot["planning"].get("station") or "").strip()
                 or None

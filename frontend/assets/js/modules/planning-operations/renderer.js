@@ -1,6 +1,6 @@
 import { renderForecast } from "./forecast.js?v=forecast2";
 import { renderHero } from "./hero.js?v=day1";
-import { renderKpis } from "./kpi.js";
+import { renderKpis } from "./kpi.js?v=2";
 import { renderRoutes } from "./routes.js";
 import {
   formatOperationalDay,
@@ -9,7 +9,7 @@ import {
 } from "./day-navigation.js?v=day1";
 import { escapeHtml } from "../../utils/dom.js";
 import { planningDriverOptions } from "../workforce-consecutivity/planning-adapter.js";
-import { renderFleetCapacity } from "./fleet-capacity.js?v=1";
+import { renderFleetCapacity } from "./fleet-capacity.js?v=2";
 
 export function renderOperationsLoading(root) {
   root.innerHTML = `<section class="planning-ops-loading" aria-label="Caricamento Piano operativo">
@@ -28,7 +28,7 @@ export function renderOperations(root, payload, routes, dayState = {}) {
     : '<p class="planning-ops-empty planning-source-empty"><strong>Rotte definitive non ancora importate</strong><span>Il Forecast Amazon è un conteggio: non genera rotte route-level.</span></p>';
   const routeCount = payload.route_data_available ? `${routes.length} rotte` : "Non disponibili";
   const operationLabel = formatOperationalDay(payload.operation_date);
-  root.innerHTML = `${renderDayNavigation(payload.operation_date, dayState.weekPayloads)}${renderHero(payload)}${renderKpis(payload.summary)}
+  root.innerHTML = `${renderDayNavigation(payload.operation_date, dayState.weekPayloads)}${renderHero(payload)}${renderKpis(payload.summary, payload.fleet_capacity)}
     <section class="planning-ops-panel planning-workforce-input"><header><div><p class="eyebrow">Input Workforce</p><h3>Planning Driver</h3></div><button type="button" class="secondary" data-open-workforce-planning>Apri Planning Workforce</button></header>
       <div class="planning-workforce-summary"><span><strong>${unavailable(summary.planned)}</strong> pianificati</span><span><strong>${unavailable(summary.available)}</strong> disponibili</span><span><strong>${unavailable(summary.absent)}</strong> assenti</span><span><strong>${unavailable(summary.next_day)}</strong> Next Day</span><span><strong>${unavailable(summary.same_day)}</strong> Same Day</span><span><strong>${unavailable(summary.not_set)}</strong> ciclo da definire</span></div>
       <p>Fonte Workforce canonica per ${workforce.operation_date || payload.operation_date}. Coverage ${workforce.coverage?.requirement_covered === true ? "coperta" : workforce.coverage?.available ? "da completare" : "non disponibile"}.</p><datalist id="planningWorkforceDrivers">${driverOptions}</datalist></section>

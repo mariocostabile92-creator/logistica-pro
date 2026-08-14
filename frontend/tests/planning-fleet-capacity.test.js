@@ -8,6 +8,7 @@ import {
   fleetCapacityTone,
   renderFleetCapacity,
 } from "../assets/js/modules/planning-operations/fleet-capacity.js";
+import { renderKpis } from "../assets/js/modules/planning-operations/kpi.js";
 
 
 const snapshot = (changes = {}) => ({
@@ -21,6 +22,9 @@ const snapshot = (changes = {}) => ({
   blocked_vehicles: 5,
   unknown_vehicles: 0,
   vehicle_need: null,
+  vehicle_need_status: "NOT_CONFIGURED",
+  effective_requirement_buckets: [],
+  missing_requirement_buckets: ["NEXT_DAY", "SAME_DAY_A", "SAME_DAY_B_C"],
   margin: null,
   capacity_status: "NEED_NOT_DETERMINABLE",
   route_assignments_available: false,
@@ -43,21 +47,88 @@ test("Fleet capacity is visible without definitive routes", () => {
 
 test("unknown vehicle need never renders a fake zero", () => {
   const html = renderFleetCapacity(snapshot());
-  assert.match(html, /Fabbisogno mezzi non ancora determinabile/);
+  assert.match(html, /Fabbisogno mezzi da configurare/);
   assert.match(html, /<strong>—<\/strong><span>Fabbisogno mezzi/);
   assert.equal(fleetCapacityTone(snapshot()), "unknown");
 });
 
 
 test("authoritative need presentations support margin and shortage", () => {
-  const sufficient = snapshot({ vehicle_need: 120, margin: 4 });
+  const sufficient = snapshot({
+    vehicle_need: 120,
+    vehicle_need_status: "COMPLETE",
+    margin: 4,
+  });
   assert.equal(fleetCapacityMessage(sufficient), "Capacità Fleet sufficiente");
   assert.equal(fleetCapacityTone(sufficient), "sufficient");
   assert.match(renderFleetCapacity(sufficient), /<strong>\+4<\/strong><span>Margine/);
 
-  const shortage = snapshot({ vehicle_need: 130, margin: -6 });
+  const shortage = snapshot({
+    vehicle_need: 130,
+    vehicle_need_status: "COMPLETE",
+    margin: -6,
+  });
   assert.equal(fleetCapacityMessage(shortage), "Mancano 6 mezzi");
   assert.equal(fleetCapacityTone(shortage), "shortage");
+});
+
+
+test("partial Coverage reports a minimum need and the missing bucket", () => {
+  const partial = snapshot({
+    total_vehicles: 86,
+    available_vehicles: 56,
+    unavailable_vehicles: 29,
+    maintenance_vehicles: 1,
+    blocked_vehicles: 0,
+    vehicle_need: 42,
+    vehicle_need_status: "PARTIAL",
+    effective_requirement_buckets: ["SAME_DAY_A", "SAME_DAY_B_C"],
+    missing_requirement_buckets: ["NEXT_DAY"],
+    margin: 14,
+  });
+  const html = renderFleetCapacity(partial);
+  assert.equal(fleetCapacityTone(partial), "partial");
+  assert.equal(fleetCapacityMessage(partial), "Almeno 42 mezzi necessari");
+  assert.match(html, /Fabbisogno parziale/);
+  assert.match(html, /Next Day ancora da configurare/);
+  assert.match(html, /Margine sul fabbisogno noto: \+14 mezzi/);
+});
+
+
+test("complete production-like Coverage exposes the real shortage", () => {
+  const complete = snapshot({
+    total_vehicles: 86,
+    available_vehicles: 56,
+    unavailable_vehicles: 29,
+    maintenance_vehicles: 1,
+    blocked_vehicles: 0,
+    vehicle_need: 119,
+    vehicle_need_status: "COMPLETE",
+    effective_requirement_buckets: ["NEXT_DAY", "SAME_DAY_A", "SAME_DAY_B_C"],
+    missing_requirement_buckets: [],
+    margin: -63,
+  });
+  const html = renderFleetCapacity(complete);
+  assert.equal(fleetCapacityMessage(complete), "Mancano 63 mezzi");
+  assert.equal(fleetCapacityTone(complete), "shortage");
+  assert.match(html, /requirement operativo \+10% supera/);
+  assert.doesNotMatch(html, /Fabbisogno parziale/);
+});
+
+
+test("top KPIs separate vehicle need, availability and route assignments", () => {
+  const html = renderKpis({
+    routes_forecast: 108,
+    requirement: 119,
+    drivers_planned: 117,
+    routes_definitive: 80,
+    vehicles_assigned: 73,
+    requirement_gap: 2,
+    conflicts: 0,
+  }, snapshot({ vehicle_need: 119, available_vehicles: 56 }));
+  assert.match(html, /<strong>119<\/strong><span>Mezzi necessari/);
+  assert.match(html, /<strong>56<\/strong><span>Mezzi disponibili/);
+  assert.match(html, /<strong>73<\/strong><span>Mezzi assegnati/);
 });
 
 
@@ -93,4 +164,3 @@ test("Planning handles Fleet navigation and responsive 390px layout", async () =
   assert.match(css, /planning-fleet-capacity > header button[^}]*min-height:\s*44px/);
   assert.doesNotMatch(css, /planning-fleet-capacity[^}]*width:\s*\d{4}px/);
 });
-

@@ -14,6 +14,30 @@ NOW = "2026-08-14T08:00:00+00:00"
 client = TestClient(app)
 
 
+def _coverage(
+    cycle: str,
+    segment: str | None,
+    forecast: int | None,
+    requirement: int | None,
+    *,
+    authority: str = "AUTHORITATIVE",
+    status: str | None = None,
+    source: str = "IMPORT",
+) -> dict[str, object]:
+    return {
+        "cycle": cycle,
+        "segment": segment,
+        "forecast": forecast,
+        "raw_forecast": forecast,
+        "requirement": requirement,
+        "authority_status": authority,
+        "status": status or (
+            "NO_FORECAST" if forecast is None else "REQUIREMENT_COVERED"
+        ),
+        "source": source,
+    }
+
+
 def _asset(organization_id: str, plate: str, availability: str) -> int:
     with db_session() as conn:
         return int(conn.execute(
@@ -113,15 +137,96 @@ def test_open_maintenance_does_not_invent_a_blocking_state():
     assert snapshot.maintenance_vehicles == 0
 
 
-def test_vehicle_need_is_not_fabricated_from_forecast_or_driver_requirement():
+def test_vehicle_need_is_null_when_no_effective_forecast_exists():
     _asset("org-a", "AA004AA", "disponibile")
     snapshot = daily_fleet_capacity(
         organization_id="org-a", operational_date=DAY,
     )
     assert snapshot.vehicle_need is None
     assert snapshot.margin is None
+    assert snapshot.vehicle_need_status == "NOT_CONFIGURED"
+    assert snapshot.missing_requirement_buckets == [
+        "NEXT_DAY", "SAME_DAY_A", "SAME_DAY_B_C",
+    ]
     assert snapshot.capacity_status == "NEED_NOT_DETERMINABLE"
-    assert "non ancora determinabile" in snapshot.capacity_message
+    assert "da configurare" in snapshot.capacity_message
+
+
+def test_full_effective_requirement_becomes_complete_vehicle_need(monkeypatch):
+    monkeypatch.setattr(
+        "app.plugins.fleet.application.daily_capacity_service.repository.availability_counts",
+        lambda organization_id: ([{"availability": "disponibile", "count": 120}], NOW),
+    )
+    snapshot = daily_fleet_capacity(
+        organization_id="org-a",
+        operational_date=DAY,
+        coverage_items=[
+            _coverage("NEXT_DAY", None, 70, 77, source="MANUAL"),
+            _coverage("SAME_DAY", "A", 20, 22),
+            _coverage("SAME_DAY", "B_C", 18, 20),
+        ],
+    )
+    assert snapshot.vehicle_need == 119
+    assert snapshot.vehicle_need_status == "COMPLETE"
+    assert snapshot.effective_requirement_buckets == [
+        "NEXT_DAY", "SAME_DAY_A", "SAME_DAY_B_C",
+    ]
+    assert snapshot.missing_requirement_buckets == []
+    assert snapshot.margin == 1
+    assert snapshot.capacity_status == "SUFFICIENT"
+    assert snapshot.vehicle_need_rule == "EFFECTIVE_DAILY_OPERATIONAL_REQUIREMENT"
+
+
+def test_rejected_template_is_excluded_and_known_requirement_is_partial(monkeypatch):
+    monkeypatch.setattr(
+        "app.plugins.fleet.application.daily_capacity_service.repository.availability_counts",
+        lambda organization_id: ([{"availability": "disponibile", "count": 56}], NOW),
+    )
+    snapshot = daily_fleet_capacity(
+        organization_id="org-a",
+        operational_date=DAY,
+        coverage_items=[
+            _coverage(
+                "NEXT_DAY", None, None, None,
+                authority="REJECTED_TEMPLATE", status="NO_FORECAST",
+            ),
+            _coverage("SAME_DAY", "A", 20, 22),
+            _coverage("SAME_DAY", "B_C", 18, 20),
+        ],
+    )
+    assert snapshot.vehicle_need == 42
+    assert snapshot.vehicle_need_status == "PARTIAL"
+    assert snapshot.missing_requirement_buckets == ["NEXT_DAY"]
+    assert snapshot.margin == 14
+    assert snapshot.capacity_message == "Almeno 42 mezzi necessari."
+
+
+def test_complete_requirement_reports_shortage_against_unchanged_fleet_counts(monkeypatch):
+    monkeypatch.setattr(
+        "app.plugins.fleet.application.daily_capacity_service.repository.availability_counts",
+        lambda organization_id: ([
+            {"availability": "disponibile", "count": 56},
+            {"availability": "indisponibile", "count": 29},
+            {"availability": "in_manutenzione", "count": 1},
+        ], NOW),
+    )
+    snapshot = daily_fleet_capacity(
+        organization_id="org-a",
+        operational_date=DAY,
+        coverage_items=[
+            _coverage("NEXT_DAY", None, 70, 77, source="MANUAL"),
+            _coverage("SAME_DAY", "A", 20, 22),
+            _coverage("SAME_DAY", "B_C", 18, 20),
+        ],
+    )
+    assert snapshot.total_vehicles == 86
+    assert snapshot.available_vehicles == 56
+    assert snapshot.unavailable_vehicles == 29
+    assert snapshot.maintenance_vehicles == 1
+    assert snapshot.vehicle_need == 119
+    assert snapshot.margin == -63
+    assert snapshot.capacity_status == "SHORTAGE"
+    assert snapshot.capacity_message == "Mancano 63 mezzi."
 
 
 def test_planning_without_routes_still_returns_fleet_capacity():
@@ -134,6 +239,7 @@ def test_planning_without_routes_still_returns_fleet_capacity():
     assert payload["fleet_capacity"]["route_assignments_available"] is False
     assert payload["fleet_capacity"]["assigned_vehicles"] is None
     assert payload["fleet_capacity"]["vehicle_need"] is None
+    assert payload["fleet_capacity"]["vehicle_need_status"] == "NOT_CONFIGURED"
 
 
 def test_dsp_reuses_the_same_fleet_snapshot_without_route_data():
@@ -164,4 +270,3 @@ def test_capacity_service_uses_one_aggregate_repository_call(monkeypatch):
     )
     assert calls == ["org-a"]
     assert snapshot.total_vehicles == 12
-

@@ -26,7 +26,7 @@ import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
 } from "./conflicts.js";
-import { createPlanningWorkspaceLayout } from "./layout.js?v=fleet1";
+import { createPlanningWorkspaceLayout } from "./layout.js?v=fleet2";
 import {
   readinessEventType,
 } from "./readiness.js";
@@ -45,7 +45,7 @@ import {
   normalizePlanningDraftWorkspace,
 } from "./draft.js";
 import { focusRelativeAction } from "./utils.js";
-import { openPlanningOperationsDate } from "../planning-operations/index.js?v=fleet1";
+import { openPlanningOperationsDate } from "../planning-operations/index.js?v=fleet2";
 
 
 let initialized = false;

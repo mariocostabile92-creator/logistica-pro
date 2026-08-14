@@ -131,6 +131,9 @@ def test_planning_reads_forecast_requirement_and_assignments_from_coverage():
     assert payload["summary"]["routes_forecast"] == 17
     assert payload["summary"]["requirement"] == 20
     assert payload["summary"]["requirement_gap"] == 17
+    assert payload["fleet_capacity"]["vehicle_need"] == 20
+    assert payload["fleet_capacity"]["vehicle_need_status"] == "COMPLETE"
+    assert payload["fleet_capacity"]["missing_requirement_buckets"] == []
 
 
 def test_planning_reuses_dsp_semantics_for_rest_absence_and_reserve():
@@ -206,6 +209,10 @@ def test_planning_and_dsp_have_identical_workforce_and_coverage_projection():
     assert planning["workforce"]["summary"]["planned"] == dsp["counts"]["driver_planned_count"]
     assert planning["workforce"]["summary"]["absent"] == dsp["counts"]["driver_absent_count"]
     assert planning["coverage"]["items"] == dsp["coverage"]
+    assert planning["fleet_capacity"]["vehicle_need"] == 3
+    assert planning["fleet_capacity"]["vehicle_need_status"] == "PARTIAL"
+    assert dsp["fleet_capacity"]["vehicle_need"] == 3
+    assert dsp["fleet_capacity"]["vehicle_need_status"] == "PARTIAL"
 
 
 def test_bridge_invokes_each_shared_date_scoped_reader_once(monkeypatch):

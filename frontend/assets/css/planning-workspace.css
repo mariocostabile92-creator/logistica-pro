@@ -96,6 +96,8 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 .planning-fleet-metrics span, .planning-fleet-assignments span, .planning-fleet-assignments small { color: var(--text-muted); font-size: 12px; }
 .planning-fleet-capacity-message { display: grid; gap: 3px; padding: 12px 14px; border-left: 4px solid #6f817b; background: #f3f6f5; }
 .planning-fleet-capacity-message span { color: var(--text-muted); font-size: 12px; }
+.planning-fleet-capacity-message small { color: #795400; font-size: 11px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
+.planning-fleet-capacity[data-fleet-capacity-state="partial"] .planning-fleet-capacity-message { border-left-color: #c28a19; background: #fff8e8; }
 .planning-fleet-capacity[data-fleet-capacity-state="shortage"] .planning-fleet-capacity-message { border-left-color: var(--danger); background: var(--critical-bg); }
 .planning-fleet-capacity[data-fleet-capacity-state="sufficient"] .planning-fleet-capacity-message { border-left-color: var(--accent); background: var(--stable-bg); }
 .planning-fleet-assignments { display: grid; grid-template-columns: minmax(190px, 1fr) auto; align-items: center; gap: 3px 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }

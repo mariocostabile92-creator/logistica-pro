@@ -5,21 +5,51 @@ function metric(value) {
   return value === null || value === undefined ? "—" : String(value);
 }
 
+const BUCKET_LABELS = {
+  NEXT_DAY: "Next Day",
+  SAME_DAY_A: "Same Day A",
+  SAME_DAY_B_C: "Same Day B-C",
+};
+
 
 export function fleetCapacityTone(snapshot) {
   if (!snapshot || snapshot.vehicle_need === null) return "unknown";
+  if (snapshot.vehicle_need_status === "PARTIAL") return "partial";
   return snapshot.margin < 0 ? "shortage" : "sufficient";
 }
 
 
 export function fleetCapacityMessage(snapshot) {
   if (!snapshot || snapshot.vehicle_need === null) {
-    return "Fabbisogno mezzi non ancora determinabile";
+    return "Fabbisogno mezzi da configurare";
+  }
+  if (snapshot.vehicle_need_status === "PARTIAL") {
+    return `Almeno ${snapshot.vehicle_need} mezzi necessari`;
   }
   if (snapshot.margin < 0) {
     return `Mancano ${Math.abs(snapshot.margin)} mezzi`;
   }
   return "Capacità Fleet sufficiente";
+}
+
+
+export function fleetCapacityDetail(snapshot) {
+  if (!snapshot || snapshot.vehicle_need === null) {
+    return "Nessun bucket possiede ancora un forecast effettivo.";
+  }
+  if (snapshot.vehicle_need_status === "PARTIAL") {
+    const missing = (snapshot.missing_requirement_buckets || [])
+      .map((bucket) => BUCKET_LABELS[bucket] || bucket)
+      .join(", ");
+    const margin = snapshot.margin === null
+      ? ""
+      : ` Margine sul fabbisogno noto: ${snapshot.margin > 0 ? "+" : ""}${snapshot.margin} mezzi.`;
+    return `${missing || "Un bucket"} ancora da configurare.${margin}`;
+  }
+  if (snapshot.margin < 0) {
+    return "Il requirement operativo +10% supera i mezzi attualmente disponibili.";
+  }
+  return `+${snapshot.margin} mezzi di margine sul requirement operativo +10%.`;
 }
 
 
@@ -69,7 +99,11 @@ export function renderFleetCapacity(snapshot) {
       <article><strong>${metric(snapshot.vehicle_need)}</strong><span>Fabbisogno mezzi</span></article>
       <article><strong>${snapshot.margin === null ? "—" : snapshot.margin > 0 ? `+${snapshot.margin}` : snapshot.margin}</strong><span>Margine</span></article>
     </div>
-    <div class="planning-fleet-capacity-message" role="status"><strong>${escapeHtml(fleetCapacityMessage(snapshot))}</strong><span>Il fabbisogno sarà valorizzato solo quando esisterà una regola operativa autorevole.</span></div>
+    <div class="planning-fleet-capacity-message" role="status">
+      ${snapshot.vehicle_need_status === "PARTIAL" ? '<small>Fabbisogno parziale</small>' : ""}
+      <strong>${escapeHtml(fleetCapacityMessage(snapshot))}</strong>
+      <span>${escapeHtml(fleetCapacityDetail(snapshot))}</span>
+    </div>
     ${routeAssignments(snapshot)}
     <p class="planning-fleet-source">${stationNote} Lo stato è quello operativo corrente: Fleet non conserva ancora una disponibilità storica per data.</p>
   </section>`;

@@ -9,6 +9,12 @@ FleetCapacityStatus = Literal[
     "NEED_NOT_DETERMINABLE",
 ]
 
+VehicleNeedStatus = Literal[
+    "COMPLETE",
+    "PARTIAL",
+    "NOT_CONFIGURED",
+]
+
 
 class DailyFleetCapacitySnapshot(BaseModel):
     operational_date: str
@@ -22,6 +28,9 @@ class DailyFleetCapacitySnapshot(BaseModel):
     unknown_vehicles: int = Field(ge=0)
     vehicle_need: int | None = Field(default=None, ge=0)
     vehicle_need_rule: str | None = None
+    vehicle_need_status: VehicleNeedStatus = "NOT_CONFIGURED"
+    effective_requirement_buckets: list[str] = Field(default_factory=list)
+    missing_requirement_buckets: list[str] = Field(default_factory=list)
     margin: int | None = None
     capacity_status: FleetCapacityStatus
     capacity_message: str
@@ -33,4 +42,3 @@ class DailyFleetCapacitySnapshot(BaseModel):
         "CURRENT_OPERATIONAL_STATE"
     )
     observed_at: str | None = None
-
