@@ -662,6 +662,18 @@ export async function getPlanningCoverage(dateFrom, dateTo, cycle = "") {
 }
 
 
+export async function saveManualPlanningCoverage(operationDate, payload) {
+  return parseResponse(await fetch(
+    `${API_BASE}/api/plugins/workforce/v1/planning/coverage/${encodeURIComponent(operationDate)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  ));
+}
+
+
 export async function createWorkforceMember(payload) {
   return parseResponse(await fetch(`${API_BASE}/api/plugins/workforce/v1/members`, {
     method: "POST",

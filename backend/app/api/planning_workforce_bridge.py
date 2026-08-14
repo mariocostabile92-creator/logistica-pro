@@ -77,6 +77,7 @@ def planning_workforce_input(
         "coverage": {
             "available": coverage_available,
             "has_data": has_coverage_data(coverage_items),
+            "fingerprint": coverage_response.fingerprint,
             "items": [item.model_dump(mode="json") for item in coverage_items],
             "summary": coverage_response.summary.model_dump(mode="json"),
             "requirement_covered": requirement_covered,

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from decimal import Decimal, ROUND_HALF_UP
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -15,6 +16,22 @@ class CoverageSource(str, Enum):
     IMPORT = "IMPORT"
     LEGACY_IMPORT_BACKFILL = "LEGACY_IMPORT_BACKFILL"
     MANUAL = "MANUAL"
+    MANUAL_PLANNING_INPUT = "MANUAL_PLANNING_INPUT"
+
+
+DEFAULT_RESERVE_PERCENTAGE = 10
+
+
+def required_capacity_for(
+    forecast_routes: int,
+    reserve_percentage: int = DEFAULT_RESERVE_PERCENTAGE,
+) -> int:
+    multiplier = (Decimal(100) + Decimal(reserve_percentage)) / Decimal(100)
+    return int(
+        (Decimal(forecast_routes) * multiplier).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -80,5 +97,6 @@ class DailyCoverageResponse(BaseModel):
     date_from: str
     date_to: str
     cycle: str | None = None
+    fingerprint: str
     items: list[DailyCoverageReadModel] = Field(default_factory=list)
     summary: DailyCoverageSummary

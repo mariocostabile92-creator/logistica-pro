@@ -1,5 +1,5 @@
 import { planningOperationsApi } from "./api.js";
-import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=day1";
+import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=forecast1";
 import { filteredRoutes, planningOperationsState as state } from "./state.js";
 import { userMessageForError } from "../../utils/errors.js";
 import {
@@ -7,6 +7,11 @@ import {
   operationalWeek,
   todayOperationalDate,
 } from "./day-navigation.js?v=day1";
+import {
+  changedRequirements,
+  forecastDraft,
+  requirementPreview,
+} from "./forecast-editor.js?v=forecast1";
 
 let root;
 let initialLoadPromise = null;
@@ -23,7 +28,37 @@ function renderCurrent() {
     weekPayloads: state.weekPayloads,
     weekLoading: state.weekLoading,
     weekError: state.weekError,
+    forecastEditor: state.forecastEditor,
   });
+}
+
+function resetForecastEditor() {
+  state.forecastEditor = {
+    open: false,
+    saving: false,
+    error: null,
+    draft: null,
+    initial: null,
+  };
+}
+
+function openForecastEditor() {
+  const draft = forecastDraft(state.payload.coverage);
+  state.forecastEditor = {
+    open: true,
+    saving: false,
+    error: null,
+    draft,
+    initial: { ...draft },
+  };
+  renderCurrent();
+  root.querySelector("[data-manual-coverage-input]")?.focus();
+}
+
+function closeForecastEditor() {
+  if (state.forecastEditor.saving) return;
+  resetForecastEditor();
+  renderCurrent();
 }
 
 async function load(operationDate = state.selectedOperationalDate || todayOperationalDate()) {
@@ -60,6 +95,7 @@ async function selectOperationalDate(operationDate) {
   state.query = "";
   state.filter = "all";
   state.weekError = null;
+  resetForecastEditor();
   syncDateUrl(operationDate);
   await load(operationDate);
   document.dispatchEvent(new CustomEvent("planning:date-changed", {
@@ -111,9 +147,53 @@ async function convocationChange(select) {
 }
 
 function handleInput(event) {
+  if (event.target.matches("[data-manual-coverage-input]")) {
+    const key = event.target.dataset.manualCoverageInput;
+    state.forecastEditor.draft[key] = event.target.value;
+    state.forecastEditor.error = null;
+    const output = root.querySelector(`[data-manual-coverage-preview="${key}"]`);
+    if (output) output.textContent = requirementPreview(event.target.value) ?? "—";
+    return;
+  }
   if (event.target.matches("[data-planning-query]")) {
     state.query = event.target.value;
     refreshRoutes();
+  }
+}
+
+async function handleSubmit(event) {
+  if (!event.target.matches("[data-planning-forecast-form]")) return;
+  event.preventDefault();
+  if (state.forecastEditor.saving) return;
+  const { requirements, clearedExisting } = changedRequirements(
+    state.forecastEditor,
+  );
+  if (clearedExisting) {
+    state.forecastEditor.error = "La rimozione del valore manuale non è disponibile in questa versione.";
+    renderCurrent();
+    return;
+  }
+  if (!requirements.length) {
+    state.forecastEditor.error = "Nessuna modifica da salvare.";
+    renderCurrent();
+    return;
+  }
+  state.forecastEditor.saving = true;
+  state.forecastEditor.error = null;
+  renderCurrent();
+  try {
+    await planningOperationsApi.saveForecast(state.selectedOperationalDate, {
+      expected_fingerprint: state.payload.coverage.fingerprint,
+      requirements,
+    });
+    resetForecastEditor();
+    await load(state.selectedOperationalDate);
+  } catch (error) {
+    state.forecastEditor.saving = false;
+    state.forecastEditor.error = error?.status === 409
+      ? "Il fabbisogno è cambiato. Aggiorna i dati e riprova."
+      : userMessageForError(error, "Impossibile salvare il fabbisogno.");
+    renderCurrent();
   }
 }
 
@@ -160,6 +240,8 @@ function openWorkforcePlanning() {
 }
 
 async function handleClick(event) {
+  if (event.target.closest("[data-open-planning-forecast]")) { openForecastEditor(); return; }
+  if (event.target.closest("[data-close-planning-forecast]")) { closeForecastEditor(); return; }
   if (event.target.closest("[data-open-workforce-planning]")) { openWorkforcePlanning(); return; }
   const selectedDay = event.target.closest("[data-planning-select-date]");
   if (selectedDay) { await selectOperationalDate(selectedDay.dataset.planningSelectDate); return; }
@@ -192,6 +274,7 @@ export function initPlanningOperations(element) {
   root.addEventListener("input", handleInput);
   root.addEventListener("change", handleChange);
   root.addEventListener("click", handleClick);
+  root.addEventListener("submit", handleSubmit);
   renderOperationsLoading(root);
   const requested = new URL(window.location.href).searchParams.get("planning_date");
   state.selectedOperationalDate = /^\d{4}-\d{2}-\d{2}$/.test(requested || "")

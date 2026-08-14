@@ -1,4 +1,4 @@
-import { renderForecast } from "./forecast.js";
+import { renderForecast } from "./forecast.js?v=forecast1";
 import { renderHero } from "./hero.js?v=day1";
 import { renderKpis } from "./kpi.js";
 import { renderRoutes } from "./routes.js";
@@ -37,7 +37,11 @@ export function renderOperations(root, payload, routes, dayState = {}) {
       <label class="planning-import-trigger">Importa rotte del ${operationLabel}<input type="file" accept=".xlsx,.xls,.csv" data-planning-import-file></label>
       <span data-planning-import-feedback aria-live="polite"></span>
     </section>
-    ${renderForecast(payload.coverage)}
+    ${renderForecast(payload.coverage, {
+      operationLabel,
+      writable: payload.permissions.write,
+      editor: dayState.forecastEditor,
+    })}
     <section class="planning-ops-panel planning-routes-panel"><header><div><p class="eyebrow">Superficie operativa</p><h3>Rotte definitive</h3></div><span>${routeCount}</span></header><div data-planning-routes>${routesState}</div></section>
     <section class="planning-ops-panel planning-vehicles-state"><header><div><p class="eyebrow">Fleet input</p><h3>Mezzi</h3></div><strong>${payload.vehicle_assignments_available ? `${payload.summary.vehicles_assigned} assegnati` : "Non disponibili"}</strong></header>${payload.vehicle_assignments_available ? "" : '<p class="planning-ops-empty planning-source-empty"><strong>Mezzi non ancora assegnati</strong><span>Le assegnazioni saranno mostrate solo quando esisteranno dati route-level reali.</span></p>'}</section>
     <section class="planning-ops-panel planning-publication"><header><div><p class="eyebrow">Lifecycle</p><h3>Conferma e pubblicazione</h3></div></header>

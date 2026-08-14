@@ -136,6 +136,8 @@ def coverage_projection(
             forecast_gap=item.forecast_gap,
             requirement_gap=item.requirement_gap,
             reserve=item.reserve_drivers,
+            source=item.source,
+            source_reference=item.source_reference,
             status=item.coverage_status.value,
         )
         projections.append(projection)

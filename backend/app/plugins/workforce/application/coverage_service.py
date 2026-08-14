@@ -1,4 +1,6 @@
 from datetime import date, timedelta
+from hashlib import sha256
+import json
 
 from app.plugins.workforce.domain.coverage import (
     CoverageStatus,
@@ -18,6 +20,45 @@ _BUCKET_CODES = {
     (cycle, segment): codes for cycle, segment, codes in _BUCKETS
 }
 _CYCLE_ORDER = {"NEXT_DAY": 0, "SAME_DAY": 1}
+
+
+def requirements_fingerprint(
+    requirements,
+    *,
+    date_from: str,
+    date_to: str,
+    cycle: str | None = None,
+) -> str:
+    payload = {
+        "date_from": date_from,
+        "date_to": date_to,
+        "cycle": cycle,
+        "requirements": sorted(
+            (
+                {
+                    "id": item.coverage_requirement_id,
+                    "date": item.operational_date,
+                    "station": item.station,
+                    "cycle": item.operational_cycle,
+                    "segment": item.coverage_segment,
+                    "forecast": item.forecast_routes,
+                    "reserve": item.reserve_percentage,
+                    "required": item.required_capacity,
+                    "source": item.source,
+                    "updated_at": item.updated_at,
+                }
+                for item in requirements
+            ),
+            key=lambda item: (
+                item["date"], item["station"] or "", item["cycle"],
+                item["segment"] or "", item["id"],
+            ),
+        ),
+    }
+    encoded = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return sha256(encoded).hexdigest()
 
 
 def _dates(date_from: str, date_to: str) -> list[str]:
@@ -198,6 +239,12 @@ def daily_coverage(
         date_from=date_from,
         date_to=date_to,
         cycle=cycle,
+        fingerprint=requirements_fingerprint(
+            requirements,
+            date_from=date_from,
+            date_to=date_to,
+            cycle=cycle,
+        ),
         items=items,
         summary=summary,
     )

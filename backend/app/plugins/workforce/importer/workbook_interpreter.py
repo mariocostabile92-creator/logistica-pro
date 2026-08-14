@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from functools import lru_cache
 from hashlib import sha256
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation
 import re
 from time import perf_counter
 from typing import Any
@@ -23,6 +23,7 @@ from app.plugins.workforce.domain.driver_shift_contact import (
 from app.plugins.workforce.domain.coverage import (
     CoverageSource,
     ImportedDailyCoverageRequirement,
+    required_capacity_for,
 )
 from app.utils.text_normalizer import compact_key, normalize_text
 
@@ -445,15 +446,6 @@ def _forecast_routes(value: Any) -> int | None:
     return int(numeric)
 
 
-def _required_capacity(forecast_routes: int, reserve_percentage: int) -> int:
-    multiplier = (Decimal(100) + Decimal(reserve_percentage)) / Decimal(100)
-    return int(
-        (Decimal(forecast_routes) * multiplier).quantize(
-            Decimal("1"), rounding=ROUND_HALF_UP
-        )
-    )
-
-
 def _coverage_requirements(
     sheets: tuple[Any, ...],
     fingerprint: str,
@@ -500,7 +492,7 @@ def _coverage_requirements(
                     coverage_segment=segment,
                     forecast_routes=forecast,
                     reserve_percentage=_DEFAULT_RESERVE_PERCENTAGE,
-                    required_capacity=_required_capacity(
+                    required_capacity=required_capacity_for(
                         forecast, _DEFAULT_RESERVE_PERCENTAGE
                     ),
                     source=CoverageSource.IMPORT.value,

@@ -43,6 +43,8 @@ class CoverageProjection(BaseModel):
     forecast_gap: int | None = Field(default=None, ge=0)
     requirement_gap: int | None = Field(default=None, ge=0)
     reserve: int | None = Field(default=None, ge=0)
+    source: str | None = None
+    source_reference: str | None = None
     status: Literal[
         "NO_FORECAST",
         "UNDER_FORECAST",

@@ -20,6 +20,7 @@ from app.plugins.workforce.application import driver_shift_portal_service
 from app.plugins.workforce.application import driver_shift_credentials_service
 from app.plugins.workforce.application import driver_shift_driver_session_service
 from app.plugins.workforce.application import coverage_service
+from app.plugins.workforce.application import manual_coverage_service
 from app.plugins.workforce.application import legacy_coverage_backfill_service
 from app.plugins.workforce.application import operational_cycle_reconciliation_service
 from app.plugins.workforce.application import day_member_batch_service
@@ -75,6 +76,10 @@ from app.plugins.workforce.domain.driver_shift_distribution import (
 )
 from app.plugins.workforce.domain.contact_coverage import WorkforceContactCoverage
 from app.plugins.workforce.domain.coverage import DailyCoverageResponse
+from app.plugins.workforce.domain.manual_coverage import (
+    ManualCoverageConflictError,
+    ManualCoverageError,
+)
 from app.plugins.workforce.domain.legacy_coverage_backfill import (
     LegacyCoverageBackfillPreview,
     LegacyCoverageBackfillResult,
@@ -130,6 +135,7 @@ from app.plugins.workforce.interfaces.schemas import (
     DriverShiftBatchPrepareRequest,
     DriverShiftPortalTokenRequest,
     DriverShiftPortalLoginRequest,
+    ManualCoverageUpdateRequest,
 )
 from app.core.config import SETTINGS
 from app.workspace.status_service import (
@@ -1181,6 +1187,40 @@ def planning_coverage(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.put(
+    "/planning/coverage/{operational_date}",
+    response_model=DailyCoverageResponse,
+)
+def update_manual_planning_coverage(
+    operational_date: str,
+    payload: ManualCoverageUpdateRequest,
+    request: Request,
+) -> DailyCoverageResponse:
+    user = _require(request, "workforce:write")
+    try:
+        ensure_real_data_write_allowed()
+        return manual_coverage_service.save_daily_forecast(
+            organization_id=user.organization_id,
+            operational_date=operational_date,
+            requirements=[
+                item.model_dump(mode="json") for item in payload.requirements
+            ],
+            expected_fingerprint=payload.expected_fingerprint,
+            actor=user.email,
+        )
+    except ManualCoverageConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "message": str(exc)},
+        ) from exc
+    except (
+        DemoWorkspaceResetRequiredError,
+        ManualCoverageError,
+        ValueError,
+    ) as exc:
+        raise _write_error(exc) from exc
 
 
 @router.post(

@@ -1,6 +1,7 @@
 from datetime import date
+from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.plugins.workforce.domain.models import (
     OperationalCycle,
@@ -28,6 +29,41 @@ class WorkforceCalendarResponse(BaseModel):
 
 class WorkforceCoverageResponse(BaseModel):
     items: list[WorkforceCoverage]
+
+
+class ManualCoverageRequirementRequest(BaseModel):
+    cycle: Literal["NEXT_DAY", "SAME_DAY"]
+    segment: Literal["A", "B_C"] | None = None
+    forecast_routes: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def valid_bucket(self):
+        valid = (
+            (self.cycle == "NEXT_DAY" and self.segment is None)
+            or (self.cycle == "SAME_DAY" and self.segment in {"A", "B_C"})
+        )
+        if not valid:
+            raise ValueError("Combinazione ciclo/segmento non supportata.")
+        return self
+
+
+class ManualCoverageUpdateRequest(BaseModel):
+    expected_fingerprint: str = Field(
+        min_length=64, max_length=64, pattern="^[0-9a-f]{64}$"
+    )
+    requirements: list[ManualCoverageRequirementRequest] = Field(
+        min_length=1, max_length=3
+    )
+
+    @field_validator("requirements")
+    @classmethod
+    def unique_buckets(
+        cls, values: list[ManualCoverageRequirementRequest]
+    ) -> list[ManualCoverageRequirementRequest]:
+        keys = [(item.cycle, item.segment) for item in values]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Un bucket non puo essere ripetuto.")
+        return values
 
 
 class WorkforceChangesResponse(BaseModel):

@@ -4,6 +4,13 @@ export const planningOperationsState = {
   weekPayloads: new Map(),
   weekLoading: false,
   weekError: null,
+  forecastEditor: {
+    open: false,
+    saving: false,
+    error: null,
+    draft: null,
+    initial: null,
+  },
   query: "",
   filter: "all",
 };

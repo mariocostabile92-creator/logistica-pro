@@ -61,6 +61,25 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 .planning-coverage-buckets dl div { padding: 8px; border-radius: 8px; background: #fff; }
 .planning-coverage-buckets dt { color: var(--text-muted); font-size: 11px; }
 .planning-coverage-buckets dd { margin: 3px 0 0; font-size: 18px; font-weight: 800; }
+.planning-coverage-actions { display: flex; align-items: center; gap: 10px; }
+.planning-coverage-source { display: block; margin-top: 10px; color: var(--text-muted); font-weight: 700; }
+.planning-forecast-modal { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 20px; background: rgba(17, 33, 29, .58); }
+.planning-forecast-editor { width: min(620px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 22px 60px rgba(10, 28, 23, .28); }
+.planning-forecast-editor > header, .planning-forecast-editor > footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.planning-forecast-editor > header h3 { margin: 3px 0 0; }
+.planning-forecast-editor > header .icon-button { min-width: 44px; min-height: 44px; font-size: 22px; }
+.planning-forecast-editor > p { color: var(--text-muted); }
+.planning-forecast-fields { display: grid; gap: 10px; margin: 18px 0; }
+.planning-forecast-fields > label { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(135px, .65fr) minmax(130px, .65fr); align-items: center; gap: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 11px; }
+.planning-forecast-fields label > span:first-child { display: grid; gap: 3px; }
+.planning-forecast-fields small { color: var(--text-muted); }
+.planning-forecast-input-row { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.planning-forecast-input-row input { width: 100%; min-height: 44px; }
+.planning-forecast-requirement { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.planning-forecast-requirement output { color: var(--text); font-size: 21px; font-weight: 800; }
+.planning-forecast-error { padding: 10px 12px; border-left: 3px solid var(--danger); background: #fff3f1; color: var(--danger) !important; }
+.planning-forecast-editor > footer { justify-content: flex-end; margin-top: 18px; }
+.planning-forecast-editor > footer button { min-height: 44px; }
 .planning-source-empty { display: grid; gap: 6px; }
 .planning-source-empty strong { color: var(--text); font-size: 16px; }
 .planning-lifecycle-reason { margin: 12px 0 0; color: var(--text-muted); font-size: 13px; text-align: right; }
@@ -138,6 +157,13 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
   .planning-route-card > header, .planning-ops-panel > header { align-items: start; }
   .planning-publication > div { display: grid; }
   .planning-workforce-summary, .planning-coverage-buckets { grid-template-columns: 1fr; }
+  .planning-coverage-actions { width: 100%; align-items: stretch; flex-direction: column; }
+  .planning-coverage-actions button { width: 100%; min-height: 44px; }
+  .planning-forecast-modal { align-items: end; padding: 0; }
+  .planning-forecast-editor { width: 100%; max-height: 92vh; padding: 16px; border-radius: 16px 16px 0 0; }
+  .planning-forecast-fields > label { grid-template-columns: 1fr; gap: 9px; }
+  .planning-forecast-editor > footer { display: grid; grid-template-columns: 1fr; }
+  .planning-forecast-editor > footer button { width: 100%; }
   .planning-workforce-input > header { align-items: stretch; }
   .planning-workforce-input > header button { min-height: 44px; }
   .planning-lifecycle-reason { text-align: left; }

@@ -6,6 +6,7 @@ from app.plugins.workforce.domain.operational_status import (
     NON_OPERATIONAL_STATUS_CODES,
 )
 from app.plugins.workforce.domain.coverage import (
+    CoverageSource,
     DailyCoverageRequirement,
     ImportedDailyCoverageRequirement,
 )
@@ -17,6 +18,14 @@ def _station_key(value: str | None) -> str:
 
 def _segment_key(value: str | None) -> str:
     return str(value or "").strip().upper()
+
+
+def _source_priority(value: str) -> int:
+    if value == CoverageSource.MANUAL_PLANNING_INPUT.value:
+        return 100
+    if value == CoverageSource.MANUAL.value:
+        return 90
+    return 10
 
 
 def persist_imported_requirements(
@@ -112,7 +121,8 @@ def persist_imported_requirements(
     return len(inserts), len(updates)
 
 
-def list_current_requirements(
+def list_current_requirements_in_connection(
+    conn,
     organization_id: str,
     date_from: str,
     date_to: str,
@@ -127,23 +137,26 @@ def list_current_requirements(
     if cycle:
         conditions.append("operational_cycle = ?")
         parameters.append(cycle)
-    with db_session() as conn:
-        rows = conn.execute(
-            f"""
-            SELECT * FROM workforce_daily_coverage_requirements
-            WHERE {' AND '.join(conditions)}
-            ORDER BY operational_date, operational_cycle, coverage_segment,
-                     station_key, updated_at DESC, id DESC
-            """,
-            parameters,
-        ).fetchall()
+    rows = conn.execute(
+        f"""
+        SELECT * FROM workforce_daily_coverage_requirements
+        WHERE {' AND '.join(conditions)}
+        ORDER BY operational_date, operational_cycle, coverage_segment,
+                 station_key, updated_at DESC, id DESC
+        """,
+        parameters,
+    ).fetchall()
     current: dict[tuple[str, str, str, str], Any] = {}
     for row in rows:
         key = (
             row["operational_date"], row["station_key"],
             row["operational_cycle"], row["coverage_segment"],
         )
-        current.setdefault(key, row)
+        selected = current.get(key)
+        if selected is None or _source_priority(row["source"]) > _source_priority(
+            selected["source"]
+        ):
+            current[key] = row
     return [
         DailyCoverageRequirement(
             coverage_requirement_id=int(row["id"]),
@@ -163,6 +176,18 @@ def list_current_requirements(
         )
         for row in current.values()
     ]
+
+
+def list_current_requirements(
+    organization_id: str,
+    date_from: str,
+    date_to: str,
+    cycle: str | None = None,
+) -> list[DailyCoverageRequirement]:
+    with db_session() as conn:
+        return list_current_requirements_in_connection(
+            conn, organization_id, date_from, date_to, cycle
+        )
 
 
 def assigned_driver_groups(

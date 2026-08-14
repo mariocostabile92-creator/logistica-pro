@@ -5,8 +5,9 @@ import {
   patchPlanningAssignment,
   patchPlanningConvocation,
   previewImport,
+  saveManualPlanningCoverage,
   transitionOperationalPlanning,
-} from "../../api.js?v=bridge1";
+} from "../../api.js?v=forecast1";
 
 export const planningOperationsApi = Object.freeze({
   load: getPlanningOperations,
@@ -16,4 +17,5 @@ export const planningOperationsApi = Object.freeze({
   previewImport: (file) => previewImport(file, "planning"),
   importRoutes: (file) => importDataset(file, "planning"),
   generate: generatePlanning,
+  saveForecast: saveManualPlanningCoverage,
 });
