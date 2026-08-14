@@ -9,7 +9,7 @@ const KPI = [
 ];
 
 export function renderKpis(summary) {
-  return `<section class="planning-ops-kpis" aria-label="Indicatori del piano">${KPI.map(([key, label, filter]) => {
+  return `<section class="planning-ops-kpis" aria-label="Indicatori della giornata">${KPI.map(([key, label, filter]) => {
     const value = summary[key] ?? "—";
     return filter
       ? `<button type="button" data-planning-filter="${filter}"><strong>${value}</strong><span>${label}</span></button>`

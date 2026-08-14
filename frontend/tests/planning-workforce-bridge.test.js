@@ -8,6 +8,7 @@ import { renderForecast } from "../assets/js/modules/planning-operations/forecas
 import { renderHero } from "../assets/js/modules/planning-operations/hero.js";
 import { renderKpis } from "../assets/js/modules/planning-operations/kpi.js";
 import { renderOperations } from "../assets/js/modules/planning-operations/renderer.js";
+import { renderDayNavigation } from "../assets/js/modules/planning-operations/day-navigation.js";
 
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -55,7 +56,7 @@ const payload = {
 
 
 test("operational date is always rendered and selectable", () => {
-  const html = renderHero(payload);
+  const html = `${renderDayNavigation(payload.operation_date)}${renderHero(payload)}`;
   assert.match(html, /data-planning-operation-date/);
   assert.match(html, /2026-08-14/);
   assert.doesNotMatch(html, /Data<\/dt><dd>Non disponibile/);
@@ -118,7 +119,7 @@ test("date changes are API-scoped and synchronize Planning and Workforce context
   assert.match(controller, /planning_date/);
   assert.match(controller, /planning:date-changed/);
   assert.match(controller, /workforce:open-date/);
-  assert.match(controller, /operationDate: state\.operationDate/);
+  assert.match(controller, /operationDate: state\.selectedOperationalDate/);
   assert.match(workspace, /openPlanningOperationsDate\(normalized\)/);
 });
 

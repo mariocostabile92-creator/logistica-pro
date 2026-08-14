@@ -1,6 +1,9 @@
 export const planningOperationsState = {
   payload: null,
-  operationDate: null,
+  selectedOperationalDate: null,
+  weekPayloads: new Map(),
+  weekLoading: false,
+  weekError: null,
   query: "",
   filter: "all",
 };

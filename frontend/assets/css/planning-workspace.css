@@ -4,6 +4,24 @@
 }
 
 /* Dispatcher operations surface */
+.planning-day-navigation { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.planning-day-navigation > header { display: grid; grid-template-columns: minmax(180px, 1fr) auto minmax(180px, .55fr); align-items: end; gap: 14px; }
+.planning-day-navigation > header p { margin: 0 0 3px; }
+.planning-day-navigation > header > div > strong { font-size: 20px; text-transform: capitalize; }
+.planning-day-navigation nav { display: flex; gap: 7px; }
+.planning-day-navigation nav button { min-width: 46px; min-height: 44px; }
+.planning-day-navigation > header label { display: grid; gap: 4px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.planning-day-navigation input { width: 100%; min-height: 44px; }
+.planning-week-strip { display: grid; grid-template-columns: repeat(7, minmax(74px, 1fr)); gap: 7px; overflow-x: auto; padding-bottom: 2px; }
+.planning-week-day { display: grid; min-height: 72px; justify-items: center; align-content: center; gap: 1px; padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: #f7faf8; color: var(--text); box-shadow: none; }
+.planning-week-day:hover { border-color: #5a8d80; background: #eef6f2; }
+.planning-week-day.is-selected { border: 2px solid #176f5c; background: #e5f4ee; box-shadow: inset 0 0 0 1px #fff; }
+.planning-week-day span { color: var(--text-muted); font-size: 12px; text-transform: capitalize; }
+.planning-week-day strong { font-size: 20px; }
+.planning-week-day small { min-height: 18px; font-weight: 850; }
+.planning-week-day small.is-ready { color: #23724f; }
+.planning-week-day small.is-attention { color: #8a5b00; }
+.planning-week-day small.is-missing { color: var(--text-muted); }
 .planning-operations { display: grid; gap: 16px; min-height: 320px; }
 body[data-active-workspace="operations"] .app-header-inner { gap: 14px; }
 body[data-active-workspace="operations"] .app-header .workspace-tabs { grid-template-columns: repeat(6, minmax(74px, 1fr)); width: min(600px, 100%); }
@@ -12,6 +30,7 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 .planning-ops-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(460px, .9fr); gap: 28px; padding: 24px; color: #fff; background: linear-gradient(125deg, #173d35, #245d50); border-radius: 18px; box-shadow: var(--shadow-sm); }
 .planning-ops-hero h2 { margin: 3px 0 8px; font-size: clamp(28px, 4vw, 38px); }
 .planning-ops-hero p { margin: 0; max-width: 620px; color: #dbe9e5; }
+.planning-ops-hero .planning-hero-date { margin: -2px 0 9px; color: #fff; font-size: 18px; font-weight: 800; text-transform: capitalize; }
 .planning-ops-hero dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.18); border-radius: 12px; background: rgba(255,255,255,.1); }
 .planning-ops-hero dl div { padding: 12px 14px; background: rgba(7,32,26,.22); }
 .planning-ops-hero dt { color: #b8d3cc; font-size: 12px; font-weight: 700; text-transform: uppercase; }
@@ -45,6 +64,16 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 .planning-source-empty { display: grid; gap: 6px; }
 .planning-source-empty strong { color: var(--text); font-size: 16px; }
 .planning-lifecycle-reason { margin: 12px 0 0; color: var(--text-muted); font-size: 13px; text-align: right; }
+.planning-lifecycle-scope { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; text-align: right; }
+.planning-week-summary { border: 1px solid var(--border); border-radius: 13px; background: var(--surface); }
+.planning-week-summary > summary { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; cursor: pointer; font-weight: 800; }
+.planning-week-summary > summary span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.planning-week-summary > div { padding: 0 16px 16px; }
+.planning-week-summary p { margin: 0 0 10px; color: var(--text-muted); }
+.planning-week-summary dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.planning-week-summary dl div { padding: 10px; border-radius: 9px; background: #f4f8f6; }
+.planning-week-summary dt { color: var(--text-muted); font-size: 11px; }
+.planning-week-summary dd { margin: 4px 0 0; font-size: 20px; font-weight: 800; }
 .planning-forecast-days { display: grid; grid-template-columns: repeat(7, minmax(105px, 1fr)); gap: 8px; overflow-x: auto; padding-bottom: 3px; }
 .planning-forecast-days article { display: grid; gap: 4px; padding: 12px; border-radius: 10px; background: #f4f8f6; }
 .planning-forecast-days time, .planning-forecast-days span { color: var(--text-muted); font-size: 12px; }
@@ -78,6 +107,8 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 @keyframes planning-ops-pulse { to { opacity: .55; } }
 
 @media (max-width: 1000px) {
+  .planning-day-navigation > header { grid-template-columns: 1fr auto; }
+  .planning-day-navigation > header label { grid-column: 1 / -1; }
   .planning-ops-hero { grid-template-columns: 1fr; }
   .planning-ops-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .planning-route-card { grid-template-columns: minmax(130px,.55fr) minmax(280px,1.3fr) minmax(170px,.8fr); }
@@ -86,6 +117,12 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 }
 
 @media (max-width: 640px) {
+  .planning-day-navigation { padding: 12px; }
+  .planning-day-navigation > header { grid-template-columns: 1fr; align-items: stretch; }
+  .planning-day-navigation > header label { grid-column: auto; }
+  .planning-day-navigation nav { display: grid; grid-template-columns: 44px minmax(90px, 1fr) 44px; }
+  .planning-week-strip { grid-template-columns: repeat(7, minmax(66px, 1fr)); margin-right: -12px; padding-right: 12px; }
+  .planning-week-day { min-height: 68px; }
   body[data-active-workspace="operations"] .app-header .workspace-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     width: 100%;
@@ -104,6 +141,9 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
   .planning-workforce-input > header { align-items: stretch; }
   .planning-workforce-input > header button { min-height: 44px; }
   .planning-lifecycle-reason { text-align: left; }
+  .planning-lifecycle-scope { text-align: left; }
+  .planning-week-summary dl { grid-template-columns: 1fr 1fr; }
+  .planning-week-summary button { width: 100%; min-height: 44px; }
 }
 
 .planning-workspace {

@@ -11,7 +11,7 @@ export function renderForecast(coverage) {
   if (!coverage?.available) {
     return `<section class="planning-ops-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon</h3></div></header><p class="planning-ops-empty">Forecast non disponibile per la data selezionata.</p></section>`;
   }
-  return `<section class="planning-ops-panel planning-coverage-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon e copertura</h3></div><small>Fonte: Coverage Workforce</small></header>
+  return `<section class="planning-ops-panel planning-coverage-panel"><header><div><p class="eyebrow">Totale della giornata</p><h3>Forecast Amazon e copertura</h3></div><small>Fonte: Coverage Workforce</small></header>
   <div class="planning-coverage-buckets">${BUCKETS.map(([cycle, segment, label]) => {
     const item = items.find((entry) => entry.cycle === cycle && entry.segment === segment);
     const status = item?.status === "REQUIREMENT_COVERED"

@@ -26,7 +26,7 @@ import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
 } from "./conflicts.js";
-import { createPlanningWorkspaceLayout } from "./layout.js?v=bridge1";
+import { createPlanningWorkspaceLayout } from "./layout.js?v=day1";
 import {
   readinessEventType,
 } from "./readiness.js";

@@ -1,17 +1,16 @@
 import { planningOperationsApi } from "./api.js";
-import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=bridge1";
+import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=day1";
 import { filteredRoutes, planningOperationsState as state } from "./state.js";
 import { userMessageForError } from "../../utils/errors.js";
+import {
+  addOperationalDays,
+  operationalWeek,
+  todayOperationalDate,
+} from "./day-navigation.js?v=day1";
 
 let root;
 let initialLoadPromise = null;
 let loadSequence = 0;
-
-function today() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
-}
 
 function syncDateUrl(operationDate) {
   const url = new URL(window.location.href);
@@ -19,16 +18,25 @@ function syncDateUrl(operationDate) {
   history.replaceState(history.state, "", url);
 }
 
-async function load(operationDate = state.operationDate || today()) {
+function renderCurrent() {
+  renderOperations(root, state.payload, filteredRoutes(state), {
+    weekPayloads: state.weekPayloads,
+    weekLoading: state.weekLoading,
+    weekError: state.weekError,
+  });
+}
+
+async function load(operationDate = state.selectedOperationalDate || todayOperationalDate()) {
   const sequence = ++loadSequence;
-  state.operationDate = operationDate;
+  state.selectedOperationalDate = operationDate;
   root.setAttribute("aria-busy", "true");
   try {
     const payload = await planningOperationsApi.load({ operationDate });
     if (sequence !== loadSequence) return;
     state.payload = payload;
-    state.operationDate = payload.operation_date;
-    renderOperations(root, state.payload, filteredRoutes(state));
+    state.selectedOperationalDate = payload.operation_date;
+    state.weekPayloads.set(payload.operation_date, payload);
+    renderCurrent();
     const diagnostics = root.closest(".planning-workspace-shell")?.querySelector(".planning-advanced-diagnostics");
     if (diagnostics) diagnostics.hidden = !state.payload.permissions.diagnostics;
   } catch (error) {
@@ -45,6 +53,41 @@ async function load(operationDate = state.operationDate || today()) {
 
 function refreshRoutes() {
   renderRouteList(root, filteredRoutes(state), state.payload.permissions.write);
+}
+
+async function selectOperationalDate(operationDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(operationDate || ""))) return;
+  state.query = "";
+  state.filter = "all";
+  state.weekError = null;
+  syncDateUrl(operationDate);
+  await load(operationDate);
+  document.dispatchEvent(new CustomEvent("planning:date-changed", {
+    detail: { operationDate },
+  }));
+}
+
+async function loadWeekSummary() {
+  const requestedWeek = operationalWeek(state.selectedOperationalDate);
+  const missingDates = requestedWeek.filter((date) => !state.weekPayloads.has(date));
+  if (!missingDates.length || state.weekLoading) return;
+  state.weekLoading = true;
+  state.weekError = null;
+  renderCurrent();
+  try {
+    const payloads = await Promise.all(
+      missingDates.map((operationDate) => planningOperationsApi.load({ operationDate })),
+    );
+    payloads.forEach((payload) => state.weekPayloads.set(payload.operation_date, payload));
+  } catch (error) {
+    state.weekError = userMessageForError(
+      error,
+      "Impossibile caricare il riepilogo settimanale.",
+    );
+  } finally {
+    state.weekLoading = false;
+    renderCurrent();
+  }
 }
 
 async function assignmentChange(input, kind) {
@@ -77,12 +120,7 @@ function handleInput(event) {
 async function handleChange(event) {
   const target = event.target;
   if (target.matches("[data-planning-operation-date]")) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(target.value)) return;
-    state.query = "";
-    state.filter = "all";
-    syncDateUrl(target.value);
-    await load(target.value);
-    document.dispatchEvent(new CustomEvent("planning:date-changed", { detail: { operationDate: target.value } }));
+    await selectOperationalDate(target.value);
     return;
   }
   if (target.matches("[data-planning-filter-select]")) { state.filter = target.value; refreshRoutes(); return; }
@@ -112,7 +150,7 @@ function openWorkforcePlanning() {
     if (event.detail?.view !== "workforce") return;
     document.removeEventListener("workspace:view-changed", onViewChanged);
     document.dispatchEvent(new CustomEvent("workforce:open-date", {
-      detail: { operationDate: state.operationDate },
+      detail: { operationDate: state.selectedOperationalDate },
     }));
   };
   document.addEventListener("workspace:view-changed", onViewChanged);
@@ -123,6 +161,20 @@ function openWorkforcePlanning() {
 
 async function handleClick(event) {
   if (event.target.closest("[data-open-workforce-planning]")) { openWorkforcePlanning(); return; }
+  const selectedDay = event.target.closest("[data-planning-select-date]");
+  if (selectedDay) { await selectOperationalDate(selectedDay.dataset.planningSelectDate); return; }
+  const dayJump = event.target.closest("[data-planning-day-jump]");
+  if (dayJump) {
+    const targetDate = dayJump.dataset.planningDayJump === "today"
+      ? todayOperationalDate()
+      : addOperationalDays(
+        state.selectedOperationalDate,
+        dayJump.dataset.planningDayJump === "previous" ? -1 : 1,
+      );
+    await selectOperationalDate(targetDate);
+    return;
+  }
+  if (event.target.closest("[data-load-planning-week]")) { await loadWeekSummary(); return; }
   const filter = event.target.closest("[data-planning-filter]");
   if (filter) { state.filter = filter.dataset.planningFilter; refreshRoutes(); return; }
   if (event.target.closest("[data-planning-retry]")) { await load(); return; }
@@ -142,14 +194,15 @@ export function initPlanningOperations(element) {
   root.addEventListener("click", handleClick);
   renderOperationsLoading(root);
   const requested = new URL(window.location.href).searchParams.get("planning_date");
-  state.operationDate = /^\d{4}-\d{2}-\d{2}$/.test(requested || "") ? requested : today();
-  initialLoadPromise = load(state.operationDate);
+  state.selectedOperationalDate = /^\d{4}-\d{2}-\d{2}$/.test(requested || "")
+    ? requested
+    : todayOperationalDate();
+  initialLoadPromise = load(state.selectedOperationalDate);
   return initialLoadPromise;
 }
 
 export async function openPlanningOperationsDate(operationDate) {
   if (!root || !/^\d{4}-\d{2}-\d{2}$/.test(String(operationDate || ""))) return false;
-  syncDateUrl(operationDate);
-  await load(operationDate);
+  await selectOperationalDate(operationDate);
   return true;
 }
