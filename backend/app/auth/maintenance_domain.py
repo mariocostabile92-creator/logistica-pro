@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field
 
 class MaintenanceScope(StrEnum):
     PLANNING_COVERAGE_BACKFILL = "PLANNING_COVERAGE_BACKFILL"
+    WORKFORCE_OPERATIONAL_CYCLE_BACKFILL = (
+        "WORKFORCE_OPERATIONAL_CYCLE_BACKFILL"
+    )
 
 
 class MaintenanceTokenStatus(StrEnum):
@@ -32,4 +35,3 @@ class MaintenancePrincipal:
     organization_id: str
     scope: MaintenanceScope
     created_by: str
-

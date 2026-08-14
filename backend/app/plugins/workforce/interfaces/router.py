@@ -5,6 +5,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Respon
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from app.auth.domain import Role
+from app.auth.maintenance_domain import MaintenanceScope
 from app.auth.permission_service import has_permission
 
 from app.importers.excel_reader import read_validated_upload
@@ -1254,14 +1255,30 @@ async def apply_legacy_coverage_backfill(
         raise _write_error(exc) from exc
 
 
-def _cycle_bridge_administrator(request: Request):
+def _cycle_bridge_authorization(request: Request) -> tuple[str, str]:
+    maintenance_principal = getattr(
+        request.state, "maintenance_principal", None
+    )
+    if maintenance_principal is not None:
+        if (
+            maintenance_principal.scope
+            != MaintenanceScope.WORKFORCE_OPERATIONAL_CYCLE_BACKFILL
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Scope manutenzione non autorizzato.",
+            )
+        return (
+            maintenance_principal.organization_id,
+            f"maintenance-token:{maintenance_principal.token_id}",
+        )
     user = _require(request, "workforce:write")
     if user.role != Role.ADMINISTRATOR:
         raise HTTPException(
             status_code=403,
             detail="Permesso Administrator richiesto.",
         )
-    return user
+    return user.organization_id, user.email
 
 
 @router.post(
@@ -1273,11 +1290,11 @@ async def preview_operational_cycle_backfill(
     file: UploadFile = File(...),
     workforce_import_id: int = Form(..., gt=0),
 ) -> OperationalCycleReconciliationPreview:
-    user = _cycle_bridge_administrator(request)
+    organization_id, _ = _cycle_bridge_authorization(request)
     try:
         content, filename = await _read_upload(file)
         return operational_cycle_reconciliation_service.preview(
-            user.organization_id,
+            organization_id,
             content=content,
             filename=filename,
             workforce_import_id=workforce_import_id,
@@ -1301,17 +1318,17 @@ async def apply_operational_cycle_backfill(
         ..., min_length=64, max_length=64, pattern="^[0-9a-f]{64}$"
     ),
 ) -> OperationalCycleReconciliationResult:
-    user = _cycle_bridge_administrator(request)
+    organization_id, actor = _cycle_bridge_authorization(request)
     try:
         ensure_real_data_write_allowed()
         content, filename = await _read_upload(file)
         return operational_cycle_reconciliation_service.apply(
-            user.organization_id,
+            organization_id,
             content=content,
             filename=filename,
             workforce_import_id=workforce_import_id,
             expected_preview_fingerprint=expected_preview_fingerprint,
-            actor=user.email,
+            actor=actor,
         )
     except (
         operational_cycle_reconciliation_service.OperationalCycleReconciliationConflictError

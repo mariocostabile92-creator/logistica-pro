@@ -38,6 +38,10 @@ MAINTENANCE_ROUTES = {
         MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
     ("POST", "/api/plugins/workforce/v1/planning/coverage/backfill"):
         MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
+    ("POST", "/api/plugins/workforce/v1/operational-cycle-backfill/preview"):
+        MaintenanceScope.WORKFORCE_OPERATIONAL_CYCLE_BACKFILL,
+    ("POST", "/api/plugins/workforce/v1/operational-cycle-backfill"):
+        MaintenanceScope.WORKFORCE_OPERATIONAL_CYCLE_BACKFILL,
 }
 
 
@@ -113,10 +117,7 @@ async def enforce_authentication(request: Request, call_next):
         resolved = repository.user_by_session(token)
     maintenance_scope = MAINTENANCE_ROUTES.get((request.method, path))
     maintenance_principal = None
-    session_is_administrator = bool(
-        resolved and resolved[0].role == Role.ADMINISTRATOR
-    )
-    if maintenance_scope and not session_is_administrator:
+    if maintenance_scope and not resolved:
         authorization = request.headers.get("authorization")
         if authorization:
             try:

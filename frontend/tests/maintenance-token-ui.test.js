@@ -4,12 +4,13 @@ import test from "node:test";
 
 const file = path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("organization diagnostics exposes the single explicit maintenance scope", async () => {
+test("organization diagnostics exposes both explicit maintenance scopes", async () => {
   const html = await file("index.html");
   for (const value of [
     "Diagnostica",
     "Genera token manutenzione",
     "Planning Coverage Backfill",
+    "Workforce Operational Cycle Backfill",
     "15 minuti",
     "30 minuti",
     "Copia token",
@@ -17,6 +18,7 @@ test("organization diagnostics exposes the single explicit maintenance scope", a
     "Token mostrato una sola volta",
   ]) assert.match(html, new RegExp(value, "i"));
   assert.match(html, /value="PLANNING_COVERAGE_BACKFILL"/);
+  assert.match(html, /value="WORKFORCE_OPERATIONAL_CYCLE_BACKFILL"/);
   assert.doesNotMatch(html, /value="\*"/);
 });
 
