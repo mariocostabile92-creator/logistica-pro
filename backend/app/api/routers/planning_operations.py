@@ -22,6 +22,9 @@ from app.plugins.workforce.application.planning_adapter import (
     planning_conflicts,
     planning_contract,
 )
+from app.plugins.fleet.application.daily_capacity_service import (
+    daily_fleet_capacity,
+)
 
 
 router = APIRouter(prefix="/api/planning/operations", tags=["planning-operations"])
@@ -57,6 +60,27 @@ def snapshot(
     )
     payload["workforce"] = workforce_input
     payload["coverage"] = workforce_input["coverage"]
+    planning_station = (
+        str(payload["planning"].get("station") or "").strip() or None
+        if payload.get("planning")
+        else None
+    )
+    payload["fleet_capacity"] = daily_fleet_capacity(
+        organization_id=str(user.organization_id),
+        operational_date=day,
+        requested_station=planning_station,
+        route_assignments_available=bool(payload["route_data_available"]),
+        assigned_vehicles=(
+            int(payload["summary"].get("vehicles_assigned") or 0)
+            if payload["route_data_available"]
+            else None
+        ),
+        routes_without_vehicle=(
+            sum(not bool(route.get("plate")) for route in payload["routes"])
+            if payload["route_data_available"]
+            else None
+        ),
+    ).model_dump(mode="json")
     coverage_summary = workforce_input["coverage"]["summary"]
     payload["summary"]["routes_forecast"] = (
         coverage_summary["forecast_total"]

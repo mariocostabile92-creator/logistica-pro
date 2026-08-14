@@ -20,6 +20,9 @@ from app.plugins.workforce.application.availability_service import (
     foundation_snapshot,
 )
 from app.plugins.workforce.application.coverage_service import daily_coverage
+from app.plugins.fleet.application.daily_capacity_service import (
+    daily_fleet_capacity,
+)
 
 
 def _now() -> str:
@@ -129,12 +132,44 @@ def daily_operations_snapshot(
 
     fleet_fetched_at = _now()
     fleet_assets: list[dict] = []
+    fleet_capacity = None
     try:
+        fleet_capacity = daily_fleet_capacity(
+            organization_id=organization_id,
+            operational_date=day,
+            requested_station=(
+                str(planning_snapshot["planning"].get("station") or "").strip()
+                or None
+                if planning_snapshot
+                else None
+            ),
+            route_assignments_available=bool(planning_snapshot),
+            assigned_vehicles=(
+                sum(
+                    bool(item.get("plate"))
+                    for item in planning_snapshot.get("assignments", [])
+                )
+                if planning_snapshot
+                else None
+            ),
+            routes_without_vehicle=(
+                sum(
+                    not bool(item.get("plate"))
+                    for item in planning_snapshot.get("assignments", [])
+                )
+                if planning_snapshot
+                else None
+            ),
+        )
         if planning_snapshot:
             fleet_assets = repository.compact_fleet_assets(organization_id)
         sources["fleet"] = _source(
             available=True,
-            status=("available" if planning_snapshot else "not_required"),
+            status=(
+                "available"
+                if fleet_capacity.total_vehicles
+                else "no_data"
+            ),
             fetched_at=fleet_fetched_at,
         )
     except Exception as exc:
@@ -309,6 +344,11 @@ def daily_operations_snapshot(
         planning_status=planning_status,
         counts=counts,
         coverage=coverage_items,
+        fleet_capacity=(
+            fleet_capacity.model_dump(mode="json")
+            if fleet_capacity is not None
+            else None
+        ),
         warnings=[*bridge_warnings, *coverage_warnings],
         rows=operational.rows,
         signals=[*built_signals, *operational.signals],

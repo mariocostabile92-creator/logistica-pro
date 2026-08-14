@@ -1,5 +1,5 @@
 import { planningOperationsApi } from "./api.js";
-import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=forecast2";
+import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=fleet1";
 import { filteredRoutes, planningOperationsState as state } from "./state.js";
 import { userMessageForError } from "../../utils/errors.js";
 import {
@@ -239,10 +239,17 @@ function openWorkforcePlanning() {
   }));
 }
 
+function openFleet() {
+  document.dispatchEvent(new CustomEvent("workspace:navigate", {
+    detail: { view: "fleet" },
+  }));
+}
+
 async function handleClick(event) {
   if (event.target.closest("[data-open-planning-forecast]")) { openForecastEditor(); return; }
   if (event.target.closest("[data-close-planning-forecast]")) { closeForecastEditor(); return; }
   if (event.target.closest("[data-open-workforce-planning]")) { openWorkforcePlanning(); return; }
+  if (event.target.closest("[data-open-fleet]")) { openFleet(); return; }
   const selectedDay = event.target.closest("[data-planning-select-date]");
   if (selectedDay) { await selectOperationalDate(selectedDay.dataset.planningSelectDate); return; }
   const dayJump = event.target.closest("[data-planning-day-jump]");

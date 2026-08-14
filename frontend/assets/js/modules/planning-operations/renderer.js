@@ -9,6 +9,7 @@ import {
 } from "./day-navigation.js?v=day1";
 import { escapeHtml } from "../../utils/dom.js";
 import { planningDriverOptions } from "../workforce-consecutivity/planning-adapter.js";
+import { renderFleetCapacity } from "./fleet-capacity.js?v=1";
 
 export function renderOperationsLoading(root) {
   root.innerHTML = `<section class="planning-ops-loading" aria-label="Caricamento Piano operativo">
@@ -43,7 +44,7 @@ export function renderOperations(root, payload, routes, dayState = {}) {
       editor: dayState.forecastEditor,
     })}
     <section class="planning-ops-panel planning-routes-panel"><header><div><p class="eyebrow">Superficie operativa</p><h3>Rotte definitive</h3></div><span>${routeCount}</span></header><div data-planning-routes>${routesState}</div></section>
-    <section class="planning-ops-panel planning-vehicles-state"><header><div><p class="eyebrow">Fleet input</p><h3>Mezzi</h3></div><strong>${payload.vehicle_assignments_available ? `${payload.summary.vehicles_assigned} assegnati` : "Non disponibili"}</strong></header>${payload.vehicle_assignments_available ? "" : '<p class="planning-ops-empty planning-source-empty"><strong>Mezzi non ancora assegnati</strong><span>Le assegnazioni saranno mostrate solo quando esisteranno dati route-level reali.</span></p>'}</section>
+    ${renderFleetCapacity(payload.fleet_capacity)}
     <section class="planning-ops-panel planning-publication"><header><div><p class="eyebrow">Lifecycle</p><h3>Conferma e pubblicazione</h3></div></header>
       <dl><div><dt>Rotte</dt><dd>${unavailable(payload.summary.routes_definitive)}</dd></div><div><dt>Incomplete</dt><dd>${unavailable(payload.summary.routes_incomplete)}</dd></div><div><dt>Conflitti bloccanti</dt><dd>${unavailable(payload.summary.blocking_conflicts)}</dd></div><div><dt>Convocazioni pronte</dt><dd>${unavailable(payload.summary.convocations_ready)}</dd></div></dl>
       <p class="planning-lifecycle-scope">Queste azioni riguardano esclusivamente ${operationLabel}.</p>

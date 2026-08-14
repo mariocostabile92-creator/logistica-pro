@@ -33,6 +33,7 @@ class PlanningOperationResponse(BaseModel):
     forecast: dict[str, object] | None = None
     workforce: dict[str, object]
     coverage: dict[str, object]
+    fleet_capacity: dict[str, object]
     route_data_available: bool = False
     vehicle_assignments_available: bool = False
     readiness: dict[str, object]

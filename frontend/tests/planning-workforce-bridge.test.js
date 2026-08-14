@@ -87,7 +87,8 @@ test("missing route and vehicle sources are described without fake zeroes", () =
   const root = { innerHTML: "" };
   renderOperations(root, payload, []);
   assert.match(root.innerHTML, /Rotte definitive non ancora importate/);
-  assert.match(root.innerHTML, /Mezzi non ancora assegnati/);
+  assert.match(root.innerHTML, /Fleet non disponibile/);
+  assert.doesNotMatch(root.innerHTML, /Fabbisogno mezzi<\/dt><dd>0/);
   assert.match(root.innerHTML, /Il Forecast Amazon è un conteggio/);
 });
 

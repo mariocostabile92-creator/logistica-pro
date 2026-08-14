@@ -86,6 +86,23 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 .planning-forecast-editor > footer button { min-height: 44px; }
 .planning-source-empty { display: grid; gap: 6px; }
 .planning-source-empty strong { color: var(--text); font-size: 16px; }
+.planning-fleet-capacity { display: grid; gap: 14px; }
+.planning-fleet-capacity > header { margin-bottom: 0; }
+.planning-fleet-capacity > header button { min-height: 44px; }
+.planning-fleet-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.planning-fleet-metrics article { display: grid; gap: 3px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: #f7faf8; }
+.planning-fleet-metrics article.is-positive { border-color: #b9dccc; background: #edf8f3; }
+.planning-fleet-metrics strong { font-size: 24px; }
+.planning-fleet-metrics span, .planning-fleet-assignments span, .planning-fleet-assignments small { color: var(--text-muted); font-size: 12px; }
+.planning-fleet-capacity-message { display: grid; gap: 3px; padding: 12px 14px; border-left: 4px solid #6f817b; background: #f3f6f5; }
+.planning-fleet-capacity-message span { color: var(--text-muted); font-size: 12px; }
+.planning-fleet-capacity[data-fleet-capacity-state="shortage"] .planning-fleet-capacity-message { border-left-color: var(--danger); background: var(--critical-bg); }
+.planning-fleet-capacity[data-fleet-capacity-state="sufficient"] .planning-fleet-capacity-message { border-left-color: var(--accent); background: var(--stable-bg); }
+.planning-fleet-assignments { display: grid; grid-template-columns: minmax(190px, 1fr) auto; align-items: center; gap: 3px 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; }
+.planning-fleet-assignments strong { text-align: right; }
+.planning-fleet-assignments small { grid-column: 1 / -1; }
+.planning-fleet-assignments.is-waiting { background: #f8faf9; }
+.planning-fleet-source { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
 .planning-lifecycle-reason { margin: 12px 0 0; color: var(--text-muted); font-size: 13px; text-align: right; }
 .planning-lifecycle-scope { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; text-align: right; }
 .planning-week-summary { border: 1px solid var(--border); border-radius: 13px; background: var(--surface); }
@@ -137,6 +154,7 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
   .planning-route-card { grid-template-columns: minmax(130px,.55fr) minmax(280px,1.3fr) minmax(170px,.8fr); }
   .planning-route-actions { grid-column: 1 / -1; }
   .planning-workforce-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .planning-fleet-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
@@ -170,6 +188,11 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
   .planning-forecast-editor > footer button { width: 100%; }
   .planning-workforce-input > header { align-items: stretch; }
   .planning-workforce-input > header button { min-height: 44px; }
+  .planning-fleet-capacity > header { align-items: stretch; flex-direction: column; }
+  .planning-fleet-capacity > header button { width: 100%; }
+  .planning-fleet-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .planning-fleet-assignments { grid-template-columns: 1fr; }
+  .planning-fleet-assignments strong { text-align: left; }
   .planning-lifecycle-reason { text-align: left; }
   .planning-lifecycle-scope { text-align: left; }
   .planning-week-summary dl { grid-template-columns: 1fr 1fr; }

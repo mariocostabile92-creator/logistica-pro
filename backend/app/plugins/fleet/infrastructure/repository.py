@@ -413,6 +413,30 @@ def list_assets() -> list[Asset]:
         ]
 
 
+def availability_counts(
+    organization_id: str,
+) -> tuple[list[dict[str, object]], str | None]:
+    """Aggregate canonical Fleet availability in one organization-scoped query."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT availability, COUNT(1) AS count,
+                   MAX(updated_at) AS observed_at
+            FROM fleet_assets
+            WHERE organization_id = ?
+            GROUP BY availability
+            ORDER BY availability
+            """,
+            (organization_id,),
+        ).fetchall()
+    values = [dict(row) for row in rows]
+    observed_at = max(
+        (str(row["observed_at"]) for row in values if row.get("observed_at")),
+        default=None,
+    )
+    return values, observed_at
+
+
 def get_asset(asset_id: int) -> Asset | None:
     with db_session() as conn:
         return _get_asset_in_session(conn, asset_id, current_organization_id())

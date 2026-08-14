@@ -176,6 +176,7 @@ class DailyOperationsSnapshot(BaseModel):
     planning_status: str = "no_data"
     counts: DailyOperationsCounts = Field(default_factory=DailyOperationsCounts)
     coverage: list[CoverageProjection] = Field(default_factory=list)
+    fleet_capacity: dict[str, object] | None = None
     warnings: list[DailyOperationsWarning] = Field(default_factory=list)
     rows: list[OperationalRow] = Field(default_factory=list)
     signals: list[OperationalSignal] = Field(default_factory=list)

@@ -36,6 +36,22 @@ function payload(operationDate = "2026-08-14", overrides = {}) {
     summary: { routes_forecast: 277, requirement: 305, drivers_planned: 78, requirement_gap: 229, routes_definitive: null, vehicles_assigned: null, conflicts: null, routes_incomplete: null, blocking_conflicts: null, convocations_ready: null },
     workforce: { operation_date: operationDate, summary: { planned: 78, available: 78, absent: 1, next_day: 47, same_day: 31, not_set: 0 }, coverage, drivers: [] },
     coverage,
+    fleet_capacity: {
+      operational_date: operationDate,
+      requested_station: null,
+      station_scope_applied: false,
+      total_vehicles: 158,
+      available_vehicles: 124,
+      unavailable_vehicles: 28,
+      maintenance_vehicles: 1,
+      blocked_vehicles: 5,
+      unknown_vehicles: 0,
+      vehicle_need: null,
+      margin: null,
+      route_assignments_available: false,
+      assigned_vehicles: null,
+      routes_without_vehicle: null,
+    },
     routes: [],
     route_data_available: false,
     vehicle_assignments_available: false,
@@ -109,10 +125,12 @@ test("route import CTA names the selected day", () => {
   assert.match(root.innerHTML, /Importa rotte del .*14 agosto/i);
 });
 
-test("vehicles remain selected-day facts and never become a weekly aggregate", () => {
+test("Fleet capacity remains selected-day context and route assignment stays separate", () => {
   const root = { innerHTML: "" };
   renderOperations(root, payload(), [], { weekPayloads: new Map() });
-  assert.match(root.innerHTML, /Mezzi non ancora assegnati/);
+  assert.match(root.innerHTML, /Capacità flotta/);
+  assert.match(root.innerHTML, /124<\/strong><span>Disponibili/);
+  assert.match(root.innerHTML, /In attesa delle rotte definitive/);
   assert.doesNotMatch(root.innerHTML, /Mezzi settimana/);
 });
 
