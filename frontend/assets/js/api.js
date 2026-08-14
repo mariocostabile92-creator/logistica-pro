@@ -1009,8 +1009,11 @@ export async function createWorkforceConsecutivityOverride(payload) {
 }
 
 
-export async function getPlanningOperations({ signal } = {}) {
-  return parseResponse(await fetch(`${API_BASE}/api/planning/operations`, { signal }));
+export async function getPlanningOperations({ operationDate, signal } = {}) {
+  const params = new URLSearchParams();
+  if (operationDate) params.set("operation_date", operationDate);
+  const query = params.size ? `?${params.toString()}` : "";
+  return parseResponse(await fetch(`${API_BASE}/api/planning/operations${query}`, { signal }));
 }
 
 

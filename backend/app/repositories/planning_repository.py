@@ -143,6 +143,20 @@ def get_latest_planning_record() -> dict[str, Any] | None:
     return _record_from_row(row) if row else None
 
 
+def get_planning_record_for_date(operation_date: str) -> dict[str, Any] | None:
+    organization_id = current_organization_id()
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT * FROM plannings
+            WHERE organization_id = ? AND operation_date = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (organization_id, operation_date),
+        ).fetchone()
+    return _record_from_row(row) if row else None
+
+
 def update_planning_record(
     planning: OperationalPlanning,
     summary: PlanningSummary,

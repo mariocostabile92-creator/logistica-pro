@@ -17,8 +17,9 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 .planning-ops-hero dt { color: #b8d3cc; font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .planning-ops-hero dd { margin: 4px 0 0; font-weight: 750; overflow-wrap: anywhere; }
 .planning-ops-status { display: inline-flex; padding: 3px 9px; border-radius: 999px; background: #d7f5e7; color: #174738; }
+.planning-operation-date { width: 100%; min-height: 38px; border-color: rgba(255,255,255,.35); background: rgba(255,255,255,.95); color: #173d35; font-weight: 750; }
 .planning-ops-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.planning-ops-kpis button { display: grid; gap: 3px; justify-items: start; padding: 16px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); color: inherit; text-align: left; box-shadow: none; }
+.planning-ops-kpis button, .planning-ops-kpis article { display: grid; gap: 3px; justify-items: start; padding: 16px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); color: inherit; text-align: left; box-shadow: none; }
 .planning-ops-kpis button:hover { border-color: #5a8d80; background: #f7fbf9; }
 .planning-ops-kpis strong { font-size: 25px; }
 .planning-ops-kpis span { color: var(--text-muted); font-size: 13px; }
@@ -29,6 +30,21 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 .planning-ops-panel { padding: 18px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); }
 .planning-ops-panel > header { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 14px; }
 .planning-ops-panel h3 { margin: 3px 0 0; }
+.planning-workforce-summary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.planning-workforce-summary span { display: grid; gap: 2px; padding: 10px; border-radius: 9px; background: #f4f8f6; color: var(--text-muted); font-size: 12px; }
+.planning-workforce-summary strong { color: var(--text); font-size: 20px; }
+.planning-coverage-buckets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.planning-coverage-buckets > article { padding: 14px; border: 1px solid var(--border); border-radius: 11px; background: #f8faf9; }
+.planning-coverage-buckets article > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.planning-coverage-buckets h4 { margin: 0; }
+.planning-coverage-buckets header span { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.planning-coverage-buckets dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 13px 0 0; }
+.planning-coverage-buckets dl div { padding: 8px; border-radius: 8px; background: #fff; }
+.planning-coverage-buckets dt { color: var(--text-muted); font-size: 11px; }
+.planning-coverage-buckets dd { margin: 3px 0 0; font-size: 18px; font-weight: 800; }
+.planning-source-empty { display: grid; gap: 6px; }
+.planning-source-empty strong { color: var(--text); font-size: 16px; }
+.planning-lifecycle-reason { margin: 12px 0 0; color: var(--text-muted); font-size: 13px; text-align: right; }
 .planning-forecast-days { display: grid; grid-template-columns: repeat(7, minmax(105px, 1fr)); gap: 8px; overflow-x: auto; padding-bottom: 3px; }
 .planning-forecast-days article { display: grid; gap: 4px; padding: 12px; border-radius: 10px; background: #f4f8f6; }
 .planning-forecast-days time, .planning-forecast-days span { color: var(--text-muted); font-size: 12px; }
@@ -66,6 +82,7 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
   .planning-ops-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .planning-route-card { grid-template-columns: minmax(130px,.55fr) minmax(280px,1.3fr) minmax(170px,.8fr); }
   .planning-route-actions { grid-column: 1 / -1; }
+  .planning-workforce-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
@@ -83,6 +100,10 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
   .planning-route-assignments, .planning-route-actions { grid-template-columns: 1fr; }
   .planning-route-card > header, .planning-ops-panel > header { align-items: start; }
   .planning-publication > div { display: grid; }
+  .planning-workforce-summary, .planning-coverage-buckets { grid-template-columns: 1fr; }
+  .planning-workforce-input > header { align-items: stretch; }
+  .planning-workforce-input > header button { min-height: 44px; }
+  .planning-lifecycle-reason { text-align: left; }
 }
 
 .planning-workspace {

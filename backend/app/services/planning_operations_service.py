@@ -4,8 +4,8 @@ from app.domain.planning_models import PlanningStatus
 from app.repositories.assignment_repository import get_assignments
 from app.repositories.import_repository import get_latest_import, save_import
 from app.repositories.planning_repository import (
-    get_latest_planning_record,
     get_planning_record,
+    get_planning_record_for_date,
     list_versions,
     save_version,
     update_planning_record,
@@ -146,27 +146,47 @@ def update_convocation(
     )
 
 
-def operational_snapshot(*, can_write: bool, is_admin: bool) -> dict[str, object]:
-    record = get_latest_planning_record()
+def operational_snapshot(
+    *,
+    operation_date: str,
+    can_write: bool,
+    is_admin: bool,
+) -> dict[str, object]:
+    record = get_planning_record_for_date(operation_date)
     forecast = forecast_snapshot()
     if not record:
+        legacy_expected = next(
+            (
+                row["routes_expected"]
+                for row in (forecast or {}).get("days", [])
+                if row["operation_date"] == operation_date
+            ),
+            None,
+        )
         return {
+            "operation_date": operation_date,
             "planning": None,
             "summary": {
-                "routes_forecast": sum(
-                    row["routes_expected"] for row in (forecast or {}).get("days", [])
-                ),
-                "routes_definitive": 0,
-                "drivers_assigned": 0,
-                "vehicles_assigned": 0,
-                "routes_complete": 0,
-                "routes_incomplete": 0,
-                "conflicts": 0,
-                "convocations_ready": 0,
+                "routes_forecast": legacy_expected,
+                "routes_definitive": None,
+                "drivers_assigned": None,
+                "vehicles_assigned": None,
+                "routes_complete": None,
+                "routes_incomplete": None,
+                "conflicts": None,
+                "blocking_conflicts": None,
+                "convocations_ready": None,
             },
             "routes": [], "conflicts": [], "convocations": [],
             "forecast": forecast,
-            "lifecycle": {"state": "no_plan", "can_confirm": False, "can_publish": False},
+            "route_data_available": False,
+            "vehicle_assignments_available": False,
+            "lifecycle": {
+                "state": "routes_missing",
+                "can_confirm": False,
+                "can_publish": False,
+                "disabled_reason": "Importa le rotte definitive per attivare conferma e pubblicazione.",
+            },
             "audit": [],
             "permissions": {"write": can_write, "diagnostics": is_admin},
         }
@@ -194,6 +214,7 @@ def operational_snapshot(*, can_write: bool, is_admin: bool) -> dict[str, object
         expected = next((row["routes_expected"] for row in forecast["days"] if row["operation_date"] == planning.operation_date), 0)
     status = planning.status.value
     return {
+        "operation_date": operation_date,
         "planning": planning.model_dump(mode="json"),
         "summary": {
             "routes_forecast": expected,
@@ -210,10 +231,13 @@ def operational_snapshot(*, can_write: bool, is_admin: bool) -> dict[str, object
         "conflicts": [item.model_dump(mode="json") for item in bundle.conflicts],
         "convocations": convocations,
         "forecast": forecast,
+        "route_data_available": True,
+        "vehicle_assignments_available": True,
         "lifecycle": {
             "state": status,
             "can_confirm": complete == len(routes) and blocking == 0 and bool(routes) and status not in {"confirmed", "published"},
             "can_publish": status == "confirmed",
+            "disabled_reason": None,
         },
         "audit": list_versions(planning.id)[-20:][::-1],
         "permissions": {"write": can_write, "diagnostics": is_admin},

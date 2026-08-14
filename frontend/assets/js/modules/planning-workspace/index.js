@@ -26,7 +26,7 @@ import {
   createPlanningConflictLoader,
   normalizePlanningConflictResult,
 } from "./conflicts.js";
-import { createPlanningWorkspaceLayout } from "./layout.js?v=5";
+import { createPlanningWorkspaceLayout } from "./layout.js?v=bridge1";
 import {
   readinessEventType,
 } from "./readiness.js";
@@ -45,6 +45,7 @@ import {
   normalizePlanningDraftWorkspace,
 } from "./draft.js";
 import { focusRelativeAction } from "./utils.js";
+import { openPlanningOperationsDate } from "../planning-operations/index.js?v=bridge1";
 
 
 let initialized = false;
@@ -579,6 +580,7 @@ function handleLegacyKeydown(event) {
 export async function openPlanningDate(planningDate) {
   const normalized = String(planningDate || "");
   if (!initialized || !/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return false;
+  await openPlanningOperationsDate(normalized);
   commit({ type: "load-started", planningDate: normalized });
   const diagnostics = refs.root.querySelector(".planning-advanced-diagnostics");
   diagnostics.dataset.loaded = "true";

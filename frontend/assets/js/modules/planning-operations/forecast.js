@@ -1,5 +1,28 @@
-export function renderForecast(forecast, definitiveDate, definitiveCount) {
-  if (!forecast) return `<section class="planning-ops-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon</h3></div></header><p class="planning-ops-empty">Nessun forecast disponibile.</p></section>`;
-  return `<section class="planning-ops-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon</h3></div><small>${forecast.source_filename} · ${new Date(forecast.updated_at).toLocaleString("it-IT")}</small></header>
-  <div class="planning-forecast-days">${forecast.days.map((day) => `<article><time>${new Date(`${day.operation_date}T12:00:00`).toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" })}</time><strong>${day.routes_expected}</strong><span>${day.operation_date === definitiveDate ? `${definitiveCount - day.routes_expected >= 0 ? "+" : ""}${definitiveCount - day.routes_expected} vs definitivo` : "rotte previste"}</span></article>`).join("")}</div></section>`;
+const BUCKETS = [
+  ["NEXT_DAY", null, "Next Day"],
+  ["SAME_DAY", "A", "Same Day A"],
+  ["SAME_DAY", "B_C", "Same Day B-C"],
+];
+
+const value = (item, key) => item?.[key] ?? "—";
+
+export function renderForecast(coverage) {
+  const items = coverage?.items || [];
+  if (!coverage?.available) {
+    return `<section class="planning-ops-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon</h3></div></header><p class="planning-ops-empty">Forecast non disponibile per la data selezionata.</p></section>`;
+  }
+  return `<section class="planning-ops-panel planning-coverage-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon e copertura</h3></div><small>Fonte: Coverage Workforce</small></header>
+  <div class="planning-coverage-buckets">${BUCKETS.map(([cycle, segment, label]) => {
+    const item = items.find((entry) => entry.cycle === cycle && entry.segment === segment);
+    const status = item?.status === "REQUIREMENT_COVERED"
+      ? "Coperto"
+      : item?.status === "NO_FORECAST" ? "Forecast assente" : "Da coprire";
+    return `<article><header><h4>${label}</h4><span>${status}</span></header><dl>
+      <div><dt>Forecast</dt><dd>${value(item, "forecast")}</dd></div>
+      <div><dt>Requirement +10%</dt><dd>${value(item, "requirement")}</dd></div>
+      <div><dt>Assegnati</dt><dd>${value(item, "assigned")}</dd></div>
+      <div><dt>Gap requirement</dt><dd>${value(item, "requirement_gap")}</dd></div>
+      <div><dt>Scorta</dt><dd>${value(item, "reserve")}</dd></div>
+    </dl></article>`;
+  }).join("")}</div></section>`;
 }

@@ -30,7 +30,7 @@ def _generated(routes=2, drivers=2, vehicles=2):
 
 def test_operational_snapshot_uses_real_assignments_and_convocations():
     generated = _generated()
-    response = client.get("/api/planning/operations")
+    response = client.get("/api/planning/operations?operation_date=2026-08-03")
     assert response.status_code == 200
     payload = response.json()
     assert payload["summary"]["routes_definitive"] == 2
@@ -42,7 +42,7 @@ def test_operational_snapshot_uses_real_assignments_and_convocations():
     assert "callable" in payload["workforce"]["summary"]
 
 
-def test_forecast_remains_distinct_from_definitive_routes():
+def test_legacy_forecast_remains_distinct_but_is_not_the_canonical_kpi():
     _generated()
     response = client.post(
         "/api/planning/operations/forecast",
@@ -56,9 +56,9 @@ def test_forecast_remains_distinct_from_definitive_routes():
         },
     )
     assert response.status_code == 200
-    payload = client.get("/api/planning/operations").json()
+    payload = client.get("/api/planning/operations?operation_date=2026-08-03").json()
     assert len(payload["forecast"]["days"]) == 7
-    assert payload["summary"]["routes_forecast"] == 73
+    assert payload["summary"]["routes_forecast"] is None
     assert payload["summary"]["routes_definitive"] == 2
 
 
@@ -72,7 +72,7 @@ def test_convocation_update_is_persisted_and_audited():
     )
     assert response.status_code == 200
     assert response.json()["scheduled_time"] == "08:15"
-    payload = client.get("/api/planning/operations").json()
+    payload = client.get("/api/planning/operations?operation_date=2026-08-03").json()
     assert payload["summary"]["convocations_ready"] == 1
     assert payload["audit"][0]["change_type"] == "convocation_updated"
 
@@ -90,7 +90,7 @@ def test_operational_lifecycle_confirms_then_publishes():
     )
     assert published.status_code == 200
     assert published.json()["status"] == "published"
-    snapshot = client.get("/api/planning/operations").json()
+    snapshot = client.get("/api/planning/operations?operation_date=2026-08-03").json()
     assert snapshot["lifecycle"]["state"] == "published"
 
 
@@ -118,7 +118,7 @@ def test_isolated_qa_day_exposes_78_routes_and_73_complete():
             f"/api/planning/assignments/{assignment['id']}",
             json={"plate": plate},
         ).status_code == 200
-    payload = client.get("/api/planning/operations").json()
+    payload = client.get("/api/planning/operations?operation_date=2026-08-03").json()
     assert payload["summary"]["routes_definitive"] == 78
     assert payload["summary"]["drivers_assigned"] == 75
     assert payload["summary"]["vehicles_assigned"] == 76
@@ -142,7 +142,7 @@ def _role_client(role: Role):
 def test_viewer_reads_planning_but_cannot_mutate_it():
     _generated()
     viewer = _role_client(Role.VIEWER)
-    snapshot = viewer.get("/api/planning/operations")
+    snapshot = viewer.get("/api/planning/operations?operation_date=2026-08-03")
     assert snapshot.status_code == 200
     assert snapshot.json()["permissions"]["write"] is False
     mutation = viewer.post(
@@ -159,7 +159,7 @@ def test_viewer_reads_planning_but_cannot_mutate_it():
 def test_dispatcher_can_manage_operational_planning():
     _generated()
     dispatcher = _role_client(Role.DISPATCHER)
-    snapshot = dispatcher.get("/api/planning/operations")
+    snapshot = dispatcher.get("/api/planning/operations?operation_date=2026-08-03")
     assert snapshot.status_code == 200
     assert snapshot.json()["permissions"]["write"] is True
     mutation = dispatcher.post(

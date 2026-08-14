@@ -90,7 +90,7 @@ test("Planning and Workforce expose finite first-paint promises", async () => {
     source("assets/js/modules/planning-workspace/layout.js"),
     source("assets/js/modules/workforce-page.js"),
   ]);
-  assert.match(operations, /initialLoadPromise = load\(\);[\s\S]*return initialLoadPromise;/);
+  assert.match(operations, /initialLoadPromise = load\(state\.operationDate\);[\s\S]*return initialLoadPromise;/);
   assert.match(layout, /const operationsReady = initPlanningOperations\(operations\)/);
   assert.match(planning, /firstPaintPromise = Promise\.resolve\(refs\.operationsReady\)/);
   assert.match(workforce, /export function prepareWorkforceFirstPaint\(\)[\s\S]*firstPaintPromise = refresh\(\)\.finally/);

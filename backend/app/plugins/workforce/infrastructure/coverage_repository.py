@@ -2,6 +2,9 @@ from collections.abc import Sequence
 from typing import Any
 
 from app.core.database import db_session
+from app.plugins.workforce.domain.operational_status import (
+    NON_OPERATIONAL_STATUS_CODES,
+)
 from app.plugins.workforce.domain.coverage import (
     DailyCoverageRequirement,
     ImportedDailyCoverageRequirement,
@@ -167,9 +170,11 @@ def assigned_driver_groups(
     date_from: str,
     date_to: str,
 ) -> list[dict[str, object]]:
+    excluded_statuses = sorted(NON_OPERATIONAL_STATUS_CODES)
+    status_placeholders = ",".join("?" for _ in excluded_statuses)
     with db_session() as conn:
         rows = conn.execute(
-            """
+            f"""
             SELECT ds.date, m.operational_cycle, m.station,
                    UPPER(TRIM(ds.shift_code)) AS shift_code,
                    COUNT(*) AS assigned
@@ -179,12 +184,14 @@ def assigned_driver_groups(
              AND m.organization_id = ds.organization_id
             WHERE ds.organization_id = ?
               AND ds.date >= ? AND ds.date <= ?
-              AND ds.availability = 1
-              AND ds.shift_code IS NOT NULL
+                AND ds.availability = 1
+                AND ds.shift_code IS NOT NULL
+                AND LOWER(TRIM(COALESCE(ds.status_code, 'unknown')))
+                    NOT IN ({status_placeholders})
             GROUP BY ds.date, m.operational_cycle, m.station,
                      UPPER(TRIM(ds.shift_code))
-            """,
-            (organization_id, date_from, date_to),
+              """,
+              (organization_id, date_from, date_to, *excluded_statuses),
         ).fetchall()
     return [
         {

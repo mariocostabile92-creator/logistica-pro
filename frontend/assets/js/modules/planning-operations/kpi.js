@@ -1,15 +1,18 @@
 const KPI = [
-  ["routes_forecast", "Rotte previste", "all"],
+  ["routes_forecast", "Forecast Amazon", null],
+  ["requirement", "Requirement +10%", null],
+  ["drivers_planned", "Driver pianificati", null],
   ["routes_definitive", "Rotte definitive", "all"],
-  ["drivers_assigned", "Driver assegnati", "missing-driver"],
   ["vehicles_assigned", "Mezzi assegnati", "missing-vehicle"],
-  ["routes_complete", "Rotte complete", "complete"],
-  ["routes_incomplete", "Da completare", "missing-driver"],
+  ["requirement_gap", "Gap requirement", null],
   ["conflicts", "Conflitti", "conflict"],
-  ["convocations_ready", "Convocazioni pronte", "convocation"],
 ];
 
 export function renderKpis(summary) {
-  return `<section class="planning-ops-kpis" aria-label="Indicatori del piano">${KPI.map(([key, label, filter]) => `
-    <button type="button" data-planning-filter="${filter}"><strong>${summary[key] ?? 0}</strong><span>${label}</span></button>`).join("")}</section>`;
+  return `<section class="planning-ops-kpis" aria-label="Indicatori del piano">${KPI.map(([key, label, filter]) => {
+    const value = summary[key] ?? "—";
+    return filter
+      ? `<button type="button" data-planning-filter="${filter}"><strong>${value}</strong><span>${label}</span></button>`
+      : `<article><strong>${value}</strong><span>${label}</span></article>`;
+  }).join("")}</section>`;
 }

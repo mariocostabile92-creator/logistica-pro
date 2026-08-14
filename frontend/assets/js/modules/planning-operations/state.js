@@ -1,5 +1,6 @@
 export const planningOperationsState = {
   payload: null,
+  operationDate: null,
   query: "",
   filter: "all",
 };

@@ -11,10 +11,14 @@ from app.plugins.dsp_workspace.domain.models import (
     WorkforceProjection,
 )
 from app.plugins.workforce.domain.coverage import DailyCoverageResponse
+from app.plugins.workforce.domain.operational_status import (
+    ABSENCE_STATUS_CODES,
+    NON_OPERATIONAL_STATUS_CODES,
+)
 
 
-ABSENCE_STATUSES = frozenset({"holiday", "sickness", "leave", "unavailable"})
-NON_OPERATIONAL_STATUSES = ABSENCE_STATUSES | frozenset({"rest", "unknown"})
+ABSENCE_STATUSES = ABSENCE_STATUS_CODES
+NON_OPERATIONAL_STATUSES = NON_OPERATIONAL_STATUS_CODES
 
 
 @dataclass(frozen=True)

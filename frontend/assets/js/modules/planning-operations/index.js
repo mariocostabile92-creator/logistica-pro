@@ -1,25 +1,45 @@
 import { planningOperationsApi } from "./api.js";
-import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=brand2";
+import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=bridge1";
 import { filteredRoutes, planningOperationsState as state } from "./state.js";
 import { userMessageForError } from "../../utils/errors.js";
 
 let root;
 let initialLoadPromise = null;
-async function load() {
+let loadSequence = 0;
+
+function today() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function syncDateUrl(operationDate) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("planning_date", operationDate);
+  history.replaceState(history.state, "", url);
+}
+
+async function load(operationDate = state.operationDate || today()) {
+  const sequence = ++loadSequence;
+  state.operationDate = operationDate;
   root.setAttribute("aria-busy", "true");
   try {
-    state.payload = await planningOperationsApi.load({});
+    const payload = await planningOperationsApi.load({ operationDate });
+    if (sequence !== loadSequence) return;
+    state.payload = payload;
+    state.operationDate = payload.operation_date;
     renderOperations(root, state.payload, filteredRoutes(state));
     const diagnostics = root.closest(".planning-workspace-shell")?.querySelector(".planning-advanced-diagnostics");
     if (diagnostics) diagnostics.hidden = !state.payload.permissions.diagnostics;
   } catch (error) {
+    if (sequence !== loadSequence) return;
     root.innerHTML = '<section class="planning-ops-error" role="alert"><h2>Planning non disponibile</h2><p data-planning-error></p><button type="button" data-planning-retry>Riprova</button></section>';
     root.querySelector("[data-planning-error]").textContent = userMessageForError(
       error,
       "Non è stato possibile caricare il Planning. Riprova.",
     );
   } finally {
-    root.setAttribute("aria-busy", "false");
+    if (sequence === loadSequence) root.setAttribute("aria-busy", "false");
   }
 }
 
@@ -56,6 +76,15 @@ function handleInput(event) {
 
 async function handleChange(event) {
   const target = event.target;
+  if (target.matches("[data-planning-operation-date]")) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(target.value)) return;
+    state.query = "";
+    state.filter = "all";
+    syncDateUrl(target.value);
+    await load(target.value);
+    document.dispatchEvent(new CustomEvent("planning:date-changed", { detail: { operationDate: target.value } }));
+    return;
+  }
   if (target.matches("[data-planning-filter-select]")) { state.filter = target.value; refreshRoutes(); return; }
   if (target.matches("[data-assignment-driver]")) await assignmentChange(target, "driver");
   if (target.matches("[data-assignment-vehicle]")) await assignmentChange(target, "vehicle");
@@ -78,7 +107,22 @@ async function handleChange(event) {
   }
 }
 
+function openWorkforcePlanning() {
+  const onViewChanged = (event) => {
+    if (event.detail?.view !== "workforce") return;
+    document.removeEventListener("workspace:view-changed", onViewChanged);
+    document.dispatchEvent(new CustomEvent("workforce:open-date", {
+      detail: { operationDate: state.operationDate },
+    }));
+  };
+  document.addEventListener("workspace:view-changed", onViewChanged);
+  document.dispatchEvent(new CustomEvent("workspace:navigate", {
+    detail: { view: "workforce" },
+  }));
+}
+
 async function handleClick(event) {
+  if (event.target.closest("[data-open-workforce-planning]")) { openWorkforcePlanning(); return; }
   const filter = event.target.closest("[data-planning-filter]");
   if (filter) { state.filter = filter.dataset.planningFilter; refreshRoutes(); return; }
   if (event.target.closest("[data-planning-retry]")) { await load(); return; }
@@ -97,6 +141,15 @@ export function initPlanningOperations(element) {
   root.addEventListener("change", handleChange);
   root.addEventListener("click", handleClick);
   renderOperationsLoading(root);
-  initialLoadPromise = load();
+  const requested = new URL(window.location.href).searchParams.get("planning_date");
+  state.operationDate = /^\d{4}-\d{2}-\d{2}$/.test(requested || "") ? requested : today();
+  initialLoadPromise = load(state.operationDate);
   return initialLoadPromise;
+}
+
+export async function openPlanningOperationsDate(operationDate) {
+  if (!root || !/^\d{4}-\d{2}-\d{2}$/.test(String(operationDate || ""))) return false;
+  syncDateUrl(operationDate);
+  await load(operationDate);
+  return true;
 }
