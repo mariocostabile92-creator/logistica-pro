@@ -1,6 +1,6 @@
 import { renderForecast } from "./forecast.js?v=forecast2";
 import { renderHero } from "./hero.js?v=day1";
-import { renderKpis } from "./kpi.js?v=2";
+import { renderKpis } from "./kpi.js?v=21";
 import { renderRoutes } from "./routes.js";
 import {
   formatOperationalDay,
@@ -9,7 +9,7 @@ import {
 } from "./day-navigation.js?v=day1";
 import { escapeHtml } from "../../utils/dom.js";
 import { planningDriverOptions } from "../workforce-consecutivity/planning-adapter.js";
-import { renderFleetCapacity } from "./fleet-capacity.js?v=2";
+import { renderFleetCapacity } from "./fleet-capacity.js?v=21";
 
 export function renderOperationsLoading(root) {
   root.innerHTML = `<section class="planning-ops-loading" aria-label="Caricamento Piano operativo">

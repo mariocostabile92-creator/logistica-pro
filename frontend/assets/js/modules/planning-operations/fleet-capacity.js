@@ -6,9 +6,9 @@ function metric(value) {
 }
 
 const BUCKET_LABELS = {
-  NEXT_DAY: "Next Day",
-  SAME_DAY_A: "Same Day A",
-  SAME_DAY_B_C: "Same Day B-C",
+  NEXT_DAY: "NEXT DAY",
+  SAME_DAY_A: "SAME DAY A",
+  SAME_DAY_B_C: "SAME DAY B-C",
 };
 
 
@@ -24,12 +24,22 @@ export function fleetCapacityMessage(snapshot) {
     return "Fabbisogno mezzi da configurare";
   }
   if (snapshot.vehicle_need_status === "PARTIAL") {
-    return `Almeno ${snapshot.vehicle_need} mezzi necessari`;
+    return snapshot.margin < 0
+      ? "Capacità Fleet già insufficiente"
+      : "Capacità Fleet sufficiente sul fabbisogno noto";
   }
   if (snapshot.margin < 0) {
-    return `Mancano ${Math.abs(snapshot.margin)} mezzi`;
+    return "Capacità Fleet insufficiente";
   }
   return "Capacità Fleet sufficiente";
+}
+
+
+export function fleetVehicleNeedMetric(snapshot) {
+  if (!snapshot || snapshot.vehicle_need === null) return "—";
+  return snapshot.vehicle_need_status === "PARTIAL"
+    ? `Almeno ${snapshot.vehicle_need}`
+    : String(snapshot.vehicle_need);
 }
 
 
@@ -41,13 +51,14 @@ export function fleetCapacityDetail(snapshot) {
     const missing = (snapshot.missing_requirement_buckets || [])
       .map((bucket) => BUCKET_LABELS[bucket] || bucket)
       .join(", ");
-    const margin = snapshot.margin === null
-      ? ""
-      : ` Margine sul fabbisogno noto: ${snapshot.margin > 0 ? "+" : ""}${snapshot.margin} mezzi.`;
-    return `${missing || "Un bucket"} ancora da configurare.${margin}`;
+    const missingDetail = `${missing || "Un bucket"} ancora da configurare.`;
+    if (snapshot.margin < 0) {
+      return `Mancano almeno ${Math.abs(snapshot.margin)} mezzi. ${missingDetail} Il deficit può aumentare quando verranno configurati i bucket mancanti.`;
+    }
+    return `+${snapshot.margin} margine sul fabbisogno noto. ${missingDetail} Il fabbisogno finale può aumentare: mancano ancora dati di Coverage.`;
   }
   if (snapshot.margin < 0) {
-    return "Il requirement operativo +10% supera i mezzi attualmente disponibili.";
+    return `Mancano ${Math.abs(snapshot.margin)} mezzi. Il requirement operativo +10% supera i mezzi attualmente disponibili.`;
   }
   return `+${snapshot.margin} mezzi di margine sul requirement operativo +10%.`;
 }
@@ -96,8 +107,8 @@ export function renderFleetCapacity(snapshot) {
       <article><strong>${snapshot.maintenance_vehicles}</strong><span>Manutenzione</span></article>
       <article><strong>${snapshot.blocked_vehicles}</strong><span>Bloccati / officina</span></article>
       <article><strong>${snapshot.unknown_vehicles}</strong><span>Da classificare</span></article>
-      <article><strong>${metric(snapshot.vehicle_need)}</strong><span>Fabbisogno mezzi</span></article>
-      <article><strong>${snapshot.margin === null ? "—" : snapshot.margin > 0 ? `+${snapshot.margin}` : snapshot.margin}</strong><span>Margine</span></article>
+      <article><strong>${fleetVehicleNeedMetric(snapshot)}</strong><span>Mezzi necessari</span></article>
+      <article><strong>${snapshot.margin === null ? "—" : snapshot.margin > 0 ? `+${snapshot.margin}` : snapshot.margin}</strong><span>${snapshot.vehicle_need_status === "PARTIAL" ? "Margine noto" : "Margine"}</span></article>
     </div>
     <div class="planning-fleet-capacity-message" role="status">
       ${snapshot.vehicle_need_status === "PARTIAL" ? '<small>Fabbisogno parziale</small>' : ""}

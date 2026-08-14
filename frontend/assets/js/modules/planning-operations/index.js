@@ -1,5 +1,5 @@
 import { planningOperationsApi } from "./api.js";
-import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=fleet2";
+import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=fleet21";
 import { filteredRoutes, planningOperationsState as state } from "./state.js";
 import { userMessageForError } from "../../utils/errors.js";
 import {

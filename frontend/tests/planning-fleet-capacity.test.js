@@ -4,8 +4,10 @@ import test from "node:test";
 
 import {
   fleetCapacityDate,
+  fleetCapacityDetail,
   fleetCapacityMessage,
   fleetCapacityTone,
+  fleetVehicleNeedMetric,
   renderFleetCapacity,
 } from "../assets/js/modules/planning-operations/fleet-capacity.js";
 import { renderKpis } from "../assets/js/modules/planning-operations/kpi.js";
@@ -48,12 +50,13 @@ test("Fleet capacity is visible without definitive routes", () => {
 test("unknown vehicle need never renders a fake zero", () => {
   const html = renderFleetCapacity(snapshot());
   assert.match(html, /Fabbisogno mezzi da configurare/);
-  assert.match(html, /<strong>—<\/strong><span>Fabbisogno mezzi/);
+  assert.match(html, /<strong>—<\/strong><span>Mezzi necessari/);
+  assert.equal(fleetVehicleNeedMetric(snapshot()), "—");
   assert.equal(fleetCapacityTone(snapshot()), "unknown");
 });
 
 
-test("authoritative need presentations support margin and shortage", () => {
+test("complete surplus is the only definitive sufficient state", () => {
   const sufficient = snapshot({
     vehicle_need: 120,
     vehicle_need_status: "COMPLETE",
@@ -61,14 +64,19 @@ test("authoritative need presentations support margin and shortage", () => {
   });
   assert.equal(fleetCapacityMessage(sufficient), "Capacità Fleet sufficiente");
   assert.equal(fleetCapacityTone(sufficient), "sufficient");
+  assert.equal(fleetVehicleNeedMetric(sufficient), "120");
   assert.match(renderFleetCapacity(sufficient), /<strong>\+4<\/strong><span>Margine/);
+});
 
+
+test("complete shortage is definitive and exposes the missing vehicles", () => {
   const shortage = snapshot({
     vehicle_need: 130,
     vehicle_need_status: "COMPLETE",
     margin: -6,
   });
-  assert.equal(fleetCapacityMessage(shortage), "Mancano 6 mezzi");
+  assert.equal(fleetCapacityMessage(shortage), "Capacità Fleet insufficiente");
+  assert.match(fleetCapacityDetail(shortage), /Mancano 6 mezzi/);
   assert.equal(fleetCapacityTone(shortage), "shortage");
 });
 
@@ -88,10 +96,34 @@ test("partial Coverage reports a minimum need and the missing bucket", () => {
   });
   const html = renderFleetCapacity(partial);
   assert.equal(fleetCapacityTone(partial), "partial");
-  assert.equal(fleetCapacityMessage(partial), "Almeno 42 mezzi necessari");
+  assert.equal(
+    fleetCapacityMessage(partial),
+    "Capacità Fleet sufficiente sul fabbisogno noto",
+  );
+  assert.equal(fleetVehicleNeedMetric(partial), "Almeno 42");
   assert.match(html, /Fabbisogno parziale/);
-  assert.match(html, /Next Day ancora da configurare/);
-  assert.match(html, /Margine sul fabbisogno noto: \+14 mezzi/);
+  assert.match(html, /<strong>Almeno 42<\/strong><span>Mezzi necessari/);
+  assert.match(html, /<strong>\+14<\/strong><span>Margine noto/);
+  assert.match(html, /NEXT DAY ancora da configurare/);
+  assert.match(html, /\+14 margine sul fabbisogno noto/);
+  assert.match(html, /Il fabbisogno finale può aumentare/);
+});
+
+
+test("partial shortage is already insufficient but may still worsen", () => {
+  const partial = snapshot({
+    available_vehicles: 56,
+    vehicle_need: 60,
+    vehicle_need_status: "PARTIAL",
+    missing_requirement_buckets: ["NEXT_DAY", "SAME_DAY_B_C"],
+    margin: -4,
+  });
+  const html = renderFleetCapacity(partial);
+  assert.equal(fleetCapacityMessage(partial), "Capacità Fleet già insufficiente");
+  assert.match(html, /Almeno 60/);
+  assert.match(html, /Mancano almeno 4 mezzi/);
+  assert.match(html, /NEXT DAY, SAME DAY B-C ancora da configurare/);
+  assert.match(html, /Il deficit può aumentare/);
 });
 
 
@@ -109,15 +141,16 @@ test("complete production-like Coverage exposes the real shortage", () => {
     margin: -63,
   });
   const html = renderFleetCapacity(complete);
-  assert.equal(fleetCapacityMessage(complete), "Mancano 63 mezzi");
+  assert.equal(fleetCapacityMessage(complete), "Capacità Fleet insufficiente");
   assert.equal(fleetCapacityTone(complete), "shortage");
+  assert.match(html, /Mancano 63 mezzi/);
   assert.match(html, /requirement operativo \+10% supera/);
   assert.doesNotMatch(html, /Fabbisogno parziale/);
+  assert.doesNotMatch(html, /ancora da configurare/);
 });
 
 
-test("top KPIs separate vehicle need, availability and route assignments", () => {
-  const html = renderKpis({
+const kpiSummary = {
     routes_forecast: 108,
     requirement: 119,
     drivers_planned: 117,
@@ -125,10 +158,29 @@ test("top KPIs separate vehicle need, availability and route assignments", () =>
     vehicles_assigned: 73,
     requirement_gap: 2,
     conflicts: 0,
-  }, snapshot({ vehicle_need: 119, available_vehicles: 56 }));
+};
+
+
+test("top KPIs render a numeric complete need and keep route assignments separate", () => {
+  const html = renderKpis(kpiSummary, snapshot({
+    vehicle_need: 119,
+    vehicle_need_status: "COMPLETE",
+    available_vehicles: 56,
+  }));
   assert.match(html, /<strong>119<\/strong><span>Mezzi necessari/);
   assert.match(html, /<strong>56<\/strong><span>Mezzi disponibili/);
   assert.match(html, /<strong>73<\/strong><span>Mezzi assegnati/);
+});
+
+
+test("top KPI renders a known partial need instead of an em dash", () => {
+  const html = renderKpis(kpiSummary, snapshot({
+    vehicle_need: 42,
+    vehicle_need_status: "PARTIAL",
+    available_vehicles: 56,
+  }));
+  assert.match(html, /<strong>Almeno 42<\/strong><span>Mezzi necessari/);
+  assert.doesNotMatch(html, /<strong>—<\/strong><span>Mezzi necessari/);
 });
 
 

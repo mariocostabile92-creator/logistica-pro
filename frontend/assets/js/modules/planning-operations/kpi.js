@@ -1,9 +1,12 @@
+import { fleetVehicleNeedMetric } from "./fleet-capacity.js?v=21";
+
+
 export function renderKpis(summary, fleetCapacity = null) {
   const kpis = [
     [summary.routes_forecast, "Forecast Amazon", null],
     [summary.requirement, "Requirement +10%", null],
     [summary.drivers_planned, "Driver pianificati", null],
-    [fleetCapacity?.vehicle_need, "Mezzi necessari", null],
+    [fleetVehicleNeedMetric(fleetCapacity), "Mezzi necessari", null],
     [fleetCapacity?.available_vehicles, "Mezzi disponibili", null],
     [summary.routes_definitive, "Rotte definitive", "all"],
     [summary.vehicles_assigned, "Mezzi assegnati", "missing-vehicle"],
