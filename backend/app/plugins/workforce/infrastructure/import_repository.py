@@ -7,6 +7,7 @@ from typing import Any
 from app.auth.tenant_context import current_organization_id
 from app.core.database import db_session
 from app.plugins.workforce.domain.models import WorkforceImportResult
+from app.plugins.workforce.domain.coverage import ForecastAuthorityStatus
 from app.plugins.workforce.importer.workbook_interpreter import (
     ParsedWorkforceWorkbook,
 )
@@ -825,6 +826,46 @@ def apply_import(
         )
 
         started = perf_counter()
+        authority_audits = []
+        rejected_count = sum(
+            item.authority_status
+            == ForecastAuthorityStatus.REJECTED_TEMPLATE.value
+            for item in parsed.coverage_requirements
+        )
+        suspect_count = sum(
+            item.authority_status
+            == ForecastAuthorityStatus.SUSPECT_TEMPLATE.value
+            for item in parsed.coverage_requirements
+        )
+        if rejected_count or suspect_count:
+            authority_audits.append(_audit_row(
+                entity_type="daily_coverage_import",
+                entity_id=0,
+                actor=actor,
+                before=None,
+                after={
+                    "fingerprint": parsed.fingerprint,
+                    "rejected_count": rejected_count,
+                    "suspect_count": suspect_count,
+                },
+                reason="forecast_template_detected",
+                source="workforce_import",
+                timestamp=now,
+            ))
+        if rejected_count:
+            authority_audits.append(_audit_row(
+                entity_type="daily_coverage_import",
+                entity_id=0,
+                actor=actor,
+                before=None,
+                after={
+                    "fingerprint": parsed.fingerprint,
+                    "rejected_count": rejected_count,
+                },
+                reason="forecast_template_rejected",
+                source="workforce_import",
+                timestamp=now,
+            ))
         _executemany(
             conn,
             timings,
@@ -834,7 +875,7 @@ def apply_import(
                 after_value, reason, source, organization_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            chain(member_audits, status_audits),
+            chain(member_audits, status_audits, authority_audits),
             chunk_size,
         )
         timings["persist_audit"] = perf_counter() - started
@@ -867,6 +908,8 @@ def apply_import(
             "same_day_detected": parsed.preview.same_day_detected,
             "operational_cycle_unrecognized": parsed.preview.operational_cycle_unrecognized,
             "coverage_requirements_detected": parsed.preview.coverage_requirements_detected,
+            "coverage_rejected_template": parsed.preview.coverage_rejected_template,
+            "coverage_suspect_template": parsed.preview.coverage_suspect_template,
             "absences_detected": parsed.preview.absences_detected,
             "excluded_rows": parsed.preview.excluded_rows,
             "phone_detected": parsed.preview.phone_detected,

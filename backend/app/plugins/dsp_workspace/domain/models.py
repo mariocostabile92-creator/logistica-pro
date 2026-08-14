@@ -38,6 +38,7 @@ class CoverageProjection(BaseModel):
     segment: Literal["A", "B_C"] | None = None
     station: str | None = None
     forecast: int | None = Field(default=None, ge=0)
+    raw_forecast: int | None = Field(default=None, ge=0)
     requirement: int | None = Field(default=None, ge=0)
     assigned: int = Field(default=0, ge=0)
     forecast_gap: int | None = Field(default=None, ge=0)
@@ -45,6 +46,10 @@ class CoverageProjection(BaseModel):
     reserve: int | None = Field(default=None, ge=0)
     source: str | None = None
     source_reference: str | None = None
+    authority_status: Literal[
+        "AUTHORITATIVE", "SUSPECT_TEMPLATE", "REJECTED_TEMPLATE"
+    ] | None = None
+    detection_reason: str | None = None
     status: Literal[
         "NO_FORECAST",
         "UNDER_FORECAST",
@@ -59,6 +64,8 @@ class DailyOperationsWarning(BaseModel):
         "FORECAST_NOT_COVERED",
         "OPERATIONAL_CYCLE_NOT_SET",
         "FORECAST_MISSING",
+        "FORECAST_TEMPLATE_REJECTED",
+        "FORECAST_TEMPLATE_SUSPECT",
     ]
     severity: Literal["info", "warning", "critical"]
     message: str

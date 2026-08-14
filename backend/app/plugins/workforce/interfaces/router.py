@@ -22,6 +22,7 @@ from app.plugins.workforce.application import driver_shift_driver_session_servic
 from app.plugins.workforce.application import coverage_service
 from app.plugins.workforce.application import manual_coverage_service
 from app.plugins.workforce.application import legacy_coverage_backfill_service
+from app.plugins.workforce.application import forecast_reconciliation_service
 from app.plugins.workforce.application import operational_cycle_reconciliation_service
 from app.plugins.workforce.application import day_member_batch_service
 from app.plugins.workforce.application.contact_coverage_service import contact_coverage
@@ -83,6 +84,9 @@ from app.plugins.workforce.domain.manual_coverage import (
 from app.plugins.workforce.domain.legacy_coverage_backfill import (
     LegacyCoverageBackfillPreview,
     LegacyCoverageBackfillResult,
+)
+from app.plugins.workforce.domain.forecast_reconciliation import (
+    ForecastReconciliationPreview,
 )
 from app.plugins.workforce.domain.operational_cycle_reconciliation import (
     OperationalCycleReconciliationPreview,
@@ -1252,6 +1256,34 @@ async def preview_legacy_coverage_backfill(
         WorkbookProfileError,
         legacy_coverage_backfill_service.LegacyCoverageBackfillError,
     ) as exc:
+        raise _write_error(exc) from exc
+
+
+@router.post(
+    "/planning/coverage/template-reconciliation/preview",
+    response_model=ForecastReconciliationPreview,
+)
+async def preview_forecast_template_reconciliation(
+    request: Request,
+    file: UploadFile = File(...),
+    workforce_import_id: int = Form(..., gt=0),
+) -> ForecastReconciliationPreview:
+    organization_id = _coverage_organization(
+        request,
+        permission="workforce:write",
+        administrator_only=True,
+    )
+    user = _require(request, "workforce:write")
+    try:
+        content, filename = await _read_upload(file)
+        return forecast_reconciliation_service.preview(
+            organization_id,
+            actor=user.email,
+            content=content,
+            filename=filename,
+            workforce_import_id=workforce_import_id,
+        )
+    except WorkbookProfileError as exc:
         raise _write_error(exc) from exc
 
 

@@ -63,6 +63,10 @@ body[data-active-workspace="operations"] .auth-session-user { display: none; }
 .planning-coverage-buckets dd { margin: 3px 0 0; font-size: 18px; font-weight: 800; }
 .planning-coverage-actions { display: flex; align-items: center; gap: 10px; }
 .planning-coverage-source { display: block; margin-top: 10px; color: var(--text-muted); font-weight: 700; }
+.planning-coverage-buckets > article.is-rejected-template { border-color: #d7a84a; background: #fffaf0; }
+.planning-forecast-template-warning { display: grid; gap: 3px; margin-top: 12px; padding: 10px 11px; border-left: 3px solid #b7791f; background: #fff4d8; color: #684414; }
+.planning-forecast-template-warning strong { font-size: 13px; }
+.planning-forecast-template-warning span { font-size: 12px; line-height: 1.45; }
 .planning-forecast-modal { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 20px; background: rgba(17, 33, 29, .58); }
 .planning-forecast-editor { width: min(620px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 22px 60px rgba(10, 28, 23, .28); }
 .planning-forecast-editor > header, .planning-forecast-editor > footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

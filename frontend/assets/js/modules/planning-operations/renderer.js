@@ -1,4 +1,4 @@
-import { renderForecast } from "./forecast.js?v=forecast1";
+import { renderForecast } from "./forecast.js?v=forecast2";
 import { renderHero } from "./hero.js?v=day1";
 import { renderKpis } from "./kpi.js";
 import { renderRoutes } from "./routes.js";

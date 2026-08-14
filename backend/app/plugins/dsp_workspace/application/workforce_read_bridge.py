@@ -131,6 +131,7 @@ def coverage_projection(
             segment=item.segment,
             station=item.station,
             forecast=item.forecast_routes,
+            raw_forecast=item.raw_forecast_routes,
             requirement=item.required_capacity,
             assigned=item.assigned_drivers,
             forecast_gap=item.forecast_gap,
@@ -138,11 +139,33 @@ def coverage_projection(
             reserve=item.reserve_drivers,
             source=item.source,
             source_reference=item.source_reference,
+            authority_status=(
+                item.authority_status.value if item.authority_status else None
+            ),
+            detection_reason=item.detection_reason,
             status=item.coverage_status.value,
         )
         projections.append(projection)
         label = item.cycle if not item.segment else f"{item.cycle} {item.segment}"
-        if item.coverage_status.value == "NO_FORECAST":
+        if item.authority_status and item.authority_status.value == "REJECTED_TEMPLATE":
+            warnings.append(DailyOperationsWarning(
+                code="FORECAST_TEMPLATE_REJECTED",
+                severity="warning",
+                message=(
+                    f"{label}: il dato importato e stato scartato perche non operativo."
+                ),
+                cycle=item.cycle,
+                segment=item.segment,
+            ))
+        elif item.authority_status and item.authority_status.value == "SUSPECT_TEMPLATE":
+            warnings.append(DailyOperationsWarning(
+                code="FORECAST_TEMPLATE_SUSPECT",
+                severity="warning",
+                message=f"{label}: il dato importato richiede verifica.",
+                cycle=item.cycle,
+                segment=item.segment,
+            ))
+        elif item.coverage_status.value == "NO_FORECAST":
             warnings.append(DailyOperationsWarning(
                 code="FORECAST_MISSING",
                 severity="info",

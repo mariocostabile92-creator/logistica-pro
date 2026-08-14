@@ -19,6 +19,17 @@ class CoverageSource(str, Enum):
     MANUAL_PLANNING_INPUT = "MANUAL_PLANNING_INPUT"
 
 
+class ForecastAuthorityStatus(str, Enum):
+    AUTHORITATIVE = "AUTHORITATIVE"
+    SUSPECT_TEMPLATE = "SUSPECT_TEMPLATE"
+    REJECTED_TEMPLATE = "REJECTED_TEMPLATE"
+
+
+class ForecastDetectionReason(str, Enum):
+    LONG_ARITHMETIC_SEQUENCE = "LONG_ARITHMETIC_SEQUENCE"
+    CORRELATED_CONSTANT_BLOCK = "CORRELATED_CONSTANT_BLOCK"
+
+
 DEFAULT_RESERVE_PERCENTAGE = 10
 
 
@@ -46,6 +57,8 @@ class ImportedDailyCoverageRequirement:
     source: str
     source_reference: str | None
     source_identity: str
+    authority_status: str = ForecastAuthorityStatus.AUTHORITATIVE.value
+    detection_reason: str | None = None
 
 
 class DailyCoverageRequirement(BaseModel):
@@ -61,6 +74,8 @@ class DailyCoverageRequirement(BaseModel):
     source: str
     source_reference: str | None = None
     source_identity: str
+    authority_status: ForecastAuthorityStatus = ForecastAuthorityStatus.AUTHORITATIVE
+    detection_reason: str | None = None
     created_at: str
     updated_at: str
 
@@ -71,6 +86,7 @@ class DailyCoverageReadModel(BaseModel):
     segment: str | None = None
     station: str | None = None
     forecast_routes: int | None = Field(default=None, ge=0)
+    raw_forecast_routes: int | None = Field(default=None, ge=0)
     reserve_percentage: int | None = Field(default=None, ge=0, le=100)
     required_capacity: int | None = Field(default=None, ge=0)
     assigned_drivers: int = Field(ge=0)
@@ -80,6 +96,19 @@ class DailyCoverageReadModel(BaseModel):
     coverage_status: CoverageStatus
     source: str | None = None
     source_reference: str | None = None
+    authority_status: ForecastAuthorityStatus | None = None
+    detection_reason: str | None = None
+
+
+class CoverageImportPreviewItem(BaseModel):
+    operational_date: str
+    cycle: str
+    segment: str | None = None
+    source_reference: str | None = None
+    raw_forecast: int = Field(ge=0)
+    authority_status: ForecastAuthorityStatus
+    detection_reason: str | None = None
+    effective_forecast: int | None = Field(default=None, ge=0)
 
 
 class DailyCoverageSummary(BaseModel):

@@ -1,7 +1,7 @@
 import {
   renderForecastEditor,
   sourceLabel,
-} from "./forecast-editor.js?v=forecast1";
+} from "./forecast-editor.js?v=forecast2";
 
 
 const BUCKETS = [
@@ -19,24 +19,28 @@ export function renderForecast(coverage, {
   editor = null,
 } = {}) {
   const items = coverage?.items || [];
+  const rejectedItems = items.filter(
+    (item) => item?.authority_status === "REJECTED_TEMPLATE" && item?.forecast == null,
+  );
   const action = writable
-    ? '<button type="button" class="secondary" data-open-planning-forecast>Modifica fabbisogno</button>'
+    ? `<button type="button" class="secondary" data-open-planning-forecast>${rejectedItems.length ? "Inserisci fabbisogno" : "Modifica fabbisogno"}</button>`
     : "";
-  if (!coverage?.available) {
+  if (!coverage?.available && !items.length) {
     return `<section class="planning-ops-panel"><header><div><p class="eyebrow">Preparazione risorse</p><h3>Forecast Amazon</h3></div>${action}</header><p class="planning-ops-empty">Forecast non disponibile per la data selezionata.</p></section>${renderForecastEditor({ operationLabel, coverage, editor })}`;
   }
   return `<section class="planning-ops-panel planning-coverage-panel"><header><div><p class="eyebrow">Totale della giornata</p><h3>Forecast Amazon e copertura</h3></div><div class="planning-coverage-actions"><small>Fonte: Coverage Workforce</small>${action}</div></header>
   <div class="planning-coverage-buckets">${BUCKETS.map(([cycle, segment, label]) => {
     const item = items.find((entry) => entry.cycle === cycle && entry.segment === segment);
+    const rejected = item?.authority_status === "REJECTED_TEMPLATE";
     const status = item?.status === "REQUIREMENT_COVERED"
       ? "Coperto"
       : item?.status === "NO_FORECAST" ? "Forecast assente" : "Da coprire";
-    return `<article><header><h4>${label}</h4><span>${status}</span></header><dl>
+    return `<article class="${rejected ? "is-rejected-template" : ""}"><header><h4>${label}</h4><span>${status}</span></header>${rejected ? `<div class="planning-forecast-template-warning" role="status"><strong>Forecast ${label} da impostare</strong><span>Il valore presente nel file non è stato considerato operativo.</span></div>` : ""}<dl>
       <div><dt>Forecast</dt><dd>${value(item, "forecast")}</dd></div>
       <div><dt>Requirement +10%</dt><dd>${value(item, "requirement")}</dd></div>
       <div><dt>Assegnati</dt><dd>${value(item, "assigned")}</dd></div>
       <div><dt>Gap requirement</dt><dd>${value(item, "requirement_gap")}</dd></div>
       <div><dt>Scorta</dt><dd>${value(item, "reserve")}</dd></div>
-    </dl><small class="planning-coverage-source">Fonte: ${sourceLabel(item?.source)}</small></article>`;
+    </dl><small class="planning-coverage-source">Fonte: ${sourceLabel(item?.source, item?.authority_status)}</small></article>`;
   }).join("")}</div></section>${renderForecastEditor({ operationLabel, coverage, editor })}`;
 }

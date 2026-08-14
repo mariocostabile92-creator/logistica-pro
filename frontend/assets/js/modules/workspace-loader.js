@@ -7,7 +7,7 @@ let loaderInitialized = false;
 
 const STYLES = {
   operations: [
-    "planning-workspace.css?v=forecast1",
+    "planning-workspace.css?v=forecast2",
   ],
   "operations-legacy": [
     "fleet-sync.css",
@@ -118,7 +118,7 @@ function initializeOnce(key, callback) {
 const WORKSPACE_PREPARERS = {
   operations: async () => {
     const [planningWorkspace] = await Promise.all([
-      import("./planning-workspace/index.js?v=forecast1"),
+      import("./planning-workspace/index.js?v=forecast2"),
       loadWorkspaceStyles("operations"),
     ]);
     return async () => {

@@ -1,5 +1,5 @@
 import { planningOperationsApi } from "./api.js";
-import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=forecast1";
+import { renderOperations, renderOperationsLoading, renderRouteList } from "./renderer.js?v=forecast2";
 import { filteredRoutes, planningOperationsState as state } from "./state.js";
 import { userMessageForError } from "../../utils/errors.js";
 import {
@@ -11,7 +11,7 @@ import {
   changedRequirements,
   forecastDraft,
   requirementPreview,
-} from "./forecast-editor.js?v=forecast1";
+} from "./forecast-editor.js?v=forecast2";
 
 let root;
 let initialLoadPromise = null;

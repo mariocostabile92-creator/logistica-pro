@@ -21,9 +21,14 @@ from app.plugins.workforce.domain.driver_shift_contact import (
     normalize_phone,
 )
 from app.plugins.workforce.domain.coverage import (
+    CoverageImportPreviewItem,
     CoverageSource,
+    ForecastAuthorityStatus,
     ImportedDailyCoverageRequirement,
     required_capacity_for,
+)
+from app.plugins.workforce.domain.forecast_authority import (
+    classify_forecast_requirements,
 )
 from app.utils.text_normalizer import compact_key, normalize_text
 
@@ -571,7 +576,9 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
     metrics = dict(workbook.metrics)
     metrics.update({"profile": 0.0, "normalize": 0.0, "validate": 0.0})
     fingerprint = sha256(content).hexdigest()
-    coverage_requirements = _coverage_requirements(workbook.sheets, fingerprint)
+    coverage_requirements = classify_forecast_requirements(
+        _coverage_requirements(workbook.sheets, fingerprint)
+    )
     status_mapping = _status_mapping()
     members: dict[str, dict[str, object]] = {}
     member_contacts: dict[str, dict[str, object]] = {}
@@ -582,6 +589,22 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
     mappings: list[WorkforceMapping] = []
     excluded_rows = 0
     anomalies: list[str] = []
+    rejected_count = sum(
+        item.authority_status == ForecastAuthorityStatus.REJECTED_TEMPLATE.value
+        for item in coverage_requirements
+    )
+    suspect_count = sum(
+        item.authority_status == ForecastAuthorityStatus.SUSPECT_TEMPLATE.value
+        for item in coverage_requirements
+    )
+    if rejected_count:
+        anomalies.append(
+            f"{rejected_count} forecast Next Day template sono stati scartati."
+        )
+    if suspect_count:
+        anomalies.append(
+            f"{suspect_count} forecast Same Day importati richiedono verifica."
+        )
     operational_cycle_invalid = 0
     operational_cycle_conflicts: set[str] = set()
 
@@ -939,6 +962,26 @@ def interpret_workforce_workbook(content: bytes, filename: str) -> ParsedWorkfor
         same_day_detected=sum(item.get("operational_cycle") == "SAME_DAY" for item in members.values()),
         operational_cycle_unrecognized=(operational_cycle_invalid + len(operational_cycle_conflicts)),
         coverage_requirements_detected=len(coverage_requirements),
+        coverage_rejected_template=rejected_count,
+        coverage_suspect_template=suspect_count,
+        coverage_preview=[
+            CoverageImportPreviewItem(
+                operational_date=item.operational_date,
+                cycle=item.operational_cycle,
+                segment=item.coverage_segment,
+                source_reference=item.source_reference,
+                raw_forecast=item.forecast_routes,
+                authority_status=item.authority_status,
+                detection_reason=item.detection_reason,
+                effective_forecast=(
+                    None
+                    if item.authority_status
+                    == ForecastAuthorityStatus.REJECTED_TEMPLATE.value
+                    else item.forecast_routes
+                ),
+            )
+            for item in coverage_requirements
+        ],
         absences_detected=sum(item.get("status_code") in absence_codes for item in statuses.values()),
         excluded_rows=excluded_rows,
         confirmation_columns=confirmation_columns,

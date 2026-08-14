@@ -2,6 +2,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.plugins.workforce.domain.coverage import CoverageImportPreviewItem
+
 
 class LegacyCoverageBackfillStatus(str, Enum):
     READY = "READY"
@@ -24,6 +26,10 @@ class LegacyCoverageBackfillPreview(BaseModel):
     next_day_count: int = Field(default=0, ge=0)
     same_day_a_count: int = Field(default=0, ge=0)
     same_day_b_c_count: int = Field(default=0, ge=0)
+    next_day_rejected_count: int = Field(default=0, ge=0)
+    same_day_a_suspect_count: int = Field(default=0, ge=0)
+    same_day_b_c_suspect_count: int = Field(default=0, ge=0)
+    coverage_preview: list[CoverageImportPreviewItem] = Field(default_factory=list)
     requirements_expected: int = Field(default=0, ge=0)
     existing_rows: int = Field(default=0, ge=0)
     existing_modern_rows: int = Field(default=0, ge=0)
@@ -36,4 +42,3 @@ class LegacyCoverageBackfillResult(LegacyCoverageBackfillPreview):
     requirements_created: int = Field(default=0, ge=0)
     requirements_skipped: int = Field(default=0, ge=0)
     idempotent: bool = False
-

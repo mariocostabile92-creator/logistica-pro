@@ -7,7 +7,7 @@ import {
   previewImport,
   saveManualPlanningCoverage,
   transitionOperationalPlanning,
-} from "../../api.js?v=forecast1";
+} from "../../api.js?v=forecast2";
 
 export const planningOperationsApi = Object.freeze({
   load: getPlanningOperations,

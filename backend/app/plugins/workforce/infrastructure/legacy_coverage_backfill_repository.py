@@ -122,8 +122,9 @@ def _insert_rows(conn, rows: list[tuple[Any, ...]]) -> None:
             organization_id, operational_date, station, station_key,
             operational_cycle, coverage_segment, forecast_routes,
             reserve_percentage, required_capacity, source,
-            source_reference, source_identity, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            source_reference, source_identity, authority_status,
+            detection_reason, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         rows,
     )
@@ -168,6 +169,8 @@ def apply_missing(
                 item.source,
                 item.source_reference,
                 item.source_identity,
+                item.authority_status,
+                item.detection_reason,
                 now,
                 now,
             )

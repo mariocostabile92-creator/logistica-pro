@@ -8,8 +8,10 @@ export const FORECAST_BUCKETS = Object.freeze([
 ]);
 
 
-export function sourceLabel(source) {
+export function sourceLabel(source, authorityStatus = "AUTHORITATIVE") {
   if (source === "MANUAL_PLANNING_INPUT") return "Inserimento manuale";
+  if (authorityStatus === "REJECTED_TEMPLATE") return "Dato importato scartato";
+  if (authorityStatus === "SUSPECT_TEMPLATE") return "Dato importato sospetto";
   if (source === "IMPORT" || source === "LEGACY_IMPORT_BACKFILL") {
     return "Planning Amazon importato";
   }
@@ -43,10 +45,14 @@ export function forecastDraft(coverage) {
 
 
 function sourceFor(coverage, bucket) {
-  return (coverage?.items || []).find(
+  const item = (coverage?.items || []).find(
     (candidate) => candidate.cycle === bucket.cycle
       && candidate.segment === bucket.segment,
-  )?.source || null;
+  );
+  return {
+    source: item?.source || null,
+    authorityStatus: item?.authority_status || "AUTHORITATIVE",
+  };
 }
 
 
@@ -90,8 +96,9 @@ export function renderForecastEditor({
         ${FORECAST_BUCKETS.map((bucket) => {
           const raw = editor.draft?.[bucket.key] ?? "";
           const preview = requirementPreview(raw);
+          const source = sourceFor(coverage, bucket);
           return `<label data-forecast-bucket="${bucket.key}">
-            <span><strong>${bucket.label}</strong><small>Fonte attuale: ${sourceLabel(sourceFor(coverage, bucket))}</small></span>
+            <span><strong>${bucket.label}</strong><small>Fonte attuale: ${sourceLabel(source.source, source.authorityStatus)}</small></span>
             <span class="planning-forecast-input-row"><span>Rotte Amazon</span><input type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(String(raw))}" data-manual-coverage-input="${bucket.key}"></span>
             <span class="planning-forecast-requirement">Requirement +10% <output data-manual-coverage-preview="${bucket.key}">${preview ?? "—"}</output></span>
           </label>`;

@@ -25,6 +25,11 @@ SCOPED_COLUMNS = {
 
 DAY_STATUS_COLUMNS = {"operational_activity": "TEXT"}
 
+COVERAGE_REQUIREMENT_COLUMNS = {
+    "authority_status": "TEXT NOT NULL DEFAULT 'AUTHORITATIVE'",
+    "detection_reason": "TEXT",
+}
+
 
 def _sqlite_table_definition(conn, table: str) -> str:
     row = conn.execute(
@@ -459,6 +464,8 @@ def init_schema() -> None:
                 source TEXT NOT NULL,
                 source_reference TEXT,
                 source_identity TEXT NOT NULL,
+                authority_status TEXT NOT NULL DEFAULT 'AUTHORITATIVE',
+                detection_reason TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 UNIQUE (
@@ -762,6 +769,11 @@ def init_schema() -> None:
         for table, columns in SCOPED_COLUMNS.items():
             _ensure_columns(conn, table, columns)
         _ensure_columns(conn, "workforce_day_statuses", DAY_STATUS_COLUMNS)
+        _ensure_columns(
+            conn,
+            "workforce_daily_coverage_requirements",
+            COVERAGE_REQUIREMENT_COLUMNS,
+        )
         _ensure_columns(conn, "driver_shift_plannings", {
             "published_at": "TEXT",
             "published_by": "TEXT",

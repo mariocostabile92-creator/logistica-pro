@@ -8,6 +8,7 @@ from app.plugins.workforce.domain.operational_status import (
 from app.plugins.workforce.domain.coverage import (
     CoverageSource,
     DailyCoverageRequirement,
+    ForecastAuthorityStatus,
     ImportedDailyCoverageRequirement,
 )
 
@@ -20,12 +21,19 @@ def _segment_key(value: str | None) -> str:
     return str(value or "").strip().upper()
 
 
-def _source_priority(value: str) -> int:
-    if value == CoverageSource.MANUAL_PLANNING_INPUT.value:
-        return 100
-    if value == CoverageSource.MANUAL.value:
-        return 90
-    return 10
+def _requirement_priority(row) -> tuple[int, int]:
+    source = row["source"]
+    if source == CoverageSource.MANUAL_PLANNING_INPUT.value:
+        return 4, 3
+    if source == CoverageSource.MANUAL.value:
+        return 3, 3
+    authority = row["authority_status"]
+    authority_priority = {
+        ForecastAuthorityStatus.AUTHORITATIVE.value: 3,
+        ForecastAuthorityStatus.SUSPECT_TEMPLATE.value: 2,
+        ForecastAuthorityStatus.REJECTED_TEMPLATE.value: 1,
+    }.get(authority, 0)
+    return 2, authority_priority
 
 
 def persist_imported_requirements(
@@ -71,6 +79,8 @@ def persist_imported_requirements(
             item.required_capacity,
             item.source,
             item.source_reference,
+            item.authority_status,
+            item.detection_reason,
         )
         if row is None:
             inserts.append((
@@ -80,8 +90,14 @@ def persist_imported_requirements(
                 station_key,
                 item.operational_cycle,
                 segment_key,
-                *values,
+                item.forecast_routes,
+                item.reserve_percentage,
+                item.required_capacity,
+                item.source,
+                item.source_reference,
                 item.source_identity,
+                item.authority_status,
+                item.detection_reason,
                 now,
                 now,
             ))
@@ -92,6 +108,8 @@ def persist_imported_requirements(
             int(row["required_capacity"]),
             row["source"],
             row["source_reference"],
+            row["authority_status"],
+            row["detection_reason"],
         )
         if previous != values:
             updates.append((*values, now, int(row["id"]), organization_id))
@@ -102,8 +120,9 @@ def persist_imported_requirements(
                 organization_id, operational_date, station, station_key,
                 operational_cycle, coverage_segment, forecast_routes,
                 reserve_percentage, required_capacity, source,
-                source_reference, source_identity, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                source_reference, source_identity, authority_status,
+                detection_reason, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             inserts,
         )
@@ -113,6 +132,7 @@ def persist_imported_requirements(
             UPDATE workforce_daily_coverage_requirements
             SET forecast_routes = ?, reserve_percentage = ?,
                 required_capacity = ?, source = ?, source_reference = ?,
+                authority_status = ?, detection_reason = ?,
                 updated_at = ?
             WHERE id = ? AND organization_id = ?
             """,
@@ -153,8 +173,8 @@ def list_current_requirements_in_connection(
             row["operational_cycle"], row["coverage_segment"],
         )
         selected = current.get(key)
-        if selected is None or _source_priority(row["source"]) > _source_priority(
-            selected["source"]
+        if selected is None or _requirement_priority(row) > _requirement_priority(
+            selected
         ):
             current[key] = row
     return [
@@ -171,6 +191,8 @@ def list_current_requirements_in_connection(
             source=row["source"],
             source_reference=row["source_reference"],
             source_identity=row["source_identity"],
+            authority_status=row["authority_status"],
+            detection_reason=row["detection_reason"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

@@ -4,7 +4,9 @@ from hashlib import sha256
 import json
 
 from app.plugins.workforce.domain.coverage import (
+    CoverageImportPreviewItem,
     CoverageSource,
+    ForecastAuthorityStatus,
     ImportedDailyCoverageRequirement,
 )
 from app.plugins.workforce.domain.legacy_coverage_backfill import (
@@ -76,6 +78,8 @@ def _preview_fingerprint(
                 "reserve": item.reserve_percentage,
                 "required": item.required_capacity,
                 "reference": item.source_reference,
+                "authority": item.authority_status,
+                "detection_reason": item.detection_reason,
             }
             for item in requirements
         ],
@@ -157,6 +161,10 @@ def inspect(
     counts = Counter(
         (item.operational_cycle, item.coverage_segment) for item in requirements
     )
+    authority_counts = Counter(
+        (item.operational_cycle, item.coverage_segment, item.authority_status)
+        for item in requirements
+    )
     source_identity = requirements[0].source_identity
     modern = sum(
         row["source_identity"] != source_identity for row in existing.values()
@@ -180,13 +188,40 @@ def inspect(
         next_day_count=counts[("NEXT_DAY", None)],
         same_day_a_count=counts[("SAME_DAY", "A")],
         same_day_b_c_count=counts[("SAME_DAY", "B_C")],
+        next_day_rejected_count=authority_counts[(
+            "NEXT_DAY", None, ForecastAuthorityStatus.REJECTED_TEMPLATE.value,
+        )],
+        same_day_a_suspect_count=authority_counts[(
+            "SAME_DAY", "A", ForecastAuthorityStatus.SUSPECT_TEMPLATE.value,
+        )],
+        same_day_b_c_suspect_count=authority_counts[(
+            "SAME_DAY", "B_C", ForecastAuthorityStatus.SUSPECT_TEMPLATE.value,
+        )],
+        coverage_preview=[
+            CoverageImportPreviewItem(
+                operational_date=item.operational_date,
+                cycle=item.operational_cycle,
+                segment=item.coverage_segment,
+                source_reference=item.source_reference,
+                raw_forecast=item.forecast_routes,
+                authority_status=item.authority_status,
+                detection_reason=item.detection_reason,
+                effective_forecast=(
+                    None
+                    if item.authority_status
+                    == ForecastAuthorityStatus.REJECTED_TEMPLATE.value
+                    else item.forecast_routes
+                ),
+            )
+            for item in requirements
+        ],
         requirements_expected=len(requirements),
         existing_rows=len(existing),
         existing_modern_rows=modern,
         requirements_missing=missing,
         preview_fingerprint=_preview_fingerprint(import_record, requirements),
         action_required=(
-            "Confermare il backfill dei soli bucket mancanti."
+            "Confermare il backfill dei soli bucket mancanti; i template scartati restano non effective."
             if missing else "Nessuna scrittura necessaria."
         ),
     )

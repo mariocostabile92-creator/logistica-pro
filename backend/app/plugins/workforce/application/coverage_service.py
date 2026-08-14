@@ -7,6 +7,7 @@ from app.plugins.workforce.domain.coverage import (
     DailyCoverageReadModel,
     DailyCoverageResponse,
     DailyCoverageSummary,
+    ForecastAuthorityStatus,
 )
 from app.plugins.workforce.infrastructure import coverage_repository
 
@@ -45,6 +46,8 @@ def requirements_fingerprint(
                     "reserve": item.reserve_percentage,
                     "required": item.required_capacity,
                     "source": item.source,
+                    "authority": item.authority_status.value,
+                    "detection_reason": item.detection_reason,
                     "updated_at": item.updated_at,
                 }
                 for item in requirements
@@ -110,15 +113,23 @@ def _read_model(
     required_capacity: int | None = None,
     source: str | None = None,
     source_reference: str | None = None,
+    authority_status: ForecastAuthorityStatus | None = None,
+    detection_reason: str | None = None,
 ) -> DailyCoverageReadModel:
-    if forecast_routes is None or required_capacity is None:
+    rejected = authority_status == ForecastAuthorityStatus.REJECTED_TEMPLATE
+    if rejected or forecast_routes is None or required_capacity is None:
         return DailyCoverageReadModel(
             operational_date=operational_date,
             cycle=cycle,
             segment=segment,
             station=station,
+            raw_forecast_routes=(forecast_routes if rejected else None),
             assigned_drivers=assigned_drivers,
             coverage_status=CoverageStatus.NO_FORECAST,
+            source=source,
+            source_reference=source_reference,
+            authority_status=authority_status,
+            detection_reason=detection_reason,
         )
     forecast_gap = max(forecast_routes - assigned_drivers, 0)
     requirement_gap = max(required_capacity - assigned_drivers, 0)
@@ -135,6 +146,7 @@ def _read_model(
         segment=segment,
         station=station,
         forecast_routes=forecast_routes,
+        raw_forecast_routes=forecast_routes,
         reserve_percentage=reserve_percentage,
         required_capacity=required_capacity,
         assigned_drivers=assigned_drivers,
@@ -144,6 +156,8 @@ def _read_model(
         coverage_status=status,
         source=source,
         source_reference=source_reference,
+        authority_status=authority_status,
+        detection_reason=detection_reason,
     )
 
 
@@ -189,6 +203,8 @@ def daily_coverage(
             assigned_drivers=assigned,
             source=requirement.source,
             source_reference=requirement.source_reference,
+            authority_status=requirement.authority_status,
+            detection_reason=requirement.detection_reason,
         ))
     expected_buckets = [
         (bucket_cycle, segment)
