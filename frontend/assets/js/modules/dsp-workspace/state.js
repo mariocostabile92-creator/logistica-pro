@@ -123,15 +123,25 @@ export function deriveDspWorkspaceView(state) {
     phase: "ready",
     operationDate: state.operationDate,
     planningAvailable: Boolean(snapshot.planning?.available),
+    hasOperationalData: Boolean(snapshot.source_type || snapshot.planning?.available),
+    sourceType: snapshot.source_type || (
+      snapshot.planning?.available ? "LEGACY_OPERATIONAL_PLANNING" : null
+    ),
+    planningStatus: snapshot.planning_status || snapshot.planning?.status || "no_data",
     summary: {
-      drivers: enrichedRows.filter((row) => (
+      drivers: snapshot.counts?.driver_planned_count ?? enrichedRows.filter((row) => (
         row.driver?.name || row.driver?.planning_identifier
       )).length,
+      available: snapshot.counts?.driver_available_count ?? null,
+      absences: snapshot.counts?.driver_absent_count ?? null,
+      reserves: snapshot.counts?.reserve_count ?? 0,
       vehicles: enrichedRows.filter((row) => (
         row.vehicle?.fleet_asset_id || row.vehicle?.plate
       )).length,
       attention: snapshot.signals.length,
     },
+    coverage: snapshot.coverage || [],
+    warnings: snapshot.warnings || [],
     sources: snapshot.sources || {},
     totalRows: enrichedRows.length,
     rows: sortedRows(filteredRows, state.sort),

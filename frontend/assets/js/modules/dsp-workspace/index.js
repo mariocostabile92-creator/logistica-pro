@@ -1,6 +1,10 @@
 import { getDspDailySnapshot } from "./api.js";
 import { dspWorkspaceRefs, renderDspWorkspace } from "./presenter.js";
-import { buildDspRowActions, dispatchDspAction } from "./actions.js";
+import {
+  buildDspRowActions,
+  dispatchDspAction,
+  openWorkforcePlanning,
+} from "./actions.js";
 import {
   applyDspWorkspaceEvent,
   createDspWorkspaceState,
@@ -64,6 +68,9 @@ function bindEvents() {
   refs.sort.addEventListener("change", () => commit({
     type: "sort-changed", sort: refs.sort.value,
   }));
+  refs.openWorkforce.addEventListener("click", () => {
+    openWorkforcePlanning(state.operationDate);
+  });
   document.addEventListener("click", (event) => {
     const filter = event.target.closest("[data-dsp-filter]")?.dataset.dspFilter;
     if (filter) commit({ type: "filter-changed", filter });

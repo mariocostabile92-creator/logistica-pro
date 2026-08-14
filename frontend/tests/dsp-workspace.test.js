@@ -10,6 +10,7 @@ import {
   localToday,
 } from "../assets/js/modules/dsp-workspace/state.js";
 import {
+  coverageMarkup,
   partialMessages,
   rowMarkup,
   signalLabel,
@@ -245,13 +246,70 @@ test("search finds a route", () => {
   assert.deepEqual(deriveDspWorkspaceView(state).rows.map((row) => row.assignment_id), [12]);
 });
 
-test("missing authoritative Planning exposes the dedicated empty state", async () => {
+test("true no-data snapshot exposes the dedicated empty state", async () => {
   const presenter = await file("assets/js/modules/dsp-workspace/presenter.js");
   const view = deriveDspWorkspaceView(readyState({
-    planning: { available: false }, rows: [], signals: [],
+    planning: { available: false }, source_type: null,
+    coverage: [], rows: [], signals: [],
   }));
   assert.equal(view.planningAvailable, false);
-  assert.match(presenter, /Nessun Planning pubblicato o confermato per questa giornata\./);
+  assert.equal(view.hasOperationalData, false);
+  assert.match(presenter, /Nessun dato operativo disponibile per questa giornata\./);
+});
+
+test("Workforce fallback removes the false Planning empty state", () => {
+  const view = deriveDspWorkspaceView(readyState({
+    planning: { available: true, source: "workforce-operational-projection" },
+    source_type: "WORKFORCE_OPERATIONAL_PROJECTION",
+    planning_status: "workforce_available",
+    counts: {
+      driver_planned_count: 1,
+      driver_available_count: 4,
+      driver_absent_count: 2,
+      reserve_count: 0,
+    },
+    rows: [rows[0]],
+  }));
+  assert.equal(view.hasOperationalData, true);
+  assert.equal(view.sourceType, "WORKFORCE_OPERATIONAL_PROJECTION");
+  assert.deepEqual(view.summary, {
+    drivers: 1, available: 4, absences: 2, reserves: 0,
+    vehicles: 1, attention: 10,
+  });
+});
+
+test("legacy source remains transparent and preferred", async () => {
+  const presenter = await file("assets/js/modules/dsp-workspace/presenter.js");
+  const view = deriveDspWorkspaceView(readyState({
+    source_type: "LEGACY_OPERATIONAL_PLANNING",
+  }));
+  assert.equal(view.sourceType, "LEGACY_OPERATIONAL_PLANNING");
+  assert.match(presenter, /LEGACY_OPERATIONAL_PLANNING: "Planning operativo"/);
+  assert.match(presenter, /WORKFORCE_OPERATIONAL_PROJECTION: "Workforce operativo"/);
+});
+
+test("coverage renders forecast requirement assigned gap and reserve by bucket", () => {
+  const markup = coverageMarkup([
+    {
+      cycle: "NEXT_DAY", segment: null, forecast: 76, requirement: 84,
+      assigned: 79, requirement_gap: 5, reserve: 0, status: "FORECAST_COVERED",
+    },
+    {
+      cycle: "SAME_DAY", segment: "A", forecast: 12, requirement: 13,
+      assigned: 15, requirement_gap: 0, reserve: 2, status: "REQUIREMENT_COVERED",
+    },
+  ]);
+  assert.match(markup, /Next Day[\s\S]*Forecast[\s\S]*76[\s\S]*Requisito[\s\S]*84[\s\S]*Assegnati[\s\S]*79[\s\S]*Mancano 5/);
+  assert.match(markup, /Same Day A[\s\S]*\+2 scorte/);
+});
+
+test("no forecast is displayed as unavailable without converting it to zero", () => {
+  const markup = coverageMarkup([{
+    cycle: "SAME_DAY", segment: "B_C", forecast: null, requirement: null,
+    assigned: 3, requirement_gap: null, reserve: null, status: "NO_FORECAST",
+  }]);
+  assert.match(markup, /Forecast non disponibile/);
+  assert.match(markup, /Forecast[\s\S]*—[\s\S]*Requisito[\s\S]*—[\s\S]*Assegnati[\s\S]*3/);
 });
 
 test("partial source warning is non-blocking", () => {
@@ -283,6 +341,7 @@ test("390 px layout becomes cards without fixed canvas", async () => {
   const css = await file("assets/css/dsp-workspace.css");
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*\.dsp-board-row[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /min-width: 0/);
+  assert.match(css, /@media \(max-width: 620px\)[\s\S]*\.dsp-coverage-grid/);
   assert.doesNotMatch(css, /width:\s*(?:390|768|1440)px/);
 });
 

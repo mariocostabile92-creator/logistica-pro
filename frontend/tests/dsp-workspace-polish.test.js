@@ -96,11 +96,11 @@ test("multiple signals are grouped behind a compact disclosure", () => {
   assert.match(markup, /Mostra altre 2 criticità/);
 });
 
-test("summary remains limited to the three approved KPIs", async () => {
+test("summary exposes planned drivers, availability, absences and attention", async () => {
   const html = await file("index.html");
   const summary = html.match(/<dl class="dsp-summary"[\s\S]*?<\/dl>/)?.[0] || "";
-  assert.equal((summary.match(/<dt>/g) || []).length, 3);
-  assert.match(summary, /Driver pianificati[\s\S]*Mezzi assegnati[\s\S]*Criticità/);
+  assert.equal((summary.match(/<dt>/g) || []).length, 4);
+  assert.match(summary, /Driver pianificati[\s\S]*Disponibili[\s\S]*Assenze[\s\S]*Criticità/);
 });
 
 test("partial sources expose one grouped disclosure with source details", async () => {

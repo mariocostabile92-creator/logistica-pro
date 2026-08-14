@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   buildDspRowActions,
   dispatchDspAction,
+  openWorkforcePlanning,
   SIGNAL_ACTIONS,
 } from "../assets/js/modules/dsp-workspace/actions.js";
 import { rowActionsMarkup } from "../assets/js/modules/dsp-workspace/presenter.js";
@@ -56,6 +57,19 @@ function navigation(action) {
 test("signal map sends DRIVER_WITHOUT_VEHICLE to Planning", () => {
   assert.equal(SIGNAL_ACTIONS.DRIVER_WITHOUT_VEHICLE, "planning");
   assert.equal(actionsFor(signalRow("DRIVER_WITHOUT_VEHICLE")).primary.id, "planning");
+});
+
+test("Workforce Planning CTA opens the selected operational week", () => {
+  const target = new EventTarget();
+  const events = [];
+  target.addEventListener("workspace:navigate", (event) => events.push(event));
+  target.addEventListener("workforce:open-date", (event) => events.push(event));
+  assert.equal(openWorkforcePlanning(DAY, target), true);
+  assert.deepEqual(events[0].detail, { view: "workforce" });
+  target.dispatchEvent(new CustomEvent("workspace:view-changed", {
+    detail: { view: "workforce" },
+  }));
+  assert.deepEqual(events[1].detail, { operationDate: DAY });
 });
 
 test("DRIVER_NOT_AVAILABLE opens the canonical Workforce driver", () => {

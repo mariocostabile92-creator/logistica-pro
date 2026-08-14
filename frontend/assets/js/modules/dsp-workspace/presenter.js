@@ -40,6 +40,18 @@ const STATUS_LABELS = Object.freeze({
   workshop: "In officina",
 });
 
+const SOURCE_LABELS = Object.freeze({
+  LEGACY_OPERATIONAL_PLANNING: "Planning operativo",
+  WORKFORCE_OPERATIONAL_PROJECTION: "Workforce operativo",
+});
+
+const COVERAGE_STATUS_LABELS = Object.freeze({
+  NO_FORECAST: "Forecast non disponibile",
+  UNDER_FORECAST: "Sotto forecast",
+  FORECAST_COVERED: "Forecast coperto",
+  REQUIREMENT_COVERED: "Requisito coperto",
+});
+
 
 export function signalLabel(code) {
   return SIGNAL_LABELS[code] || "Attenzione operativa";
@@ -277,6 +289,54 @@ function renderWarnings(refs, sources) {
 }
 
 
+function valueOrDash(value) {
+  return value == null ? "—" : String(value);
+}
+
+
+function coverageLabel(item) {
+  if (item.cycle === "NEXT_DAY") return "Next Day";
+  return item.segment === "A" ? "Same Day A" : "Same Day B-C";
+}
+
+
+export function coverageMarkup(items = []) {
+  if (!items.length) {
+    return '<p class="dsp-coverage-empty">Nessun dato Coverage per la giornata.</p>';
+  }
+  return items.map((item) => {
+    const gap = item.requirement_gap;
+    const reserve = item.reserve;
+    const balance = gap > 0
+      ? `<strong class="is-gap">Mancano ${escapeHtml(gap)}</strong>`
+      : reserve > 0
+        ? `<strong class="is-reserve">+${escapeHtml(reserve)} scorte</strong>`
+        : '<strong class="is-balanced">Copertura allineata</strong>';
+    return `
+      <article class="dsp-coverage-card" data-coverage-status="${escapeHtml(item.status)}">
+        <header><h4>${escapeHtml(coverageLabel(item))}</h4><span>${escapeHtml(COVERAGE_STATUS_LABELS[item.status] || "Da verificare")}</span></header>
+        <dl>
+          <div><dt>Forecast</dt><dd>${escapeHtml(valueOrDash(item.forecast))}</dd></div>
+          <div><dt>Requisito</dt><dd>${escapeHtml(valueOrDash(item.requirement))}</dd></div>
+          <div><dt>Assegnati</dt><dd>${escapeHtml(valueOrDash(item.assigned))}</dd></div>
+        </dl>
+        <p>${balance}</p>
+      </article>
+    `;
+  }).join("");
+}
+
+
+function renderOperationalWarnings(refs, warnings = []) {
+  refs.operationalWarnings.hidden = !warnings.length;
+  refs.operationalWarnings.innerHTML = warnings.length
+    ? `<details><summary>${warnings.length} attenzioni operative</summary><ul>${warnings.map((item) => (
+      `<li class="tone-${escapeHtml(item.severity)}">${escapeHtml(item.message)}</li>`
+    )).join("")}</ul></details>`
+    : "";
+}
+
+
 function renderFilterState(view) {
   document.querySelectorAll("[data-dsp-filter]").forEach((button) => {
     const active = button.dataset.dspFilter === view.filter;
@@ -309,8 +369,10 @@ export function renderDspWorkspace(refs, view) {
   }
 
   refs.data.hidden = false;
+  refs.sourceLabel.textContent = SOURCE_LABELS[view.sourceType] || "Dati non disponibili";
   refs.summaryDrivers.textContent = String(view.summary.drivers);
-  refs.summaryVehicles.textContent = String(view.summary.vehicles);
+  refs.summaryAvailable.textContent = valueOrDash(view.summary.available);
+  refs.summaryAbsences.textContent = valueOrDash(view.summary.absences);
   refs.summaryAttention.textContent = String(view.summary.attention);
   refs.summaryAttention.parentElement?.classList.toggle(
     "is-active", view.summary.attention > 0,
@@ -318,15 +380,17 @@ export function renderDspWorkspace(refs, view) {
   refs.search.value = view.search;
   refs.sort.value = view.sort;
   refs.resultCount.textContent = `${view.rows.length} di ${view.totalRows} assegnazioni`;
+  refs.coverage.innerHTML = coverageMarkup(view.coverage);
+  renderOperationalWarnings(refs, view.warnings);
   renderWarnings(refs, view.sources);
   renderFilterState(view);
 
-  if (!view.planningAvailable) {
+  if (!view.hasOperationalData) {
     refs.board.hidden = true;
     renderViewState(refs.state, {
       state: "empty",
-      title: "Nessun Planning pubblicato o confermato per questa giornata.",
-      description: "Seleziona un'altra data operativa.",
+      title: "Nessun dato operativo disponibile per questa giornata.",
+      description: "Non risultano Planning, assegnazioni Workforce o Coverage.",
     });
     return;
   }
@@ -334,8 +398,12 @@ export function renderDspWorkspace(refs, view) {
     refs.board.hidden = true;
     renderViewState(refs.state, {
       state: "empty",
-      title: "Nessuna assegnazione disponibile.",
-      description: "Il Planning non contiene righe operative.",
+      title: view.sourceType === "WORKFORCE_OPERATIONAL_PROJECTION"
+        ? "Pianificazione Workforce disponibile."
+        : "Nessuna assegnazione disponibile.",
+      description: view.coverage.length
+        ? "Il Coverage della giornata e disponibile; non risultano driver assegnati."
+        : "La fonte operativa non contiene righe driver.",
     });
     return;
   }
@@ -355,9 +423,14 @@ export function dspWorkspaceRefs() {
     state: byId("dspViewState"),
     data: byId("dspWorkspaceData"),
     warnings: byId("dspSourceWarnings"),
+    operationalWarnings: byId("dspOperationalWarnings"),
+    sourceLabel: byId("dspSourceLabel"),
+    openWorkforce: byId("dspOpenWorkforcePlanning"),
     summaryDrivers: byId("dspSummaryDrivers"),
-    summaryVehicles: byId("dspSummaryVehicles"),
+    summaryAvailable: byId("dspSummaryAvailable"),
+    summaryAbsences: byId("dspSummaryAbsences"),
     summaryAttention: byId("dspSummaryAttention"),
+    coverage: byId("dspCoverageBuckets"),
     search: byId("dspSearch"),
     sort: byId("dspSort"),
     resultCount: byId("dspResultCount"),

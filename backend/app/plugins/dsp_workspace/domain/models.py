@@ -3,6 +3,12 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+OperationsSourceType = Literal[
+    "LEGACY_OPERATIONAL_PLANNING",
+    "WORKFORCE_OPERATIONAL_PROJECTION",
+]
+
+
 class SourceMetadata(BaseModel):
     available: bool
     status: str
@@ -18,6 +24,44 @@ class PlanningMetadata(BaseModel):
     status: str | None = None
     source: str = "planning-operational"
     updated_at: str | None = None
+
+
+class DailyOperationsCounts(BaseModel):
+    driver_planned_count: int = Field(default=0, ge=0)
+    driver_available_count: int | None = Field(default=None, ge=0)
+    driver_absent_count: int | None = Field(default=None, ge=0)
+    reserve_count: int = Field(default=0, ge=0)
+
+
+class CoverageProjection(BaseModel):
+    cycle: Literal["NEXT_DAY", "SAME_DAY"]
+    segment: Literal["A", "B_C"] | None = None
+    station: str | None = None
+    forecast: int | None = Field(default=None, ge=0)
+    requirement: int | None = Field(default=None, ge=0)
+    assigned: int = Field(default=0, ge=0)
+    forecast_gap: int | None = Field(default=None, ge=0)
+    requirement_gap: int | None = Field(default=None, ge=0)
+    reserve: int | None = Field(default=None, ge=0)
+    status: Literal[
+        "NO_FORECAST",
+        "UNDER_FORECAST",
+        "FORECAST_COVERED",
+        "REQUIREMENT_COVERED",
+    ]
+
+
+class DailyOperationsWarning(BaseModel):
+    code: Literal[
+        "REQUIREMENT_NOT_COVERED",
+        "FORECAST_NOT_COVERED",
+        "OPERATIONAL_CYCLE_NOT_SET",
+        "FORECAST_MISSING",
+    ]
+    severity: Literal["info", "warning", "critical"]
+    message: str
+    cycle: Literal["NEXT_DAY", "SAME_DAY"] | None = None
+    segment: Literal["A", "B_C"] | None = None
 
 
 class DriverProjection(BaseModel):
@@ -116,9 +160,14 @@ class DailyOperationsSnapshot(BaseModel):
     generated_at: str
     planning: PlanningMetadata
     sources: dict[
-        Literal["planning", "workforce", "fleet", "journal", "damage"],
+        Literal["planning", "workforce", "coverage", "fleet", "journal", "damage"],
         SourceMetadata,
     ]
+    source_type: OperationsSourceType | None = None
+    planning_status: str = "no_data"
+    counts: DailyOperationsCounts = Field(default_factory=DailyOperationsCounts)
+    coverage: list[CoverageProjection] = Field(default_factory=list)
+    warnings: list[DailyOperationsWarning] = Field(default_factory=list)
     rows: list[OperationalRow] = Field(default_factory=list)
     signals: list[OperationalSignal] = Field(default_factory=list)
     partial: bool = False

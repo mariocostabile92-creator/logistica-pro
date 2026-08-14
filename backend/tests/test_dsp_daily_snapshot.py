@@ -9,6 +9,8 @@ from app.main import app
 from app.plugins.dsp_workspace.application.service import (
     daily_operations_snapshot,
 )
+from app.plugins.dsp_workspace.infrastructure import repository
+from app.plugins.workforce.application.coverage_service import daily_coverage
 
 
 DAY = "2026-08-09"
@@ -160,6 +162,56 @@ def _snapshot_at(hour: int, organization_id: str = "org-a"):
         organization_id=organization_id,
         now=datetime(2026, 8, 9, hour, 0, tzinfo=timezone.utc),
     )
+
+
+def _set_assignment(
+    member_id: int,
+    *,
+    shift_code: str,
+    cycle: str = "NEXT_DAY",
+    activity: str = "delivery",
+) -> None:
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE workforce_members SET operational_cycle = ? WHERE id = ?",
+            (cycle, member_id),
+        )
+        conn.execute(
+            """
+            UPDATE workforce_day_statuses
+            SET shift_code = ?, operational_activity = ?
+            WHERE workforce_member_id = ? AND date = ?
+            """,
+            (shift_code, activity, member_id, DAY),
+        )
+
+
+def _coverage_requirement(
+    organization_id: str,
+    *,
+    cycle: str,
+    segment: str | None,
+    forecast: int,
+    requirement: int,
+) -> None:
+    segment_key = segment or ""
+    identity = f"dsp:{organization_id}:{DAY}:{cycle}:{segment_key}"
+    with db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO workforce_daily_coverage_requirements (
+                organization_id, operational_date, station, station_key,
+                operational_cycle, coverage_segment, forecast_routes,
+                reserve_percentage, required_capacity, source,
+                source_reference, source_identity, created_at, updated_at
+            ) VALUES (?, ?, NULL, '', ?, ?, ?, 10, ?, 'MANUAL',
+                      'dsp-test', ?, ?, ?)
+            """,
+            (
+                organization_id, DAY, cycle, segment_key, forecast,
+                requirement, identity, NOW, NOW,
+            ),
+        )
 
 
 def _journal_session(
@@ -335,6 +387,115 @@ def test_no_planning_is_a_valid_empty_snapshot():
     assert result.rows == []
     assert result.signals == []
     assert result.sources["planning"].status == "no_authoritative_planning"
+
+
+def test_legacy_planning_is_preferred_over_workforce_projection_without_double_count():
+    member_id, _, _ = _standard_data()
+    _set_assignment(member_id, shift_code="C1")
+    result = _snapshot()
+    assert result.source_type == "LEGACY_OPERATIONAL_PLANNING"
+    assert result.planning_status == "published"
+    assert result.counts.driver_planned_count == 1
+    assert len(result.rows) == 1
+
+
+def test_workforce_projection_is_used_when_legacy_planning_is_missing():
+    member_id = _member("org-a", "DRV-1", "Mario Driver")
+    _set_assignment(member_id, shift_code="C1")
+    result = _snapshot()
+    assert result.source_type == "WORKFORCE_OPERATIONAL_PROJECTION"
+    assert result.planning.available is True
+    assert result.planning_status == "workforce_available"
+    assert result.counts.driver_planned_count == 1
+    assert result.rows[0].driver.workforce_member_id == member_id
+    assert result.rows[0].route == "delivery"
+
+
+def test_workforce_projection_excludes_rest_from_planned_and_absence_counts():
+    rest_member = _member("org-a", "DRV-REST", "Driver Rest", status="rest")
+    _set_assignment(rest_member, shift_code="C1")
+    result = _snapshot()
+    assert result.counts.driver_planned_count == 0
+    assert result.counts.driver_absent_count == 0
+
+
+def test_workforce_projection_counts_canonical_absences():
+    for index, status in enumerate(("holiday", "sickness", "leave", "unavailable")):
+        _member("org-a", f"DRV-{index}", f"Driver {index}", status=status)
+    result = _snapshot()
+    assert result.counts.driver_absent_count == 4
+
+
+def test_workforce_projection_reads_all_coverage_buckets_and_gaps():
+    next_member = _member("org-a", "DRV-N", "Next Driver")
+    same_a_member = _member("org-a", "DRV-A", "Same A Driver")
+    same_bc_member = _member("org-a", "DRV-BC", "Same BC Driver")
+    _set_assignment(next_member, shift_code="C1", cycle="NEXT_DAY")
+    _set_assignment(same_a_member, shift_code="SA", cycle="SAME_DAY")
+    _set_assignment(same_bc_member, shift_code="SB", cycle="SAME_DAY")
+    _coverage_requirement(
+        "org-a", cycle="NEXT_DAY", segment=None, forecast=1, requirement=2,
+    )
+    _coverage_requirement(
+        "org-a", cycle="SAME_DAY", segment="A", forecast=2, requirement=3,
+    )
+    _coverage_requirement(
+        "org-a", cycle="SAME_DAY", segment="B_C", forecast=1, requirement=1,
+    )
+    result = _snapshot()
+    coverage = {(item.cycle, item.segment): item for item in result.coverage}
+    assert coverage[("NEXT_DAY", None)].assigned == 1
+    assert coverage[("NEXT_DAY", None)].requirement_gap == 1
+    assert coverage[("SAME_DAY", "A")].assigned == 1
+    assert coverage[("SAME_DAY", "A")].requirement_gap == 2
+    assert coverage[("SAME_DAY", "B_C")].assigned == 1
+    assert coverage[("SAME_DAY", "B_C")].reserve == 0
+
+
+def test_workforce_projection_preserves_no_forecast_status():
+    member_id = _member("org-a", "DRV-1", "Mario Driver")
+    _set_assignment(member_id, shift_code="C1")
+    result = _snapshot()
+    assert {item.status for item in result.coverage} == {"NO_FORECAST"}
+    assert sum(item.assigned for item in result.coverage) == 1
+
+
+def test_workforce_projection_is_organization_scoped():
+    own = _member("org-a", "DRV-A", "Driver A")
+    other = _member("org-b", "DRV-B", "Driver B")
+    _set_assignment(own, shift_code="C1")
+    _set_assignment(other, shift_code="C1")
+    result = _snapshot("org-a")
+    assert result.counts.driver_planned_count == 1
+    assert [row.driver.name for row in result.rows] == ["Driver A"]
+
+
+def test_workforce_bridge_sources_are_loaded_once(monkeypatch):
+    member_id = _member("org-a", "DRV-1", "Mario Driver")
+    _set_assignment(member_id, shift_code="C1")
+    calls = {"projection": 0, "coverage": 0}
+    original_projection = repository.workforce_daily_projection
+    original_coverage = daily_coverage
+
+    def projection(*args, **kwargs):
+        calls["projection"] += 1
+        return original_projection(*args, **kwargs)
+
+    def coverage(*args, **kwargs):
+        calls["coverage"] += 1
+        return original_coverage(*args, **kwargs)
+
+    monkeypatch.setattr(
+        "app.plugins.dsp_workspace.application.service.repository."
+        "workforce_daily_projection",
+        projection,
+    )
+    monkeypatch.setattr(
+        "app.plugins.dsp_workspace.application.service.daily_coverage",
+        coverage,
+    )
+    _snapshot()
+    assert calls == {"projection": 1, "coverage": 1}
 
 
 def test_assignment_builds_compact_operational_row():

@@ -1,7 +1,7 @@
 import {
   initDspWorkspace,
   prepareDspFirstPaint,
-} from "../dsp-workspace/index.js?v=5";
+} from "../dsp-workspace/index.js?v=6";
 
 
 let initialized = false;

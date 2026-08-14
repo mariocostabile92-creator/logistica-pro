@@ -1008,6 +1008,10 @@ export function initWorkforcePage() {
   document.addEventListener("workforce:driver-open", (event) => {
     void openWorkforceDriver(event.detail?.driverId);
   });
+  document.addEventListener("workforce:open-date", (event) => {
+    const operationDate = event.detail?.operationDate;
+    if (operationDate) void loadFromAnchor(operationDate);
+  });
   document.addEventListener("workspace:view-changed", (event) => {
     if (event.detail.view === "workforce" && !loaded && !firstPaintPromise) {
       void prepareWorkforceFirstPaint();

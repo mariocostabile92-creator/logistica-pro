@@ -148,3 +148,13 @@ export function dispatchDspAction(selectedAction, target = document) {
   }
   return false;
 }
+
+
+export function openWorkforcePlanning(operationDate, target = document) {
+  const date = validOperationDate(operationDate);
+  if (!date) return false;
+  navigateThen(target, "workforce", "workforce:open-date", {
+    operationDate: date,
+  });
+  return true;
+}

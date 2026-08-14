@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
 
 from app.plugins.dsp_workspace.domain.models import (
+    DailyOperationsCounts,
     DailyOperationsSnapshot,
     PlanningMetadata,
     SourceMetadata,
@@ -10,9 +11,15 @@ from app.plugins.dsp_workspace.application.operational_signals import (
     apply_operational_projections,
 )
 from app.plugins.dsp_workspace.infrastructure import repository
+from app.plugins.dsp_workspace.application.workforce_read_bridge import (
+    build_workforce_bridge,
+    coverage_projection,
+    has_coverage_data,
+)
 from app.plugins.workforce.application.availability_service import (
     foundation_snapshot,
 )
+from app.plugins.workforce.application.coverage_service import daily_coverage
 
 
 def _now() -> str:
@@ -75,12 +82,17 @@ def daily_operations_snapshot(
 
     workforce_fetched_at = _now()
     workforce_drivers: dict[int, object] = {}
+    workforce_records: list[dict[str, object]] = []
+    workforce_bridge = build_workforce_bridge([])
     try:
-        workforce = foundation_snapshot(day, organization_id)
-        workforce_drivers = {
-            driver.workforce_member_id: driver
-            for driver in workforce.drivers
-        }
+        workforce_records = repository.workforce_daily_projection(day, organization_id)
+        workforce_bridge = build_workforce_bridge(workforce_records)
+        if planning_snapshot:
+            workforce = foundation_snapshot(day, organization_id)
+            workforce_drivers = {
+                driver.workforce_member_id: driver
+                for driver in workforce.drivers
+            }
         sources["workforce"] = _source(
             available=True,
             status="available",
@@ -91,6 +103,26 @@ def daily_operations_snapshot(
             available=False,
             status="unavailable",
             fetched_at=workforce_fetched_at,
+            partial=True,
+            error=_safe_error(exc),
+        )
+
+    coverage_fetched_at = _now()
+    coverage_items = []
+    coverage_warnings = []
+    try:
+        coverage_response = daily_coverage(organization_id, day, day)
+        coverage_items, coverage_warnings = coverage_projection(coverage_response)
+        sources["coverage"] = _source(
+            available=True,
+            status=("available" if has_coverage_data(coverage_items) else "no_data"),
+            fetched_at=coverage_fetched_at,
+        )
+    except Exception as exc:
+        sources["coverage"] = _source(
+            available=False,
+            status="unavailable",
+            fetched_at=coverage_fetched_at,
             partial=True,
             error=_safe_error(exc),
         )
@@ -98,10 +130,11 @@ def daily_operations_snapshot(
     fleet_fetched_at = _now()
     fleet_assets: list[dict] = []
     try:
-        fleet_assets = repository.compact_fleet_assets(organization_id)
+        if planning_snapshot:
+            fleet_assets = repository.compact_fleet_assets(organization_id)
         sources["fleet"] = _source(
             available=True,
-            status="available",
+            status=("available" if planning_snapshot else "not_required"),
             fetched_at=fleet_fetched_at,
         )
     except Exception as exc:
@@ -113,6 +146,9 @@ def daily_operations_snapshot(
             error=_safe_error(exc),
         )
 
+    workforce_fallback_available = bool(workforce_bridge.rows) or has_coverage_data(
+        coverage_items
+    )
     if planning_snapshot:
         planning_record = planning_snapshot["planning"]
         planning = PlanningMetadata(
@@ -122,24 +158,63 @@ def daily_operations_snapshot(
             status=str(planning_record["status"]),
             updated_at=planning_record.get("updated_at"),
         )
+        source_type = "LEGACY_OPERATIONAL_PLANNING"
+        planning_status = str(planning_record["status"])
     else:
-        planning = PlanningMetadata(available=False, operation_date=day)
+        planning = PlanningMetadata(
+            available=workforce_fallback_available,
+            operation_date=day,
+            status=("available" if workforce_fallback_available else None),
+            source="workforce-operational-projection",
+        )
+        source_type = (
+            "WORKFORCE_OPERATIONAL_PROJECTION"
+            if workforce_fallback_available else None
+        )
+        planning_status = (
+            "workforce_available" if workforce_fallback_available else "no_data"
+        )
 
-    built = build_operational_rows(
-        organization_id=organization_id,
-        planning_snapshot=planning_snapshot,
-        workforce_drivers=workforce_drivers,
-        fleet_assets=fleet_assets,
-    )
+    if planning_snapshot:
+        built = build_operational_rows(
+            organization_id=organization_id,
+            planning_snapshot=planning_snapshot,
+            workforce_drivers=workforce_drivers,
+            fleet_assets=fleet_assets,
+        )
+        built_rows = built.rows
+        built_signals = built.signals
+        legacy_member_ids = {
+            row.driver.workforce_member_id
+            for row in built_rows
+            if row.driver.workforce_member_id is not None
+        }
+        counts = DailyOperationsCounts(
+            driver_planned_count=len(built_rows),
+            driver_available_count=workforce_bridge.counts.driver_available_count,
+            driver_absent_count=workforce_bridge.counts.driver_absent_count,
+            reserve_count=sum(
+                bool(record.get("is_reserve"))
+                and int(record["workforce_member_id"]) in legacy_member_ids
+                for record in workforce_records
+            ),
+        )
+        bridge_warnings = []
+    else:
+        built = None
+        built_rows = workforce_bridge.rows
+        built_signals = []
+        counts = workforce_bridge.counts
+        bridge_warnings = workforce_bridge.warnings
 
     asset_ids = [
         row.vehicle.fleet_asset_id
-        for row in built.rows
+        for row in built_rows
         if row.vehicle.fleet_asset_id is not None
     ]
     workforce_member_ids = [
         row.driver.workforce_member_id
-        for row in built.rows
+        for row in built_rows
         if row.driver.workforce_member_id is not None
     ]
 
@@ -190,7 +265,7 @@ def daily_operations_snapshot(
         )
 
     operational = apply_operational_projections(
-        rows=built.rows,
+        rows=built_rows,
         journal_records=journal_records,
         damage_cases=damage_cases,
         operation_date=day,
@@ -200,17 +275,21 @@ def daily_operations_snapshot(
         damage_available=sources["damage"].available,
         now=now,
     )
-    if built.unresolved_drivers and sources["workforce"].available:
+    if built and built.unresolved_drivers and sources["workforce"].available:
         sources["workforce"] = sources["workforce"].model_copy(update={
             "status": "partial_unresolved_identity",
             "partial": True,
         })
-    if built.unresolved_vehicles and sources["fleet"].available:
+    if built and built.unresolved_vehicles and sources["fleet"].available:
         sources["fleet"] = sources["fleet"].model_copy(update={
             "status": "partial_unresolved_identity",
             "partial": True,
         })
-    if operational.journal_partial_rows and sources["journal"].available:
+    if (
+        planning_snapshot
+        and operational.journal_partial_rows
+        and sources["journal"].available
+    ):
         sources["journal"] = sources["journal"].model_copy(update={
             "status": "partial_unresolved_correlation",
             "partial": True,
@@ -226,7 +305,12 @@ def daily_operations_snapshot(
         generated_at=_now(),
         planning=planning,
         sources=sources,
+        source_type=source_type,
+        planning_status=planning_status,
+        counts=counts,
+        coverage=coverage_items,
+        warnings=[*bridge_warnings, *coverage_warnings],
         rows=operational.rows,
-        signals=[*built.signals, *operational.signals],
+        signals=[*built_signals, *operational.signals],
         partial=any(item.partial for item in sources.values()),
     )

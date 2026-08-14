@@ -7,6 +7,7 @@ const SEVERITY_RANK = Object.freeze({
 const SOURCE_LABELS = Object.freeze({
   planning: "Planning",
   workforce: "Workforce",
+  coverage: "Coverage",
   fleet: "Fleet",
   journal: "Journal",
   damage: "Danni",

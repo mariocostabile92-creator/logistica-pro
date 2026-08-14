@@ -1622,11 +1622,26 @@
       <div id="dspViewState" class="view-state loading" aria-live="polite" aria-busy="true"></div>
 
       <div id="dspWorkspaceData" class="dsp-workspace-data" hidden>
+        <div class="dsp-source-context">
+          <p><span>Fonte</span><strong id="dspSourceLabel">In aggiornamento</strong></p>
+          <button id="dspOpenWorkforcePlanning" type="button" class="secondary">
+            Apri Planning Workforce
+          </button>
+        </div>
         <dl class="dsp-summary" aria-label="Riepilogo DSP">
           <div><dt>Driver pianificati</dt><dd id="dspSummaryDrivers">0</dd></div>
-          <div><dt>Mezzi assegnati</dt><dd id="dspSummaryVehicles">0</dd></div>
+          <div><dt>Disponibili</dt><dd id="dspSummaryAvailable">—</dd></div>
+          <div><dt>Assenze</dt><dd id="dspSummaryAbsences">—</dd></div>
           <div class="dsp-summary-attention"><dt>Criticità</dt><dd id="dspSummaryAttention">0</dd></div>
         </dl>
+        <section class="dsp-coverage-section" aria-labelledby="dspCoverageTitle">
+          <header>
+            <div><p class="eyebrow">Coverage</p><h3 id="dspCoverageTitle">Forecast e copertura</h3></div>
+            <small>Forecast Amazon, requisito e assegnazioni Workforce</small>
+          </header>
+          <div id="dspCoverageBuckets" class="dsp-coverage-grid"></div>
+        </section>
+        <div id="dspOperationalWarnings" class="dsp-operational-warnings" role="status" hidden></div>
         <div id="dspSourceWarnings" class="dsp-source-warnings" role="status" hidden></div>
 
         <div class="dsp-toolbar">

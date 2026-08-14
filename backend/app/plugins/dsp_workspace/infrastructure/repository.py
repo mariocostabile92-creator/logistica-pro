@@ -13,6 +13,40 @@ def authoritative_planning_snapshot(
     )
 
 
+def workforce_daily_projection(
+    operation_date: str,
+    organization_id: str,
+) -> list[dict[str, object]]:
+    """Load one organization-scoped daily Workforce projection in one query."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT m.id AS workforce_member_id,
+                   m.external_identifier,
+                   m.display_name,
+                   m.station,
+                   m.employment_type,
+                   m.operational_cycle,
+                   m.is_reserve,
+                   ds.id AS status_id,
+                   ds.status_code,
+                   ds.availability,
+                   ds.shift_code,
+                   ds.operational_activity
+            FROM workforce_members m
+            LEFT JOIN workforce_day_statuses ds
+              ON ds.workforce_member_id = m.id
+             AND ds.organization_id = m.organization_id
+             AND ds.date = ?
+            WHERE m.organization_id = ?
+              AND m.active = 1
+            ORDER BY m.display_name, m.id
+            """,
+            (operation_date, organization_id),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def compact_fleet_assets(organization_id: str) -> list[dict]:
     """Load only identity and current operational fields for this tenant."""
     with db_session() as conn:
