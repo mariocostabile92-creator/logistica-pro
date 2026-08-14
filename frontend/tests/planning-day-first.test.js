@@ -61,6 +61,28 @@ function payload(operationDate = "2026-08-14", overrides = {}) {
   };
 }
 
+function fleetSnapshot(operationDate, changes = {}) {
+  return {
+    operational_date: operationDate,
+    requested_station: null,
+    station_scope_applied: false,
+    total_vehicles: 86,
+    available_vehicles: 56,
+    unavailable_vehicles: 29,
+    maintenance_vehicles: 1,
+    blocked_vehicles: 0,
+    unknown_vehicles: 0,
+    vehicle_need: null,
+    vehicle_need_status: "NOT_CONFIGURED",
+    margin: null,
+    missing_requirement_buckets: ["NEXT_DAY", "SAME_DAY_A", "SAME_DAY_B_C"],
+    route_assignments_available: false,
+    assigned_vehicles: null,
+    routes_without_vehicle: null,
+    ...changes,
+  };
+}
+
 test("default date helper returns today without UTC day drift", () => {
   assert.equal(todayOperationalDate(new Date(2026, 7, 14, 23, 30)), "2026-08-14");
 });
@@ -132,6 +154,70 @@ test("Fleet capacity remains selected-day context and route assignment stays sep
   assert.match(root.innerHTML, /124<\/strong><span>Disponibili/);
   assert.match(root.innerHTML, /In attesa delle rotte definitive/);
   assert.doesNotMatch(root.innerHTML, /Mezzi settimana/);
+});
+
+test("complete Fleet snapshot stays synchronized between top KPIs and capacity card", () => {
+  const root = { innerHTML: "" };
+  renderOperations(root, payload("2026-08-15", {
+    fleet_capacity: fleetSnapshot("2026-08-15", {
+      vehicle_need: 92,
+      vehicle_need_status: "COMPLETE",
+      margin: -36,
+      missing_requirement_buckets: [],
+    }),
+  }), [], { weekPayloads: new Map() });
+  assert.equal((root.innerHTML.match(/<strong>92<\/strong>/g) || []).length, 2);
+  assert.equal((root.innerHTML.match(/<strong>56<\/strong>/g) || []).length, 2);
+  assert.match(root.innerHTML, /Capacità Fleet insufficiente/);
+  assert.match(root.innerHTML, /Mancano 36 mezzi/);
+  assert.match(root.innerHTML, /<strong>—<\/strong><span>Mezzi assegnati/);
+});
+
+test("partial Fleet snapshot updates top KPI and card in the same render cycle", () => {
+  const root = { innerHTML: "" };
+  renderOperations(root, payload("2026-08-15", {
+    fleet_capacity: fleetSnapshot("2026-08-15", {
+      vehicle_need: 42,
+      vehicle_need_status: "PARTIAL",
+      margin: 14,
+      missing_requirement_buckets: ["NEXT_DAY"],
+    }),
+  }), [], { weekPayloads: new Map() });
+  assert.equal((root.innerHTML.match(/<strong>Almeno 42<\/strong>/g) || []).length, 2);
+  assert.match(root.innerHTML, /<strong>56<\/strong><span>Mezzi disponibili/);
+
+  renderOperations(root, payload("2026-08-15", {
+    fleet_capacity: fleetSnapshot("2026-08-15", {
+      vehicle_need: 92,
+      vehicle_need_status: "COMPLETE",
+      margin: -36,
+      missing_requirement_buckets: [],
+    }),
+  }), [], { weekPayloads: new Map() });
+  assert.doesNotMatch(root.innerHTML, /Almeno 42/);
+  assert.equal((root.innerHTML.match(/<strong>92<\/strong>/g) || []).length, 2);
+});
+
+test("day change replaces both Fleet KPI values without historical availability claims", () => {
+  const root = { innerHTML: "" };
+  renderOperations(root, payload("2026-08-14", {
+    fleet_capacity: fleetSnapshot("2026-08-14", {
+      vehicle_need: 119,
+      vehicle_need_status: "COMPLETE",
+      margin: -63,
+      missing_requirement_buckets: [],
+    }),
+  }), [], { weekPayloads: new Map() });
+  assert.match(root.innerHTML, /Fleet input · 14 agosto/);
+  assert.equal((root.innerHTML.match(/<strong>119<\/strong>/g) || []).length, 2);
+
+  renderOperations(root, payload("2026-08-16", {
+    fleet_capacity: fleetSnapshot("2026-08-16"),
+  }), [], { weekPayloads: new Map() });
+  assert.match(root.innerHTML, /Fleet input · 16 agosto/);
+  assert.match(root.innerHTML, /Fabbisogno mezzi da configurare/);
+  assert.match(root.innerHTML, /stato è quello operativo corrente/);
+  assert.doesNotMatch(root.innerHTML, /<strong>119<\/strong>/);
 });
 
 test("URL and every day change use selectedOperationalDate", async () => {
