@@ -49,12 +49,30 @@ def init_schema() -> None:
             status_code INTEGER NOT NULL,
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS maintenance_tokens (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            scope TEXT NOT NULL,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            revoked_at TEXT,
+            used_at TEXT,
+            status TEXT NOT NULL,
+            FOREIGN KEY (organization_id) REFERENCES organizations(id),
+            FOREIGN KEY (created_by) REFERENCES auth_users(id)
+        );
         CREATE TABLE IF NOT EXISTS auth_bootstrap_state (
             id INTEGER PRIMARY KEY,
             completed_at TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(token_hash);
         CREATE INDEX IF NOT EXISTS idx_audit_org_time ON admin_audit_events(organization_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_maintenance_tokens_hash
+            ON maintenance_tokens(token_hash);
+        CREATE INDEX IF NOT EXISTS idx_maintenance_tokens_org_status
+            ON maintenance_tokens(organization_id, status, expires_at);
         """)
         _ensure_column(conn, "organizations", "primary_station", "TEXT")
         _ensure_column(conn, "organizations", "timezone", "TEXT NOT NULL DEFAULT 'Europe/Rome'")

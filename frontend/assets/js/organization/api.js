@@ -17,3 +17,10 @@ export const listUsers = () => request("/users");
 export const createUser = data => request("/users", { method: "POST", body: JSON.stringify(data) });
 export const updateUser = (id, data) => request(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 export const changePassword = (id, password) => request(`/users/${id}/password`, { method: "POST", body: JSON.stringify({ password }) });
+
+export const createMaintenanceToken = data => fetch("/api/admin/maintenance-tokens", {
+  method: "POST",
+  credentials: "same-origin",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(data),
+}).then(parse);

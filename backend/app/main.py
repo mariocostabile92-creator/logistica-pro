@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.attachments.repository import init_schema as init_attachment_schema
 from app.attachments.router import router as attachment_router
 from app.auth.middleware import enforce_authentication
+from app.auth.maintenance_router import router as maintenance_token_router
 from app.auth.organization_router import router as organization_router
 from app.auth.repository import init_schema as init_auth_schema
 from app.auth.router import router as auth_router
@@ -127,6 +128,7 @@ app = FastAPI(
 app.middleware("http")(enforce_authentication)
 app.include_router(auth_router)
 app.include_router(organization_router)
+app.include_router(maintenance_token_router)
 app.include_router(attachment_router)
 
 app.add_middleware(

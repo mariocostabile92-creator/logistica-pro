@@ -48,7 +48,7 @@ const STYLES = {
     "vehicle-dossier.css?v=1",
     "fleet-vision-workspace.css?v=3",
   ],
-  settings: ["settings.css", "organization-settings.css?v=1"],
+  settings: ["settings.css", "organization-settings.css?v=1", "maintenance-token.css?v=1"],
   demo: ["demo-workspace.css"],
 };
 

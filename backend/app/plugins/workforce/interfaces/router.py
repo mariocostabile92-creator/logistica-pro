@@ -205,6 +205,26 @@ def _require(request: Request, permission: str):
     return user
 
 
+def _coverage_organization(
+    request: Request,
+    *,
+    permission: str,
+    administrator_only: bool = False,
+) -> str:
+    maintenance_principal = getattr(
+        request.state, "maintenance_principal", None
+    )
+    if maintenance_principal is not None:
+        return maintenance_principal.organization_id
+    user = _require(request, permission)
+    if administrator_only and user.role != Role.ADMINISTRATOR:
+        raise HTTPException(
+            status_code=403,
+            detail="Permesso Administrator richiesto.",
+        )
+    return user.organization_id
+
+
 def _planning_error(exc: DriverShiftPlanningError | ValueError) -> HTTPException:
     if isinstance(exc, DriverShiftPlanningConflictError):
         return HTTPException(
@@ -1143,10 +1163,12 @@ def planning_coverage(
         default=None, pattern="^(NEXT_DAY|SAME_DAY)$"
     ),
 ) -> DailyCoverageResponse:
-    user = _require(request, "workforce:read")
+    organization_id = _coverage_organization(
+        request, permission="workforce:read"
+    )
     try:
         return coverage_service.daily_coverage(
-            user.organization_id,
+            organization_id,
             date_from,
             date_to,
             cycle,
@@ -1164,19 +1186,18 @@ async def preview_legacy_coverage_backfill(
     file: UploadFile | None = File(default=None),
     workforce_import_id: int | None = Form(default=None, gt=0),
 ) -> LegacyCoverageBackfillPreview:
-    user = _require(request, "workforce:write")
-    if user.role != Role.ADMINISTRATOR:
-        raise HTTPException(
-            status_code=403,
-            detail="La preview del backfill legacy richiede un account Amministratore.",
-        )
+    organization_id = _coverage_organization(
+        request,
+        permission="workforce:write",
+        administrator_only=True,
+    )
     try:
         content: bytes | None = None
         filename: str | None = None
         if file is not None:
             content, filename = await _read_upload(file)
         return legacy_coverage_backfill_service.preview(
-            user.organization_id,
+            organization_id,
             content=content,
             filename=filename,
             workforce_import_id=workforce_import_id,
@@ -1200,17 +1221,16 @@ async def apply_legacy_coverage_backfill(
         ..., min_length=64, max_length=64, pattern="^[0-9a-f]{64}$"
     ),
 ) -> LegacyCoverageBackfillResult:
-    user = _require(request, "workforce:write")
-    if user.role != Role.ADMINISTRATOR:
-        raise HTTPException(
-            status_code=403,
-            detail="Il backfill legacy richiede un account Amministratore.",
-        )
+    organization_id = _coverage_organization(
+        request,
+        permission="workforce:write",
+        administrator_only=True,
+    )
     try:
         ensure_real_data_write_allowed()
         content, filename = await _read_upload(file)
         return legacy_coverage_backfill_service.apply(
-            user.organization_id,
+            organization_id,
             content=content,
             filename=filename,
             workforce_import_id=workforce_import_id,

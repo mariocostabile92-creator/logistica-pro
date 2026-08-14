@@ -125,6 +125,7 @@ def reset_database():
         conn.execute("DELETE FROM workforce_external_identity_events")
         conn.execute("DELETE FROM workforce_external_identities")
         conn.execute("DELETE FROM admin_audit_events")
+        conn.execute("DELETE FROM maintenance_tokens")
         conn.execute("DELETE FROM auth_bootstrap_state")
         conn.execute("DELETE FROM auth_sessions")
         conn.execute("DELETE FROM auth_users")

@@ -2101,6 +2101,7 @@
           <button type="button" class="active" data-organization-tab="general">Generale</button>
           <button type="button" data-organization-tab="users">Utenti</button>
           <button type="button" data-organization-tab="roles">Ruoli</button>
+          <button type="button" data-organization-tab="diagnostics">Diagnostica</button>
         </nav>
         <section class="organization-panel" data-organization-panel="general">
           <div class="organization-general-grid">
@@ -2113,6 +2114,37 @@
         </section>
         <section class="organization-panel" data-organization-panel="roles" hidden>
           <div class="roles-grid"><article><strong>Administrator</strong><p>Gestione completa e utenti.</p></article><article><strong>Operations Manager</strong><p>Lettura e operatività.</p></article><article><strong>Fleet Manager</strong><p>Gestione operativa Fleet.</p></article><article><strong>Dispatcher</strong><p>Gestione operativa.</p></article><article><strong>Viewer</strong><p>Consultazione in sola lettura.</p></article></div>
+        </section>
+        <section class="organization-panel maintenance-token-panel" data-organization-panel="diagnostics" hidden>
+          <div>
+            <h3>Accesso tecnico temporaneo</h3>
+            <p class="section-note">Genera una credenziale breve e limitata per una manutenzione controllata.</p>
+          </div>
+          <div class="maintenance-token-controls">
+            <label>Scope
+              <select id="maintenanceTokenScope">
+                <option value="PLANNING_COVERAGE_BACKFILL">Planning Coverage Backfill</option>
+              </select>
+            </label>
+            <label>Durata
+              <select id="maintenanceTokenTtl">
+                <option value="15" selected>15 minuti</option>
+                <option value="30">30 minuti</option>
+              </select>
+            </label>
+            <button id="generateMaintenanceToken" type="button">Genera token manutenzione</button>
+          </div>
+          <p class="maintenance-token-warning">Questo token concede accesso tecnico limitato fino alla scadenza. Non salvarlo in file permanenti.</p>
+          <div id="maintenanceTokenResult" class="maintenance-token-result" hidden>
+            <label>Token mostrato una sola volta
+              <textarea id="maintenanceTokenValue" rows="3" readonly spellcheck="false"></textarea>
+            </label>
+            <div class="maintenance-token-result-actions">
+              <span id="maintenanceTokenExpiry"></span>
+              <button id="copyMaintenanceToken" type="button" class="secondary">Copia token</button>
+            </div>
+          </div>
+          <p id="maintenanceTokenMessage" class="auth-message" role="status"></p>
         </section>
       </div>
       <dialog id="organizationUserDialog" class="organization-user-dialog" aria-labelledby="organizationUserDialogTitle">

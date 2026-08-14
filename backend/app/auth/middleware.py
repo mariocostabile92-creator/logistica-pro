@@ -6,6 +6,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.auth import repository
 from app.auth.domain import AuthenticatedUser, Role
+from app.auth.maintenance_domain import MaintenanceScope
+from app.auth import maintenance_service
 from app.auth.permission_service import has_permission
 from app.auth.router import COOKIE_NAME
 from app.auth.tenant_context import bind_organization, reset_organization
@@ -27,6 +29,16 @@ PUBLIC_JOURNAL_ROUTES = (
     ({"DELETE"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+/media/[^/]+$")),
     ({"GET", "HEAD"}, re.compile(r"^/api/plugins/fleet/v1/journal/(movements/[^/]+/receipt|media/[^/]+|shared-access/[^/]+)$")),
 )
+
+
+MAINTENANCE_ROUTES = {
+    ("GET", "/api/plugins/workforce/v1/planning/coverage"):
+        MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
+    ("POST", "/api/plugins/workforce/v1/planning/coverage/backfill/preview"):
+        MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
+    ("POST", "/api/plugins/workforce/v1/planning/coverage/backfill"):
+        MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
+}
 
 
 def _public_journal_path(request: Request) -> bool:
@@ -99,6 +111,39 @@ async def enforce_authentication(request: Request, call_next):
     token = request.cookies.get(COOKIE_NAME)
     if token:
         resolved = repository.user_by_session(token)
+    maintenance_scope = MAINTENANCE_ROUTES.get((request.method, path))
+    maintenance_principal = None
+    session_is_administrator = bool(
+        resolved and resolved[0].role == Role.ADMINISTRATOR
+    )
+    if maintenance_scope and not session_is_administrator:
+        authorization = request.headers.get("authorization")
+        if authorization:
+            try:
+                maintenance_principal = maintenance_service.authenticate(
+                    maintenance_service.raw_bearer(authorization),
+                    maintenance_scope,
+                )
+            except maintenance_service.MaintenanceTokenInvalidError:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Credenziali di manutenzione non valide."},
+                )
+    if maintenance_principal is not None:
+        request.state.maintenance_principal = maintenance_principal
+        request.state.organization_id = maintenance_principal.organization_id
+        tenant_token = bind_organization(maintenance_principal.organization_id)
+        try:
+            response = await call_next(request)
+            maintenance_service.record_usage(
+                maintenance_principal,
+                method=request.method,
+                path=path,
+                status_code=response.status_code,
+            )
+            return response
+        finally:
+            reset_organization(tenant_token)
     if resolved:
         user, session_id = resolved
         request.state.user = user

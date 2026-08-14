@@ -1,4 +1,4 @@
-import { changePassword, createUser, getOrganization, listUsers, updateUser } from "./api.js";
+import { changePassword, createMaintenanceToken, createUser, getOrganization, listUsers, updateUser } from "./api.js";
 import { renderOrganization, renderUsers } from "./renderer.js";
 import { organizationState, setOrganizationData } from "./state.js";
 
@@ -37,6 +37,37 @@ async function save(event) {
   finally { button.disabled = false; }
 }
 
+async function generateMaintenanceToken() {
+  const button = document.getElementById("generateMaintenanceToken");
+  const message = document.getElementById("maintenanceTokenMessage");
+  const result = document.getElementById("maintenanceTokenResult");
+  button.disabled = true;
+  message.textContent = "";
+  result.hidden = true;
+  document.getElementById("maintenanceTokenValue").value = "";
+  try {
+    const created = await createMaintenanceToken({
+      scope: document.getElementById("maintenanceTokenScope").value,
+      ttl_minutes: Number(document.getElementById("maintenanceTokenTtl").value),
+    });
+    document.getElementById("maintenanceTokenValue").value = created.token;
+    document.getElementById("maintenanceTokenExpiry").textContent = `Scade: ${new Intl.DateTimeFormat("it-IT", { dateStyle:"short", timeStyle:"medium" }).format(new Date(created.expires_at))}`;
+    document.getElementById("copyMaintenanceToken").textContent = "Copia token";
+    result.hidden = false;
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyMaintenanceToken() {
+  const value = document.getElementById("maintenanceTokenValue").value;
+  if (!value) return;
+  await navigator.clipboard.writeText(value);
+  document.getElementById("copyMaintenanceToken").textContent = "Copiato";
+}
+
 export function initOrganizationSettings() {
   if (initialized) return; initialized = true;
   document.getElementById("organizationSettingsTabs").addEventListener("click", event => {
@@ -51,6 +82,8 @@ export function initOrganizationSettings() {
     if (id) openEditor(organizationState.users.find(user => user.id === id));
   });
   document.getElementById("organizationUserForm").addEventListener("submit", save);
+  document.getElementById("generateMaintenanceToken").addEventListener("click", generateMaintenanceToken);
+  document.getElementById("copyMaintenanceToken").addEventListener("click", copyMaintenanceToken);
   document.querySelector("[data-close-user-dialog]").addEventListener("click", () => document.getElementById("organizationUserDialog").close());
   load().catch(error => { document.getElementById("organizationSettingsStatus").textContent = error.message; });
 }
