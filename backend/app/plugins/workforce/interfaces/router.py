@@ -20,6 +20,7 @@ from app.plugins.workforce.application import driver_shift_credentials_service
 from app.plugins.workforce.application import driver_shift_driver_session_service
 from app.plugins.workforce.application import coverage_service
 from app.plugins.workforce.application import legacy_coverage_backfill_service
+from app.plugins.workforce.application import operational_cycle_reconciliation_service
 from app.plugins.workforce.application import day_member_batch_service
 from app.plugins.workforce.application.contact_coverage_service import contact_coverage
 from app.plugins.workforce.application.consecutivity_service import snapshots as consecutivity_snapshots
@@ -76,6 +77,10 @@ from app.plugins.workforce.domain.coverage import DailyCoverageResponse
 from app.plugins.workforce.domain.legacy_coverage_backfill import (
     LegacyCoverageBackfillPreview,
     LegacyCoverageBackfillResult,
+)
+from app.plugins.workforce.domain.operational_cycle_reconciliation import (
+    OperationalCycleReconciliationPreview,
+    OperationalCycleReconciliationResult,
 )
 from app.plugins.workforce.domain.driver_shift_portal import (
     DriverShiftPortalAccess,
@@ -1245,6 +1250,83 @@ async def apply_legacy_coverage_backfill(
         DemoWorkspaceResetRequiredError,
         WorkbookProfileError,
         legacy_coverage_backfill_service.LegacyCoverageBackfillError,
+    ) as exc:
+        raise _write_error(exc) from exc
+
+
+def _cycle_bridge_administrator(request: Request):
+    user = _require(request, "workforce:write")
+    if user.role != Role.ADMINISTRATOR:
+        raise HTTPException(
+            status_code=403,
+            detail="Permesso Administrator richiesto.",
+        )
+    return user
+
+
+@router.post(
+    "/operational-cycle-backfill/preview",
+    response_model=OperationalCycleReconciliationPreview,
+)
+async def preview_operational_cycle_backfill(
+    request: Request,
+    file: UploadFile = File(...),
+    workforce_import_id: int = Form(..., gt=0),
+) -> OperationalCycleReconciliationPreview:
+    user = _cycle_bridge_administrator(request)
+    try:
+        content, filename = await _read_upload(file)
+        return operational_cycle_reconciliation_service.preview(
+            user.organization_id,
+            content=content,
+            filename=filename,
+            workforce_import_id=workforce_import_id,
+        )
+    except (
+        WorkbookProfileError,
+        operational_cycle_reconciliation_service.OperationalCycleReconciliationError,
+    ) as exc:
+        raise _write_error(exc) from exc
+
+
+@router.post(
+    "/operational-cycle-backfill",
+    response_model=OperationalCycleReconciliationResult,
+)
+async def apply_operational_cycle_backfill(
+    request: Request,
+    file: UploadFile = File(...),
+    workforce_import_id: int = Form(..., gt=0),
+    expected_preview_fingerprint: str = Form(
+        ..., min_length=64, max_length=64, pattern="^[0-9a-f]{64}$"
+    ),
+) -> OperationalCycleReconciliationResult:
+    user = _cycle_bridge_administrator(request)
+    try:
+        ensure_real_data_write_allowed()
+        content, filename = await _read_upload(file)
+        return operational_cycle_reconciliation_service.apply(
+            user.organization_id,
+            content=content,
+            filename=filename,
+            workforce_import_id=workforce_import_id,
+            expected_preview_fingerprint=expected_preview_fingerprint,
+            actor=user.email,
+        )
+    except (
+        operational_cycle_reconciliation_service.OperationalCycleReconciliationConflictError
+    ) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "OPERATIONAL_CYCLE_PREVIEW_CONFLICT",
+                "message": str(exc),
+            },
+        ) from exc
+    except (
+        DemoWorkspaceResetRequiredError,
+        WorkbookProfileError,
+        operational_cycle_reconciliation_service.OperationalCycleReconciliationError,
     ) as exc:
         raise _write_error(exc) from exc
 
