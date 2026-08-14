@@ -1,7 +1,6 @@
-import { availabilityCard } from "./availability-card.js?v=3";
+import { availabilityCard } from "./availability-card.js?v=4";
 import { KPI_FILTERS, renderAvailabilityKpis } from "./availability-kpi.js?v=2";
 import { createAvailabilityState, reduceAvailabilityState, selectAvailabilityDrivers } from "./availability-state.js?v=3";
-import { createAvailabilityDetail } from "./availability-detail.js?v=2";
 import {
   CONSECUTIVITY_BINDINGS,
   filterValue,
@@ -13,7 +12,6 @@ import {
 } from "../workforce-consecutivity/consecutivity-presenter.js";
 
 let state = createAvailabilityState();
-let detail = null;
 let activeKpi = "";
 
 function options(field) {
@@ -50,7 +48,6 @@ function setFilter(name, value) {
 }
 
 export function initAvailabilityPresenter() {
-  detail = createAvailabilityDetail();
   const bindings = {
     workforceFoundationSearch: "query", workforceCallabilityFilter: "callability",
     workforceAvailabilityFilter: "availability", workforceRoleFilter: "role",
@@ -80,7 +77,9 @@ export function initAvailabilityPresenter() {
     const button = event.target.closest("[data-workforce-driver-detail]");
     if (!button) return;
     const driver = state.snapshot.drivers.find((item) => item.workforce_member_id === Number(button.dataset.workforceDriverDetail));
-    if (driver) detail.open({ ...driver, permissions: state.snapshot.permissions });
+    if (driver) document.dispatchEvent(new CustomEvent("workforce:driver-open", {
+      detail: { driverId: driver.workforce_member_id },
+    }));
   });
   initConsecutivityPresenter();
 }

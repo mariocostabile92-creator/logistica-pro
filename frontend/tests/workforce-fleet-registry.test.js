@@ -47,10 +47,10 @@ test("Workforce READY is a calendar-first workspace with compact controls", asyn
   ]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
-  assert.match(page, /Importa il planning esistente oppure crea il primo planning/);
+  assert.match(page, /Nessun turno disponibile per questa settimana/);
   assert.doesNotMatch(html, /Apri calendario/);
   assert.match(html, /Aggiorna da Excel/);
-  assert.match(page, /await loadCalendar\(\)/);
+  assert.match(page, /await ensureActiveWorkforceSectionData\(\)/);
 });
 
 
@@ -212,7 +212,7 @@ test("Workforce initial READY load is limited to the active calendar period", as
   assert.match(calendarBody, /listWorkforceMembers\(\)/);
   assert.doesNotMatch(calendarBody, /getWorkforceChanges/);
   assert.match(refreshBody, /getWorkforceStatus\(\)/);
-  assert.match(refreshBody, /await loadCalendar\(\)/);
+  assert.match(refreshBody, /await ensureActiveWorkforceSectionData\(\)/);
 });
 
 
@@ -241,16 +241,16 @@ test("Workforce visible language translates internal states", async () => {
 });
 
 
-test("Workforce anomalies are categorized and initially bounded to 25", async () => {
+test("Workforce anomalies exclude ordinary rest and remain bounded to 25", async () => {
   const statuses = Array.from({ length: 30 }, (_, index) => ({
     workforce_member_id: 1,
     date: `2026-07-${String((index % 7) + 20).padStart(2, "0")}`,
     status_code: index % 2 ? "sickness" : "rest",
   }));
   const result = workforceAnomalies(statuses, [{ workforce_member_id: 1, display_name: "Risorsa Test" }]);
-  assert.equal(result.total, 30);
+  assert.equal(result.total, 15);
   assert.equal(result.counts.absence, 15);
-  assert.equal(result.counts.rest, 15);
+  assert.equal("rest" in result.counts, false);
   const [page, insights] = await Promise.all([
     frontendFile("assets/js/modules/workforce-page.js"),
     frontendFile("assets/js/modules/workforce-insights-view.js"),
@@ -312,7 +312,7 @@ test("Workforce polish keeps operational signals compact and accessible", async 
   assert.match(calendarCss, /\.workforce-status-badge::before/);
   assert.match(insights, /covered: "Coperto"/);
   assert.match(insights, /deficit: "Scoperto"/);
-  assert.match(insights, /eventi registrati nel periodo selezionato/);
+  assert.match(insights, /warning operativi nel periodo selezionato/);
   assert.match(page, /showWorkforceFeedback\("Modifica salvata"\)/);
   assert.match(page, /}, 3200\)/);
   assert.match(layout, /transition:[^;]*160ms/);

@@ -46,8 +46,9 @@ test("availability architecture is split into service presenter state KPI card d
   assert.ok(files.every((content) => !/fetch\s*\(/.test(content)));
 });
 
-test("cards expose status reason availability capabilities and real detail action", async () => {
+test("compact People cards expose readiness and open the full detail action", async () => {
   const card = await readFile(new URL("../assets/js/modules/workforce-availability/availability-card.js", import.meta.url), "utf8");
-  for (const field of ["callability_label", "callability_reason", "availability_label", "capabilities"]) assert.match(card, new RegExp(field));
+  for (const field of ["callability_label", "callability_reason", "availability_label", "operational_cycle"]) assert.match(card, new RegExp(field));
+  assert.doesNotMatch(card, /driver\.capabilities/);
   assert.match(card, /data-workforce-driver-detail/);
 });

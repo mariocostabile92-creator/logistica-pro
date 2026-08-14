@@ -1,0 +1,211 @@
+.workforce-section .workforce-toolbar {
+  margin-bottom: 8px;
+}
+
+.workforce-section .workforce-toolbar .oe-workspace-mark {
+  width: 24px;
+  height: 17px;
+}
+
+.workforce-section .workforce-toolbar h2 {
+  margin: 2px 0;
+}
+
+.workforce-section-nav {
+  display: flex;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 12px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  scrollbar-width: thin;
+}
+
+.workforce-section-nav button {
+  min-height: 42px;
+  padding: 8px 16px;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.workforce-section-nav button[aria-selected="true"] {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgb(15 48 39 / 8%);
+}
+
+.workforce-section-nav button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.workforce-mode-surface[hidden] {
+  display: none !important;
+}
+
+.workforce-planning-surface {
+  min-width: 0;
+}
+
+.workforce-planning-surface .workforce-source-heading {
+  display: none;
+}
+
+.workforce-planning-surface .workforce-command-bar {
+  margin-top: 0;
+}
+
+.workforce-people-surface .workforce-foundation {
+  margin-top: 0;
+}
+
+.workforce-people-surface .workforce-foundation-header {
+  align-items: end;
+}
+
+.workforce-people-surface .workforce-driver-readiness {
+  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(105px, 0.75fr)) auto;
+  gap: 10px;
+  padding: 12px;
+}
+
+.workforce-people-surface .workforce-driver-readiness > div {
+  min-width: 0;
+}
+
+.workforce-driver-state-compact strong:last-child {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workforce-data-surface {
+  display: grid;
+  gap: 14px;
+}
+
+.workforce-data-group,
+.workforce-mode-heading {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.workforce-data-group > header,
+.workforce-mode-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.workforce-data-group h3,
+.workforce-data-group p,
+.workforce-mode-heading h3,
+.workforce-mode-heading p {
+  margin: 0;
+}
+
+.workforce-shared-detail-host .workforce-detail-backdrop:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: rgb(18 29 26 / 38%);
+}
+
+.workforce-shared-detail-host .workforce-detail-panel:not([hidden]) {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  z-index: 59;
+  width: min(410px, calc(100% - 32px));
+  max-height: calc(100vh - 88px);
+  box-shadow: -16px 0 48px rgb(14 27 23 / 20%);
+}
+
+.workforce-editing-shifts .planning-coverage-board,
+.workforce-editing-shifts .workforce-kpis,
+.workforce-editing-shifts .workforce-planning-filters,
+.workforce-editing-shifts .workforce-tabs,
+.workforce-editing-shifts .workforce-command-bar {
+  display: none;
+}
+
+.workforce-editing-shifts .workforce-multi-day-bar {
+  position: sticky;
+  top: 74px;
+  z-index: 8;
+  margin-bottom: 10px;
+}
+
+.workforce-mode-loading,
+.workforce-mode-empty {
+  padding: 24px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .workforce-people-surface .workforce-driver-readiness {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workforce-people-surface .workforce-driver-identity,
+  .workforce-people-surface .workforce-driver-state-compact {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .workforce-section-nav {
+    width: 100%;
+  }
+
+  .workforce-section-nav button {
+    min-height: 44px;
+    padding-inline: 14px;
+  }
+
+  .workforce-people-surface .workforce-driver-readiness {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workforce-people-surface .workforce-driver-identity,
+  .workforce-people-surface .workforce-driver-state-compact {
+    grid-column: auto;
+  }
+
+  .workforce-data-group {
+    padding: 10px;
+    overflow: hidden;
+  }
+
+  .workforce-shared-detail-host .workforce-detail-panel:not([hidden]) {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 84vh;
+  }
+}

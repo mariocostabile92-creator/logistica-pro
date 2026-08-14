@@ -763,8 +763,8 @@
           </p>
         </div>
         <div class="workforce-header-actions">
-          <button id="workforceNewMemberBtn" type="button">+ Nuovo driver</button>
-          <span id="workforceHeaderActions" class="workforce-header-actions" hidden>
+          <button id="workforceNewMemberBtn" type="button" data-workforce-section-action="people">+ Nuovo driver</button>
+          <span id="workforceHeaderActions" class="workforce-header-actions" data-workforce-section-action="data" hidden>
           <button id="workforceImportToggle" type="button" class="secondary">
             Aggiorna da Excel
           </button>
@@ -772,6 +772,12 @@
           </span>
         </div>
       </div>
+
+      <nav id="workforceSectionNav" class="workforce-section-nav" role="tablist" aria-label="Aree Workforce">
+        <button id="workforcePlanningModeTab" type="button" role="tab" aria-selected="true" aria-controls="workforcePlanningSurface" tabindex="0" data-workforce-section="planning">Pianifica</button>
+        <button id="workforcePeopleModeTab" type="button" role="tab" aria-selected="false" aria-controls="workforcePeopleSurface" tabindex="-1" data-workforce-section="people">Persone</button>
+        <button id="workforceDataModeTab" type="button" role="tab" aria-selected="false" aria-controls="workforceDataSurface" tabindex="-1" data-workforce-section="data">Dati &amp; Import</button>
+      </nav>
 
       <dialog id="workforceMemberCreateDialog" class="workforce-member-create-dialog" aria-labelledby="workforceMemberCreateTitle">
         <form id="workforceMemberCreateForm">
@@ -1159,6 +1165,45 @@
       </dialog>
 
       <article id="workforceReadyView" class="workforce-workspace" hidden>
+        <section
+          id="workforcePlanningSurface"
+          class="workforce-mode-surface workforce-planning-surface"
+          role="tabpanel"
+          aria-labelledby="workforcePlanningModeTab"
+          data-workforce-mode-surface="planning"
+        ></section>
+        <section
+          id="workforcePeopleSurface"
+          class="workforce-mode-surface workforce-people-surface"
+          role="tabpanel"
+          aria-labelledby="workforcePeopleModeTab"
+          data-workforce-mode-surface="people"
+          hidden
+        >
+          <header class="workforce-mode-heading">
+            <div><p class="eyebrow">Anagrafica operativa</p><h3>Persone</h3><p>Cerca e aggiorna i driver della tua organizzazione.</p></div>
+            <div id="workforcePeopleActions"></div>
+          </header>
+        </section>
+        <section
+          id="workforceDataSurface"
+          class="workforce-mode-surface workforce-data-surface"
+          role="tabpanel"
+          aria-labelledby="workforceDataModeTab"
+          data-workforce-mode-surface="data"
+          hidden
+        >
+          <section class="workforce-data-group" aria-labelledby="workforceImportGroupTitle">
+            <header><div><p class="eyebrow">A. Import</p><h3 id="workforceImportGroupTitle">Import Excel</h3><p>Analizza e importa le fonti operative Workforce.</p></div><div id="workforceDataActions"></div></header>
+          </section>
+          <section id="workforcePlanningSourcesGroup" class="workforce-data-group" aria-labelledby="workforcePlanningSourcesGroupTitle">
+            <header><div><p class="eyebrow">B. Fonti Planning &middot; C. Merge / conflitti &middot; E. Storico / revisioni</p><h3 id="workforcePlanningSourcesGroupTitle">Fonti Planning e conflitti</h3><p>Revisioni, sorgenti immutabili, preview e pubblicazione.</p></div></header>
+          </section>
+          <section id="workforceContactCoverageGroup" class="workforce-data-group" aria-labelledby="workforceContactCoverageGroupTitle">
+            <header><div><p class="eyebrow">D. Copertura contatti</p><h3 id="workforceContactCoverageGroupTitle">Recapiti operativi</h3><p>Verifica la prontezza dei contatti per la distribuzione.</p></div></header>
+          </section>
+        </section>
+        <div id="workforceSharedDetailHost" class="workforce-shared-detail-host"></div>
         <section
           id="workforceContactCoverage"
           class="workforce-contact-coverage"
@@ -1563,7 +1608,6 @@
                 <option value="absence">Assenze</option>
                 <option value="unavailable">Non disponibili</option>
                 <option value="unknown">Da verificare</option>
-                <option value="rest">Riposi</option>
               </select>
             </label>
           </div>
@@ -2770,6 +2814,6 @@
     <div id="message" class="message" role="status" aria-live="polite" hidden></div>
   </main>
 
-    <script type="module" src="./assets/js/app.js?v=107"></script>
+    <script type="module" src="./assets/js/app.js?v=108"></script>
 </body>
 </html>

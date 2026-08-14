@@ -28,7 +28,7 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
   const damageSummary = createWorkforceDamageSummary();
 
   function clearSelection() {
-    byId("workforceDesk").dataset.detailOpen = "false";
+    byId("workforceSharedDetailHost").dataset.detailOpen = "false";
     if (!preserveSelectionOnClose) {
       byId("workforceCalendar").querySelectorAll(".is-selected").forEach((element) => {
         element.classList.remove("is-selected");
@@ -95,7 +95,7 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     byId("workforceEndTime").value = status?.end_time || "";
     byId("workforceStatusNotes").value = status?.notes || "";
     form.hidden = false;
-    byId("workforceDesk").dataset.detailOpen = "true";
+    byId("workforceSharedDetailHost").dataset.detailOpen = "true";
     surface.show(selectedChoice);
   }
 
@@ -158,7 +158,7 @@ export function initWorkforceDetailPanel({ getStatuses, onSelectionCleared = () 
     populateMemberEditor(member);
     byId("workforceMemberDetail").hidden = false;
     byId("workforceMemberEditor").hidden = true;
-    byId("workforceDesk").dataset.detailOpen = "true";
+    byId("workforceSharedDetailHost").dataset.detailOpen = "true";
     surface.show(byId("workforceMemberEditBtn"));
     void damageSummary.show(member);
   }

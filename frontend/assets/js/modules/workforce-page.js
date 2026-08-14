@@ -60,6 +60,13 @@ import { initDriverShiftPlanning } from "./driver-shift-planning.js?v=16";
 import { initWorkforceMemberCreate } from "./workforce-member-create.js?v=2";
 import { createPlanningCoverageBoard } from "./workforce-coverage-board.js?v=1";
 import { createWorkforceDayPlanner } from "./workforce-day-planner.js?v=2";
+import {
+  WORKFORCE_SECTIONS,
+  nextWorkforceSection,
+  normalizeWorkforceSection,
+  workforceSectionFromLocation,
+  writeWorkforceSection,
+} from "./workforce-section-navigation.js?v=1";
 
 
 const PAGE_STATES = Object.freeze({
@@ -94,6 +101,11 @@ let multiDayEditing = {
   trigger: null,
 };
 let weekCopyPreview = null;
+let activeWorkforceSection = WORKFORCE_SECTIONS.PLANNING;
+let peopleLoadedForDate = null;
+let dataSectionLoaded = false;
+let peopleLoadPromise = null;
+let dataLoadPromise = null;
 
 
 function errorMessage(context, error) {
@@ -169,16 +181,7 @@ function setPageState(state, status = null) {
     return;
   }
   if (state === PAGE_STATES.EMPTY) {
-    renderViewState(byId("workforceViewState"), {
-      state: "empty",
-      title: "Planning turni",
-      description: "Importa il planning esistente oppure crea il primo planning.",
-      actionLabel: "Importa da Excel",
-      action: "import-workforce",
-      actionTone: "primary",
-    });
-    byId("workforceViewState").querySelector("[data-view-action]")
-      ?.addEventListener("click", () => workforceImportFlow.open());
+    renderWorkforceEmptyState();
     return;
   }
   if (state === PAGE_STATES.ERROR) {
@@ -197,6 +200,7 @@ function setPageState(state, status = null) {
     renderWorkforceLanding(status);
     byId("workforceHeaderActions").hidden = false;
     byId("workforceReadyView").hidden = false;
+    applyWorkforceSectionVisibility();
   }
 }
 
@@ -250,6 +254,170 @@ function setActiveTab(tab, { focus = false } = {}) {
 }
 
 
+function organizeWorkforceSurfaces() {
+  const planningSurface = byId("workforcePlanningSurface");
+  const peopleSurface = byId("workforcePeopleSurface");
+  const dataSources = byId("workforcePlanningSourcesGroup");
+  const contactGroup = byId("workforceContactCoverageGroup");
+  const sharedDetailHost = byId("workforceSharedDetailHost");
+  const planningNodes = [
+    document.querySelector(".workforce-source-heading"),
+    document.querySelector(".workforce-command-bar"),
+    byId("workforceSummary"),
+    byId("workforceRequirementNotice"),
+    document.querySelector(".workforce-planning-filters"),
+    byId("workforceActivitySummary"),
+    document.querySelector(".workforce-tabs"),
+    byId("workforceCalendarPanel"),
+    byId("workforceCoveragePanel"),
+    byId("workforceAnomaliesPanel"),
+  ].filter(Boolean);
+  planningSurface.append(...planningNodes);
+  peopleSurface.append(document.querySelector(".workforce-foundation"));
+  dataSources.append(byId("driverShiftPlanningSection"));
+  contactGroup.append(byId("workforceContactCoverage"));
+  byId("workforcePeopleActions").append(byId("workforceNewMemberBtn"));
+  byId("workforceDataActions").append(byId("workforceHeaderActions"));
+  sharedDetailHost.append(
+    byId("workforceDetailBackdrop"),
+    byId("workforceDetailPanel"),
+  );
+}
+
+
+function renderWorkforceEmptyState() {
+  const presentations = {
+    [WORKFORCE_SECTIONS.PLANNING]: {
+      title: "Nessun turno disponibile per questa settimana",
+      description: "Apri Dati & Import per caricare o controllare le fonti turni.",
+      actionLabel: "Apri Dati & Import",
+      action: () => setWorkforceSection(WORKFORCE_SECTIONS.DATA, { historyMode: "push" }),
+    },
+    [WORKFORCE_SECTIONS.PEOPLE]: {
+      title: "Nessun driver trovato",
+      description: "Crea il primo profilo operativo Workforce.",
+      actionLabel: "Nuovo driver",
+      action: () => byId("workforceNewMemberBtn").click(),
+    },
+    [WORKFORCE_SECTIONS.DATA]: {
+      title: "Nessuna fonte importata",
+      description: "Importa un file Excel oppure crea il primo Planning multi-source.",
+      actionLabel: "Importa da Excel",
+      action: () => workforceImportFlow.open(),
+    },
+  };
+  const presentation = presentations[activeWorkforceSection];
+  renderViewState(byId("workforceViewState"), {
+    state: "empty",
+    title: presentation.title,
+    description: presentation.description,
+    actionLabel: presentation.actionLabel,
+    action: `workforce-${activeWorkforceSection}-empty`,
+    actionTone: "primary",
+  });
+  byId("workforceViewState").querySelector("[data-view-action]")
+    ?.addEventListener("click", presentation.action);
+}
+
+
+function applyWorkforceSectionVisibility({ focus = false } = {}) {
+  document.querySelectorAll("[data-workforce-section]").forEach((button) => {
+    const active = button.dataset.workforceSection === activeWorkforceSection;
+    button.setAttribute("aria-selected", String(active));
+    button.tabIndex = active ? 0 : -1;
+    if (active && focus) button.focus();
+  });
+  document.querySelectorAll("[data-workforce-mode-surface]").forEach((surface) => {
+    surface.hidden = surface.dataset.workforceModeSurface !== activeWorkforceSection;
+  });
+  if (currentStatus?.member_count) {
+    byId("workforceReadyView").hidden = false;
+    byId("workforceViewState").hidden = true;
+  } else if (loaded) {
+    byId("workforceReadyView").hidden = true;
+    byId("workforceViewState").hidden = false;
+    renderWorkforceEmptyState();
+  }
+}
+
+
+async function loadPeopleSectionData() {
+  const { dateFrom, dateTo } = selectedCalendarWindow();
+  if (peopleLoadedForDate === dateFrom) return;
+  if (peopleLoadPromise) return peopleLoadPromise;
+  byId("workforceFoundationDrivers").innerHTML = '<p class="workforce-mode-loading">Caricamento persone...</p>';
+  peopleLoadPromise = Promise.all([
+    listWorkforceMembers(),
+    getWorkforceCalendar(dateFrom, dateTo),
+    getWorkforceFoundation(dateFrom),
+  ]).then(([members, calendar, foundation]) => {
+    currentData.members = members.items;
+    currentData.statuses = calendar.items;
+    renderWorkforceFoundation(foundation);
+    peopleLoadedForDate = dateFrom;
+  }).catch((error) => {
+    byId("workforceFoundationDrivers").innerHTML = '<p class="workforce-mode-empty">Impossibile caricare le persone.</p>';
+    errorMessage("workforce.load-people", error);
+  }).finally(() => {
+    peopleLoadPromise = null;
+  });
+  return peopleLoadPromise;
+}
+
+
+async function loadDataSectionData() {
+  if (dataSectionLoaded) return;
+  if (dataLoadPromise) return dataLoadPromise;
+  byId("workforceContactCoverage").innerHTML = '<p class="workforce-mode-loading">Caricamento copertura contatti...</p>';
+  dataLoadPromise = Promise.all([
+    getWorkforceContactCoverage(),
+    driverShiftPlanning.refresh(),
+  ]).then(([contactCoverage]) => {
+    renderWorkforceContactCoverage(byId("workforceContactCoverage"), contactCoverage);
+    dataSectionLoaded = true;
+  }).catch((error) => {
+    byId("workforceContactCoverage").innerHTML = '<p class="workforce-mode-empty">Dati tecnici temporaneamente non disponibili.</p>';
+    errorMessage("workforce.load-data", error);
+  }).finally(() => {
+    dataLoadPromise = null;
+  });
+  return dataLoadPromise;
+}
+
+
+async function ensureActiveWorkforceSectionData() {
+  if (!currentStatus?.member_count) return;
+  if (activeWorkforceSection === WORKFORCE_SECTIONS.PLANNING) {
+    if (!calendarLoaded) await loadCalendar();
+    return;
+  }
+  if (activeWorkforceSection === WORKFORCE_SECTIONS.PEOPLE) {
+    await loadPeopleSectionData();
+    return;
+  }
+  await loadDataSectionData();
+}
+
+
+async function setWorkforceSection(
+  section,
+  { focus = false, historyMode = "none", ensureData = true } = {},
+) {
+  const nextSection = normalizeWorkforceSection(section);
+  const changed = nextSection !== activeWorkforceSection;
+  if (changed) {
+    clearMultiDayEditing({ rerender: false });
+    workforceDetailPanel?.close({ restoreFocus: false });
+  }
+  activeWorkforceSection = nextSection;
+  applyWorkforceSectionVisibility({ focus });
+  if (historyMode !== "none" && changed) {
+    writeWorkforceSection(activeWorkforceSection, { mode: historyMode });
+  }
+  if (ensureData) await ensureActiveWorkforceSectionData();
+}
+
+
 function multiDayMember() {
   return currentData.members.find((item) => (
     Number(item.workforce_member_id) === Number(multiDayEditing.memberId)
@@ -261,6 +429,10 @@ function renderMultiDayBar() {
   const member = multiDayMember();
   const count = multiDayEditing.selectedDates.size;
   byId("workforceMultiDayBar").hidden = !member;
+  byId("workforcePlanningSurface").classList.toggle(
+    "workforce-editing-shifts",
+    Boolean(member),
+  );
   if (!member) return;
   const quickSelection = byId("workforceQuickSelection");
   const weekDates = workforceCalendarDatesForActiveRange();
@@ -419,6 +591,7 @@ function clearMultiDayEditing({ restoreFocus = false, rerender = true } = {}) {
     trigger: null,
   };
   byId("workforceMultiDayBar").hidden = true;
+  byId("workforcePlanningSurface").classList.remove("workforce-editing-shifts");
   closeWeekCopyPreview();
   if (rerender && currentData.members.length) renderData();
   if (restoreFocus) trigger?.focus?.();
@@ -482,7 +655,7 @@ function renderData() {
       );
       workforceDetailPanel.openStatus(details);
     },
-    workforceDetailPanel.openMember,
+    (member) => { void openWorkforceDriver(member?.workforce_member_id); },
     {
       selectedCellKey,
       onSelectCell: (key) => { selectedCellKey = key; },
@@ -602,12 +775,10 @@ async function loadCalendar(range = null) {
   `;
   void planningCoverageBoard?.load(dateFrom, dateTo);
   try {
-    const [members, calendar, coverage, foundation, contactCoverage] = await Promise.all([
+    const [members, calendar, coverage] = await Promise.all([
       listWorkforceMembers(),
       getWorkforceCalendar(dateFrom, dateTo),
       getWorkforceCoverage(dateFrom, dateTo),
-      getWorkforceFoundation(dateFrom),
-      getWorkforceContactCoverage(),
     ]);
     currentData = {
       members: members.items,
@@ -615,8 +786,7 @@ async function loadCalendar(range = null) {
       coverage: coverage.items,
     };
     refreshOperationalActivityControls(currentData.statuses);
-    renderWorkforceFoundation(foundation);
-    renderWorkforceContactCoverage(byId("workforceContactCoverage"), contactCoverage);
+    peopleLoadedForDate = null;
     anomalyLimit = ANOMALY_PAGE_SIZE;
     renderData();
     workforceDayPlanner?.refresh();
@@ -637,10 +807,7 @@ async function loadCalendar(range = null) {
 async function refresh() {
   setPageState(PAGE_STATES.IMPORTING);
   try {
-    const [status] = await Promise.all([
-      getWorkforceStatus(),
-      driverShiftPlanning?.refresh(),
-    ]);
+    const status = await getWorkforceStatus();
     currentStatus = status;
     calendarLoaded = false;
     loaded = true;
@@ -651,7 +818,7 @@ async function refresh() {
       setViewMode(isMobileLayout() ? "day" : "week");
       setActiveTab("calendar");
       setPageState(PAGE_STATES.READY, status);
-      await loadCalendar();
+      await ensureActiveWorkforceSectionData();
     }
     document.dispatchEvent(new CustomEvent("workforce:status-changed", {
       detail: { memberCount: status.member_count },
@@ -688,13 +855,13 @@ export async function openWorkforceDriver(driverId) {
   const canonicalId = Number(driverId);
   if (!Number.isInteger(canonicalId) || canonicalId <= 0) return false;
   await prepareWorkforceFirstPaint();
+  await setWorkforceSection(WORKFORCE_SECTIONS.PEOPLE, { historyMode: "push" });
   const member = currentData.members.find((item) => (
     Number(item.workforce_member_id) === canonicalId
   ));
   if (!member) return false;
-  setActiveTab("calendar");
-  const trigger = byId("workforceCalendar").querySelector(
-    `[data-workforce-member-edit="${canonicalId}"]`,
+  const trigger = byId("workforceFoundationDrivers").querySelector(
+    `[data-workforce-driver-detail="${canonicalId}"]`,
   );
   workforceDetailPanel.openMember(member, trigger);
   trigger?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -843,7 +1010,23 @@ function handleTabKeydown(event) {
 }
 
 
+function handleWorkforceSectionKeydown(event) {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  void setWorkforceSection(
+    nextWorkforceSection(activeWorkforceSection, event.key),
+    { focus: true, historyMode: "push" },
+  );
+}
+
+
 export function initWorkforcePage() {
+  organizeWorkforceSurfaces();
+  activeWorkforceSection = workforceSectionFromLocation();
+  if (!new URL(window.location.href).searchParams.has("workforce")) {
+    writeWorkforceSection(activeWorkforceSection, { mode: "replace" });
+  }
+  applyWorkforceSectionVisibility();
   initWorkforceFoundation();
   planningCoverageBoard = createPlanningCoverageBoard({
     container: byId("planningCoverageBoard"),
@@ -977,6 +1160,14 @@ export function initWorkforcePage() {
         applyQuickSelection(button.dataset.workforceQuickSelection);
       });
     });
+  document.querySelectorAll("[data-workforce-section]").forEach((button) => {
+    button.addEventListener("click", () => {
+      void setWorkforceSection(button.dataset.workforceSection, {
+        historyMode: "push",
+      });
+    });
+    button.addEventListener("keydown", handleWorkforceSectionKeydown);
+  });
   document.querySelectorAll("[data-workforce-view-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       setViewMode(button.dataset.workforceViewMode);
@@ -1000,7 +1191,11 @@ export function initWorkforcePage() {
       detail: { view: "workforce" },
     }));
     const file = event.detail?.file || null;
-    workforceImportFlow.open(file, { analyzeFile: Boolean(file) });
+    void setWorkforceSection(WORKFORCE_SECTIONS.DATA, {
+      historyMode: "push",
+    }).then(() => {
+      workforceImportFlow.open(file, { analyzeFile: Boolean(file) });
+    });
   });
   document.addEventListener("workforce:consecutivity-changed", () => {
     if (loaded && currentStatus?.member_count) loadCalendar();
@@ -1010,7 +1205,17 @@ export function initWorkforcePage() {
   });
   document.addEventListener("workforce:open-date", (event) => {
     const operationDate = event.detail?.operationDate;
-    if (operationDate) void loadFromAnchor(operationDate);
+    void setWorkforceSection(WORKFORCE_SECTIONS.PLANNING, {
+      historyMode: "push",
+      ensureData: !operationDate,
+    }).then(() => {
+      if (operationDate) loadFromAnchor(operationDate);
+    });
+  });
+  window.addEventListener("popstate", () => {
+    void setWorkforceSection(workforceSectionFromLocation(), {
+      historyMode: "none",
+    });
   });
   document.addEventListener("workspace:view-changed", (event) => {
     if (event.detail.view === "workforce" && !loaded && !firstPaintPromise) {
@@ -1022,6 +1227,10 @@ export function initWorkforcePage() {
     calendarLoaded = false;
     currentStatus = null;
     currentData = { members: [], statuses: [], coverage: [] };
+    peopleLoadedForDate = null;
+    dataSectionLoaded = false;
+    peopleLoadPromise = null;
+    dataLoadPromise = null;
     selectedCellKey = null;
     clearMultiDayEditing({ rerender: false });
     workforceImportFlow.reset();

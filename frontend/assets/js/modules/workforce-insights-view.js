@@ -14,7 +14,6 @@ const ANOMALY_LABELS = {
   absence: "Assenze",
   unavailable: "Non disponibili",
   unknown: "Da verificare",
-  rest: "Riposi",
 };
 
 
@@ -22,14 +21,13 @@ function anomalyCategory(status) {
   if (status.status_code === "unknown") return "unknown";
   if (status.status_code === "unavailable") return "unavailable";
   if (["holiday", "sickness", "leave"].includes(status.status_code)) return "absence";
-  if (status.status_code === "rest") return "rest";
   return null;
 }
 
 
 export function workforceAnomalies(statuses, members, filter = "all") {
   const memberById = new Map(members.map((item) => [item.workforce_member_id, item]));
-  const counts = { absence: 0, unavailable: 0, unknown: 0, rest: 0 };
+  const counts = { absence: 0, unavailable: 0, unknown: 0 };
   const allItems = statuses.flatMap((status) => {
     const category = anomalyCategory(status);
     if (!category) return [];
@@ -102,7 +100,9 @@ export function renderWorkforceAnomalies({
   limit = 25,
 }) {
   const result = workforceAnomalies(statuses, members, filter);
-  summaryElement.textContent = `${result.total} eventi registrati nel periodo selezionato.`;
+  summaryElement.textContent = result.total
+    ? `${result.total} warning operativi nel periodo selezionato.`
+    : "Nessuna anomalia operativa nel periodo selezionato.";
   categoriesElement.innerHTML = Object.entries(result.counts).map(([category, count]) => `
     <span class="${escapeHtml(category)}"><strong>${count}</strong> ${escapeHtml(ANOMALY_LABELS[category])}</span>
   `).join("");
