@@ -33,15 +33,26 @@ PUBLIC_JOURNAL_ROUTES = (
 
 MAINTENANCE_ROUTES = {
     ("GET", "/api/plugins/workforce/v1/planning/coverage"):
-        MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
+        (
+            MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
+            MaintenanceScope.PLANNING_FORECAST_TEMPLATE_RECONCILIATION,
+        ),
     ("POST", "/api/plugins/workforce/v1/planning/coverage/backfill/preview"):
-        MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
+        (MaintenanceScope.PLANNING_COVERAGE_BACKFILL,),
     ("POST", "/api/plugins/workforce/v1/planning/coverage/backfill"):
-        MaintenanceScope.PLANNING_COVERAGE_BACKFILL,
+        (MaintenanceScope.PLANNING_COVERAGE_BACKFILL,),
+    (
+        "POST",
+        "/api/plugins/workforce/v1/planning/coverage/template-reconciliation/preview",
+    ): (MaintenanceScope.PLANNING_FORECAST_TEMPLATE_RECONCILIATION,),
+    (
+        "POST",
+        "/api/plugins/workforce/v1/planning/coverage/template-reconciliation",
+    ): (MaintenanceScope.PLANNING_FORECAST_TEMPLATE_RECONCILIATION,),
     ("POST", "/api/plugins/workforce/v1/operational-cycle-backfill/preview"):
-        MaintenanceScope.WORKFORCE_OPERATIONAL_CYCLE_BACKFILL,
+        (MaintenanceScope.WORKFORCE_OPERATIONAL_CYCLE_BACKFILL,),
     ("POST", "/api/plugins/workforce/v1/operational-cycle-backfill"):
-        MaintenanceScope.WORKFORCE_OPERATIONAL_CYCLE_BACKFILL,
+        (MaintenanceScope.WORKFORCE_OPERATIONAL_CYCLE_BACKFILL,),
 }
 
 
@@ -115,16 +126,26 @@ async def enforce_authentication(request: Request, call_next):
     token = request.cookies.get(COOKIE_NAME)
     if token:
         resolved = repository.user_by_session(token)
-    maintenance_scope = MAINTENANCE_ROUTES.get((request.method, path))
+    maintenance_scopes = MAINTENANCE_ROUTES.get((request.method, path))
     maintenance_principal = None
-    if maintenance_scope and not resolved:
+    if maintenance_scopes and not resolved:
         authorization = request.headers.get("authorization")
         if authorization:
             try:
-                maintenance_principal = maintenance_service.authenticate(
-                    maintenance_service.raw_bearer(authorization),
-                    maintenance_scope,
-                )
+                raw_token = maintenance_service.raw_bearer(authorization)
+                for maintenance_scope in maintenance_scopes:
+                    try:
+                        maintenance_principal = maintenance_service.authenticate(
+                            raw_token,
+                            maintenance_scope,
+                        )
+                        break
+                    except maintenance_service.MaintenanceTokenInvalidError:
+                        continue
+                if maintenance_principal is None:
+                    raise maintenance_service.MaintenanceTokenInvalidError(
+                        "Credenziali di manutenzione non valide."
+                    )
             except maintenance_service.MaintenanceTokenInvalidError:
                 return JSONResponse(
                     status_code=401,

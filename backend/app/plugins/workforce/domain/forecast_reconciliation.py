@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class ForecastReconciliationStatus(str, Enum):
     READY = "READY"
+    ALREADY_COMPLETE = "ALREADY_COMPLETE"
     SOURCE_MISMATCH = "SOURCE_MISMATCH"
     NO_ELIGIBLE_IMPORT = "NO_ELIGIBLE_IMPORT"
     SOURCE_NOT_RECOVERABLE = "SOURCE_NOT_RECOVERABLE"
@@ -25,5 +26,13 @@ class ForecastReconciliationPreview(BaseModel):
     manual_overrides_preserved: int = Field(default=0, ge=0)
     effective_rows_before: int = Field(default=0, ge=0)
     effective_rows_after: int = Field(default=0, ge=0)
+    rows_pending: int = Field(default=0, ge=0)
+    rows_reconciled: int = Field(default=0, ge=0)
     preview_fingerprint: str | None = None
     action_required: str
+
+
+class ForecastReconciliationResult(ForecastReconciliationPreview):
+    rows_updated: int = Field(default=0, ge=0)
+    rows_unchanged: int = Field(default=0, ge=0)
+    idempotent: bool = False

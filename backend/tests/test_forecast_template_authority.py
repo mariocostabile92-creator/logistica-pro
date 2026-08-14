@@ -134,6 +134,26 @@ def _persist(requirements, *, organization_id: str = ORG):
         )
 
 
+def _simulate_pre_authority_legacy_rows(
+    requirements,
+    *,
+    organization_id: str = ORG,
+) -> None:
+    from app.plugins.workforce.infrastructure import legacy_coverage_backfill_repository
+    legacy_coverage_backfill_repository.apply_missing(
+        organization_id, requirements
+    )
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE workforce_daily_coverage_requirements
+            SET authority_status = 'AUTHORITATIVE', detection_reason = NULL
+            WHERE organization_id = ? AND source = 'LEGACY_IMPORT_BACKFILL'
+            """,
+            (organization_id,),
+        )
+
+
 def _real_workbook() -> Path | None:
     candidates = (
         Path.home() / "Downloads" / "Planning driver_DLO2_2026 (1).xlsx",
@@ -287,8 +307,7 @@ def test_reconciliation_is_organization_scoped_and_audited():
         workforce_import_id=import_id,
     )
     assert inspection.status.value == "READY"
-    from app.plugins.workforce.infrastructure import legacy_coverage_backfill_repository
-    legacy_coverage_backfill_repository.apply_missing(ORG, requirements)
+    _simulate_pre_authority_legacy_rows(requirements)
 
     result = forecast_reconciliation_service.preview(
         ORG,
@@ -303,6 +322,7 @@ def test_reconciliation_is_organization_scoped_and_audited():
     assert result.same_day_b_c_suspect == 14
     assert result.effective_rows_before == 42
     assert result.effective_rows_after == 28
+    assert result.rows_pending == 14
     foreign = forecast_reconciliation_service.preview(
         "other-organization",
         actor="admin@example.test",
@@ -322,6 +342,271 @@ def test_reconciliation_is_organization_scoped_and_audited():
         ).fetchone()
     assert audit is not None
     assert "workbook" not in json.loads(audit["after_value"])
+
+
+def test_reconciliation_apply_is_idempotent_preserves_manual_and_same_day():
+    content = _workbook()
+    import_id = _legacy_import(content)
+    _, requirements = legacy_coverage_backfill_service.inspect(
+        ORG,
+        content=content,
+        filename="planning.xlsx",
+        workforce_import_id=import_id,
+    )
+    _simulate_pre_authority_legacy_rows(requirements)
+    manual_source = next(
+        item for item in requirements
+        if item.operational_cycle == "NEXT_DAY"
+    )
+    _persist([
+        replace(
+            manual_source,
+            forecast_routes=70,
+            required_capacity=77,
+            source=CoverageSource.MANUAL_PLANNING_INPUT.value,
+            source_identity="manual:production-style:70",
+            authority_status=ForecastAuthorityStatus.AUTHORITATIVE.value,
+            detection_reason=None,
+        )
+    ])
+    with db_session() as conn:
+        manual_before = dict(conn.execute(
+            """
+            SELECT * FROM workforce_daily_coverage_requirements
+            WHERE organization_id = ? AND source = 'MANUAL_PLANNING_INPUT'
+            """,
+            (ORG,),
+        ).fetchone())
+        same_day_before = [
+            dict(row) for row in conn.execute(
+                """
+                SELECT * FROM workforce_daily_coverage_requirements
+                WHERE organization_id = ? AND operational_cycle = 'SAME_DAY'
+                ORDER BY id
+                """,
+                (ORG,),
+            ).fetchall()
+        ]
+
+    preview = forecast_reconciliation_service.preview(
+        ORG,
+        actor="admin@example.test",
+        content=content,
+        filename="planning.xlsx",
+        workforce_import_id=import_id,
+    )
+    applied = forecast_reconciliation_service.apply(
+        ORG,
+        actor="admin@example.test",
+        content=content,
+        filename="planning.xlsx",
+        workforce_import_id=import_id,
+        expected_preview_fingerprint=preview.preview_fingerprint or "",
+    )
+    assert applied.status.value == "ALREADY_COMPLETE"
+    assert applied.rows_updated == 14
+    assert applied.rows_unchanged == 0
+    assert applied.idempotent is False
+    assert applied.rows_pending == 0
+
+    with db_session() as conn:
+        manual_after = dict(conn.execute(
+            """
+            SELECT * FROM workforce_daily_coverage_requirements
+            WHERE organization_id = ? AND source = 'MANUAL_PLANNING_INPUT'
+            """,
+            (ORG,),
+        ).fetchone())
+        same_day_after = [
+            dict(row) for row in conn.execute(
+                """
+                SELECT * FROM workforce_daily_coverage_requirements
+                WHERE organization_id = ? AND operational_cycle = 'SAME_DAY'
+                ORDER BY id
+                """,
+                (ORG,),
+            ).fetchall()
+        ]
+        rejected_rows = conn.execute(
+            """
+            SELECT forecast_routes, authority_status, detection_reason
+            FROM workforce_daily_coverage_requirements
+            WHERE organization_id = ? AND operational_cycle = 'NEXT_DAY'
+              AND source = 'LEGACY_IMPORT_BACKFILL'
+            """,
+            (ORG,),
+        ).fetchall()
+        audits = conn.execute(
+            """
+            SELECT actor, after_value FROM workforce_changes
+            WHERE organization_id = ?
+              AND reason = 'forecast_template_reconciled'
+            """,
+            (ORG,),
+        ).fetchall()
+    assert manual_after == manual_before
+    assert same_day_after == same_day_before
+    assert {row["authority_status"] for row in rejected_rows} == {
+        "REJECTED_TEMPLATE"
+    }
+    assert {row["detection_reason"] for row in rejected_rows} == {
+        "LONG_ARITHMETIC_SEQUENCE"
+    }
+    assert {row["forecast_routes"] for row in rejected_rows} == set(range(59, 73))
+    assert len(audits) == 1
+    audit = json.loads(audits[0]["after_value"])
+    assert audits[0]["actor"] == "admin@example.test"
+    assert audit["affected_count"] == 14
+    assert audit["rejected_count"] == 14
+    assert audit["manual_overrides_preserved"] == 1
+    assert "workbook" not in audit
+
+    repeated = forecast_reconciliation_service.apply(
+        ORG,
+        actor="admin@example.test",
+        content=content,
+        filename="planning.xlsx",
+        workforce_import_id=import_id,
+        expected_preview_fingerprint=preview.preview_fingerprint or "",
+    )
+    assert repeated.status.value == "ALREADY_COMPLETE"
+    assert repeated.rows_updated == 0
+    assert repeated.rows_unchanged == 14
+    assert repeated.idempotent is True
+    with db_session() as conn:
+        audit_count = conn.execute(
+            """
+            SELECT COUNT(*) total FROM workforce_changes
+            WHERE organization_id = ?
+              AND reason = 'forecast_template_reconciled'
+            """,
+            (ORG,),
+        ).fetchone()["total"]
+    assert audit_count == 1
+
+    manual_day = manual_source.operational_date
+    rejected_day = next(
+        item.operational_date for item in requirements
+        if item.operational_cycle == "NEXT_DAY"
+        and item.operational_date != manual_day
+    )
+    manual_coverage = coverage_service.daily_coverage(
+        ORG, manual_day, manual_day
+    )
+    rejected_coverage = coverage_service.daily_coverage(
+        ORG, rejected_day, rejected_day
+    )
+    assert next(
+        item for item in manual_coverage.items if item.cycle == "NEXT_DAY"
+    ).forecast_routes == 70
+    rejected_next = next(
+        item for item in rejected_coverage.items if item.cycle == "NEXT_DAY"
+    )
+    assert rejected_next.forecast_routes is None
+    assert rejected_next.raw_forecast_routes == 60
+    planning = planning_workforce_input(
+        operation_date=rejected_day, organization_id=ORG
+    )
+    assert next(
+        item for item in planning["coverage"]["items"]
+        if item["cycle"] == "NEXT_DAY"
+    )["forecast"] is None
+    dsp, _ = coverage_projection(rejected_coverage)
+    assert next(item for item in dsp if item.cycle == "NEXT_DAY").forecast is None
+
+
+def test_reconciliation_rejects_stale_fingerprint_and_is_atomic(monkeypatch):
+    content = _workbook()
+    import_id = _legacy_import(content)
+    _, requirements = legacy_coverage_backfill_service.inspect(
+        ORG,
+        content=content,
+        filename="planning.xlsx",
+        workforce_import_id=import_id,
+    )
+    _simulate_pre_authority_legacy_rows(requirements)
+    preview = forecast_reconciliation_service.preview(
+        ORG,
+        actor="admin@example.test",
+        content=content,
+        filename="planning.xlsx",
+        workforce_import_id=import_id,
+    )
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE workforce_daily_coverage_requirements
+            SET forecast_routes = forecast_routes + 100
+            WHERE id = (
+                SELECT MIN(id) FROM workforce_daily_coverage_requirements
+                WHERE organization_id = ? AND operational_cycle = 'NEXT_DAY'
+            )
+            """,
+            (ORG,),
+        )
+    with pytest.raises(
+        forecast_reconciliation_service.ForecastReconciliationConflictError
+    ):
+        forecast_reconciliation_service.apply(
+            ORG,
+            actor="admin@example.test",
+            content=content,
+            filename="planning.xlsx",
+            workforce_import_id=import_id,
+            expected_preview_fingerprint=preview.preview_fingerprint or "",
+        )
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE workforce_daily_coverage_requirements
+            SET forecast_routes = forecast_routes - 100
+            WHERE id = (
+                SELECT MIN(id) FROM workforce_daily_coverage_requirements
+                WHERE organization_id = ? AND operational_cycle = 'NEXT_DAY'
+            )
+            """,
+            (ORG,),
+        )
+
+    from app.plugins.workforce.infrastructure import forecast_reconciliation_repository
+    original = forecast_reconciliation_repository._update_rows
+
+    def fail_after_first(conn, rows):
+        original(conn, rows[:1])
+        raise RuntimeError("forced rollback")
+
+    monkeypatch.setattr(
+        forecast_reconciliation_repository, "_update_rows", fail_after_first
+    )
+    with pytest.raises(RuntimeError, match="forced rollback"):
+        forecast_reconciliation_service.apply(
+            ORG,
+            actor="admin@example.test",
+            content=content,
+            filename="planning.xlsx",
+            workforce_import_id=import_id,
+            expected_preview_fingerprint=preview.preview_fingerprint or "",
+        )
+    with db_session() as conn:
+        states = conn.execute(
+            """
+            SELECT DISTINCT authority_status
+            FROM workforce_daily_coverage_requirements
+            WHERE organization_id = ? AND operational_cycle = 'NEXT_DAY'
+              AND source = 'LEGACY_IMPORT_BACKFILL'
+            """,
+            (ORG,),
+        ).fetchall()
+        audit = conn.execute(
+            """
+            SELECT COUNT(*) total FROM workforce_changes
+            WHERE organization_id = ?
+              AND reason = 'forecast_template_reconciled'
+            """,
+            (ORG,),
+        ).fetchone()["total"]
+    assert {row["authority_status"] for row in states} == {"AUTHORITATIVE"}
+    assert audit == 0
 
 
 @pytest.mark.skipif(_real_workbook() is None, reason="Workbook reale non disponibile")
@@ -358,8 +643,7 @@ def test_real_legacy_reconciliation_previews_323_and_preserves_manual_70():
         workforce_import_id=import_id,
     )
     assert inspection.next_day_rejected_count == 323
-    from app.plugins.workforce.infrastructure import legacy_coverage_backfill_repository
-    legacy_coverage_backfill_repository.apply_missing(ORG, requirements)
+    _simulate_pre_authority_legacy_rows(requirements)
     august_14 = next(
         item for item in requirements
         if item.operational_date == "2026-08-14"
@@ -394,3 +678,28 @@ def test_real_legacy_reconciliation_previews_323_and_preserves_manual_70():
     effective = coverage_service.daily_coverage(ORG, "2026-08-14", "2026-08-14")
     next_day = next(item for item in effective.items if item.cycle == "NEXT_DAY")
     assert next_day.forecast_routes == 70
+    result = forecast_reconciliation_service.apply(
+        ORG,
+        actor="admin@example.test",
+        content=content,
+        filename=path.name,
+        workforce_import_id=import_id,
+        expected_preview_fingerprint=preview.preview_fingerprint or "",
+    )
+    assert result.rows_updated == 323
+    assert result.manual_overrides_preserved == 1
+    with db_session() as conn:
+        counts = {
+            (row["operational_cycle"], row["authority_status"]): row["total"]
+            for row in conn.execute(
+                """
+                SELECT operational_cycle, authority_status, COUNT(*) total
+                FROM workforce_daily_coverage_requirements
+                WHERE organization_id = ? AND source = 'LEGACY_IMPORT_BACKFILL'
+                GROUP BY operational_cycle, authority_status
+                """,
+                (ORG,),
+            ).fetchall()
+        }
+    assert counts[("NEXT_DAY", "REJECTED_TEMPLATE")] == 323
+    assert counts[("SAME_DAY", "AUTHORITATIVE")] == 739

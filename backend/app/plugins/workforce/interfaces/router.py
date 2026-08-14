@@ -87,6 +87,7 @@ from app.plugins.workforce.domain.legacy_coverage_backfill import (
 )
 from app.plugins.workforce.domain.forecast_reconciliation import (
     ForecastReconciliationPreview,
+    ForecastReconciliationResult,
 )
 from app.plugins.workforce.domain.operational_cycle_reconciliation import (
     OperationalCycleReconciliationPreview,
@@ -1268,22 +1269,86 @@ async def preview_forecast_template_reconciliation(
     file: UploadFile = File(...),
     workforce_import_id: int = Form(..., gt=0),
 ) -> ForecastReconciliationPreview:
-    organization_id = _coverage_organization(
-        request,
-        permission="workforce:write",
-        administrator_only=True,
-    )
-    user = _require(request, "workforce:write")
+    organization_id, actor = _forecast_reconciliation_authorization(request)
     try:
         content, filename = await _read_upload(file)
         return forecast_reconciliation_service.preview(
             organization_id,
-            actor=user.email,
+            actor=actor,
             content=content,
             filename=filename,
             workforce_import_id=workforce_import_id,
         )
-    except WorkbookProfileError as exc:
+    except (
+        WorkbookProfileError,
+        forecast_reconciliation_service.ForecastReconciliationError,
+    ) as exc:
+        raise _write_error(exc) from exc
+
+
+def _forecast_reconciliation_authorization(request: Request) -> tuple[str, str]:
+    maintenance_principal = getattr(
+        request.state, "maintenance_principal", None
+    )
+    if maintenance_principal is not None:
+        if (
+            maintenance_principal.scope
+            != MaintenanceScope.PLANNING_FORECAST_TEMPLATE_RECONCILIATION
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Scope manutenzione non autorizzato.",
+            )
+        return (
+            maintenance_principal.organization_id,
+            f"maintenance-token:{maintenance_principal.token_id}",
+        )
+    user = _require(request, "workforce:write")
+    if user.role != Role.ADMINISTRATOR:
+        raise HTTPException(
+            status_code=403,
+            detail="Permesso Administrator richiesto.",
+        )
+    return user.organization_id, user.email
+
+
+@router.post(
+    "/planning/coverage/template-reconciliation",
+    response_model=ForecastReconciliationResult,
+)
+async def apply_forecast_template_reconciliation(
+    request: Request,
+    file: UploadFile = File(...),
+    workforce_import_id: int = Form(..., gt=0),
+    expected_preview_fingerprint: str = Form(
+        ..., min_length=64, max_length=64, pattern="^[0-9a-f]{64}$"
+    ),
+) -> ForecastReconciliationResult:
+    organization_id, actor = _forecast_reconciliation_authorization(request)
+    try:
+        ensure_real_data_write_allowed()
+        content, filename = await _read_upload(file)
+        return forecast_reconciliation_service.apply(
+            organization_id,
+            actor=actor,
+            content=content,
+            filename=filename,
+            workforce_import_id=workforce_import_id,
+            expected_preview_fingerprint=expected_preview_fingerprint,
+        )
+    except forecast_reconciliation_service.ForecastReconciliationConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "FORECAST_RECONCILIATION_PREVIEW_CONFLICT",
+                "message": str(exc),
+            },
+        ) from exc
+    except (
+        DemoWorkspaceResetRequiredError,
+        WorkbookProfileError,
+        forecast_reconciliation_service.ForecastReconciliationError,
+    ) as exc:
         raise _write_error(exc) from exc
 
 

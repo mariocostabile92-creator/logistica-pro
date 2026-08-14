@@ -14,6 +14,8 @@ from app.main import app
 from app.plugins.workforce.importer.workbook_interpreter import (
     interpret_workforce_workbook,
 )
+from app.plugins.workforce.application import legacy_coverage_backfill_service
+from app.plugins.workforce.infrastructure import legacy_coverage_backfill_repository
 
 
 ENFORCE = {"X-Auth-Enforce": "1"}
@@ -28,6 +30,13 @@ CYCLE_PREVIEW_ENDPOINT = (
     "/api/plugins/workforce/v1/operational-cycle-backfill/preview"
 )
 CYCLE_APPLY_ENDPOINT = "/api/plugins/workforce/v1/operational-cycle-backfill"
+FORECAST_RECONCILIATION_SCOPE = "PLANNING_FORECAST_TEMPLATE_RECONCILIATION"
+FORECAST_RECONCILIATION_PREVIEW_ENDPOINT = (
+    "/api/plugins/workforce/v1/planning/coverage/template-reconciliation/preview"
+)
+FORECAST_RECONCILIATION_APPLY_ENDPOINT = (
+    "/api/plugins/workforce/v1/planning/coverage/template-reconciliation"
+)
 
 
 def _authenticated(role: Role, email: str):
@@ -100,6 +109,29 @@ def _cycle_workbook() -> bytes:
     return output.getvalue()
 
 
+def _template_workbook() -> bytes:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Planning"
+    sheet["H13"] = "FORECAST"
+    sheet["H14"] = 0.1
+    sheet["H19"] = "FORECAST SAME DAY A"
+    sheet["H20"] = "FORECAST SAME DAY B - C"
+    sheet["G24"] = "Turno"
+    sheet["H24"] = "drivers"
+    start = date(2026, 8, 10)
+    for offset in range(14):
+        column = 12 + offset
+        sheet.cell(row=24, column=column, value=start + timedelta(days=offset))
+        sheet.cell(row=13, column=column, value=200 + offset)
+        sheet.cell(row=19, column=column, value=20)
+        sheet.cell(row=20, column=column, value=18)
+    output = io.BytesIO()
+    workbook.save(output)
+    workbook.close()
+    return output.getvalue()
+
+
 def _legacy_import(content: bytes, organization_id: str) -> int:
     with db_session() as conn:
         cursor = conn.execute(
@@ -156,6 +188,30 @@ def _cycle_fixture(organization_id: str):
         )
         member_id = int(cursor.lastrowid)
     return content, import_id, member_id
+
+
+def _template_fixture(organization_id: str):
+    content = _template_workbook()
+    import_id = _legacy_import(content, organization_id)
+    _, requirements = legacy_coverage_backfill_service.inspect(
+        organization_id,
+        content=content,
+        filename="Planning legacy.xlsx",
+        workforce_import_id=import_id,
+    )
+    legacy_coverage_backfill_repository.apply_missing(
+        organization_id, requirements
+    )
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE workforce_daily_coverage_requirements
+            SET authority_status = 'AUTHORITATIVE', detection_reason = NULL
+            WHERE organization_id = ? AND source = 'LEGACY_IMPORT_BACKFILL'
+            """,
+            (organization_id,),
+        )
+    return content, import_id
 
 
 def test_admin_creates_short_lived_hashed_token_with_no_store_and_audit():
@@ -581,3 +637,156 @@ def test_valid_session_precedes_cycle_token_and_maintenance_needs_no_session():
         headers={"Authorization": f"Bearer {cycle_token}"},
     )
     assert viewer_response.status_code == 403
+
+
+def test_forecast_reconciliation_scope_allows_only_preview_apply_and_coverage_read():
+    admin, organization_id = _authenticated(
+        Role.ADMINISTRATOR, "forecast-reconciliation-admin@example.test"
+    )
+    created = _create_token(
+        admin, scope=FORECAST_RECONCILIATION_SCOPE
+    ).json()
+    assert created["scope"] == FORECAST_RECONCILIATION_SCOPE
+    content, import_id = _template_fixture(organization_id)
+    technical = _token_client(created["token"])
+    preview = technical.post(
+        FORECAST_RECONCILIATION_PREVIEW_ENDPOINT,
+        data={"workforce_import_id": str(import_id)},
+        files=_files(content),
+    )
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["status"] == "READY"
+    assert preview.json()["next_day_affected"] == 14
+    applied = technical.post(
+        FORECAST_RECONCILIATION_APPLY_ENDPOINT,
+        data={
+            "workforce_import_id": str(import_id),
+            "expected_preview_fingerprint": preview.json()[
+                "preview_fingerprint"
+            ],
+        },
+        files=_files(content),
+    )
+    assert applied.status_code == 200, applied.text
+    assert applied.json()["rows_updated"] == 14
+    coverage = technical.get(
+        COVERAGE_ENDPOINT,
+        params={"date_from": "2026-08-10", "date_to": "2026-08-10"},
+    )
+    assert coverage.status_code == 200
+    assert next(
+        item for item in coverage.json()["items"]
+        if item["cycle"] == "NEXT_DAY"
+    )["forecast_routes"] is None
+    assert technical.get("/api/plugins/workforce/v1/members").status_code == 401
+    assert technical.get("/api/fleet/vision").status_code == 401
+
+    coverage_token = _create_token(admin, scope=SCOPE).json()["token"]
+    assert _token_client(coverage_token).post(
+        FORECAST_RECONCILIATION_PREVIEW_ENDPOINT,
+        data={"workforce_import_id": str(import_id)},
+        files=_files(content),
+    ).status_code == 401
+    with db_session() as conn:
+        usage = conn.execute(
+            """
+            SELECT target FROM admin_audit_events
+            WHERE action = 'maintenance_token_used'
+              AND target LIKE ?
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (f"%{FORECAST_RECONCILIATION_APPLY_ENDPOINT}%",),
+        ).fetchone()
+    assert usage is not None
+    assert f"scope:{FORECAST_RECONCILIATION_SCOPE}" in usage["target"]
+
+
+def test_forecast_reconciliation_scope_is_organization_scoped_and_session_precedes_token():
+    admin, organization_id = _authenticated(
+        Role.ADMINISTRATOR, "forecast-reconciliation-isolation@example.test"
+    )
+    token = _create_token(
+        admin, scope=FORECAST_RECONCILIATION_SCOPE
+    ).json()["token"]
+    content, foreign_import_id = _template_fixture("foreign-org")
+    technical = _token_client(token)
+    foreign = technical.post(
+        FORECAST_RECONCILIATION_PREVIEW_ENDPOINT,
+        data={"workforce_import_id": str(foreign_import_id)},
+        files=_files(content),
+    )
+    assert foreign.status_code == 200
+    assert foreign.json()["status"] == "NO_ELIGIBLE_IMPORT"
+    with db_session() as conn:
+        assert conn.execute(
+            """
+            SELECT COUNT(*) total FROM workforce_daily_coverage_requirements
+            WHERE organization_id = 'foreign-org'
+              AND authority_status = 'REJECTED_TEMPLATE'
+            """
+        ).fetchone()["total"] == 0
+
+    own_content, own_import_id = _template_fixture(organization_id)
+    session_preview = admin.post(
+        FORECAST_RECONCILIATION_PREVIEW_ENDPOINT,
+        data={"workforce_import_id": str(own_import_id)},
+        files=_files(own_content),
+        headers={"Authorization": "Bearer invalid"},
+    )
+    assert session_preview.status_code == 200, session_preview.text
+
+
+def test_forecast_reconciliation_endpoint_returns_409_for_stale_preview():
+    admin, organization_id = _authenticated(
+        Role.ADMINISTRATOR, "forecast-reconciliation-stale@example.test"
+    )
+    token = _create_token(
+        admin, scope=FORECAST_RECONCILIATION_SCOPE
+    ).json()["token"]
+    content, import_id = _template_fixture(organization_id)
+    technical = _token_client(token)
+    preview = technical.post(
+        FORECAST_RECONCILIATION_PREVIEW_ENDPOINT,
+        data={"workforce_import_id": str(import_id)},
+        files=_files(content),
+    )
+    assert preview.status_code == 200
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE workforce_daily_coverage_requirements
+            SET forecast_routes = forecast_routes + 1
+            WHERE id = (
+                SELECT MIN(id) FROM workforce_daily_coverage_requirements
+                WHERE organization_id = ? AND operational_cycle = 'NEXT_DAY'
+            )
+            """,
+            (organization_id,),
+        )
+    stale = technical.post(
+        FORECAST_RECONCILIATION_APPLY_ENDPOINT,
+        data={
+            "workforce_import_id": str(import_id),
+            "expected_preview_fingerprint": preview.json()[
+                "preview_fingerprint"
+            ],
+        },
+        files=_files(content),
+    )
+    assert stale.status_code == 409
+    assert stale.json()["detail"]["code"] == (
+        "FORECAST_RECONCILIATION_PREVIEW_CONFLICT"
+    )
+    with db_session() as conn:
+        states = {
+            row["authority_status"]
+            for row in conn.execute(
+                """
+                SELECT authority_status
+                FROM workforce_daily_coverage_requirements
+                WHERE organization_id = ? AND operational_cycle = 'NEXT_DAY'
+                """,
+                (organization_id,),
+            ).fetchall()
+        }
+    assert states == {"AUTHORITATIVE"}
