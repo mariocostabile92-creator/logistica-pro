@@ -13,8 +13,14 @@ from app.core.config import SETTINGS
 from app.plugins.fleet.journal.application import shared_access_service
 from app.plugins.fleet.journal.application.evidence_service import (
     ALLOWED_CAPTURE_SOURCES,
+    CHECKPOINTS,
+    EVIDENCE_MODES,
     EVIDENCE_POLICY_VERSION,
+    PHOTO_SLOTS,
     REQUIRED_EVIDENCE,
+    VIDEO_SLOT,
+    checkpoint_column,
+    checkpoint_report,
     classify_freshness,
     completion_evidence_report,
     parse_client_capture_time,
@@ -78,6 +84,16 @@ class JournalEvidenceError(JournalError):
         super().__init__(str(self.detail["message"]))
 
 
+class JournalCheckpointEvidenceError(JournalError):
+    def __init__(self, report: dict[str, object]):
+        self.detail = {
+            "code": "JOURNAL_CHECKPOINT_INCOMPLETE",
+            "message": "Completa tutte le evidenze obbligatorie del controllo.",
+            **report,
+        }
+        super().__init__(str(self.detail["message"]))
+
+
 class JournalExpired(JournalError):
     status_code = 410
 
@@ -104,6 +120,10 @@ def configuration() -> dict[str, object]:
             "accepted_mime_types": list(MEDIA_EXTENSIONS),
             "max_size_bytes": MAX_MEDIA_BYTES,
             "required": REQUIRED_EVIDENCE,
+            "checkpoints": list(CHECKPOINTS),
+            "modes": list(EVIDENCE_MODES),
+            "photo_slots": list(PHOTO_SLOTS),
+            "video_slot": VIDEO_SLOT,
             "policy_version": EVIDENCE_POLICY_VERSION,
             "camera_first": True,
         },
@@ -498,6 +518,93 @@ def mark_managed_session_in_progress(
     }
 
 
+def _checkpoint_value(value: str) -> str:
+    checkpoint = value.strip().upper()
+    if checkpoint not in CHECKPOINTS:
+        raise JournalError("Checkpoint evidenza non valido.")
+    return checkpoint
+
+
+def _checkpoint_mode(value: str) -> str:
+    mode = value.strip().upper()
+    if mode not in EVIDENCE_MODES:
+        raise JournalError("Modalità evidenza non valida.")
+    return mode
+
+
+def _checkpoint_payload(session: dict[str, object]) -> dict[str, object]:
+    media = repository.session_media(str(session["id"]))
+    return {
+        "session_id": session["id"],
+        "evidence": completion_evidence_report(session, media),
+        "media": media,
+    }
+
+
+def start_checkpoint(
+    session_id: str,
+    token: str | None,
+    checkpoint_value: str,
+    mode_value: str,
+) -> dict[str, object]:
+    session = authorize(session_id, token)
+    checkpoint = _checkpoint_value(checkpoint_value)
+    mode = _checkpoint_mode(mode_value)
+    if session.get("evidence_policy_version") != EVIDENCE_POLICY_VERSION:
+        raise JournalConflict("Questo Journal usa una policy evidenze storica.")
+    if session.get(checkpoint_column(checkpoint, "completed_at")):
+        raise JournalConflict("Il controllo è già completato e le evidenze sono immutabili.")
+    if checkpoint == "CHECK_OUT" and not session.get("check_in_completed_at"):
+        raise JournalConflict("Completa prima il controllo presa in carico.")
+    existing_mode = session.get(checkpoint_column(checkpoint, "mode"))
+    if existing_mode and existing_mode != mode:
+        raise JournalConflict("La modalità del controllo è già stata scelta.")
+    if session.get(checkpoint_column(checkpoint, "started_at")):
+        return _checkpoint_payload(session)
+    event_type = f"journal_{checkpoint.casefold()}_started"
+    updated = repository.update_checkpoint(
+        session_id,
+        checkpoint,
+        mode,
+        event_type,
+        datetime.now(timezone.utc).isoformat(),
+        str(session.get("declared_driver_identifier") or "driver"),
+    )
+    assert updated is not None
+    return _checkpoint_payload(updated)
+
+
+def complete_checkpoint(
+    session_id: str,
+    token: str | None,
+    checkpoint_value: str,
+) -> dict[str, object]:
+    session = authorize(session_id, token)
+    checkpoint = _checkpoint_value(checkpoint_value)
+    if session.get("evidence_policy_version") != EVIDENCE_POLICY_VERSION:
+        raise JournalConflict("Questo Journal usa una policy evidenze storica.")
+    completed_column = checkpoint_column(checkpoint, "completed_at")
+    if session.get(completed_column):
+        return _checkpoint_payload(session)
+    if checkpoint == "CHECK_OUT" and not session.get("check_in_completed_at"):
+        raise JournalConflict("Completa prima il controllo presa in carico.")
+    mode = str(session.get(checkpoint_column(checkpoint, "mode")) or "")
+    report = checkpoint_report(session, repository.session_media(session_id), checkpoint)
+    if not report["evidence_complete"]:
+        raise JournalCheckpointEvidenceError(report)
+    event_type = f"journal_{checkpoint.casefold()}_completed"
+    updated = repository.update_checkpoint(
+        session_id,
+        checkpoint,
+        mode,
+        event_type,
+        datetime.now(timezone.utc).isoformat(),
+        str(session.get("declared_driver_identifier") or "driver"),
+    )
+    assert updated is not None
+    return _checkpoint_payload(updated)
+
+
 def authorize(
     session_id: str,
     token: str | None,
@@ -552,6 +659,8 @@ def add_media(
     captured_at: str | None = None,
     capture_source: str = "file",
     evidence_slot: str | None = None,
+    checkpoint_value: str | None = None,
+    evidence_mode_value: str | None = None,
 ) -> dict[str, object]:
     session = authorize(session_id, token)
     if len(data) > MAX_MEDIA_BYTES:
@@ -559,9 +668,22 @@ def add_media(
     safe_name = _safe_filename(filename)
     verified, media_type = _verified_media(data, content_type, safe_name)
     evidence_type = "video" if media_type == "video" else "photo"
-    slot = evidence_slot or evidence_type
-    if slot != evidence_type:
-        raise JournalError("Lo slot evidenza non corrisponde al tipo di file.")
+    checkpoint = _checkpoint_value(checkpoint_value or "")
+    evidence_mode = _checkpoint_mode(evidence_mode_value or "")
+    configured_mode = session.get(checkpoint_column(checkpoint, "mode"))
+    if configured_mode != evidence_mode:
+        raise JournalConflict("Avvia il checkpoint e scegli la modalità prima del caricamento.")
+    if session.get(checkpoint_column(checkpoint, "completed_at")):
+        raise JournalConflict("Il controllo è completato e le evidenze sono immutabili.")
+    if checkpoint == "CHECK_OUT" and not session.get("check_in_completed_at"):
+        raise JournalConflict("Completa prima il controllo presa in carico.")
+    slot = str(evidence_slot or "").upper()
+    allowed_slots = REQUIRED_EVIDENCE[evidence_mode]
+    if slot not in allowed_slots:
+        raise JournalError("Slot evidenza non valido per la modalità selezionata.")
+    expected_type = "photo" if evidence_mode == "PHOTO" else "video"
+    if evidence_type != expected_type:
+        raise JournalError("Il file non corrisponde alla modalità del checkpoint.")
     if capture_source not in ALLOWED_CAPTURE_SOURCES:
         raise JournalError("Origine acquisizione non valida.")
     try:
@@ -611,6 +733,8 @@ def add_media(
                 "uploaded_at": now.isoformat(),
                 "evidence_type": evidence_type,
                 "evidence_slot": slot,
+                "checkpoint": checkpoint,
+                "evidence_mode": evidence_mode,
                 "captured_at": capture_time.isoformat() if capture_time else None,
                 "received_at": now.isoformat(),
                 "capture_source": capture_source,
@@ -636,10 +760,13 @@ def add_media(
 
 
 def delete_media(session_id: str, media_id: str, token: str | None) -> None:
-    authorize(session_id, token)
+    session = authorize(session_id, token)
     media = repository.get_session_media(session_id, media_id)
     if not media:
         raise JournalNotFound("Foto non trovata in questa sessione.")
+    checkpoint = str(media.get("checkpoint") or "")
+    if checkpoint in CHECKPOINTS and session.get(checkpoint_column(checkpoint, "completed_at")):
+        raise JournalConflict("Il controllo è completato e le evidenze sono immutabili.")
     repository.delete_media(session_id, media_id)
     media_storage.delete(str(media["storage_key"]))
 
@@ -734,4 +861,9 @@ def receipt(movement_id: str) -> dict[str, object]:
     if not result:
         raise JournalNotFound("Movimentazione non trovata.")
     result["warnings"] = json.loads(str(result.pop("warnings_json", "[]")))
+    session = repository.get_session(str(result.get("session_id") or ""))
+    if session:
+        result["evidence"] = completion_evidence_report(
+            session, repository.session_media(str(session["id"]))
+        )
     return result

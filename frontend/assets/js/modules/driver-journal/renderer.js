@@ -1,6 +1,6 @@
-import { state } from "./state.js?v=djh1";
-import { escapeHtml } from "../../utils/dom.js?v=djh1";
-import { evidenceProgress } from "./evidence.js?v=djh1";
+import { state } from "./state.js?v=djh2";
+import { escapeHtml } from "../../utils/dom.js?v=djh2";
+import { evidenceProgress } from "./evidence.js?v=djh2";
 
 const $ = id => document.getElementById(id);
 const TOTAL_STEPS = 8;
@@ -20,7 +20,7 @@ export function render() {
   if (state.step === 7) {
     $("nextButton").disabled = !evidenceProgress(
       state.media,
-      state.configuration?.media?.required || { photo: 1, video: 1 },
+      state.evidence,
     ).complete || state.submitting;
   } else if (!state.submitting) {
     $("nextButton").disabled = false;
@@ -58,8 +58,8 @@ export function renderSummary() {
     ["Carburante", `${$("fuel").value}%`],
     ["Dotazioni", equipment.join(", ")],
     ["Anomalia", $("anomaly").checked ? $("anomalyDescription").value : "No"],
-    ["Foto", String(state.media.filter(item => !item.failed && (item.evidence_type === "photo" || item.media_type === "image" || item.file?.type?.startsWith("image/"))).length)],
-    ["Video", String(state.media.filter(item => !item.failed && (item.evidence_type === "video" || item.media_type === "video" || item.file?.type?.startsWith("video/"))).length)],
+    ["Presa in carico", state.evidence?.checkpoints?.CHECK_IN?.completed ? "Completata" : "Incompleta"],
+    ["Fine turno", state.evidence?.checkpoints?.CHECK_OUT?.completed ? "Completata" : "Incompleta"],
   ];
   $("summary").innerHTML = pairs.map(([key, value]) =>
     `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`

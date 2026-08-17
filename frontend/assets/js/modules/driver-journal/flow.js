@@ -1,9 +1,9 @@
-import { checkSessionWarnings, completeSession, findAsset, markSessionInProgress } from "./api.js?v=djh1";
-import { assetListNeedsRetry, createSpontaneousSession, loadAssetSuggestions } from "./session-access.js?v=djh1";
-import { state } from "./state.js?v=djh1";
-import { evidenceProgress } from "./evidence.js?v=djh1";
-import { updateProgress } from "./media.js?v=djh1";
-import { render, renderSummary, renderWarnings, setLoading, showError, showReceipt } from "./renderer.js?v=djh1";
+import { checkSessionWarnings, completeSession, findAsset, markSessionInProgress } from "./api.js?v=djh2";
+import { assetListNeedsRetry, createSpontaneousSession, loadAssetSuggestions } from "./session-access.js?v=djh2";
+import { state } from "./state.js?v=djh2";
+import { evidenceProgress } from "./evidence.js?v=djh2";
+import { updateProgress } from "./media.js?v=djh2";
+import { render, renderSummary, renderWarnings, setLoading, showError, showReceipt } from "./renderer.js?v=djh2";
 
 const $ = id => document.getElementById(id);
 
@@ -52,14 +52,13 @@ async function validateCurrentStep() {
   if (state.step === 6) {
     const evidence = evidenceProgress(
       state.media,
-      state.configuration?.media?.required || { photo: 1, video: 1 },
+      state.evidence,
     );
     if (!evidence.complete) {
       if (evidence.blocked.length) {
         throw new Error("Sostituisci le evidenze non valide prima di continuare.");
       }
-      const labels = evidence.missing.map(type => type === "photo" ? "foto" : "video");
-      throw new Error(`Aggiungi le evidenze obbligatorie mancanti: ${labels.join(" e ")}.`);
+      throw new Error("Completa presa in carico e controllo fine turno prima di continuare.");
     }
   }
   if (state.step === 7 && !$("confirmSummary").checked) {

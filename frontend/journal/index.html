@@ -10,9 +10,9 @@
   <link rel="stylesheet" href="../assets/css/base.css" />
   <link rel="stylesheet" href="../assets/css/brand.css?v=2" />
   <link rel="stylesheet" href="../assets/css/components.css" />
-  <link rel="stylesheet" href="../assets/css/driver-journal-layout.css?v=djh1" />
-  <link rel="stylesheet" href="../assets/css/driver-journal-components.css?v=djh1" />
-  <link rel="stylesheet" href="../assets/css/driver-journal-responsive.css?v=djh1" />
+  <link rel="stylesheet" href="../assets/css/driver-journal-layout.css?v=djh2" />
+  <link rel="stylesheet" href="../assets/css/driver-journal-components.css?v=djh2" />
+  <link rel="stylesheet" href="../assets/css/driver-journal-responsive.css?v=djh2" />
 </head>
 <body class="journal-page">
   <header class="journal-driver-header">
@@ -81,16 +81,11 @@
         </section>
 
         <section class="step" data-step="6">
-          <h2>Evidenze del mezzo</h2>
-          <p>Acquisisci almeno una foto e un video durante questo controllo.</p>
+          <h2>Controlli obbligatori del mezzo</h2>
+          <p>Documenta separatamente la presa in carico e la fine turno scegliendo Foto oppure Video per ciascun controllo.</p>
           <div id="evidenceProgress" class="evidence-progress" role="status" aria-live="polite"></div>
-          <div class="evidence-capture-actions">
-            <label class="upload-button evidence-camera-action">Scatta foto<input id="photoCaptureInput" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" hidden /></label>
-            <label class="upload-button evidence-camera-action">Registra video<input id="videoCaptureInput" type="file" accept="video/mp4,video/quicktime" capture="environment" hidden /></label>
-            <label class="upload-button secondary evidence-file-action">Scegli file esistente<input id="mediaInput" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" multiple hidden /></label>
-          </div>
-          <p class="section-note">Il browser propone la fotocamera sui dispositivi compatibili, ma non può certificare da solo l'origine del file.</p>
-          <div id="mediaPreview" class="media-grid"></div>
+          <div id="checkpointControls" class="journal-checkpoints"></div>
+          <p class="section-note">La data di ricezione è registrata dal server. I dati del dispositivo sono informativi e non costituiscono certificazione assoluta.</p>
         </section>
 
         <section class="step" data-step="7">
@@ -118,7 +113,7 @@
     </section>
   </main>
 
-  <script type="module" src="../assets/js/modules/driver-journal/shell.js?v=djh1"></script>
-  <script type="module" src="../assets/js/modules/driver-journal/index.js?v=djh1"></script>
+  <script type="module" src="../assets/js/modules/driver-journal/shell.js?v=djh2"></script>
+  <script type="module" src="../assets/js/modules/driver-journal/index.js?v=djh2"></script>
 </body>
 </html>

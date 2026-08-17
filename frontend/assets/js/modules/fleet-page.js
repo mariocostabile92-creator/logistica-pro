@@ -76,7 +76,7 @@ async function showRentalWorkspace(options) {
 
 
 async function showJournalControlRoom(options) {
-  const module = await loadFleetModule("journal", () => import("./journal-control-room.js?v=10"));
+  const module = await loadFleetModule("journal", () => import("./journal-control-room.js?v=11"));
   return module.showJournalControlRoom(options);
 }
 

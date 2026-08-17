@@ -9,8 +9,14 @@ const liveTimeline = item => {
     [item.created_at, "Procedura generata"],
     [item.opened_at, "Procedura aperta"],
     [item.in_progress_at, "Compilazione avviata"],
+    ...(item.checkpoint_events || []).map(event => [event.created_at, ({
+      journal_check_in_started: "Controllo presa in carico avviato",
+      journal_check_in_completed: "Controllo presa in carico completato",
+      journal_check_out_started: "Controllo fine turno avviato",
+      journal_check_out_completed: "Controllo fine turno completato",
+    })[event.event_type] || "Checkpoint aggiornato"]),
     [item.occurred_at && !item.incomplete ? item.occurred_at : null, item.anomaly_present ? "Completata con anomalia" : "Procedura completata"],
-  ].filter(([at]) => at);
+  ].filter(([at]) => at).sort((a, b) => new Date(a[0]) - new Date(b[0]));
   return `<ol>${events.map(([at, label]) => `<li><time>${escapeHtml(procedureDateParts({ ...item, occurred_at: at }).full)}</time><strong>${escapeHtml(label)}</strong></li>`).join("")}</ol>`;
 };
 

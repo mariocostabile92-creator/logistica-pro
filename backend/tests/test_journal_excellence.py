@@ -35,25 +35,49 @@ def session():
     return vehicle, response.json()
 
 
+def start_photo(opened, slot="FRONT", filename="prova.png", marker=b""):
+    headers = {"X-Journal-Token": opened["token"]}
+    started = client.post(
+        f"{BASE}/sessions/{opened['id']}/checkpoints/CHECK_IN/start",
+        headers=headers, json={"mode": "PHOTO"},
+    )
+    assert started.status_code == 200
+    return client.post(
+        f"{BASE}/sessions/{opened['id']}/media", headers=headers,
+        data={"checkpoint": "CHECK_IN", "evidence_mode": "PHOTO", "evidence_slot": slot},
+        files={"file": (filename, PNG + marker, "image/png")},
+    )
+
+
 def test_image_video_relative_keys_atomic_restart_and_download():
     vehicle, opened = session()
     headers = {"X-Journal-Token": opened["token"]}
-    image = client.post(f"{BASE}/sessions/{opened['id']}/media", headers=headers,
-                        files={"file": ("prova.png", PNG, "image/png")})
+    image = start_photo(opened)
+    for slot in ("REAR", "LEFT", "RIGHT", "ODOMETER"):
+        assert client.post(
+            f"{BASE}/sessions/{opened['id']}/media", headers=headers,
+            data={"checkpoint": "CHECK_IN", "evidence_mode": "PHOTO", "evidence_slot": slot},
+            files={"file": (f"{slot}.png", PNG + slot.encode(), "image/png")},
+        ).status_code == 201
+    assert client.post(f"{BASE}/sessions/{opened['id']}/checkpoints/CHECK_IN/complete", headers=headers).status_code == 200
+    assert client.post(f"{BASE}/sessions/{opened['id']}/checkpoints/CHECK_OUT/start", headers=headers, json={"mode": "VIDEO"}).status_code == 200
     video = client.post(f"{BASE}/sessions/{opened['id']}/media", headers=headers,
+                        data={"checkpoint": "CHECK_OUT", "evidence_mode": "VIDEO", "evidence_slot": "VIDEO"},
                         files={"file": ("prova.mp4", MP4, "video/mp4")})
     assert image.status_code == video.status_code == 201
     with db_session() as conn:
         rows = conn.execute("SELECT * FROM movement_media ORDER BY display_order").fetchall()
-    assert [row["media_type"] for row in rows] == ["image", "video"]
+    assert [row["media_type"] for row in rows].count("image") == 5
+    assert [row["media_type"] for row in rows].count("video") == 1
     assert all(not row["storage_key"].startswith(("/", "C:")) for row in rows)
     assert all(row["organization_id"] == "test-organization" for row in rows)
     assert all(row["vehicle_id"] == vehicle["id"] for row in rows)
     live = client.get("/api/fleet/journal-control-room").json()["items"][0]
-    assert [entry["original_filename"] for entry in live["media"]] == ["prova.png", "prova.mp4"]
+    filenames = [entry["original_filename"] for entry in live["media"]]
+    assert "prova.png" in filenames and "prova.mp4" in filenames
     assert all(entry["uploaded_at"] for entry in live["media"])
     restarted = PrivateLocalMediaStorage()
-    assert all(restarted.path(row["storage_key"]).read_bytes() in {PNG, MP4} for row in rows)
+    assert all(restarted.path(row["storage_key"]).read_bytes().startswith((PNG, MP4)) for row in rows)
     assert not list(restarted.path(rows[0]["storage_key"]).parent.glob("*.tmp"))
     admin = client.get(f"/api/fleet/journal-control-room/media/{video.json()['id']}?download=1")
     assert admin.status_code == 200
@@ -95,8 +119,6 @@ def test_operational_day_after_midnight_and_archive_queries():
 def test_month_aggregation_reports_anomalies_incomplete_and_media_in_one_snapshot():
     vehicle, opened = session()
     headers = {"X-Journal-Token": opened["token"]}
-    client.post(f"{BASE}/sessions/{opened['id']}/media", headers=headers,
-                files={"file": ("prova.png", PNG, "image/png")})
     upload_required_evidence(client, BASE, opened, "month-complete")
     completed = client.post(f"{BASE}/sessions/{opened['id']}/complete", headers=headers, json={
         "odometer_km": 1200, "fuel_percentage": 55,
@@ -130,9 +152,7 @@ def test_month_aggregation_reports_anomalies_incomplete_and_media_in_one_snapsho
 
 def test_cross_organization_media_and_archive_are_not_visible():
     _, opened = session()
-    upload = client.post(f"{BASE}/sessions/{opened['id']}/media",
-                         headers={"X-Journal-Token": opened["token"]},
-                         files={"file": ("prova.png", PNG, "image/png")}).json()
+    upload = start_photo(opened).json()
     with db_session() as conn:
         conn.execute("UPDATE movement_media SET organization_id='other' WHERE id=?", (upload["id"],))
         conn.execute("UPDATE journal_sessions SET organization_id='other' WHERE id=?", (opened["id"],))
@@ -142,9 +162,7 @@ def test_cross_organization_media_and_archive_are_not_visible():
 
 def test_media_permissions_public_token_and_administrative_delete():
     _, opened = session()
-    uploaded = client.post(f"{BASE}/sessions/{opened['id']}/media",
-                           headers={"X-Journal-Token": opened["token"]},
-                           files={"file": ("prova.png", PNG, "image/png")}).json()
+    uploaded = start_photo(opened).json()
     assert client.get(f"{BASE}/media/{uploaded['id']}").status_code == 403
     assert client.get(f"{BASE}/media/{uploaded['id']}", params={"token": opened["token"]}).status_code == 200
     assert has_permission(Role.VIEWER, "journal:read")
@@ -158,9 +176,7 @@ def test_media_permissions_public_token_and_administrative_delete():
 
 def test_integrity_report_never_exposes_absolute_paths():
     _, opened = session()
-    client.post(f"{BASE}/sessions/{opened['id']}/media",
-                headers={"X-Journal-Token": opened["token"]},
-                files={"file": ("prova.png", PNG, "image/png")})
+    start_photo(opened)
     response = client.get("/api/fleet/journal-integrity")
     assert response.status_code == 200
     assert response.json()["missing_files"] == []

@@ -37,7 +37,9 @@ def test_frontend_prevents_double_tap_and_handles_api_errors():
 
 
 def test_photo_upload_and_removal_are_real():
-    assert 'accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"' in HTML
+    assert 'accept="image/jpeg,image/png,image/webp"' in JS
+    assert 'accept="video/mp4,video/quicktime"' in JS
+    assert "data-evidence-input" in JS
     assert "uploadMedia(" in JS
     assert "deleteMedia(" in JS
 

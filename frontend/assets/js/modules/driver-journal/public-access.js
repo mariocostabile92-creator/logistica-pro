@@ -1,5 +1,5 @@
-import { validateSharedAccess } from "./api.js?v=djh1";
-import { state } from "./state.js?v=djh1";
+import { validateSharedAccess } from "./api.js?v=djh2";
+import { state } from "./state.js?v=djh2";
 
 
 const PUBLIC_ACCESS_PATTERN = /^\/app\/journal\/access\/([^/]+)\/?$/;

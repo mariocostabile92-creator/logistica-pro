@@ -54,6 +54,10 @@ class WarningCheckRequest(BaseModel):
     odometer_km: int = Field(ge=0)
 
 
+class CheckpointStartRequest(BaseModel):
+    mode: Literal["PHOTO", "VIDEO"]
+
+
 class EquipmentInput(BaseModel):
     code: Literal["telepass", "phone", "keys", "fuel_card"]
     status: Literal["present", "missing", "damaged"]

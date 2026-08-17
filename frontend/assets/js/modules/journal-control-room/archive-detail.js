@@ -27,6 +27,12 @@ function completeTimeline(item) {
     [item.created_at, "Generazione", "Procedura creata"],
     [item.opened_at, "Apertura", "Driver Journal aperto"],
     [item.in_progress_at, "Aggiornamento", "Compilazione avviata"],
+    ...(item.checkpoint_events || []).map(event => [event.created_at, "Checkpoint", ({
+      journal_check_in_started: "Controllo presa in carico avviato",
+      journal_check_in_completed: "Controllo presa in carico completato",
+      journal_check_out_started: "Controllo fine turno avviato",
+      journal_check_out_completed: "Controllo fine turno completato",
+    })[event.event_type] || "Checkpoint aggiornato"]),
     ...item.media.map(media => [media.received_at || media.uploaded_at, "Allegato", media.original_filename || "Media caricato"]),
     [item.anomaly_present ? item.occurred_at : null, "Anomalia", item.anomaly_description || "Anomalia dichiarata"],
     [!item.incomplete ? item.occurred_at : null, "Completamento", "Procedura completata"],

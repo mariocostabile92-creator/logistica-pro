@@ -133,6 +133,11 @@ def test_driver_journal_and_shared_link_validation_remain_public():
     assert client.get(
         "/api/plugins/fleet/v1/journal/shared-access/unknown", headers=ENFORCE,
     ).status_code in {404, 410}
+    assert client.post(
+        "/api/plugins/fleet/v1/journal/sessions/unknown/checkpoints/CHECK_IN/start",
+        headers=ENFORCE,
+        json={"mode": "PHOTO"},
+    ).status_code == 404
 
 
 def test_admin_journal_routes_are_not_exposed_by_the_public_driver_prefix():

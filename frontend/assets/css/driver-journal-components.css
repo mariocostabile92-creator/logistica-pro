@@ -282,3 +282,27 @@
 .evidence-file-action{grid-column:1/-1;background:transparent!important;color:var(--primary,#0d685d)!important;border:1px solid currentColor}
 .media-card .evidence-verification{margin:8px 0 0;font-size:.82rem;color:#315b54}
 .media-card .evidence-verification.warning{color:#a53b31;font-weight:700}
+.journal-checkpoints{display:grid;gap:16px;margin-top:16px}
+.journal-checkpoint{border:1px solid var(--border);border-radius:14px;padding:16px;background:var(--surface,#fff)}
+.journal-checkpoint>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+.journal-checkpoint>header span{display:block;color:var(--text-muted,#52645f);font-size:.75rem;font-weight:800;letter-spacing:.08em}
+.journal-checkpoint>header h3{margin:3px 0 0;font-size:1.05rem}
+.journal-checkpoint>header>strong{border-radius:999px;background:#eef3f1;padding:6px 9px;font-size:.75rem;color:#315b54}
+.journal-checkpoint.is-complete{border-color:#18806f;background:#f5fbf9}
+.journal-checkpoint.is-complete>header>strong{background:#dff4ed;color:#0b6557}
+.journal-checkpoint.is-locked{background:#f3f5f4;color:#66746f}
+.checkpoint-mode-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.checkpoint-mode-picker p{grid-column:1/-1;margin:0}
+.checkpoint-mode-picker button,.checkpoint-complete{min-height:48px}
+.checkpoint-slots{display:grid;gap:8px}
+.checkpoint-slot{display:flex!important;align-items:center;justify-content:space-between;gap:12px;min-height:56px;border:1px solid var(--border);border-radius:10px;padding:9px 12px;cursor:pointer;background:#fff}
+.checkpoint-slot span,.checkpoint-slot strong,.checkpoint-slot small{display:block}
+.checkpoint-slot small{margin-top:3px;font-size:.72rem;font-weight:800;letter-spacing:.04em;color:#a13b32}
+.checkpoint-slot.is-present{border-color:#18806f;background:#eef9f6}
+.checkpoint-slot.is-present small{color:#0b6557}
+.checkpoint-slot .slot-action{font-weight:800;color:var(--primary,#0d685d)}
+.video-guidance{border-left:4px solid var(--primary,#0d685d);padding:12px 14px;background:#f3f8f6;border-radius:8px}
+.video-guidance p{margin:6px 0;color:var(--text-muted,#52645f)}
+.video-guidance .upload-button{margin-top:12px;min-height:48px;display:flex;align-items:center;justify-content:center}
+.checkpoint-complete{width:100%;margin-top:14px}
+.checkpoint-locked{display:inline-flex;align-items:center;min-height:32px;color:#52645f;font-size:.82rem;font-weight:700}

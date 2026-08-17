@@ -145,6 +145,7 @@ def reset_database():
         conn.execute("DELETE FROM movement_media")
         conn.execute("DELETE FROM movement_equipment")
         conn.execute("DELETE FROM asset_movements")
+        conn.execute("DELETE FROM journal_checkpoint_events")
         conn.execute("DELETE FROM journal_sessions")
         conn.execute("DELETE FROM journal_shared_access")
         conn.execute("DELETE FROM workspace_reset_audits")

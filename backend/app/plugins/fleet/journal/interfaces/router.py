@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 from app.core.config import SETTINGS
 from app.plugins.fleet.journal.application import service
 from app.plugins.fleet.journal.interfaces.schemas import (
+    CheckpointStartRequest,
     CompleteRequest,
     SessionCreateRequest,
     SharedSessionCreateRequest,
@@ -107,6 +108,36 @@ def session_warnings(
     )
 
 
+@router.post("/sessions/{session_id}/checkpoints/{checkpoint}/start")
+def start_checkpoint(
+    session_id: str,
+    checkpoint: str,
+    request: CheckpointStartRequest,
+    x_journal_token: str | None = Header(default=None),
+):
+    return guarded(
+        service.start_checkpoint,
+        session_id,
+        x_journal_token,
+        checkpoint,
+        request.mode,
+    )
+
+
+@router.post("/sessions/{session_id}/checkpoints/{checkpoint}/complete")
+def complete_checkpoint(
+    session_id: str,
+    checkpoint: str,
+    x_journal_token: str | None = Header(default=None),
+):
+    return guarded(
+        service.complete_checkpoint,
+        session_id,
+        x_journal_token,
+        checkpoint,
+    )
+
+
 @router.post("/sessions/{session_id}/media", status_code=status.HTTP_201_CREATED)
 async def upload_media(
     session_id: str,
@@ -114,6 +145,8 @@ async def upload_media(
     captured_at: str | None = Form(default=None),
     capture_source: str = Form(default="file"),
     evidence_slot: str | None = Form(default=None),
+    checkpoint: str | None = Form(default=None),
+    evidence_mode: str | None = Form(default=None),
     x_journal_token: str | None = Header(default=None),
 ):
     data = await file.read(service.MAX_MEDIA_BYTES + 1)
@@ -127,6 +160,8 @@ async def upload_media(
         captured_at,
         capture_source,
         evidence_slot,
+        checkpoint,
+        evidence_mode,
     )
 
 

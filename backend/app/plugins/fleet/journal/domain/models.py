@@ -27,6 +27,16 @@ class EvidenceFreshnessStatus(str, Enum):
     DATE_MISMATCH = "DATE_MISMATCH"
 
 
+class EvidenceCheckpoint(str, Enum):
+    CHECK_IN = "CHECK_IN"
+    CHECK_OUT = "CHECK_OUT"
+
+
+class EvidenceMode(str, Enum):
+    PHOTO = "PHOTO"
+    VIDEO = "VIDEO"
+
+
 class JournalSession(BaseModel):
     id: str
     token_hash: str = Field(exclude=True)
@@ -49,6 +59,12 @@ class JournalSession(BaseModel):
     warnings_json: str = "[]"
     operational_date: str | None = None
     evidence_policy_version: str | None = None
+    check_in_mode: EvidenceMode | None = None
+    check_out_mode: EvidenceMode | None = None
+    check_in_started_at: str | None = None
+    check_in_completed_at: str | None = None
+    check_out_started_at: str | None = None
+    check_out_completed_at: str | None = None
 
 
 class AssetMovement(BaseModel):
@@ -101,3 +117,5 @@ class MovementMedia(BaseModel):
     reused_from_media_id: str | None = None
     reuse_detected: bool = False
     operational_date: str | None = None
+    checkpoint: EvidenceCheckpoint | None = None
+    evidence_mode: EvidenceMode | None = None

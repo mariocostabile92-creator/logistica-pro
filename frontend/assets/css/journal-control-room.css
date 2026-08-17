@@ -29,3 +29,13 @@
 .jcr-evidence-status.verified,.jcr-evidence-status.same-day{background:#e3f5ef;color:#126151}
 .jcr-evidence-status.warning{background:#fff0ed;color:#a43329}
 .jcr-evidence-warning{margin:6px 0;color:#a43329;font-size:.8rem;font-weight:700}
+.jcr-checkpoint-evidence-list{display:grid;gap:16px}
+.jcr-checkpoint-evidence{border:1px solid var(--border);border-radius:12px;padding:14px;min-width:0}
+.jcr-checkpoint-evidence>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.jcr-checkpoint-evidence>header span{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:var(--text-muted)}
+.jcr-checkpoint-evidence>header h4{margin:3px 0 0}
+.jcr-checkpoint-evidence>header>strong{font-size:.78rem;color:var(--primary)}
+.jcr-checkpoint-summary{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 12px}
+.jcr-checkpoint-summary div{display:flex;gap:5px}.jcr-checkpoint-summary dt{color:var(--text-muted)}
+.jcr-checkpoint-summary dd{margin:0;font-weight:700}
+.jcr-evidence-legacy{border-left:3px solid var(--warning,#b7791f);padding:10px 12px;background:#fff8e8}

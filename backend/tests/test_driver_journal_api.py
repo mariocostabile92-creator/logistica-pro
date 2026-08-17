@@ -227,9 +227,15 @@ def test_image_upload_remove_and_private_cross_session_access():
     asset()
     first = session()
     second = session()
+    headers = {"X-Journal-Token": first["token"]}
+    assert client.post(
+        f"{BASE}/sessions/{first['id']}/checkpoints/CHECK_IN/start",
+        headers=headers, json={"mode": "PHOTO"},
+    ).status_code == 200
     uploaded = client.post(
         f"{BASE}/sessions/{first['id']}/media",
-        headers={"X-Journal-Token": first["token"]},
+        headers=headers,
+        data={"checkpoint": "CHECK_IN", "evidence_mode": "PHOTO", "evidence_slot": "FRONT"},
         files={"file": ("proof.png", PNG, "image/png")},
     )
     assert uploaded.status_code == 201
@@ -279,14 +285,30 @@ def test_media_rejects_false_mime_corruption_and_size_limit():
 def test_uploaded_photo_is_attached_to_movement_atomically():
     asset()
     opened = session()
+    headers = {"X-Journal-Token": opened["token"]}
+    assert client.post(
+        f"{BASE}/sessions/{opened['id']}/checkpoints/CHECK_IN/start",
+        headers=headers, json={"mode": "PHOTO"},
+    ).status_code == 200
     upload = client.post(
         f"{BASE}/sessions/{opened['id']}/media",
-        headers={"X-Journal-Token": opened["token"]},
+        headers=headers,
+        data={"checkpoint": "CHECK_IN", "evidence_mode": "PHOTO", "evidence_slot": "FRONT"},
         files={"file": ("proof.png", PNG, "image/png")},
     )
     assert upload.status_code == 201
+    for slot in ("REAR", "LEFT", "RIGHT", "ODOMETER"):
+        assert client.post(
+            f"{BASE}/sessions/{opened['id']}/media", headers=headers,
+            data={"checkpoint": "CHECK_IN", "evidence_mode": "PHOTO", "evidence_slot": slot},
+            files={"file": (f"{slot}.png", PNG + slot.encode(), "image/png")},
+        ).status_code == 201
+    assert client.post(
+        f"{BASE}/sessions/{opened['id']}/checkpoints/CHECK_IN/complete",
+        headers=headers,
+    ).status_code == 200
     receipt = complete(opened, payload()).json()
-    assert len(receipt["media"]) == 2
+    assert len(receipt["media"]) == 6
     with db_session() as conn:
         row = conn.execute(
             "SELECT movement_id FROM movement_media WHERE id = ?",

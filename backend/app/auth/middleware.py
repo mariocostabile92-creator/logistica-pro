@@ -26,6 +26,7 @@ PUBLIC_JOURNAL_ROUTES = (
     ({"POST"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/shared$")),
     ({"GET", "HEAD"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+$")),
     ({"POST"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+/(progress|warnings|media|complete)$")),
+    ({"POST"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+/checkpoints/(CHECK_IN|CHECK_OUT)/(start|complete)$")),
     ({"DELETE"}, re.compile(r"^/api/plugins/fleet/v1/journal/sessions/[^/]+/media/[^/]+$")),
     ({"GET", "HEAD"}, re.compile(r"^/api/plugins/fleet/v1/journal/(movements/[^/]+/receipt|media/[^/]+|shared-access/[^/]+)$")),
 )

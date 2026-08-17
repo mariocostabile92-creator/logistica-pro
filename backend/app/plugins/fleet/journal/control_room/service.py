@@ -7,6 +7,7 @@ from app.plugins.fleet.journal.domain.operational_day import operational_date
 from app.plugins.fleet.journal.control_room import repository
 from app.plugins.fleet.journal.control_room.completion_presenter import apply_filter as apply_completion_filter
 from app.plugins.fleet.journal.control_room.completion_service import journal_completion
+from app.plugins.fleet.journal.application.evidence_service import completion_evidence_report
 
 
 def _iso_date(value: str) -> date:
@@ -76,6 +77,7 @@ def _present(
     )
     occurred_at = item.get("occurred_at") or item["created_at"]
     movement_id = None if incomplete else item["id"]
+    evidence = completion_evidence_report(item, item["media"])
     return {
         **item,
         "driver_display_name": _driver_display_name(item),
@@ -99,6 +101,8 @@ def _present(
             if movement_id else None
         ),
         "permissions": {"delete_media": can_delete_media},
+        "evidence": evidence,
+        "checkpoint_events": repository.checkpoint_events(str(item.get("id") or "")),
     }
 
 

@@ -1,26 +1,41 @@
-export const DEFAULT_REQUIREMENTS = Object.freeze({ photo: 1, video: 1 });
+export const CHECKPOINTS = Object.freeze(["CHECK_IN", "CHECK_OUT"]);
+export const PHOTO_SLOTS = Object.freeze(["FRONT", "REAR", "LEFT", "RIGHT", "ODOMETER"]);
+export const VIDEO_SLOTS = Object.freeze(["VIDEO"]);
 
-const evidenceType = item => item.evidence_type
-  || (item.media_type === "video" || item.file?.type?.startsWith("video/") ? "video" : "photo");
+const slotSet = (media, checkpoint) => new Set(media
+  .filter(item => !item.failed && item.checkpoint === checkpoint)
+  .map(item => item.evidence_slot));
 
-export function evidenceProgress(media = [], required = DEFAULT_REQUIREMENTS) {
-  const valid = media.filter(item => !item.failed);
-  const counts = {
-    photo: valid.filter(item => evidenceType(item) === "photo").length,
-    video: valid.filter(item => evidenceType(item) === "video").length,
-  };
-  const blocked = valid.filter(item =>
-    item.freshness_status === "DATE_MISMATCH" || Boolean(item.reuse_detected)
-  );
-  const missing = Object.entries(required).filter(([type, count]) =>
-    counts[type] < Number(count)
-  ).map(([type]) => type);
+export function checkpointProgress(media = [], checkpoint, mode = null, completed = false) {
+  const slots = mode === "PHOTO" ? PHOTO_SLOTS : mode === "VIDEO" ? VIDEO_SLOTS : [];
+  const present = slotSet(media, checkpoint);
+  const blocked = media.filter(item => item.checkpoint === checkpoint
+    && (item.freshness_status === "DATE_MISMATCH" || Boolean(item.reuse_detected)));
+  const missing = slots.filter(slot => !present.has(slot));
   return {
-    counts,
-    required,
-    missing,
-    blocked,
-    complete: missing.length === 0 && blocked.length === 0,
+    checkpoint, mode, requiredSlots: slots, presentSlots: [...present], missing, blocked,
+    evidenceComplete: Boolean(mode) && !missing.length && !blocked.length,
+    completed: Boolean(completed),
+  };
+}
+
+export function evidenceProgress(media = [], evidence = null) {
+  if (evidence?.historical) return { ...evidence, complete: true };
+  const server = evidence?.checkpoints || {};
+  const checkpoints = Object.fromEntries(CHECKPOINTS.map(checkpoint => {
+    const item = server[checkpoint] || {};
+    return [checkpoint, checkpointProgress(
+      media,
+      checkpoint,
+      item.mode || null,
+      item.completed || false,
+    )];
+  }));
+  const blocked = Object.values(checkpoints).flatMap(item => item.blocked);
+  const missing = Object.values(checkpoints).flatMap(item => item.missing);
+  return {
+    checkpoints, blocked, missing,
+    complete: CHECKPOINTS.every(checkpoint => checkpoints[checkpoint].completed),
   };
 }
 

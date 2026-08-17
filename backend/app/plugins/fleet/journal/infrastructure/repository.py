@@ -84,8 +84,22 @@ def init_schema() -> None:
                 operational_date TEXT,
                 declared_driver_identifier TEXT,
                 replaced_media_id TEXT,
+                checkpoint TEXT,
+                evidence_mode TEXT,
                 FOREIGN KEY (session_id) REFERENCES journal_sessions(id),
                 FOREIGN KEY (movement_id) REFERENCES asset_movements(id)
+            );
+            CREATE TABLE IF NOT EXISTS journal_checkpoint_events (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                vehicle_id INTEGER NOT NULL,
+                driver_identifier TEXT NOT NULL,
+                checkpoint TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (session_id) REFERENCES journal_sessions(id)
             );
             CREATE INDEX IF NOT EXISTS idx_journal_asset
                 ON asset_movements(asset_id, occurred_at);
@@ -99,6 +113,14 @@ def init_schema() -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_movement_org_date ON asset_movements(organization_id, occurred_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_media_org ON movement_media(organization_id, vehicle_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_media_hash ON movement_media(organization_id, sha256)")
+        conn.execute(
+            """CREATE UNIQUE INDEX IF NOT EXISTS uq_journal_media_active_slot
+               ON movement_media(session_id, checkpoint, evidence_slot)
+               WHERE movement_id IS NULL
+                 AND checkpoint IS NOT NULL
+                 AND evidence_slot IS NOT NULL"""
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_journal_checkpoint_events_session ON journal_checkpoint_events(session_id, created_at)")
         conn.execute(
             """
             UPDATE journal_sessions
@@ -150,6 +172,12 @@ def _ensure_session_columns(conn) -> None:
         "operational_date": "TEXT",
         "organization_id": "TEXT",
         "evidence_policy_version": "TEXT",
+        "check_in_mode": "TEXT",
+        "check_out_mode": "TEXT",
+        "check_in_started_at": "TEXT",
+        "check_in_completed_at": "TEXT",
+        "check_out_started_at": "TEXT",
+        "check_out_completed_at": "TEXT",
     }
     if SETTINGS.database_backend == "postgresql":
         for name, definition in columns.items():
@@ -184,6 +212,8 @@ def _ensure_media_columns(conn) -> None:
         "operational_date": "TEXT",
         "declared_driver_identifier": "TEXT",
         "replaced_media_id": "TEXT",
+        "checkpoint": "TEXT",
+        "evidence_mode": "TEXT",
     }
     if SETTINGS.database_backend == "postgresql":
         for name, definition in columns.items():
@@ -317,6 +347,66 @@ def update_session_warnings(
     return get_session(session_id)
 
 
+def update_checkpoint(
+    session_id: str,
+    checkpoint: str,
+    mode: str,
+    event_type: str,
+    occurred_at: str,
+    actor: str,
+) -> dict[str, object] | None:
+    import uuid
+
+    if checkpoint not in {"CHECK_IN", "CHECK_OUT"}:
+        raise ValueError("Checkpoint non valido.")
+    if event_type not in {
+        "journal_check_in_started", "journal_check_in_completed",
+        "journal_check_out_started", "journal_check_out_completed",
+    }:
+        raise ValueError("Evento checkpoint non valido.")
+    prefix = checkpoint.casefold()
+    timestamp_column = (
+        f"{prefix}_completed_at" if event_type.endswith("_completed")
+        else f"{prefix}_started_at"
+    )
+    mode_column = f"{prefix}_mode"
+    with db_session() as conn:
+        session = conn.execute(
+            "SELECT * FROM journal_sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+        if not session:
+            return None
+        conn.execute(
+            f"""UPDATE journal_sessions
+                SET {mode_column} = COALESCE({mode_column}, ?),
+                    {timestamp_column} = COALESCE({timestamp_column}, ?)
+                WHERE id = ?""",
+            (mode, occurred_at, session_id),
+        )
+        conn.execute(
+            """INSERT INTO journal_checkpoint_events (
+                   id, organization_id, session_id, vehicle_id,
+                   driver_identifier, checkpoint, event_type, actor, created_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                str(uuid.uuid4()), session["organization_id"] or "default",
+                session_id, session["asset_id"],
+                session["declared_driver_identifier"], checkpoint,
+                event_type, actor, occurred_at,
+            ),
+        )
+    return get_session(session_id)
+
+
+def checkpoint_events(session_id: str) -> list[dict[str, object]]:
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT * FROM journal_checkpoint_events WHERE session_id = ? ORDER BY created_at, id",
+            (session_id,),
+        ).fetchall()
+    return [_dict(row) for row in rows]  # type: ignore[misc]
+
+
 def movement_history(asset_id: int) -> list[dict[str, object]]:
     with db_session() as conn:
         rows = conn.execute(
@@ -369,11 +459,14 @@ def create_media(values: dict[str, object]) -> tuple[dict[str, object], dict[str
         replaced = conn.execute(
             """
             SELECT * FROM movement_media
-            WHERE session_id = ? AND evidence_slot = ? AND movement_id IS NULL
+            WHERE session_id = ? AND checkpoint = ?
+              AND evidence_slot = ? AND movement_id IS NULL
             ORDER BY display_order DESC LIMIT 1
             """,
-            (values["session_id"], values["evidence_slot"]),
+            (values["session_id"], values["checkpoint"], values["evidence_slot"]),
         ).fetchone()
+        if replaced:
+            conn.execute("DELETE FROM movement_media WHERE id = ?", (replaced["id"],))
         row = conn.execute(
             """
             SELECT COALESCE(MAX(display_order), -1) + 1
@@ -392,8 +485,9 @@ def create_media(values: dict[str, object]) -> tuple[dict[str, object], dict[str
                 , evidence_type, evidence_slot, captured_at, received_at,
                 capture_source, freshness_status, freshness_warning,
                 reused_from_media_id, reuse_detected, operational_date,
-                declared_driver_identifier, replaced_media_id
-            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                declared_driver_identifier, replaced_media_id,
+                checkpoint, evidence_mode
+            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 values["id"],
@@ -421,10 +515,10 @@ def create_media(values: dict[str, object]) -> tuple[dict[str, object], dict[str
                 values.get("operational_date"),
                 values.get("declared_driver_identifier"),
                 replaced["id"] if replaced else None,
+                values.get("checkpoint"),
+                values.get("evidence_mode"),
             ),
         )
-        if replaced:
-            conn.execute("DELETE FROM movement_media WHERE id = ?", (replaced["id"],))
     created = get_session_media(
         str(values["session_id"]),
         str(values["id"]),
@@ -512,6 +606,10 @@ def complete_session_atomic(
             SET status = 'completed', lifecycle_status = 'completed', completed_at = ?,
                 operational_date = ?
             WHERE id = ? AND status = 'open'
+              AND (
+                evidence_policy_version IS NULL OR evidence_policy_version <> '2.0'
+                OR (check_in_completed_at IS NOT NULL AND check_out_completed_at IS NOT NULL)
+              )
             """,
             (movement["created_at"], movement["operational_date"], session["id"]),
         )
@@ -583,7 +681,10 @@ def receipt(movement_id: str) -> dict[str, object] | None:
             SELECT m.id, m.schema_version, m.plate_snapshot, m.operation_type,
                    occurred_at, odometer_km, fuel_percentage,
                    cleanliness_status, anomaly_present, m.created_at,
-                   s.warnings_json, s.source
+                   s.id AS session_id, s.warnings_json, s.source, s.evidence_policy_version,
+                   s.check_in_mode, s.check_out_mode,
+                   s.check_in_started_at, s.check_in_completed_at,
+                   s.check_out_started_at, s.check_out_completed_at
             FROM asset_movements m
             JOIN journal_sessions s ON s.id = m.session_id
             WHERE m.id = ?
@@ -597,7 +698,8 @@ def receipt(movement_id: str) -> dict[str, object] | None:
             SELECT id, media_type, verified_mime_type, size_bytes,
                    sha256, display_order, evidence_type, evidence_slot,
                    captured_at, received_at, freshness_status,
-                   freshness_warning, reuse_detected, operational_date
+                   freshness_warning, reuse_detected, operational_date,
+                   checkpoint, evidence_mode
             FROM movement_media
             WHERE movement_id = ?
             ORDER BY display_order
@@ -687,7 +789,8 @@ def asset_history(asset_id: int, organization_id: str | None = None) -> dict[str
                 SELECT id, movement_id, media_type, verified_mime_type,
                        size_bytes, display_order, evidence_type, evidence_slot,
                        captured_at, received_at, freshness_status,
-                       freshness_warning, reuse_detected, operational_date
+                       freshness_warning, reuse_detected, operational_date,
+                       checkpoint, evidence_mode
                 FROM movement_media
                 WHERE movement_id IN ({placeholders})
                 ORDER BY movement_id, display_order
@@ -726,7 +829,8 @@ def movement_media(media_id: str, organization_id: str | None = None) -> dict[st
             SELECT id, movement_id, media_type, storage_key,
                    verified_mime_type, size_bytes, original_filename,
                    organization_id, vehicle_id, session_id, evidence_type,
-                   evidence_slot, captured_at, received_at, freshness_status,
+                   evidence_slot, checkpoint, evidence_mode,
+                   captured_at, received_at, freshness_status,
                    freshness_warning, reuse_detected, operational_date
             FROM movement_media
             WHERE id = ? {clause}

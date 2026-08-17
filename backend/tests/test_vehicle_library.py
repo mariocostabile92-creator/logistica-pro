@@ -41,12 +41,28 @@ def create_movement(asset, operation, submission, odometer):
             "operational_shift": "morning" if operation == "check_out" else None,
         },
     ).json()
+    headers = {"X-Journal-Token": opened["token"]}
+    assert client.post(
+        f"{JOURNAL}/sessions/{opened['id']}/checkpoints/CHECK_IN/start",
+        headers=headers, json={"mode": "PHOTO"},
+    ).status_code == 200
     uploaded = client.post(
         f"{JOURNAL}/sessions/{opened['id']}/media",
-        headers={"X-Journal-Token": opened["token"]},
+        headers=headers,
+        data={"checkpoint": "CHECK_IN", "evidence_mode": "PHOTO", "evidence_slot": "FRONT"},
         files={"file": ("mezzo.png", PNG + submission.encode(), "image/png")},
     )
     assert uploaded.status_code == 201
+    for slot in ("REAR", "LEFT", "RIGHT", "ODOMETER"):
+        assert client.post(
+            f"{JOURNAL}/sessions/{opened['id']}/media", headers=headers,
+            data={"checkpoint": "CHECK_IN", "evidence_mode": "PHOTO", "evidence_slot": slot},
+            files={"file": (f"{slot}.png", PNG + f"{submission}-{slot}".encode(), "image/png")},
+        ).status_code == 201
+    assert client.post(
+        f"{JOURNAL}/sessions/{opened['id']}/checkpoints/CHECK_IN/complete",
+        headers=headers,
+    ).status_code == 200
     payload = {
         "odometer_km": odometer,
         "fuel_percentage": 72,
@@ -65,7 +81,7 @@ def create_movement(asset, operation, submission, odometer):
     upload_required_evidence(client, JOURNAL, opened, submission)
     completed = client.post(
         f"{JOURNAL}/sessions/{opened['id']}/complete",
-        headers={"X-Journal-Token": opened["token"]},
+        headers=headers,
         json=payload,
     )
     assert completed.status_code == 200

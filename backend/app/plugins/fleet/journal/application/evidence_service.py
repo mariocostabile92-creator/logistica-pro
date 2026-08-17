@@ -5,9 +5,71 @@ from datetime import datetime, timedelta, timezone
 from app.plugins.fleet.journal.domain.models import EvidenceFreshnessStatus
 
 
-REQUIRED_EVIDENCE = {"photo": 1, "video": 1}
-EVIDENCE_POLICY_VERSION = "1.0"
+CHECKPOINTS = ("CHECK_IN", "CHECK_OUT")
+EVIDENCE_MODES = ("PHOTO", "VIDEO")
+PHOTO_SLOTS = ("FRONT", "REAR", "LEFT", "RIGHT", "ODOMETER")
+VIDEO_SLOT = "VIDEO"
+REQUIRED_EVIDENCE = {
+    "PHOTO": list(PHOTO_SLOTS),
+    "VIDEO": [VIDEO_SLOT],
+}
+EVIDENCE_POLICY_VERSION = "2.0"
 ALLOWED_CAPTURE_SOURCES = {"camera", "file"}
+
+
+def checkpoint_column(checkpoint: str, suffix: str) -> str:
+    if checkpoint not in CHECKPOINTS:
+        raise ValueError("Checkpoint evidenza non valido.")
+    if suffix not in {"mode", "started_at", "completed_at"}:
+        raise ValueError("Campo checkpoint non valido.")
+    return f"{checkpoint.casefold()}_{suffix}"
+
+
+def checkpoint_report(
+    session: dict[str, object],
+    media: list[dict[str, object]],
+    checkpoint: str,
+) -> dict[str, object]:
+    mode = str(session.get(checkpoint_column(checkpoint, "mode")) or "")
+    checkpoint_media = [
+        item for item in media if str(item.get("checkpoint") or "") == checkpoint
+    ]
+    expected_slots = REQUIRED_EVIDENCE.get(mode, [])
+    present_slots = {
+        str(item.get("evidence_slot") or "")
+        for item in checkpoint_media
+        if not item.get("replaced_media_id")
+    }
+    missing_slots = [slot for slot in expected_slots if slot not in present_slots]
+    blocked: list[dict[str, object]] = []
+    for item in checkpoint_media:
+        if item.get("freshness_status") == EvidenceFreshnessStatus.DATE_MISMATCH.value:
+            blocked.append({
+                "media_id": item.get("id"),
+                "code": "DATE_MISMATCH",
+                "message": "Data evidenza non coerente con il controllo corrente.",
+            })
+        if bool(item.get("reuse_detected")):
+            blocked.append({
+                "media_id": item.get("id"),
+                "code": "REUSED_EVIDENCE",
+                "message": "Evidenza già utilizzata in un controllo precedente.",
+            })
+    evidence_complete = bool(mode) and not missing_slots and not blocked
+    completed_at = session.get(checkpoint_column(checkpoint, "completed_at"))
+    return {
+        "checkpoint": checkpoint,
+        "mode": mode or None,
+        "required_slots": expected_slots,
+        "present_slots": sorted(present_slots),
+        "missing_slots": missing_slots,
+        "blocked": blocked,
+        "evidence_complete": evidence_complete,
+        "completed": bool(completed_at),
+        "completed_at": completed_at,
+        "started_at": session.get(checkpoint_column(checkpoint, "started_at")),
+        "media_count": len(checkpoint_media),
+    }
 
 
 def parse_client_capture_time(value: str | None) -> datetime | None:
@@ -70,41 +132,51 @@ def completion_evidence_report(
     session: dict[str, object],
     media: list[dict[str, object]],
 ) -> dict[str, object]:
-    historical = not session.get("evidence_policy_version")
-    counts = {
-        evidence_type: sum(
-            str(item.get("evidence_type") or item.get("media_type"))
-            == ("image" if evidence_type == "photo" else "video")
-            or str(item.get("evidence_type")) == evidence_type
-            for item in media
-        )
-        for evidence_type in REQUIRED_EVIDENCE
+    historical = session.get("evidence_policy_version") != EVIDENCE_POLICY_VERSION
+    if historical:
+        return {
+            "policy_version": session.get("evidence_policy_version"),
+            "historical": True,
+            "historical_message": "Policy evidenze IN/OUT non disponibile per questo Journal storico.",
+            "checkpoints": {},
+            "missing": [],
+            "blocked": [],
+            "complete": True,
+            "lifecycle_status": "LEGACY",
+        }
+    checkpoints = {
+        checkpoint: checkpoint_report(session, media, checkpoint)
+        for checkpoint in CHECKPOINTS
     }
     missing = [
-        {"evidence_type": evidence_type, "required": required, "present": counts[evidence_type]}
-        for evidence_type, required in REQUIRED_EVIDENCE.items()
-        if counts[evidence_type] < required
+        {
+            "checkpoint": checkpoint,
+            "mode": report["mode"],
+            "missing_slots": report["missing_slots"],
+        }
+        for checkpoint, report in checkpoints.items()
+        if not report["evidence_complete"]
     ]
-    blocked = []
-    for item in media:
-        if item.get("freshness_status") == EvidenceFreshnessStatus.DATE_MISMATCH.value:
-            blocked.append({
-                "media_id": item.get("id"),
-                "code": "DATE_MISMATCH",
-                "message": "Data evidenza non coerente con il controllo corrente.",
-            })
-        if bool(item.get("reuse_detected")):
-            blocked.append({
-                "media_id": item.get("id"),
-                "code": "REUSED_EVIDENCE",
-                "message": "Evidenza già utilizzata in un controllo precedente.",
-            })
+    blocked = [
+        {**item, "checkpoint": checkpoint}
+        for checkpoint, report in checkpoints.items()
+        for item in report["blocked"]
+    ]
+    complete = all(report["completed"] for report in checkpoints.values())
+    check_in = checkpoints["CHECK_IN"]
+    check_out = checkpoints["CHECK_OUT"]
+    lifecycle = (
+        "CHECK_IN_REQUIRED" if not check_in["completed"]
+        else "CHECK_OUT_REQUIRED" if not check_out["completed"]
+        else "READY_TO_CLOSE"
+    )
     return {
         "policy_version": session.get("evidence_policy_version"),
-        "historical": historical,
+        "historical": False,
         "required": REQUIRED_EVIDENCE,
-        "counts": counts,
-        "missing": [] if historical else missing,
-        "blocked": [] if historical else blocked,
-        "complete": historical or (not missing and not blocked),
+        "checkpoints": checkpoints,
+        "missing": missing,
+        "blocked": blocked,
+        "complete": complete,
+        "lifecycle_status": lifecycle,
     }

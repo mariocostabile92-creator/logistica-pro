@@ -63,12 +63,13 @@ test("Journal media supports image video multiple retry and submit protection", 
     file("journal/index.html"),
     file("assets/js/modules/driver-journal/media.js"),
   ]);
-  assert.match(page, /video\/mp4/);
-  assert.match(page, /video\/quicktime/);
-  assert.match(page, /multiple/);
+  assert.match(page, /checkpointControls/);
+  assert.match(media, /video\/mp4,video\/quicktime/);
+  assert.match(media, /image\/jpeg,image\/png,image\/webp/);
+  assert.match(media, /PHOTO_SLOTS/);
   assert.match(media, /Riprova/);
   assert.match(media, /uploading/);
-  assert.match(media, /createElement\("video"\)/);
+  assert.match(media, /<video/);
 });
 
 test("essential lower controls have explicit normal hover focus and disabled styles", async () => {

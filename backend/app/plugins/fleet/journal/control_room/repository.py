@@ -81,6 +81,9 @@ def list_procedures(
                    s.source, s.lifecycle_status, s.scheduled_at,
                    s.opened_at, s.in_progress_at, s.driver_name,
                    s.driver_surname, s.warnings_json, s.operational_date,
+                   s.evidence_policy_version, s.check_in_mode, s.check_out_mode,
+                   s.check_in_started_at, s.check_in_completed_at,
+                   s.check_out_started_at, s.check_out_completed_at,
                    d.id AS damage_case_id, d.case_number AS damage_case_number,
                    d.status AS damage_case_status,
                    d.severity AS damage_case_severity,
@@ -102,6 +105,9 @@ def list_procedures(
                    s.source, s.lifecycle_status, s.scheduled_at,
                    s.opened_at, s.in_progress_at, s.driver_name,
                    s.driver_surname, s.warnings_json, s.operational_date,
+                   s.evidence_policy_version, s.check_in_mode, s.check_out_mode,
+                   s.check_in_started_at, s.check_in_completed_at,
+                   s.check_out_started_at, s.check_out_completed_at,
                    a.category AS vehicle_model
             FROM journal_sessions s
             JOIN fleet_assets a ON a.id = s.asset_id
@@ -129,7 +135,8 @@ def list_procedures(
             for row in conn.execute(
                 f"""SELECT id, session_id, movement_id, media_type, verified_mime_type,
                            size_bytes, display_order, original_filename, uploaded_at,
-                           evidence_type, evidence_slot, captured_at, received_at,
+                           evidence_type, evidence_slot, checkpoint, evidence_mode,
+                           captured_at, received_at,
                            freshness_status, freshness_warning, reuse_detected,
                            operational_date, vehicle_id
                     FROM movement_media WHERE movement_id IN ({placeholders})
@@ -145,7 +152,8 @@ def list_procedures(
             for row in conn.execute(
                 f"""SELECT id, session_id, media_type, verified_mime_type,
                            size_bytes, display_order, original_filename, uploaded_at,
-                           evidence_type, evidence_slot, captured_at, received_at,
+                           evidence_type, evidence_slot, checkpoint, evidence_mode,
+                           captured_at, received_at,
                            freshness_status, freshness_warning, reuse_detected,
                            operational_date, vehicle_id
                     FROM movement_media WHERE session_id IN ({placeholders})
@@ -173,3 +181,21 @@ def list_procedures(
 
 def get_procedure(procedure_id: str, organization_id: str) -> dict | None:
     return next((item for item in list_procedures(organization_id) if item["id"] == procedure_id), None)
+
+
+def checkpoint_events(session_or_movement_id: str) -> list[dict]:
+    with db_session() as conn:
+        session = conn.execute(
+            """SELECT id FROM journal_sessions
+               WHERE id = ? OR id = (SELECT session_id FROM asset_movements WHERE id = ?)""",
+            (session_or_movement_id, session_or_movement_id),
+        ).fetchone()
+        if not session:
+            return []
+        rows = conn.execute(
+            """SELECT checkpoint, event_type, actor, created_at
+               FROM journal_checkpoint_events
+               WHERE session_id = ? ORDER BY created_at, id""",
+            (session["id"],),
+        ).fetchall()
+    return [{key: row[key] for key in row.keys()} for row in rows]
