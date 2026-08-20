@@ -15,6 +15,7 @@ from app.domain.core_language import (
 from app.domain.workforce_auto_planning import (
     ApprovedAssignmentSnapshot,
     AssignedTimeSnapshot,
+    AssignedTimeStatus,
     AssignedTimeUnit,
     ConstraintEvidence,
     OperationalDemand,
@@ -47,7 +48,11 @@ def _demand(*, organization_id: str = "org-1", day: date = PERIOD_START):
     )
 
 
-def _candidate(*, organization_id: str = "org-1"):
+def _candidate(
+    *,
+    organization_id: str = "org-1",
+    recent_consecutivity: int | None = 2,
+):
     resource = HumanResource(
         external_identifier="member-42",
         display_name="Jordan Driver",
@@ -73,7 +78,7 @@ def _candidate(*, organization_id: str = "org-1"):
             ),
         ),
         applicable_contract_reference="contract-standard",
-        recent_consecutivity=2,
+        recent_consecutivity=recent_consecutivity,
         already_approved_assignments=(
             ApprovedAssignmentSnapshot(
                 assignment_reference="assignment-1",
@@ -181,6 +186,94 @@ def test_candidate_availability_must_describe_the_same_human_resource():
                 value=0, unit=AssignedTimeUnit.MINUTES
             ),
         )
+
+
+def test_recent_consecutivity_distinguishes_known_zero_from_unknown():
+    known_zero = _candidate(recent_consecutivity=0)
+    unknown = _candidate(recent_consecutivity=None)
+
+    assert known_zero.recent_consecutivity == 0
+    assert unknown.recent_consecutivity is None
+
+
+def test_positive_recent_consecutivity_remains_valid():
+    assert _candidate().recent_consecutivity == 2
+
+
+def test_negative_recent_consecutivity_is_rejected():
+    values = _candidate().model_dump()
+    values["recent_consecutivity"] = -1
+
+    with pytest.raises(ValidationError):
+        WorkforceCandidateSnapshot(**values)
+
+
+def test_assigned_time_known_requires_value_and_unit():
+    assigned_time = AssignedTimeSnapshot(
+        status=AssignedTimeStatus.KNOWN,
+        value=Decimal("8"),
+        unit=AssignedTimeUnit.HOURS,
+    )
+
+    assert assigned_time.status == AssignedTimeStatus.KNOWN
+    assert assigned_time.value == Decimal("8")
+    assert assigned_time.unit == AssignedTimeUnit.HOURS
+
+    with pytest.raises(ValidationError, match="requires value and unit"):
+        AssignedTimeSnapshot(status=AssignedTimeStatus.KNOWN)
+
+
+def test_assigned_time_unknown_does_not_invent_zero():
+    assigned_time = AssignedTimeSnapshot(status=AssignedTimeStatus.UNKNOWN)
+
+    assert assigned_time.value is None
+    assert assigned_time.unit is None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"value": Decimal("0")},
+        {"unit": AssignedTimeUnit.MINUTES},
+        {"value": Decimal("0"), "unit": AssignedTimeUnit.MINUTES},
+    ],
+)
+def test_assigned_time_unknown_rejects_quantity_or_unit(payload):
+    with pytest.raises(ValidationError, match="cannot include value or unit"):
+        AssignedTimeSnapshot(status=AssignedTimeStatus.UNKNOWN, **payload)
+
+
+def test_assigned_time_partial_preserves_known_incomplete_quantity():
+    assigned_time = AssignedTimeSnapshot(
+        status=AssignedTimeStatus.PARTIAL,
+        value=Decimal("90"),
+        unit=AssignedTimeUnit.MINUTES,
+    )
+
+    assert assigned_time.status == AssignedTimeStatus.PARTIAL
+    assert assigned_time.value == Decimal("90")
+    assert assigned_time.unit == AssignedTimeUnit.MINUTES
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"value": Decimal("90")},
+        {"unit": AssignedTimeUnit.MINUTES},
+    ],
+)
+def test_assigned_time_partial_requires_known_quantity_and_unit(payload):
+    with pytest.raises(ValidationError, match="requires value and unit"):
+        AssignedTimeSnapshot(status=AssignedTimeStatus.PARTIAL, **payload)
+
+
+def test_existing_assigned_time_constructor_retains_known_semantics():
+    assigned_time = AssignedTimeSnapshot(
+        value=Decimal("0"), unit=AssignedTimeUnit.MINUTES
+    )
+
+    assert assigned_time.status == AssignedTimeStatus.KNOWN
 
 
 def test_new_domain_contains_no_vertical_or_fleet_terminology():

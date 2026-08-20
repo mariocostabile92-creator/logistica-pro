@@ -28,9 +28,31 @@ class AssignedTimeUnit(str, Enum):
     HOURS = "HOURS"
 
 
+class AssignedTimeStatus(str, Enum):
+    KNOWN = "KNOWN"
+    PARTIAL = "PARTIAL"
+    UNKNOWN = "UNKNOWN"
+
+
 class AssignedTimeSnapshot(_ImmutableSnapshotModel):
-    value: Decimal = Field(ge=0)
-    unit: AssignedTimeUnit
+    status: AssignedTimeStatus = AssignedTimeStatus.KNOWN
+    value: Decimal | None = Field(default=None, ge=0)
+    unit: AssignedTimeUnit | None = None
+
+    @model_validator(mode="after")
+    def validate_status_payload(self) -> "AssignedTimeSnapshot":
+        if self.status == AssignedTimeStatus.UNKNOWN:
+            if self.value is not None or self.unit is not None:
+                raise ValueError(
+                    "UNKNOWN assigned time cannot include value or unit"
+                )
+            return self
+
+        if self.value is None or self.unit is None:
+            raise ValueError(
+                f"{self.status.value} assigned time requires value and unit"
+            )
+        return self
 
 
 class WorkforceCandidateAvailabilitySnapshot(_ImmutableSnapshotModel):
@@ -55,7 +77,7 @@ class WorkforceCandidateSnapshot(_ImmutableSnapshotModel):
         default_factory=tuple
     )
     applicable_contract_reference: str = Field(min_length=1)
-    recent_consecutivity: int = Field(ge=0, strict=True)
+    recent_consecutivity: int | None = Field(ge=0, strict=True)
     already_approved_assignments: tuple[ApprovedAssignmentSnapshot, ...] = Field(
         default_factory=tuple
     )

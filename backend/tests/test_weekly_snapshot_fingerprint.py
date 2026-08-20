@@ -11,6 +11,7 @@ from app.domain.core_language import (
 )
 from app.domain.workforce_auto_planning import (
     AssignedTimeSnapshot,
+    AssignedTimeStatus,
     AssignedTimeUnit,
     ConstraintEvidence,
     OperationalDemand,
@@ -42,7 +43,11 @@ def _demand(day_offset: int, quantity: int = 8) -> OperationalDemand:
     )
 
 
-def _candidate(member_id: str, consecutive_days: int = 1):
+def _candidate(
+    member_id: str,
+    consecutive_days: int | None = 1,
+    assigned_time: AssignedTimeSnapshot | None = None,
+):
     resource = HumanResource(
         external_identifier=member_id,
         display_name=f"Driver {member_id}",
@@ -65,8 +70,12 @@ def _candidate(member_id: str, consecutive_days: int = 1):
         ),
         applicable_contract_reference="standard-contract",
         recent_consecutivity=consecutive_days,
-        already_assigned_minutes_or_hours=AssignedTimeSnapshot(
-            value=Decimal("0"), unit=AssignedTimeUnit.MINUTES
+        already_assigned_minutes_or_hours=(
+            assigned_time
+            if assigned_time is not None
+            else AssignedTimeSnapshot(
+                value=Decimal("0"), unit=AssignedTimeUnit.MINUTES
+            )
         ),
         evidence=(
             ConstraintEvidence(key="calendar", value="ready"),
@@ -167,6 +176,44 @@ def test_changed_candidate_changes_fingerprint():
         _snapshot(candidates=(_candidate("member-1", consecutive_days=1),))
     ) != _fingerprint(
         _snapshot(candidates=(_candidate("member-1", consecutive_days=2),))
+    )
+
+
+def test_unknown_candidate_inputs_have_a_deterministic_fingerprint():
+    candidate = _candidate(
+        "member-1",
+        consecutive_days=None,
+        assigned_time=AssignedTimeSnapshot(status=AssignedTimeStatus.UNKNOWN),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(candidate,))) == _fingerprint(
+        _snapshot(candidates=(candidate.model_copy(),))
+    )
+
+
+def test_partial_assigned_time_has_a_deterministic_distinct_fingerprint():
+    partial = _candidate(
+        "member-1",
+        assigned_time=AssignedTimeSnapshot(
+            status=AssignedTimeStatus.PARTIAL,
+            value=Decimal("90"),
+            unit=AssignedTimeUnit.MINUTES,
+        ),
+    )
+    known = _candidate(
+        "member-1",
+        assigned_time=AssignedTimeSnapshot(
+            status=AssignedTimeStatus.KNOWN,
+            value=Decimal("90"),
+            unit=AssignedTimeUnit.MINUTES,
+        ),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(partial,))) == _fingerprint(
+        _snapshot(candidates=(partial.model_copy(),))
+    )
+    assert _fingerprint(_snapshot(candidates=(partial,))) != _fingerprint(
+        _snapshot(candidates=(known,))
     )
 
 
