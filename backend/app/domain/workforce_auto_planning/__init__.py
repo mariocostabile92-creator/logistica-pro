@@ -41,6 +41,9 @@ from app.domain.workforce_auto_planning.weekly_planning_input_snapshot import (
     WorkforceCandidateAvailabilitySnapshot,
     WorkforceCandidateSnapshot,
 )
+from app.domain.workforce_auto_planning.weekly_snapshot_fingerprint import (
+    compute_weekly_planning_input_fingerprint,
+)
 
 
 __all__ = [
@@ -68,6 +71,7 @@ __all__ = [
     "ShiftCatalogueEntry",
     "WorkforcePlanningPolicyProvider",
     "WorkloadCapabilityMapping",
+    "compute_weekly_planning_input_fingerprint",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
     "WeeklyPlanningInputSnapshot",
