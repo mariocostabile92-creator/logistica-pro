@@ -1,11 +1,13 @@
 import json
 from collections.abc import Sequence
+from datetime import date
 
 from app.core.database import db_session
 from app.plugins.workforce.domain.driver_shift_planning import (
     DriverShiftPlanning,
     DriverShiftPlanningError,
     DriverShiftPlanningConflictError,
+    DriverShiftPlanningPublishedRow,
     DriverShiftPlanningPublication,
     DriverShiftPlanningResolution,
     DriverShiftPlanningNotFoundError,
@@ -18,6 +20,12 @@ from app.utils.date_utils import utc_now_iso
 
 def _planning(row) -> DriverShiftPlanning:
     return DriverShiftPlanning.model_validate({key: row[key] for key in row.keys()})
+
+
+def _published_row(row) -> DriverShiftPlanningPublishedRow:
+    values = {key: row[key] for key in row.keys()}
+    values["provenance_summary"] = json.loads(values["provenance_summary"])
+    return DriverShiftPlanningPublishedRow.model_validate(values)
 
 
 def _resolution(row) -> DriverShiftPlanningResolution:
@@ -739,3 +747,47 @@ def list_published_shifts_for_workforce_member(
             (organization_id, workforce_member_id, period_start, period_end),
         ).fetchall()
     return [{key: row[key] for key in row.keys()} for row in rows]
+
+
+def list_active_published_shifts(
+    organization_id: str,
+    period_start: str,
+    period_end: str,
+) -> list[DriverShiftPlanningPublishedRow]:
+    if not isinstance(organization_id, str) or not organization_id.strip():
+        raise ValueError("organization_id is required")
+    start = date.fromisoformat(period_start)
+    end = date.fromisoformat(period_end)
+    if end < start:
+        raise ValueError("period_end must not be before period_start")
+
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT pr.*
+            FROM driver_shift_planning_published_rows pr
+            JOIN driver_shift_plannings p
+              ON p.id = pr.driver_shift_planning_id
+             AND p.organization_id = pr.organization_id
+            JOIN workforce_members m
+              ON m.id = pr.workforce_member_id
+            WHERE p.organization_id = ?
+              AND pr.organization_id = ?
+              AND m.organization_id = ?
+              AND p.status = 'ACTIVE'
+              AND pr.operational_date BETWEEN ? AND ?
+            ORDER BY
+                pr.operational_date,
+                pr.workforce_member_id,
+                COALESCE(pr.shift_code, ''),
+                pr.id
+            """,
+            (
+                organization_id,
+                organization_id,
+                organization_id,
+                period_start,
+                period_end,
+            ),
+        ).fetchall()
+    return [_published_row(row) for row in rows]
