@@ -8,6 +8,7 @@ from app.domain.core_language import HumanResource, OperationalUnit, TimeWindow
 from app.domain.workforce_auto_planning import (
     AssignedTimeSnapshot,
     AssignedTimeUnit,
+    CurrentMemberContractStateSnapshot,
     OperationalDemand,
     WeeklyPlanningInputSnapshot,
     WeeklyPlanningInputSnapshotComposer,
@@ -43,7 +44,7 @@ def _candidate() -> WorkforceCandidateSnapshot:
             external_identifier="member-1",
             capabilities=("parcel-delivery",),
         ),
-        applicable_contract_reference="standard-contract",
+        applicable_contract_state=CurrentMemberContractStateSnapshot(),
         recent_consecutivity=2,
         already_assigned_minutes_or_hours=AssignedTimeSnapshot(
             value=Decimal("0"), unit=AssignedTimeUnit.MINUTES

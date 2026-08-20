@@ -59,7 +59,7 @@ def _candidate_sort_key(
     return (
         candidate.organization_id,
         candidate.workforce_member_id,
-        candidate.applicable_contract_reference,
+        _canonical_json(_canonicalize(candidate.applicable_contract_state)),
         _canonical_json(canonical),
     )
 

@@ -17,7 +17,9 @@ from app.domain.workforce_auto_planning import (
     AssignedTimeSnapshot,
     AssignedTimeStatus,
     AssignedTimeUnit,
+    ContractStateSourceKind,
     ConstraintEvidence,
+    CurrentMemberContractStateSnapshot,
     OperationalDemand,
     WeeklyPlanningInputSnapshot,
     WorkforceCandidateAvailabilitySnapshot,
@@ -52,6 +54,7 @@ def _candidate(
     *,
     organization_id: str = "org-1",
     recent_consecutivity: int | None = 2,
+    contract_state: CurrentMemberContractStateSnapshot | None = None,
 ):
     resource = HumanResource(
         external_identifier="member-42",
@@ -77,7 +80,17 @@ def _candidate(
                 ),
             ),
         ),
-        applicable_contract_reference="contract-standard",
+        applicable_contract_state=(
+            contract_state
+            if contract_state is not None
+            else CurrentMemberContractStateSnapshot(
+                employment_type="full-time",
+                contract_start=date(2026, 1, 1),
+                contract_end=date(2026, 12, 31),
+                weekly_hours=Decimal("40"),
+                is_reserve=False,
+            )
+        ),
         recent_consecutivity=recent_consecutivity,
         already_approved_assignments=(
             ApprovedAssignmentSnapshot(
@@ -180,7 +193,7 @@ def test_candidate_availability_must_describe_the_same_human_resource():
                     ),
                 ),
             ),
-            applicable_contract_reference="contract-standard",
+            applicable_contract_state=CurrentMemberContractStateSnapshot(),
             recent_consecutivity=0,
             already_assigned_minutes_or_hours=AssignedTimeSnapshot(
                 value=0, unit=AssignedTimeUnit.MINUTES
@@ -276,6 +289,67 @@ def test_existing_assigned_time_constructor_retains_known_semantics():
     assert assigned_time.status == AssignedTimeStatus.KNOWN
 
 
+def test_complete_current_member_contract_state_is_representable():
+    contract_state = _candidate().applicable_contract_state
+
+    assert contract_state.source_kind == (
+        ContractStateSourceKind.CURRENT_MEMBER_CONTRACT_STATE
+    )
+    assert contract_state.employment_type == "full-time"
+    assert contract_state.contract_start == date(2026, 1, 1)
+    assert contract_state.contract_end == date(2026, 12, 31)
+    assert contract_state.weekly_hours == Decimal("40")
+    assert contract_state.is_reserve is False
+
+
+def test_partial_contract_state_does_not_invent_missing_values():
+    contract_state = CurrentMemberContractStateSnapshot(
+        employment_type="part-time",
+        weekly_hours=Decimal("24"),
+    )
+
+    assert contract_state.employment_type == "part-time"
+    assert contract_state.weekly_hours == Decimal("24")
+    assert contract_state.contract_start is None
+    assert contract_state.contract_end is None
+    assert contract_state.is_reserve is None
+
+
+def test_absent_contract_data_is_representable_without_defaults():
+    contract_state = CurrentMemberContractStateSnapshot()
+
+    assert contract_state.employment_type is None
+    assert contract_state.contract_start is None
+    assert contract_state.contract_end is None
+    assert contract_state.weekly_hours is None
+    assert contract_state.is_reserve is None
+
+
+def test_incoherent_contract_period_is_rejected():
+    with pytest.raises(ValidationError, match="contract_end cannot precede"):
+        CurrentMemberContractStateSnapshot(
+            contract_start=date(2026, 12, 31),
+            contract_end=date(2026, 1, 1),
+        )
+
+
+def test_negative_weekly_hours_is_rejected():
+    with pytest.raises(ValidationError):
+        CurrentMemberContractStateSnapshot(weekly_hours=Decimal("-1"))
+
+
+@pytest.mark.parametrize("employment_type", ["", "   "])
+def test_blank_employment_type_is_rejected(employment_type):
+    with pytest.raises(ValidationError):
+        CurrentMemberContractStateSnapshot(employment_type=employment_type)
+
+
+@pytest.mark.parametrize("is_reserve", [0, 1, "true"])
+def test_is_reserve_is_strict_when_present(is_reserve):
+    with pytest.raises(ValidationError):
+        CurrentMemberContractStateSnapshot(is_reserve=is_reserve)
+
+
 def test_new_domain_contains_no_vertical_or_fleet_terminology():
     domain_file = (
         Path(__file__).parents[1]
@@ -286,5 +360,13 @@ def test_new_domain_contains_no_vertical_or_fleet_terminology():
     )
     source = domain_file.read_text(encoding="utf-8").lower()
 
-    forbidden_terms = ("amazon", "dsp", "next_day", "same_day", "fleet", "vehicle")
+    forbidden_terms = (
+        "amazon",
+        "dsp",
+        "next_day",
+        "same_day",
+        "operational_cycle",
+        "fleet",
+        "vehicle",
+    )
     assert all(term not in source for term in forbidden_terms)

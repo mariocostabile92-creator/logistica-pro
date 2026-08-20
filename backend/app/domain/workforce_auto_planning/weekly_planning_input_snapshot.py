@@ -55,6 +55,31 @@ class AssignedTimeSnapshot(_ImmutableSnapshotModel):
         return self
 
 
+class ContractStateSourceKind(str, Enum):
+    CURRENT_MEMBER_CONTRACT_STATE = "CURRENT_MEMBER_CONTRACT_STATE"
+
+
+class CurrentMemberContractStateSnapshot(_ImmutableSnapshotModel):
+    source_kind: ContractStateSourceKind = (
+        ContractStateSourceKind.CURRENT_MEMBER_CONTRACT_STATE
+    )
+    employment_type: str | None = Field(default=None, min_length=1)
+    contract_start: CalendarDate | None = None
+    contract_end: CalendarDate | None = None
+    weekly_hours: Decimal | None = Field(default=None, ge=0)
+    is_reserve: bool | None = Field(default=None, strict=True)
+
+    @model_validator(mode="after")
+    def validate_contract_period(self) -> "CurrentMemberContractStateSnapshot":
+        if (
+            self.contract_start is not None
+            and self.contract_end is not None
+            and self.contract_end < self.contract_start
+        ):
+            raise ValueError("contract_end cannot precede contract_start")
+        return self
+
+
 class WorkforceCandidateAvailabilitySnapshot(_ImmutableSnapshotModel):
     date: CalendarDate
     time_window: TimeWindow | None = None
@@ -76,7 +101,7 @@ class WorkforceCandidateSnapshot(_ImmutableSnapshotModel):
     availability: tuple[WorkforceCandidateAvailabilitySnapshot, ...] = Field(
         default_factory=tuple
     )
-    applicable_contract_reference: str = Field(min_length=1)
+    applicable_contract_state: CurrentMemberContractStateSnapshot
     recent_consecutivity: int | None = Field(ge=0, strict=True)
     already_approved_assignments: tuple[ApprovedAssignmentSnapshot, ...] = Field(
         default_factory=tuple

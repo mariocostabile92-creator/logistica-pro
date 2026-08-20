@@ -14,6 +14,7 @@ from app.domain.workforce_auto_planning import (
     AssignedTimeStatus,
     AssignedTimeUnit,
     ConstraintEvidence,
+    CurrentMemberContractStateSnapshot,
     OperationalDemand,
     WeeklyPlanningInputSnapshot,
     WorkforceCandidateAvailabilitySnapshot,
@@ -47,6 +48,7 @@ def _candidate(
     member_id: str,
     consecutive_days: int | None = 1,
     assigned_time: AssignedTimeSnapshot | None = None,
+    contract_state: CurrentMemberContractStateSnapshot | None = None,
 ):
     resource = HumanResource(
         external_identifier=member_id,
@@ -68,7 +70,15 @@ def _candidate(
                 ),
             ),
         ),
-        applicable_contract_reference="standard-contract",
+        applicable_contract_state=(
+            contract_state
+            if contract_state is not None
+            else CurrentMemberContractStateSnapshot(
+                employment_type="full-time",
+                weekly_hours=Decimal("40"),
+                is_reserve=False,
+            )
+        ),
         recent_consecutivity=consecutive_days,
         already_assigned_minutes_or_hours=(
             assigned_time
@@ -214,6 +224,44 @@ def test_partial_assigned_time_has_a_deterministic_distinct_fingerprint():
     )
     assert _fingerprint(_snapshot(candidates=(partial,))) != _fingerprint(
         _snapshot(candidates=(known,))
+    )
+
+
+def test_changed_employment_type_changes_fingerprint():
+    full_time = _candidate(
+        "member-1",
+        contract_state=CurrentMemberContractStateSnapshot(
+            employment_type="full-time"
+        ),
+    )
+    part_time = _candidate(
+        "member-1",
+        contract_state=CurrentMemberContractStateSnapshot(
+            employment_type="part-time"
+        ),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(full_time,))) != _fingerprint(
+        _snapshot(candidates=(part_time,))
+    )
+
+
+def test_changed_weekly_hours_changes_fingerprint():
+    forty_hours = _candidate(
+        "member-1",
+        contract_state=CurrentMemberContractStateSnapshot(
+            weekly_hours=Decimal("40")
+        ),
+    )
+    twenty_four_hours = _candidate(
+        "member-1",
+        contract_state=CurrentMemberContractStateSnapshot(
+            weekly_hours=Decimal("24")
+        ),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(forty_hours,))) != _fingerprint(
+        _snapshot(candidates=(twenty_four_hours,))
     )
 
 
