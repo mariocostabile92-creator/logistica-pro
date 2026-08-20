@@ -23,6 +23,10 @@ from app.domain.workforce_auto_planning.planning_policy import (
     WorkforcePlanningPolicyProvider,
     WorkloadCapabilityMapping,
 )
+from app.domain.workforce_auto_planning.planning_operational_unit_binding import (
+    PlanningOperationalUnitBinding,
+    PlanningOperationalUnitBindingProvider,
+)
 from app.domain.workforce_auto_planning.proposed_shift_assignment import (
     ProposedAssignmentReason,
     ProposedShiftAssignment,
@@ -80,6 +84,8 @@ __all__ = [
     "OperationalDemand",
     "OperationalDemandProvider",
     "PlanningPriorityOrPreference",
+    "PlanningOperationalUnitBinding",
+    "PlanningOperationalUnitBindingProvider",
     "PlanningRuleDescriptor",
     "PlanningRuleParameter",
     "ProposedAssignmentReason",
