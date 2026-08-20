@@ -3,14 +3,20 @@ from datetime import date, timedelta
 from time import perf_counter
 from types import SimpleNamespace
 
+import pytest
+
 from app.auth.domain import Role
 from app.auth.permission_service import has_permission
 from app.core.database import db_session
+from app.plugins.workforce.application import consecutivity_service
 from app.plugins.workforce.application.consecutivity_policy import update_policy
-from app.plugins.workforce.application.consecutivity_service import snapshots
+from app.plugins.workforce.application.consecutivity_service import (
+    snapshots,
+    snapshots_for_period,
+)
 from app.plugins.workforce.application.override_service import create_override
 from app.plugins.workforce.application.planning_adapter import planning_conflicts
-from app.plugins.workforce.infrastructure import read_repository
+from app.plugins.workforce.infrastructure import consecutivity_repository, read_repository
 
 
 ORG = "qa-workforce"
@@ -65,7 +71,12 @@ def history(member_id: int, consecutive: int):
         day_status(member_id, TARGET - timedelta(days=offset), "scheduled")
 
 
-def planning(driver_identifier: str, day: date, status: str) -> int:
+def planning(
+    driver_identifier: str,
+    day: date,
+    status: str,
+    organization_id: str = ORG,
+) -> int:
     with db_session() as conn:
         planning_import = conn.execute(
             """INSERT INTO imports (
@@ -86,9 +97,12 @@ def planning(driver_identifier: str, day: date, status: str) -> int:
                 operation_date, station, source_planning_import_id,
                 source_fleet_import_id, status, version, reserve_threshold,
                 configuration, summary, conflicts, generation_metadata,
-                created_at, updated_at
-            ) VALUES (?, 'DLO1', ?, ?, ?, 1, 1, '{}', '{}', '[]', '{}', ?, ?)""",
-            (day.isoformat(), planning_import, fleet_import, status, NOW, NOW),
+                created_at, updated_at, organization_id
+            ) VALUES (?, 'DLO1', ?, ?, ?, 1, 1, '{}', '{}', '[]', '{}', ?, ?, ?)""",
+            (
+                day.isoformat(), planning_import, fleet_import, status,
+                NOW, NOW, organization_id,
+            ),
         ).lastrowid
         conn.execute(
             """INSERT INTO assignments (
@@ -385,3 +399,262 @@ def test_150_drivers_and_60_days_are_calculated_in_one_aggregated_pass():
     elapsed = perf_counter() - started
     assert len(result) == 150
     assert elapsed < 2.0
+
+
+def _snapshot_without_runtime_timestamp(item):
+    payload = item.model_dump(mode="json")
+    payload.pop("calculated_at")
+    return payload
+
+
+def test_period_batch_matches_authoritative_daily_snapshots_for_each_date():
+    member_id = member("BATCH-EQUIVALENCE")
+    day_status(member_id, TARGET - timedelta(days=4), "rest")
+    for offset in (3, 2, 1):
+        day_status(member_id, TARGET - timedelta(days=offset), "scheduled")
+    planning("BATCH-EQUIVALENCE", TARGET, "published")
+    members = [
+        item for item in read_repository.list_members(ORG)
+        if item.workforce_member_id == member_id
+    ]
+    period_end = TARGET + timedelta(days=2)
+
+    batch = snapshots_for_period(
+        ORG, TARGET.isoformat(), period_end.isoformat(), members, today=TARGET
+    )
+
+    for offset in range(3):
+        operation_day = TARGET + timedelta(days=offset)
+        daily = snapshots(
+            ORG, operation_day.isoformat(), members, today=TARGET
+        )[member_id]
+        assert _snapshot_without_runtime_timestamp(
+            batch[operation_day.isoformat()][member_id]
+        ) == _snapshot_without_runtime_timestamp(daily)
+
+
+def test_period_batch_preserves_source_precedence_policy_and_override_lifecycle():
+    member_id = member("BATCH-PRECEDENCE")
+    day_status(member_id, TARGET - timedelta(days=3), "rest")
+    worked_day = TARGET - timedelta(days=2)
+    planning("BATCH-PRECEDENCE", worked_day, "published")
+    completed_journal("BATCH-PRECEDENCE", worked_day)
+    day_status(member_id, TARGET - timedelta(days=1), "scheduled")
+    update_policy(
+        ORG,
+        warning_threshold=2,
+        rest_required_threshold=3,
+        rest_break_days=1,
+        actor="admin@example.test",
+    )
+    create_override(
+        ORG,
+        member_id,
+        (TARGET + timedelta(days=1)).isoformat(),
+        (TARGET + timedelta(days=1)).isoformat(),
+        "callable",
+        "Override batch controllato.",
+        "dispatcher@example.test",
+    )
+    members = [
+        item for item in read_repository.list_members(ORG)
+        if item.workforce_member_id == member_id
+    ]
+
+    batch = snapshots_for_period(
+        ORG,
+        TARGET.isoformat(),
+        (TARGET + timedelta(days=2)).isoformat(),
+        members,
+        today=TARGET,
+    )
+
+    first = batch[TARGET.isoformat()][member_id]
+    active = batch[(TARGET + timedelta(days=1)).isoformat()][member_id]
+    expired = batch[(TARGET + timedelta(days=2)).isoformat()][member_id]
+    daily_active = snapshots(
+        ORG,
+        (TARGET + timedelta(days=1)).isoformat(),
+        members,
+        today=TARGET,
+    )[member_id]
+    journal_day = next(item for item in first.sequence if item.date == worked_day.isoformat())
+    assert journal_day.source == "journal_completed"
+    assert first.threshold_warning == 2
+    assert first.threshold_rest_required == 3
+    assert first.override is None
+    assert first.expired_override is None
+    assert active.status == "override_manual"
+    assert active.override is not None
+    assert active.expired_override is None
+    assert _snapshot_without_runtime_timestamp(active) == _snapshot_without_runtime_timestamp(
+        daily_active
+    )
+    assert expired.override is None
+    assert expired.expired_override is not None
+
+
+def test_period_batch_is_date_and_member_ordered_and_supports_general_periods():
+    first_id = member("BATCH-ORDER-1")
+    second_id = member("BATCH-ORDER-2")
+    day_status(second_id, TARGET - timedelta(days=2), "rest")
+    day_status(second_id, TARGET - timedelta(days=1), "scheduled")
+    members = [
+        item for item in read_repository.list_members(ORG)
+        if item.workforce_member_id in {first_id, second_id}
+    ]
+    forward_members = list(members)
+    members.reverse()
+    period_end = TARGET + timedelta(days=9)
+
+    result = snapshots_for_period(
+        ORG, TARGET.isoformat(), period_end.isoformat(), members, today=TARGET
+    )
+
+    assert list(result) == [
+        (TARGET + timedelta(days=offset)).isoformat() for offset in range(10)
+    ]
+    assert all(list(items) == sorted((first_id, second_id)) for items in result.values())
+    assert result[TARGET.isoformat()][first_id].effective_consecutive_days is None
+    assert result[TARGET.isoformat()][second_id].effective_consecutive_days == 1
+
+    forward_result = snapshots_for_period(
+        ORG,
+        TARGET.isoformat(),
+        period_end.isoformat(),
+        forward_members,
+        today=TARGET,
+    )
+    for operation_date, items in result.items():
+        for member_id, item in items.items():
+            assert _snapshot_without_runtime_timestamp(item) == (
+                _snapshot_without_runtime_timestamp(
+                    forward_result[operation_date][member_id]
+                )
+            )
+
+
+def test_period_batch_does_not_apply_revoked_overrides():
+    member_id = member("BATCH-REVOKED")
+    revoked = create_override(
+        ORG,
+        member_id,
+        TARGET.isoformat(),
+        TARGET.isoformat(),
+        "callable",
+        "Override poi revocato.",
+        "dispatcher@example.test",
+    )
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE workforce_consecutivity_overrides SET revoked_at = ? WHERE id = ?",
+            (NOW, revoked.id),
+        )
+    members = [
+        item for item in read_repository.list_members(ORG)
+        if item.workforce_member_id == member_id
+    ]
+
+    item = snapshots_for_period(
+        ORG, TARGET.isoformat(), TARGET.isoformat(), members, today=TARGET
+    )[TARGET.isoformat()][member_id]
+
+    assert item.override is None
+    assert item.expired_override is None
+
+
+def test_period_batch_rejects_invalid_scope_period_and_cross_tenant_members():
+    local_id = member("BATCH-SCOPE-SHARED")
+    foreign_org = "qa-workforce-foreign"
+    foreign_id = member("BATCH-SCOPE-SHARED", foreign_org)
+    day_status(
+        foreign_id,
+        TARGET - timedelta(days=1),
+        "scheduled",
+        organization_id=foreign_org,
+    )
+    local_member = next(
+        item for item in read_repository.list_members(ORG)
+        if item.workforce_member_id == local_id
+    )
+    foreign_member = next(
+        item for item in read_repository.list_members(foreign_org)
+        if item.workforce_member_id == foreign_id
+    )
+    local_result = snapshots_for_period(
+        ORG,
+        TARGET.isoformat(),
+        TARGET.isoformat(),
+        [local_member],
+        today=TARGET,
+    )[TARGET.isoformat()][local_id]
+    assert local_result.effective_consecutive_days is None
+    with pytest.raises(ValueError, match="organization_id is required"):
+        snapshots_for_period("   ", TARGET.isoformat(), TARGET.isoformat(), [])
+    with pytest.raises(ValueError, match="period_end"):
+        snapshots_for_period(
+            ORG,
+            TARGET.isoformat(),
+            (TARGET - timedelta(days=1)).isoformat(),
+            [local_member],
+        )
+    with pytest.raises(ValueError, match="members must belong"):
+        snapshots_for_period(
+            ORG,
+            TARGET.isoformat(),
+            TARGET.isoformat(),
+            [local_member, foreign_member],
+            today=TARGET,
+        )
+
+
+def test_period_batch_uses_explicit_today_and_loads_each_batch_dependency_once(
+    monkeypatch,
+):
+    member_id = member("BATCH-LOADS")
+    members = [
+        item for item in read_repository.list_members(ORG)
+        if item.workforce_member_id == member_id
+    ]
+    calls = {"rows": 0, "policy": 0, "overrides": 0}
+    original_rows = consecutivity_repository.source_rows_for_organization
+    original_policy = consecutivity_repository.get_policy
+    original_overrides = consecutivity_repository.override_candidates_for_period
+
+    def counted_rows(*args, **kwargs):
+        calls["rows"] += 1
+        return original_rows(*args, **kwargs)
+
+    def counted_policy(*args, **kwargs):
+        calls["policy"] += 1
+        return original_policy(*args, **kwargs)
+
+    def counted_overrides(*args, **kwargs):
+        calls["overrides"] += 1
+        return original_overrides(*args, **kwargs)
+
+    monkeypatch.setattr(
+        consecutivity_repository, "source_rows_for_organization", counted_rows
+    )
+    monkeypatch.setattr(consecutivity_repository, "get_policy", counted_policy)
+    monkeypatch.setattr(
+        consecutivity_repository, "override_candidates_for_period", counted_overrides
+    )
+    monkeypatch.setattr(
+        consecutivity_service,
+        "_organization_today",
+        lambda _organization_id: (_ for _ in ()).throw(
+            AssertionError("today must not be resolved implicitly")
+        ),
+    )
+
+    result = snapshots_for_period(
+        ORG,
+        TARGET.isoformat(),
+        (TARGET + timedelta(days=6)).isoformat(),
+        members,
+        today=TARGET,
+    )
+
+    assert len(result) == 7
+    assert calls == {"rows": 1, "policy": 1, "overrides": 1}

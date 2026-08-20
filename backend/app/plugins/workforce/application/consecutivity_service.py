@@ -41,7 +41,7 @@ def _put(facts, driver: str, day: str, *, state: str, source: str, priority: int
 
 def _facts(rows: dict[str, list[dict]], members, today: date):
     facts = defaultdict(dict)
-    sources = defaultdict(set)
+    sources = defaultdict(lambda: defaultdict(set))
     member_ids = {member.external_identifier: member for member in members}
     finalized: dict[str, str] = {}
     for item in rows["finalized_days"]:
@@ -60,7 +60,7 @@ def _facts(rows: dict[str, list[dict]], members, today: date):
             _put(facts, driver, day, state="worked", source=source, priority=300 if item["status"] == "published" else 250, reason="Assegnazione Planning finalizzata trascorsa.")
         else:
             _put(facts, driver, day, state="planned", source=source, priority=200 if item["status"] == "published" else 150, reason="Assegnazione Planning finalizzata.")
-        sources[driver].add(source)
+        sources[driver][day].add(source)
     for day, planning_status in finalized.items():
         for driver in member_ids:
             if driver not in planned_by_day[day]:
@@ -71,18 +71,18 @@ def _facts(rows: dict[str, list[dict]], members, today: date):
         code = item["status_code"]
         if code == "scheduled" and date.fromisoformat(day) < today:
             _put(facts, driver, day, state="worked", source="workforce_history", priority=100, reason="Turno storico Workforce confermato o importato.")
-            sources[driver].add("workforce_history")
+            sources[driver][day].add("workforce_history")
         elif code in NON_WORKING and not _is_partial_leave(item):
             _put(facts, driver, day, state=code, source="workforce_status", priority=350, reason=f"Stato Workforce: {code}.")
-            sources[driver].add("workforce_status")
+            sources[driver][day].add("workforce_status")
         elif _is_partial_leave(item):
-            sources[driver].add("workforce_partial_leave")
+            sources[driver][day].add("workforce_partial_leave")
     for item in rows["journal"]:
         driver = item["declared_driver_identifier"]
         if driver not in member_ids:
             continue
         _put(facts, driver, item["operation_date"], state="worked", source="journal_completed", priority=500, reason="Movimentazione Driver Journal completata.")
-        sources[driver].add("journal_completed")
+        sources[driver][item["operation_date"]].add("journal_completed")
     return facts, sources
 
 
@@ -133,27 +133,35 @@ def _trailing(
     return count, False
 
 
-def snapshots(
+def _snapshots_for_target(
     organization_id: str,
     operation_date: str,
     members,
     *,
-    today: date | None = None,
+    current_day: date,
+    date_from: str,
+    date_to: str,
+    facts,
+    sources,
+    policy,
+    overrides,
+    expired_overrides,
 ) -> dict[int, ConsecutivitySnapshot]:
     target = date.fromisoformat(operation_date)
-    current_day = today or _organization_today(organization_id)
-    date_from, date_to = consecutivity_repository.analysis_window(operation_date)
-    rows = consecutivity_repository.source_rows(organization_id, date_from, date_to)
-    policy = consecutivity_repository.get_policy(organization_id)
-    overrides = consecutivity_repository.active_overrides(organization_id, operation_date)
-    expired_overrides = consecutivity_repository.expired_overrides(
-        organization_id, operation_date
-    )
-    facts, source_names = _facts(rows, members, current_day)
     result = {}
     effective_anchor = min(target - timedelta(days=1), current_day - timedelta(days=1))
     for member in members:
-        driver_facts = facts[member.external_identifier]
+        driver_facts = {
+            day: fact
+            for day, fact in facts[member.external_identifier].items()
+            if date_from <= day <= date_to
+        }
+        source_names = {
+            source
+            for day, day_sources in sources[member.external_identifier].items()
+            if date_from <= day <= date_to
+            for source in day_sources
+        }
         effective, effective_ok = _trailing(
             driver_facts,
             effective_anchor,
@@ -222,7 +230,7 @@ def snapshots(
             status=status,
             calculated_status=calculated_status,
             reason=reason,
-            source_summary=sorted(source_names[member.external_identifier]),
+            source_summary=sorted(source_names),
             calculated_at=utc_now_iso(),
             analyzed_from=date_from,
             analyzed_to=effective_anchor.isoformat(),
@@ -233,4 +241,112 @@ def snapshots(
                 if not override else None
             ),
         )
+    return result
+
+
+def snapshots(
+    organization_id: str,
+    operation_date: str,
+    members,
+    *,
+    today: date | None = None,
+) -> dict[int, ConsecutivitySnapshot]:
+    current_day = today or _organization_today(organization_id)
+    date_from, date_to = consecutivity_repository.analysis_window(operation_date)
+    rows = consecutivity_repository.source_rows(organization_id, date_from, date_to)
+    policy = consecutivity_repository.get_policy(organization_id)
+    overrides = consecutivity_repository.active_overrides(organization_id, operation_date)
+    expired_overrides = consecutivity_repository.expired_overrides(
+        organization_id, operation_date
+    )
+    facts, sources = _facts(rows, members, current_day)
+    return _snapshots_for_target(
+        organization_id,
+        operation_date,
+        members,
+        current_day=current_day,
+        date_from=date_from,
+        date_to=date_to,
+        facts=facts,
+        sources=sources,
+        policy=policy,
+        overrides=overrides,
+        expired_overrides=expired_overrides,
+    )
+
+
+def _overrides_for_date(
+    candidates,
+    operation_date: str,
+) -> tuple[dict[int, object], dict[int, object]]:
+    active = {}
+    expired = {}
+    for item in candidates:
+        if item.operation_date <= operation_date <= item.valid_until:
+            active.setdefault(item.workforce_member_id, item)
+        elif item.valid_until < operation_date:
+            expired.setdefault(item.workforce_member_id, item)
+    return active, expired
+
+
+def snapshots_for_period(
+    organization_id: str,
+    period_start: str,
+    period_end: str,
+    members,
+    *,
+    today: date | None = None,
+) -> dict[str, dict[int, ConsecutivitySnapshot]]:
+    if not isinstance(organization_id, str) or not organization_id.strip():
+        raise ValueError("organization_id is required")
+    start = date.fromisoformat(period_start)
+    end = date.fromisoformat(period_end)
+    if end < start:
+        raise ValueError("period_end must not be before period_start")
+
+    ordered_members = tuple(sorted(
+        members,
+        key=lambda item: (item.workforce_member_id, item.external_identifier),
+    ))
+    if any(
+        getattr(member, "organization_id", None) != organization_id
+        for member in ordered_members
+    ):
+        raise ValueError("members must belong to organization_id")
+
+    current_day = today or _organization_today(organization_id)
+    date_from, date_to = consecutivity_repository.analysis_period_window(
+        period_start, period_end
+    )
+    rows = consecutivity_repository.source_rows_for_organization(
+        organization_id, date_from, date_to
+    )
+    policy = consecutivity_repository.get_policy(organization_id)
+    override_candidates = consecutivity_repository.override_candidates_for_period(
+        organization_id, period_end
+    )
+    facts, sources = _facts(rows, ordered_members, current_day)
+
+    result = {}
+    cursor = start
+    while cursor <= end:
+        operation_date = cursor.isoformat()
+        daily_from, daily_to = consecutivity_repository.analysis_window(operation_date)
+        active_overrides, expired_overrides = _overrides_for_date(
+            override_candidates, operation_date
+        )
+        result[operation_date] = _snapshots_for_target(
+            organization_id,
+            operation_date,
+            ordered_members,
+            current_day=current_day,
+            date_from=daily_from,
+            date_to=daily_to,
+            facts=facts,
+            sources=sources,
+            policy=policy,
+            overrides=active_overrides,
+            expired_overrides=expired_overrides,
+        )
+        cursor += timedelta(days=1)
     return result

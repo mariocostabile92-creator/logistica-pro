@@ -108,6 +108,22 @@ def expired_overrides(
     return result
 
 
+def override_candidates_for_period(
+    organization_id: str,
+    period_end: str,
+) -> list[ConsecutivityOverride]:
+    """Load once all non-revoked overrides that can affect the period."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """SELECT * FROM workforce_consecutivity_overrides
+            WHERE organization_id = ? AND revoked_at IS NULL
+              AND operation_date <= ?
+            ORDER BY created_at DESC""",
+            (organization_id, period_end),
+        ).fetchall()
+    return [_override(row) for row in rows]
+
+
 def override_history(organization_id: str, member_id: int) -> list[ConsecutivityOverride]:
     with db_session() as conn:
         rows = conn.execute(
@@ -158,11 +174,18 @@ def _override_by_id(override_id: str, organization_id: str) -> ConsecutivityOver
     return _override(row)
 
 
-def source_rows(organization_id: str, date_from: str, date_to: str) -> dict[str, list[dict]]:
-    organization_operator = "IN (?, 'default')" if SETTINGS.environment == "test" else "= ?"
+def _source_rows(
+    organization_id: str,
+    date_from: str,
+    date_to: str,
+    *,
+    allow_test_default_scope: bool,
+) -> dict[str, list[dict]]:
+    use_test_default_scope = allow_test_default_scope and SETTINGS.environment == "test"
+    organization_operator = "IN (?, 'default')" if use_test_default_scope else "= ?"
     planning_scope = (
         "(p.organization_id = ? OR p.organization_id IS NULL OR p.organization_id = 'default')"
-        if SETTINGS.environment == "test"
+        if use_test_default_scope
         else "p.organization_id = ?"
     )
     with db_session() as conn:
@@ -207,9 +230,45 @@ def source_rows(organization_id: str, date_from: str, date_to: str) -> dict[str,
     }
 
 
+def source_rows(organization_id: str, date_from: str, date_to: str) -> dict[str, list[dict]]:
+    return _source_rows(
+        organization_id,
+        date_from,
+        date_to,
+        allow_test_default_scope=True,
+    )
+
+
+def source_rows_for_organization(
+    organization_id: str,
+    date_from: str,
+    date_to: str,
+) -> dict[str, list[dict]]:
+    return _source_rows(
+        organization_id,
+        date_from,
+        date_to,
+        allow_test_default_scope=False,
+    )
+
+
 def analysis_window(operation_date: str, lookback_days: int = 60, lookahead_days: int = 60) -> tuple[str, str]:
     target = date.fromisoformat(operation_date)
     return (
         (target - timedelta(days=lookback_days)).isoformat(),
         (target + timedelta(days=lookahead_days)).isoformat(),
+    )
+
+
+def analysis_period_window(
+    period_start: str,
+    period_end: str,
+    lookback_days: int = 60,
+    lookahead_days: int = 60,
+) -> tuple[str, str]:
+    start = date.fromisoformat(period_start)
+    end = date.fromisoformat(period_end)
+    return (
+        (start - timedelta(days=lookback_days)).isoformat(),
+        (end + timedelta(days=lookahead_days)).isoformat(),
     )
