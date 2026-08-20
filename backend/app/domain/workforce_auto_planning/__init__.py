@@ -33,11 +33,22 @@ from app.domain.workforce_auto_planning.weekly_workforce_proposal import (
     WeeklyWorkforceProposal,
     WeeklyWorkforceProposalStatus,
 )
+from app.domain.workforce_auto_planning.weekly_planning_input_snapshot import (
+    ApprovedAssignmentSnapshot,
+    AssignedTimeSnapshot,
+    AssignedTimeUnit,
+    WeeklyPlanningInputSnapshot,
+    WorkforceCandidateAvailabilitySnapshot,
+    WorkforceCandidateSnapshot,
+)
 
 
 __all__ = [
     "AppliedPolicyAttribute",
     "AppliedPolicyMetadata",
+    "ApprovedAssignmentSnapshot",
+    "AssignedTimeSnapshot",
+    "AssignedTimeUnit",
     "ConstraintEvaluation",
     "ConstraintEvaluationCategory",
     "ConstraintEvidence",
@@ -59,4 +70,7 @@ __all__ = [
     "WorkloadCapabilityMapping",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
+    "WeeklyPlanningInputSnapshot",
+    "WorkforceCandidateAvailabilitySnapshot",
+    "WorkforceCandidateSnapshot",
 ]
