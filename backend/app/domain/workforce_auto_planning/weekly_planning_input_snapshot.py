@@ -189,6 +189,13 @@ class WeeklyPlanningInputSnapshot(_ImmutableSnapshotModel):
                 raise ValueError(
                     "all demands must belong to the snapshot organization"
                 )
+            if (
+                demand.operational_unit.external_identifier
+                != self.operational_unit.external_identifier
+            ):
+                raise ValueError(
+                    "all demands must belong to the snapshot operational unit"
+                )
             if not self.period_start <= demand.date <= self.period_end:
                 raise ValueError("all demands must fall within the snapshot period")
 

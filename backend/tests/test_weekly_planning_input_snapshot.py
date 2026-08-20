@@ -39,10 +39,15 @@ WINDOW = TimeWindow(
 )
 
 
-def _demand(*, organization_id: str = "org-1", day: date = PERIOD_START):
+def _demand(
+    *,
+    organization_id: str = "org-1",
+    day: date = PERIOD_START,
+    operational_unit: OperationalUnit = UNIT,
+):
     return OperationalDemand(
         organization_id=organization_id,
-        operational_unit=UNIT,
+        operational_unit=operational_unit,
         date=day,
         time_window=WINDOW,
         capability_or_workload="parcel-delivery",
@@ -203,6 +208,32 @@ def test_approved_assignment_with_unknown_unit_is_immutable():
 def test_demand_organization_mismatch_is_rejected():
     with pytest.raises(ValidationError, match="all demands must belong"):
         _snapshot(demands=(_demand(organization_id="org-2"),))
+
+
+def test_demand_from_snapshot_operational_unit_is_accepted():
+    snapshot = _snapshot(demands=(_demand(operational_unit=UNIT),))
+
+    assert snapshot.demands[0].operational_unit == UNIT
+
+
+def test_demand_from_different_operational_unit_is_rejected():
+    other_unit = OperationalUnit(external_identifier="unit-south", name="South hub")
+
+    with pytest.raises(ValidationError, match="snapshot operational unit"):
+        _snapshot(demands=(_demand(operational_unit=other_unit),))
+
+
+def test_demand_unit_comparison_uses_only_external_identifier():
+    same_identifier_with_different_name = OperationalUnit(
+        external_identifier=UNIT.external_identifier,
+        name="Different descriptive name",
+    )
+
+    snapshot = _snapshot(
+        demands=(_demand(operational_unit=same_identifier_with_different_name),)
+    )
+
+    assert snapshot.demands[0].operational_unit.name == "Different descriptive name"
 
 
 def test_candidate_organization_mismatch_is_rejected():
