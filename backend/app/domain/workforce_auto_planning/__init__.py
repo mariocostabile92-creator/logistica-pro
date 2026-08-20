@@ -12,6 +12,12 @@ from app.domain.workforce_auto_planning.planning_policy import (
     WorkforcePlanningPolicyProvider,
     WorkloadCapabilityMapping,
 )
+from app.domain.workforce_auto_planning.proposed_shift_assignment import (
+    ProposedAssignmentReason,
+    ProposedShiftAssignment,
+    ProposedShiftAssignmentOrigin,
+    ProposedShiftAssignmentStatus,
+)
 from app.domain.workforce_auto_planning.weekly_workforce_proposal import (
     WeeklyWorkforceProposal,
     WeeklyWorkforceProposalStatus,
@@ -26,6 +32,10 @@ __all__ = [
     "PlanningPriorityOrPreference",
     "PlanningRuleDescriptor",
     "PlanningRuleParameter",
+    "ProposedAssignmentReason",
+    "ProposedShiftAssignment",
+    "ProposedShiftAssignmentOrigin",
+    "ProposedShiftAssignmentStatus",
     "ShiftCatalogueEntry",
     "WorkforcePlanningPolicyProvider",
     "WorkloadCapabilityMapping",
