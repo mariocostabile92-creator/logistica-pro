@@ -1,3 +1,7 @@
+from app.domain.workforce_auto_planning.coverage_gap import (
+    CoverageGap,
+    CoverageGapReason,
+)
 from app.domain.workforce_auto_planning.operational_demand import (
     AppliedPolicyAttribute,
     AppliedPolicyMetadata,
@@ -27,6 +31,8 @@ from app.domain.workforce_auto_planning.weekly_workforce_proposal import (
 __all__ = [
     "AppliedPolicyAttribute",
     "AppliedPolicyMetadata",
+    "CoverageGap",
+    "CoverageGapReason",
     "OperationalBufferPolicy",
     "OperationalDemand",
     "PlanningPriorityOrPreference",
