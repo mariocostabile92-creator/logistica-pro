@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CoverageStatus(str, Enum):
@@ -78,6 +78,21 @@ class DailyCoverageRequirement(BaseModel):
     detection_reason: str | None = None
     created_at: str
     updated_at: str
+
+
+class EffectiveCoverageDemandRow(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    organization_id: str = Field(min_length=1)
+    operational_date: str = Field(min_length=1)
+    cycle: str = Field(min_length=1)
+    segment: str | None = None
+    station: str | None = None
+    forecast_routes: int = Field(ge=0)
+    source: str = Field(min_length=1)
+    source_identity: str = Field(min_length=1)
+    authority_status: ForecastAuthorityStatus
+    detection_reason: str | None = None
 
 
 class DailyCoverageReadModel(BaseModel):

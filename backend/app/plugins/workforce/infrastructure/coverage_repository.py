@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 
 from app.core.database import db_session
@@ -8,6 +9,7 @@ from app.plugins.workforce.domain.operational_status import (
 from app.plugins.workforce.domain.coverage import (
     CoverageSource,
     DailyCoverageRequirement,
+    EffectiveCoverageDemandRow,
     ForecastAuthorityStatus,
     ImportedDailyCoverageRequirement,
 )
@@ -210,6 +212,45 @@ def list_current_requirements(
         return list_current_requirements_in_connection(
             conn, organization_id, date_from, date_to, cycle
         )
+
+
+def list_effective_coverage_demands(
+    organization_id: str,
+    period_start: str,
+    period_end: str,
+) -> tuple[EffectiveCoverageDemandRow, ...]:
+    if not isinstance(organization_id, str) or not organization_id.strip():
+        raise ValueError("organization_id cannot be empty")
+    try:
+        start = date.fromisoformat(period_start)
+        end = date.fromisoformat(period_end)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Coverage demand period must use ISO dates.") from exc
+    if end < start:
+        raise ValueError("period_end cannot precede period_start")
+
+    requirements = list_current_requirements(
+        organization_id.strip(),
+        start.isoformat(),
+        end.isoformat(),
+    )
+    return tuple(
+        EffectiveCoverageDemandRow(
+            organization_id=requirement.organization_id,
+            operational_date=requirement.operational_date,
+            cycle=requirement.operational_cycle,
+            segment=requirement.coverage_segment,
+            station=requirement.station,
+            forecast_routes=requirement.forecast_routes,
+            source=requirement.source,
+            source_identity=requirement.source_identity,
+            authority_status=requirement.authority_status,
+            detection_reason=requirement.detection_reason,
+        )
+        for requirement in requirements
+        if requirement.authority_status
+        is not ForecastAuthorityStatus.REJECTED_TEMPLATE
+    )
 
 
 def assigned_driver_groups(
