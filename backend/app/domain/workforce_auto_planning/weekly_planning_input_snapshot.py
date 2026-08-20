@@ -117,7 +117,7 @@ class WorkforceCandidateAvailabilitySnapshot(_ImmutableSnapshotModel):
 class ApprovedAssignmentSnapshot(_ImmutableSnapshotModel):
     assignment_reference: str = Field(min_length=1)
     date: CalendarDate
-    operational_unit: OperationalUnit
+    operational_unit: OperationalUnit | None = None
     shift_identifier: str = Field(min_length=1)
     time_window: TimeWindow
     assigned_time: AssignedTimeSnapshot

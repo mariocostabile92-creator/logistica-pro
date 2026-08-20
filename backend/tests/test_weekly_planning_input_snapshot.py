@@ -163,6 +163,43 @@ def test_snapshot_collections_and_models_are_immutable():
         snapshot.workforce_candidates[0].recent_consecutivity = 4
 
 
+def test_approved_assignment_supports_known_operational_unit():
+    assignment = _candidate().already_approved_assignments[0]
+
+    assert assignment.operational_unit == UNIT
+
+
+def test_approved_assignment_supports_unknown_operational_unit_without_fallback():
+    assignment = ApprovedAssignmentSnapshot(
+        assignment_reference="assignment-unknown-unit",
+        date=PERIOD_START,
+        operational_unit=None,
+        shift_identifier="morning",
+        time_window=WINDOW,
+        assigned_time=AssignedTimeSnapshot(
+            value=Decimal("8"), unit=AssignedTimeUnit.HOURS
+        ),
+    )
+
+    assert assignment.operational_unit is None
+
+
+def test_approved_assignment_with_unknown_unit_is_immutable():
+    assignment = ApprovedAssignmentSnapshot(
+        assignment_reference="assignment-unknown-unit",
+        date=PERIOD_START,
+        operational_unit=None,
+        shift_identifier="morning",
+        time_window=WINDOW,
+        assigned_time=AssignedTimeSnapshot(
+            value=Decimal("8"), unit=AssignedTimeUnit.HOURS
+        ),
+    )
+
+    with pytest.raises(ValidationError):
+        assignment.operational_unit = UNIT
+
+
 def test_demand_organization_mismatch_is_rejected():
     with pytest.raises(ValidationError, match="all demands must belong"):
         _snapshot(demands=(_demand(organization_id="org-2"),))

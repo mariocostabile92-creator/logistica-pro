@@ -10,6 +10,7 @@ from app.domain.core_language import (
     TimeWindow,
 )
 from app.domain.workforce_auto_planning import (
+    ApprovedAssignmentSnapshot,
     AssignedTimeSnapshot,
     AssignedTimeStatus,
     AssignedTimeUnit,
@@ -52,6 +53,7 @@ def _candidate(
     assigned_time: AssignedTimeSnapshot | None = None,
     contract_state: CurrentMemberContractStateSnapshot | None = None,
     operational_unit_scope: CandidateOperationalUnitScope | None = None,
+    approved_assignments: tuple[ApprovedAssignmentSnapshot, ...] = (),
 ):
     resource = HumanResource(
         external_identifier=member_id,
@@ -92,6 +94,7 @@ def _candidate(
             )
         ),
         recent_consecutivity=consecutive_days,
+        already_approved_assignments=approved_assignments,
         already_assigned_minutes_or_hours=(
             assigned_time
             if assigned_time is not None
@@ -102,6 +105,21 @@ def _candidate(
         evidence=(
             ConstraintEvidence(key="calendar", value="ready"),
             ConstraintEvidence(key="contract", value="active"),
+        ),
+    )
+
+
+def _approved_assignment(
+    operational_unit: OperationalUnit | None,
+) -> ApprovedAssignmentSnapshot:
+    return ApprovedAssignmentSnapshot(
+        assignment_reference="assignment-1",
+        date=START,
+        operational_unit=operational_unit,
+        shift_identifier="morning",
+        time_window=WINDOW,
+        assigned_time=AssignedTimeSnapshot(
+            value=Decimal("8"), unit=AssignedTimeUnit.HOURS
         ),
     )
 
@@ -296,6 +314,48 @@ def test_changed_operational_unit_scope_changes_fingerprint():
 
     assert _fingerprint(_snapshot(candidates=(matched,))) != _fingerprint(
         _snapshot(candidates=(unknown,))
+    )
+
+
+def test_unknown_assignment_unit_has_a_deterministic_fingerprint():
+    candidate = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(None),),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(candidate,))) == _fingerprint(
+        _snapshot(candidates=(candidate.model_copy(),))
+    )
+
+
+def test_assignment_unit_unknown_to_known_changes_fingerprint():
+    unknown = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(None),),
+    )
+    known = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(UNIT),),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(unknown,))) != _fingerprint(
+        _snapshot(candidates=(known,))
+    )
+
+
+def test_assignment_unit_a_to_unit_b_changes_fingerprint():
+    unit_b = OperationalUnit(external_identifier="unit-south", name="South hub")
+    unit_a_assignment = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(UNIT),),
+    )
+    unit_b_assignment = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(unit_b),),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(unit_a_assignment,))) != _fingerprint(
+        _snapshot(candidates=(unit_b_assignment,))
     )
 
 
