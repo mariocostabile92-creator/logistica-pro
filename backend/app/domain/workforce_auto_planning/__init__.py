@@ -1,3 +1,10 @@
+from app.domain.workforce_auto_planning.constraint_evaluation import (
+    ConstraintEvaluation,
+    ConstraintEvaluationCategory,
+    ConstraintEvidence,
+    ConstraintEvidenceValue,
+    ConstraintRemediation,
+)
 from app.domain.workforce_auto_planning.coverage_gap import (
     CoverageGap,
     CoverageGapReason,
@@ -31,6 +38,11 @@ from app.domain.workforce_auto_planning.weekly_workforce_proposal import (
 __all__ = [
     "AppliedPolicyAttribute",
     "AppliedPolicyMetadata",
+    "ConstraintEvaluation",
+    "ConstraintEvaluationCategory",
+    "ConstraintEvidence",
+    "ConstraintEvidenceValue",
+    "ConstraintRemediation",
     "CoverageGap",
     "CoverageGapReason",
     "OperationalBufferPolicy",
