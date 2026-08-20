@@ -29,6 +29,10 @@ from app.domain.workforce_auto_planning.proposed_shift_assignment import (
     ProposedShiftAssignmentOrigin,
     ProposedShiftAssignmentStatus,
 )
+from app.domain.workforce_auto_planning.snapshot_provider_ports import (
+    OperationalDemandProvider,
+    WorkforceCandidateSnapshotProvider,
+)
 from app.domain.workforce_auto_planning.weekly_workforce_proposal import (
     WeeklyWorkforceProposal,
     WeeklyWorkforceProposalStatus,
@@ -61,6 +65,7 @@ __all__ = [
     "CoverageGapReason",
     "OperationalBufferPolicy",
     "OperationalDemand",
+    "OperationalDemandProvider",
     "PlanningPriorityOrPreference",
     "PlanningRuleDescriptor",
     "PlanningRuleParameter",
@@ -77,4 +82,5 @@ __all__ = [
     "WeeklyPlanningInputSnapshot",
     "WorkforceCandidateAvailabilitySnapshot",
     "WorkforceCandidateSnapshot",
+    "WorkforceCandidateSnapshotProvider",
 ]
