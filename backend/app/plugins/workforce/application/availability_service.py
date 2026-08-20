@@ -1,10 +1,13 @@
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from datetime import date
 
+from app.plugins.workforce.domain.consecutivity import ConsecutivitySnapshot
 from app.plugins.workforce.domain.models import (
     WorkforceDriverReadiness,
     WorkforceFoundationSnapshot,
     WorkforceFoundationSummary,
+    WorkforceMember,
 )
 from app.plugins.workforce.infrastructure import read_repository
 from app.plugins.workforce.application.consecutivity_service import (
@@ -107,28 +110,23 @@ def _history_item(item) -> dict[str, str | bool | None]:
     }
 
 
-def foundation_snapshot(
-    operation_date: str | None = None,
-    organization_id: str = "default",
-) -> WorkforceFoundationSnapshot:
-    target_date = operation_date or date.today().isoformat()
-    date.fromisoformat(target_date)
-    all_statuses = read_repository.list_statuses(
-        date_to=target_date, organization_id=organization_id
-    )
+def _readiness_for_date(
+    target_date: str,
+    members: Sequence[WorkforceMember],
+    statuses,
+    consecutivity_by_member: Mapping[int, ConsecutivitySnapshot | None],
+) -> tuple[list[WorkforceDriverReadiness], set[str]]:
     history_by_member = defaultdict(list)
     daily_by_member = {}
-    for item in all_statuses:
+    for item in statuses:
+        if item.date > target_date:
+            continue
         history_by_member[item.workforce_member_id].append(item)
         if item.date == target_date:
             daily_by_member[item.workforce_member_id] = item
 
     drivers = []
     unknown_statuses: set[str] = set()
-    members = read_repository.list_members(organization_id=organization_id)
-    consecutivity_by_member = consecutivity_snapshots(
-        organization_id, target_date, members
-    )
     for member in members:
         if not member.active:
             continue
@@ -170,8 +168,12 @@ def foundation_snapshot(
             holiday=status == "holiday",
             sickness=status == "sickness",
             leave=status == "leave",
-            consecutive_days=consecutivity.effective_consecutive_days,
-            consecutivity_status=consecutivity.calculated_status,
+            consecutive_days=(
+                consecutivity.effective_consecutive_days if consecutivity else None
+            ),
+            consecutivity_status=(
+                consecutivity.calculated_status if consecutivity else "not_evaluated"
+            ),
             consecutivity=consecutivity,
             capabilities=member.capabilities,
             operational_notes=member.operational_notes,
@@ -184,6 +186,25 @@ def foundation_snapshot(
         {"limited": 0, "callable": 1, "not_callable": 2}[item.callability_status],
         not item.is_reserve, item.display_name.casefold(),
     ))
+    return drivers, unknown_statuses
+
+
+def foundation_snapshot(
+    operation_date: str | None = None,
+    organization_id: str = "default",
+) -> WorkforceFoundationSnapshot:
+    target_date = operation_date or date.today().isoformat()
+    date.fromisoformat(target_date)
+    all_statuses = read_repository.list_statuses(
+        date_to=target_date, organization_id=organization_id
+    )
+    members = read_repository.list_members(organization_id=organization_id)
+    consecutivity_by_member = consecutivity_snapshots(
+        organization_id, target_date, members
+    )
+    drivers, unknown_statuses = _readiness_for_date(
+        target_date, members, all_statuses, consecutivity_by_member
+    )
     summary = WorkforceFoundationSummary(
         total=len(drivers),
         available=sum(item.availability_status in CALLABLE_STATUSES | LIMITED_STATUSES for item in drivers),
@@ -210,3 +231,64 @@ def foundation_snapshot(
         operation_date=target_date, summary=summary, drivers=drivers,
         limitations=limitations,
     )
+
+
+def readiness_for_period(
+    *,
+    organization_id: str,
+    period_start: str,
+    period_end: str,
+    members: Sequence[WorkforceMember],
+    consecutivity_by_date: Mapping[
+        str, Mapping[int, ConsecutivitySnapshot | None]
+    ],
+) -> dict[str, tuple[WorkforceDriverReadiness, ...]]:
+    if not isinstance(organization_id, str) or not organization_id.strip():
+        raise ValueError("organization_id is required")
+    start = date.fromisoformat(period_start)
+    end = date.fromisoformat(period_end)
+    if end < start:
+        raise ValueError("period_end must not be before period_start")
+
+    ordered_members = tuple(sorted(
+        members,
+        key=lambda item: (item.workforce_member_id, item.external_identifier),
+    ))
+    if any(member.organization_id != organization_id for member in ordered_members):
+        raise ValueError("members must belong to organization_id")
+
+    for operation_date, items in consecutivity_by_date.items():
+        for member_id, snapshot in items.items():
+            if snapshot is None:
+                continue
+            if snapshot.organization_id != organization_id:
+                raise ValueError("consecutivity must belong to organization_id")
+            if snapshot.operation_date != operation_date:
+                raise ValueError("consecutivity operation_date does not match its index")
+            if snapshot.driver_id != member_id:
+                raise ValueError("consecutivity driver_id does not match its index")
+
+    member_ids = tuple(member.workforce_member_id for member in ordered_members)
+    statuses = read_repository.list_statuses_strict(
+        organization_id,
+        date_to=period_end,
+        member_ids=member_ids,
+    )
+    result = {}
+    cursor = start
+    while cursor <= end:
+        operation_date = cursor.isoformat()
+        indexed = consecutivity_by_date.get(operation_date, {})
+        daily_consecutivity = {
+            member.workforce_member_id: indexed.get(member.workforce_member_id)
+            for member in ordered_members
+        }
+        drivers, _unknown_statuses = _readiness_for_date(
+            operation_date,
+            ordered_members,
+            statuses,
+            daily_consecutivity,
+        )
+        result[operation_date] = tuple(drivers)
+        cursor = date.fromordinal(cursor.toordinal() + 1)
+    return result

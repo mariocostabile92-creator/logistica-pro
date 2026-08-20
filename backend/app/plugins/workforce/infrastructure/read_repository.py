@@ -1,4 +1,5 @@
 import json
+from collections.abc import Sequence
 
 from app.auth.tenant_context import current_organization_id
 from app.core.config import SETTINGS
@@ -141,6 +142,39 @@ def list_statuses(
     with db_session() as conn:
         rows = conn.execute(
             f"SELECT * FROM workforce_day_statuses{where} ORDER BY date, workforce_member_id",
+            parameters,
+        ).fetchall()
+    return [status_from_row(row) for row in rows]
+
+
+def list_statuses_strict(
+    organization_id: str,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    member_ids: Sequence[int] | None = None,
+):
+    clauses = ["s.organization_id = ?", "m.organization_id = ?"]
+    parameters: list[object] = [organization_id, organization_id]
+    if date_from:
+        clauses.append("s.date >= ?")
+        parameters.append(date_from)
+    if date_to:
+        clauses.append("s.date <= ?")
+        parameters.append(date_to)
+    if member_ids is not None:
+        normalized_ids = tuple(dict.fromkeys(int(item) for item in member_ids))
+        if not normalized_ids:
+            return []
+        placeholders = ", ".join("?" for _ in normalized_ids)
+        clauses.append(f"s.workforce_member_id IN ({placeholders})")
+        parameters.extend(normalized_ids)
+    with db_session() as conn:
+        rows = conn.execute(
+            f"""SELECT s.* FROM workforce_day_statuses s
+            JOIN workforce_members m ON m.id = s.workforce_member_id
+            WHERE {' AND '.join(clauses)}
+            ORDER BY s.date, s.workforce_member_id""",
             parameters,
         ).fetchall()
     return [status_from_row(row) for row in rows]
