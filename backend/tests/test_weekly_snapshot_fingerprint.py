@@ -2,6 +2,9 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from app.domain.core_language import (
     HumanResource,
     OperationalUnit,
@@ -111,12 +114,13 @@ def _candidate(
 
 def _approved_assignment(
     operational_unit: OperationalUnit | None,
+    shift_identifier: str | None = "morning",
 ) -> ApprovedAssignmentSnapshot:
     return ApprovedAssignmentSnapshot(
         assignment_reference="assignment-1",
         date=START,
         operational_unit=operational_unit,
-        shift_identifier="morning",
+        shift_identifier=shift_identifier,
         time_window=WINDOW,
         assigned_time=AssignedTimeSnapshot(
             value=Decimal("8"), unit=AssignedTimeUnit.HOURS
@@ -356,6 +360,69 @@ def test_assignment_unit_a_to_unit_b_changes_fingerprint():
 
     assert _fingerprint(_snapshot(candidates=(unit_a_assignment,))) != _fingerprint(
         _snapshot(candidates=(unit_b_assignment,))
+    )
+
+
+def test_approved_assignment_supports_known_and_unknown_shift_identifiers():
+    known = _approved_assignment(UNIT, "morning")
+    unknown = _approved_assignment(UNIT, None)
+
+    assert known.shift_identifier == "morning"
+    assert unknown.shift_identifier is None
+    assert unknown.model_dump()["shift_identifier"] is None
+
+
+@pytest.mark.parametrize("shift_identifier", ["", "   "])
+def test_approved_assignment_rejects_blank_shift_identifier(shift_identifier):
+    with pytest.raises(ValidationError):
+        _approved_assignment(UNIT, shift_identifier)
+
+
+def test_approved_assignment_with_unknown_shift_is_immutable():
+    assignment = _approved_assignment(UNIT, None)
+
+    with pytest.raises(ValidationError):
+        assignment.shift_identifier = "morning"
+
+
+def test_unknown_assignment_shift_has_a_deterministic_fingerprint():
+    candidate = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(UNIT, None),),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(candidate,))) == _fingerprint(
+        _snapshot(candidates=(candidate.model_copy(),))
+    )
+
+
+def test_assignment_shift_unknown_to_known_changes_fingerprint():
+    unknown = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(UNIT, None),),
+    )
+    known = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(UNIT, "morning"),),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(unknown,))) != _fingerprint(
+        _snapshot(candidates=(known,))
+    )
+
+
+def test_assignment_shift_code_change_changes_fingerprint():
+    shift_a = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(UNIT, "shift-a"),),
+    )
+    shift_b = _candidate(
+        "member-1",
+        approved_assignments=(_approved_assignment(UNIT, "shift-b"),),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(shift_a,))) != _fingerprint(
+        _snapshot(candidates=(shift_b,))
     )
 
 
