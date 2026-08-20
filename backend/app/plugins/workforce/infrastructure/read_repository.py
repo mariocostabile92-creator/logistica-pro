@@ -33,6 +33,22 @@ def list_members(organization_id: str | None = None):
     return [member_from_row(row) for row in rows]
 
 
+def list_active_members_strict(organization_id: str) -> list[WorkforceMember]:
+    if not isinstance(organization_id, str) or not organization_id.strip():
+        raise ValueError("organization_id is required")
+    with db_session() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM workforce_members
+            WHERE organization_id = ? AND active = 1
+            ORDER BY external_identifier, id
+            """,
+            (organization_id,),
+        ).fetchall()
+    return [member_from_row(row) for row in rows]
+
+
 def find_members_by_external_identifier(
     organization_id: str,
     external_identifier: str,
