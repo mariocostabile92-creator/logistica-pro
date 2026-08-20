@@ -48,6 +48,9 @@ from app.domain.workforce_auto_planning.weekly_planning_input_snapshot import (
 from app.domain.workforce_auto_planning.weekly_snapshot_fingerprint import (
     compute_weekly_planning_input_fingerprint,
 )
+from app.domain.workforce_auto_planning.weekly_snapshot_composer import (
+    WeeklyPlanningInputSnapshotComposer,
+)
 
 
 __all__ = [
@@ -80,6 +83,7 @@ __all__ = [
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
     "WeeklyPlanningInputSnapshot",
+    "WeeklyPlanningInputSnapshotComposer",
     "WorkforceCandidateAvailabilitySnapshot",
     "WorkforceCandidateSnapshot",
     "WorkforceCandidateSnapshotProvider",
