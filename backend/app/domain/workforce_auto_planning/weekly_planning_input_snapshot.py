@@ -80,6 +80,34 @@ class CurrentMemberContractStateSnapshot(_ImmutableSnapshotModel):
         return self
 
 
+class CandidateOperationalUnitScopeStatus(str, Enum):
+    MATCHED = "MATCHED"
+    MISMATCHED = "MISMATCHED"
+    UNKNOWN = "UNKNOWN"
+
+
+class CandidateOperationalUnitScope(_ImmutableSnapshotModel):
+    status: CandidateOperationalUnitScopeStatus
+    requested_unit: OperationalUnit
+    candidate_unit: OperationalUnit | None = None
+
+    @model_validator(mode="after")
+    def validate_unit_presence(self) -> "CandidateOperationalUnitScope":
+        if not self.requested_unit.external_identifier.strip():
+            raise ValueError("requested_unit cannot be empty")
+
+        if self.status == CandidateOperationalUnitScopeStatus.UNKNOWN:
+            if self.candidate_unit is not None:
+                raise ValueError("UNKNOWN scope cannot include candidate_unit")
+            return self
+
+        if self.candidate_unit is None:
+            raise ValueError(f"{self.status.value} scope requires candidate_unit")
+        if not self.candidate_unit.external_identifier.strip():
+            raise ValueError("candidate_unit cannot be empty")
+        return self
+
+
 class WorkforceCandidateAvailabilitySnapshot(_ImmutableSnapshotModel):
     date: CalendarDate
     time_window: TimeWindow | None = None
@@ -102,6 +130,7 @@ class WorkforceCandidateSnapshot(_ImmutableSnapshotModel):
         default_factory=tuple
     )
     applicable_contract_state: CurrentMemberContractStateSnapshot
+    operational_unit_scope: CandidateOperationalUnitScope
     recent_consecutivity: int | None = Field(ge=0, strict=True)
     already_approved_assignments: tuple[ApprovedAssignmentSnapshot, ...] = Field(
         default_factory=tuple

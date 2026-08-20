@@ -17,6 +17,8 @@ from app.domain.workforce_auto_planning import (
     AssignedTimeSnapshot,
     AssignedTimeStatus,
     AssignedTimeUnit,
+    CandidateOperationalUnitScope,
+    CandidateOperationalUnitScopeStatus,
     ContractStateSourceKind,
     ConstraintEvidence,
     CurrentMemberContractStateSnapshot,
@@ -55,6 +57,7 @@ def _candidate(
     organization_id: str = "org-1",
     recent_consecutivity: int | None = 2,
     contract_state: CurrentMemberContractStateSnapshot | None = None,
+    operational_unit_scope: CandidateOperationalUnitScope | None = None,
 ):
     resource = HumanResource(
         external_identifier="member-42",
@@ -89,6 +92,15 @@ def _candidate(
                 contract_end=date(2026, 12, 31),
                 weekly_hours=Decimal("40"),
                 is_reserve=False,
+            )
+        ),
+        operational_unit_scope=(
+            operational_unit_scope
+            if operational_unit_scope is not None
+            else CandidateOperationalUnitScope(
+                status=CandidateOperationalUnitScopeStatus.MATCHED,
+                requested_unit=UNIT,
+                candidate_unit=UNIT,
             )
         ),
         recent_consecutivity=recent_consecutivity,
@@ -194,6 +206,10 @@ def test_candidate_availability_must_describe_the_same_human_resource():
                 ),
             ),
             applicable_contract_state=CurrentMemberContractStateSnapshot(),
+            operational_unit_scope=CandidateOperationalUnitScope(
+                status=CandidateOperationalUnitScopeStatus.UNKNOWN,
+                requested_unit=UNIT,
+            ),
             recent_consecutivity=0,
             already_assigned_minutes_or_hours=AssignedTimeSnapshot(
                 value=0, unit=AssignedTimeUnit.MINUTES
@@ -348,6 +364,86 @@ def test_blank_employment_type_is_rejected(employment_type):
 def test_is_reserve_is_strict_when_present(is_reserve):
     with pytest.raises(ValidationError):
         CurrentMemberContractStateSnapshot(is_reserve=is_reserve)
+
+
+def test_matched_operational_unit_scope_is_representable():
+    scope = CandidateOperationalUnitScope(
+        status=CandidateOperationalUnitScopeStatus.MATCHED,
+        requested_unit=UNIT,
+        candidate_unit=UNIT,
+    )
+
+    assert scope.status == CandidateOperationalUnitScopeStatus.MATCHED
+    assert scope.requested_unit == UNIT
+    assert scope.candidate_unit == UNIT
+
+
+def test_mismatched_operational_unit_scope_is_representable():
+    other_unit = OperationalUnit(external_identifier="unit-south", name="South hub")
+    scope = CandidateOperationalUnitScope(
+        status=CandidateOperationalUnitScopeStatus.MISMATCHED,
+        requested_unit=UNIT,
+        candidate_unit=other_unit,
+    )
+
+    assert scope.status == CandidateOperationalUnitScopeStatus.MISMATCHED
+    assert scope.requested_unit == UNIT
+    assert scope.candidate_unit == other_unit
+
+
+def test_unknown_operational_unit_scope_keeps_candidate_unit_absent():
+    scope = CandidateOperationalUnitScope(
+        status=CandidateOperationalUnitScopeStatus.UNKNOWN,
+        requested_unit=UNIT,
+    )
+
+    assert scope.status == CandidateOperationalUnitScopeStatus.UNKNOWN
+    assert scope.status != CandidateOperationalUnitScopeStatus.MATCHED
+    assert scope.candidate_unit is None
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        CandidateOperationalUnitScopeStatus.MATCHED,
+        CandidateOperationalUnitScopeStatus.MISMATCHED,
+    ],
+)
+def test_known_scope_status_requires_candidate_unit(status):
+    with pytest.raises(ValidationError, match="requires candidate_unit"):
+        CandidateOperationalUnitScope(status=status, requested_unit=UNIT)
+
+
+def test_unknown_scope_rejects_candidate_unit():
+    with pytest.raises(ValidationError, match="cannot include candidate_unit"):
+        CandidateOperationalUnitScope(
+            status=CandidateOperationalUnitScopeStatus.UNKNOWN,
+            requested_unit=UNIT,
+            candidate_unit=UNIT,
+        )
+
+
+def test_requested_unit_is_required_and_non_empty():
+    with pytest.raises(ValidationError):
+        CandidateOperationalUnitScope(
+            status=CandidateOperationalUnitScopeStatus.UNKNOWN
+        )
+
+    with pytest.raises(ValidationError, match="requested_unit cannot be empty"):
+        CandidateOperationalUnitScope(
+            status=CandidateOperationalUnitScopeStatus.UNKNOWN,
+            requested_unit=OperationalUnit(external_identifier=" "),
+        )
+
+
+def test_operational_unit_scope_is_immutable():
+    scope = CandidateOperationalUnitScope(
+        status=CandidateOperationalUnitScopeStatus.UNKNOWN,
+        requested_unit=UNIT,
+    )
+
+    with pytest.raises(ValidationError):
+        scope.status = CandidateOperationalUnitScopeStatus.MATCHED
 
 
 def test_new_domain_contains_no_vertical_or_fleet_terminology():

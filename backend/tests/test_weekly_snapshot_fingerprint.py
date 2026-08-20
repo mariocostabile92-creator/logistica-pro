@@ -13,6 +13,8 @@ from app.domain.workforce_auto_planning import (
     AssignedTimeSnapshot,
     AssignedTimeStatus,
     AssignedTimeUnit,
+    CandidateOperationalUnitScope,
+    CandidateOperationalUnitScopeStatus,
     ConstraintEvidence,
     CurrentMemberContractStateSnapshot,
     OperationalDemand,
@@ -49,6 +51,7 @@ def _candidate(
     consecutive_days: int | None = 1,
     assigned_time: AssignedTimeSnapshot | None = None,
     contract_state: CurrentMemberContractStateSnapshot | None = None,
+    operational_unit_scope: CandidateOperationalUnitScope | None = None,
 ):
     resource = HumanResource(
         external_identifier=member_id,
@@ -77,6 +80,15 @@ def _candidate(
                 employment_type="full-time",
                 weekly_hours=Decimal("40"),
                 is_reserve=False,
+            )
+        ),
+        operational_unit_scope=(
+            operational_unit_scope
+            if operational_unit_scope is not None
+            else CandidateOperationalUnitScope(
+                status=CandidateOperationalUnitScopeStatus.MATCHED,
+                requested_unit=UNIT,
+                candidate_unit=UNIT,
             )
         ),
         recent_consecutivity=consecutive_days,
@@ -262,6 +274,28 @@ def test_changed_weekly_hours_changes_fingerprint():
 
     assert _fingerprint(_snapshot(candidates=(forty_hours,))) != _fingerprint(
         _snapshot(candidates=(twenty_four_hours,))
+    )
+
+
+def test_changed_operational_unit_scope_changes_fingerprint():
+    matched = _candidate(
+        "member-1",
+        operational_unit_scope=CandidateOperationalUnitScope(
+            status=CandidateOperationalUnitScopeStatus.MATCHED,
+            requested_unit=UNIT,
+            candidate_unit=UNIT,
+        ),
+    )
+    unknown = _candidate(
+        "member-1",
+        operational_unit_scope=CandidateOperationalUnitScope(
+            status=CandidateOperationalUnitScopeStatus.UNKNOWN,
+            requested_unit=UNIT,
+        ),
+    )
+
+    assert _fingerprint(_snapshot(candidates=(matched,))) != _fingerprint(
+        _snapshot(candidates=(unknown,))
     )
 
 
