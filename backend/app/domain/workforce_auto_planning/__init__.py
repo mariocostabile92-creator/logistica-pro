@@ -80,6 +80,9 @@ from app.domain.workforce_auto_planning.locked_assignment_preservation import (
     LockedDemandCoverage,
     build_locked_assignment_preservation_set,
 )
+from app.domain.workforce_auto_planning.locked_weekly_proposal_generator import (
+    generate_weekly_proposal_preserving_locked,
+)
 from app.domain.workforce_auto_planning.coverage_gap import (
     CoverageGap,
     CoverageGapReason,
@@ -293,4 +296,5 @@ __all__ = [
     "WorkforceCandidateRankingInput",
     "WorkforceEligibilityDecision",
     "generate_weekly_proposal_baseline",
+    "generate_weekly_proposal_preserving_locked",
 ]
