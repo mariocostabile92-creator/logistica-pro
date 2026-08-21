@@ -171,6 +171,13 @@ from app.domain.workforce_auto_planning.weekly_proposal_revision import (
     WeeklyProposalRevisionCompositionError,
     compose_next_weekly_proposal_revision,
 )
+from app.domain.workforce_auto_planning.weekly_proposal_status_transition import (
+    WeeklyProposalStatusTransitionCommand,
+    WeeklyProposalStatusTransitionError,
+    WeeklyProposalStatusTransitionNotAllowedError,
+    WeeklyProposalStatusTransitionScopeMismatchError,
+    apply_weekly_proposal_status_transition,
+)
 from app.domain.workforce_auto_planning.weekly_hours_capacity import (
     WeeklyHoursCapacityEvaluation,
     WeeklyHoursCapacityStatus,
@@ -274,6 +281,7 @@ __all__ = [
     "compute_operational_demand_trace_id",
     "compose_weekly_workforce_proposal",
     "compose_next_weekly_proposal_revision",
+    "apply_weekly_proposal_status_transition",
     "evaluate_approved_assignment_conflict",
     "evaluate_capability_compatibility",
     "evaluate_contract_date_eligibility",
@@ -291,6 +299,10 @@ __all__ = [
     "WeeklyProposalGenerationResult",
     "WeeklyProposalCompositionError",
     "WeeklyProposalRevisionCompositionError",
+    "WeeklyProposalStatusTransitionCommand",
+    "WeeklyProposalStatusTransitionError",
+    "WeeklyProposalStatusTransitionNotAllowedError",
+    "WeeklyProposalStatusTransitionScopeMismatchError",
     "WeeklyWorkforceProposalOrganizationMismatchError",
     "WeeklyWorkforceProposalRepository",
     "WeeklyWorkforceProposalRepositoryError",
