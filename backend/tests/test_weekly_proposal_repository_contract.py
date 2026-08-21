@@ -1,16 +1,18 @@
 from datetime import date, datetime, timezone
-from inspect import getsource
+from inspect import getsource, signature
 
 import pytest
 
 from app.domain.core_language import OperationalUnit
 from app.domain.workforce_auto_planning import (
     ComposedWeeklyWorkforceProposal,
+    WeeklyPlanningInputSnapshot,
     WeeklyWorkforceProposal,
     WeeklyWorkforceProposalOrganizationMismatchError,
     WeeklyWorkforceProposalRepository,
     WeeklyWorkforceProposalRevisionAlreadyExistsError,
     WeeklyWorkforceProposalRevisionNotFoundError,
+    WeeklyWorkforceProposalSnapshotMismatchError,
     WeeklyWorkforceProposalStatus,
 )
 from app.domain.workforce_auto_planning import (
@@ -46,14 +48,16 @@ class InMemoryWeeklyWorkforceProposalRepository:
         self,
         *,
         organization_id: str,
+        snapshot: WeeklyPlanningInputSnapshot,
         aggregate: ComposedWeeklyWorkforceProposal,
     ) -> ComposedWeeklyWorkforceProposal:
         organization_id = self._organization_id(organization_id)
+        repository_module.validate_weekly_workforce_proposal_save_contract(
+            organization_id=organization_id,
+            snapshot=snapshot,
+            aggregate=aggregate,
+        )
         proposal = aggregate.proposal
-        if proposal.organization_id != organization_id:
-            raise WeeklyWorkforceProposalOrganizationMismatchError(
-                "aggregate organization does not match repository scope"
-            )
         key = (
             organization_id,
             self._proposal_id(proposal.proposal_id),
@@ -152,10 +156,70 @@ def _aggregate(
     )
 
 
+def _snapshot_for(
+    aggregate: ComposedWeeklyWorkforceProposal,
+) -> WeeklyPlanningInputSnapshot:
+    proposal = aggregate.proposal
+    return WeeklyPlanningInputSnapshot(
+        snapshot_id=proposal.input_snapshot_id,
+        organization_id=proposal.organization_id,
+        period_start=proposal.period_start,
+        period_end=proposal.period_end,
+        operational_unit=proposal.operational_unit,
+        demands=(),
+        workforce_candidates=(),
+        policy_set_identifier=proposal.policy_set_identifier,
+        policy_set_version=proposal.policy_set_version,
+        created_at=datetime(2026, 8, 20, tzinfo=timezone.utc),
+        fingerprint=proposal.input_fingerprint,
+    )
+
+
+def _save(
+    repository: InMemoryWeeklyWorkforceProposalRepository,
+    aggregate: ComposedWeeklyWorkforceProposal,
+    *,
+    organization_id: str | None = None,
+    snapshot: WeeklyPlanningInputSnapshot | None = None,
+) -> ComposedWeeklyWorkforceProposal:
+    return repository.save_revision(
+        organization_id=(
+            aggregate.proposal.organization_id
+            if organization_id is None
+            else organization_id
+        ),
+        snapshot=snapshot or _snapshot_for(aggregate),
+        aggregate=aggregate,
+    )
+
+
 def test_repository_protocol_is_structurally_implementable() -> None:
     assert isinstance(
         InMemoryWeeklyWorkforceProposalRepository(),
         WeeklyWorkforceProposalRepository,
+    )
+
+
+def test_save_contract_requires_authoritative_snapshot() -> None:
+    parameters = signature(
+        WeeklyWorkforceProposalRepository.save_revision
+    ).parameters
+
+    assert tuple(parameters) == (
+        "self",
+        "organization_id",
+        "snapshot",
+        "aggregate",
+    )
+    assert parameters["organization_id"].kind.name == "KEYWORD_ONLY"
+    assert parameters["snapshot"].kind.name == "KEYWORD_ONLY"
+    assert parameters["aggregate"].kind.name == "KEYWORD_ONLY"
+
+
+def test_snapshot_mismatch_error_belongs_to_repository_error_hierarchy() -> None:
+    assert issubclass(
+        WeeklyWorkforceProposalSnapshotMismatchError,
+        repository_module.WeeklyWorkforceProposalRepositoryError,
     )
 
 
@@ -164,8 +228,12 @@ def test_save_and_get_exact_revision_without_mutating_aggregate() -> None:
     aggregate = _aggregate()
     before = aggregate.model_dump(mode="json")
 
+    snapshot = _snapshot_for(aggregate)
+    snapshot_before = snapshot.model_dump(mode="json")
     saved = repository.save_revision(
-        organization_id="organization-one", aggregate=aggregate
+        organization_id="organization-one",
+        snapshot=snapshot,
+        aggregate=aggregate,
     )
     loaded = repository.get_revision(
         organization_id="organization-one",
@@ -176,15 +244,13 @@ def test_save_and_get_exact_revision_without_mutating_aggregate() -> None:
     assert saved is aggregate
     assert loaded is aggregate
     assert aggregate.model_dump(mode="json") == before
+    assert snapshot.model_dump(mode="json") == snapshot_before
 
 
 def test_revisions_are_listed_by_increasing_version() -> None:
     repository = InMemoryWeeklyWorkforceProposalRepository()
     for version in (3, 1, 2):
-        repository.save_revision(
-            organization_id="organization-one",
-            aggregate=_aggregate(version=version),
-        )
+        _save(repository, _aggregate(version=version))
 
     revisions = repository.list_revisions(
         organization_id="organization-one", proposal_id="proposal-one"
@@ -204,9 +270,7 @@ def test_latest_revision_returns_max_version_without_status_semantics() -> None:
         _aggregate(version=3, status=WeeklyWorkforceProposalStatus.DRAFT),
     )
     for aggregate in revisions:
-        repository.save_revision(
-            organization_id="organization-one", aggregate=aggregate
-        )
+        _save(repository, aggregate)
 
     latest = repository.latest_revision(
         organization_id="organization-one", proposal_id="proposal-one"
@@ -219,14 +283,12 @@ def test_latest_revision_returns_max_version_without_status_semantics() -> None:
 def test_duplicate_revision_is_rejected_without_upsert() -> None:
     repository = InMemoryWeeklyWorkforceProposalRepository()
     original = _aggregate()
-    repository.save_revision(
-        organization_id="organization-one", aggregate=original
-    )
+    _save(repository, original)
 
     with pytest.raises(WeeklyWorkforceProposalRevisionAlreadyExistsError):
-        repository.save_revision(
-            organization_id="organization-one",
-            aggregate=_aggregate(status=WeeklyWorkforceProposalStatus.APPROVED),
+        _save(
+            repository,
+            _aggregate(status=WeeklyWorkforceProposalStatus.APPROVED),
         )
 
     assert repository.get_revision(
@@ -238,9 +300,7 @@ def test_duplicate_revision_is_rejected_without_upsert() -> None:
 
 def test_missing_revision_and_proposal_raise_typed_not_found() -> None:
     repository = InMemoryWeeklyWorkforceProposalRepository()
-    repository.save_revision(
-        organization_id="organization-one", aggregate=_aggregate()
-    )
+    _save(repository, _aggregate())
 
     with pytest.raises(WeeklyWorkforceProposalRevisionNotFoundError):
         repository.get_revision(
@@ -258,22 +318,70 @@ def test_missing_revision_and_proposal_raise_typed_not_found() -> None:
         )
 
 
-def test_save_rejects_organization_mismatch() -> None:
+def test_save_rejects_snapshot_organization_mismatch() -> None:
     repository = InMemoryWeeklyWorkforceProposalRepository()
+    aggregate = _aggregate(organization_id="organization-one")
+    snapshot = _snapshot_for(aggregate).model_copy(
+        update={"organization_id": "organization-two"}
+    )
 
     with pytest.raises(WeeklyWorkforceProposalOrganizationMismatchError):
-        repository.save_revision(
-            organization_id="organization-two",
-            aggregate=_aggregate(organization_id="organization-one"),
+        _save(
+            repository,
+            aggregate,
+            snapshot=snapshot,
         )
+
+
+def test_save_rejects_aggregate_organization_mismatch() -> None:
+    repository = InMemoryWeeklyWorkforceProposalRepository()
+    aggregate = _aggregate(organization_id="organization-one")
+    snapshot = _snapshot_for(aggregate).model_copy(
+        update={"organization_id": "organization-two"}
+    )
+
+    with pytest.raises(WeeklyWorkforceProposalOrganizationMismatchError):
+        _save(
+            repository,
+            aggregate,
+            organization_id="organization-two",
+            snapshot=snapshot,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("snapshot_id", "other-snapshot"),
+        ("fingerprint", "other-fingerprint"),
+        ("period_start", date(2026, 8, 23)),
+        ("period_end", date(2026, 8, 31)),
+        (
+            "operational_unit",
+            OperationalUnit(external_identifier="unit-south"),
+        ),
+        ("policy_set_identifier", "other-policy-set"),
+        ("policy_set_version", "2"),
+    ),
+)
+def test_save_rejects_snapshot_proposal_consistency_mismatch(
+    field: str,
+    value: object,
+) -> None:
+    repository = InMemoryWeeklyWorkforceProposalRepository()
+    aggregate = _aggregate()
+    snapshot = _snapshot_for(aggregate).model_copy(update={field: value})
+
+    with pytest.raises(WeeklyWorkforceProposalSnapshotMismatchError):
+        _save(repository, aggregate, snapshot=snapshot)
 
 
 def test_organizations_are_strictly_isolated_for_same_proposal_id() -> None:
     repository = InMemoryWeeklyWorkforceProposalRepository()
     first = _aggregate(organization_id="organization-one")
     second = _aggregate(organization_id="organization-two")
-    repository.save_revision(organization_id="organization-one", aggregate=first)
-    repository.save_revision(organization_id="organization-two", aggregate=second)
+    _save(repository, first)
+    _save(repository, second)
 
     assert repository.get_revision(
         organization_id="organization-one",
@@ -296,10 +404,7 @@ def test_organizations_are_strictly_isolated_for_same_proposal_id() -> None:
 def test_same_proposal_id_accepts_multiple_versions() -> None:
     repository = InMemoryWeeklyWorkforceProposalRepository()
     for version in (1, 2, 3):
-        repository.save_revision(
-            organization_id="organization-one",
-            aggregate=_aggregate(version=version),
-        )
+        _save(repository, _aggregate(version=version))
 
     assert tuple(
         item.proposal.version
@@ -352,6 +457,18 @@ def test_port_contains_only_minimal_revision_operations() -> None:
         "list_revisions",
         "latest_revision",
     }
+
+
+def test_read_operation_signatures_remain_unchanged() -> None:
+    assert tuple(
+        signature(WeeklyWorkforceProposalRepository.get_revision).parameters
+    ) == ("self", "organization_id", "proposal_id", "version")
+    assert tuple(
+        signature(WeeklyWorkforceProposalRepository.list_revisions).parameters
+    ) == ("self", "organization_id", "proposal_id")
+    assert tuple(
+        signature(WeeklyWorkforceProposalRepository.latest_revision).parameters
+    ) == ("self", "organization_id", "proposal_id")
 
 
 def test_core_port_has_no_currentness_or_persistence_dependencies() -> None:
