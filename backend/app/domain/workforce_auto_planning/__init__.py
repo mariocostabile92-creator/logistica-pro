@@ -11,6 +11,13 @@ from app.domain.workforce_auto_planning.capability_compatibility import (
     CapabilityCompatibilityStatus,
     evaluate_capability_compatibility,
 )
+from app.domain.workforce_auto_planning.candidate_ranking import (
+    DeterministicCandidateRankingKey,
+    PreferenceRankingKeyEntry,
+    RankedWorkforceCandidate,
+    WorkforceCandidateRankingInput,
+    rank_eligible_workforce_candidates,
+)
 from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvaluation,
     ConstraintEvaluationCategory,
@@ -119,6 +126,7 @@ __all__ = [
     "AssignedTimeUnit",
     "CandidateOperationalUnitScope",
     "CandidateOperationalUnitScopeStatus",
+    "DeterministicCandidateRankingKey",
     "CapabilityCompatibilityEvaluation",
     "CapabilityCompatibilityReason",
     "CapabilityCompatibilityStatus",
@@ -140,6 +148,7 @@ __all__ = [
     "PlanningPriorityOrPreference",
     "PlanningPreferenceEvaluation",
     "PlanningPreferenceOutcome",
+    "PreferenceRankingKeyEntry",
     "PlanningOperationalUnitBinding",
     "PlanningOperationalUnitBindingProvider",
     "PlanningRuleDescriptor",
@@ -148,6 +157,7 @@ __all__ = [
     "ProposedShiftAssignment",
     "ProposedShiftAssignmentOrigin",
     "ProposedShiftAssignmentStatus",
+    "RankedWorkforceCandidate",
     "ShiftCatalogueEntry",
     "WorkforcePlanningPolicyProvider",
     "WorkforcePlanningPreferenceSet",
@@ -160,6 +170,7 @@ __all__ = [
     "evaluate_continuity_preference",
     "evaluate_lower_weekly_load_preference",
     "evaluate_weekly_hours_capacity",
+    "rank_eligible_workforce_candidates",
     "evaluate_workforce_candidate_eligibility",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
@@ -170,5 +181,6 @@ __all__ = [
     "WorkforceCandidateAvailabilitySnapshot",
     "WorkforceCandidateSnapshot",
     "WorkforceCandidateSnapshotProvider",
+    "WorkforceCandidateRankingInput",
     "WorkforceEligibilityDecision",
 ]
