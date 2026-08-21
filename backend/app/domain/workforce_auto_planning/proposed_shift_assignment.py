@@ -32,7 +32,7 @@ class ProposedShiftAssignment(BaseModel):
     workforce_member_id: str = Field(min_length=1)
     date: CalendarDate
     operational_unit: OperationalUnit
-    shift_identifier: str = Field(min_length=1)
+    shift_identifier: str | None = Field(default=None, min_length=1)
     time_window: TimeWindow
     capability_or_workload: str = Field(min_length=1)
     origin: ProposedShiftAssignmentOrigin

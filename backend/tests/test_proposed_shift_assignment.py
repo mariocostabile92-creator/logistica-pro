@@ -61,6 +61,13 @@ def test_valid_proposed_shift_assignment_can_be_created() -> None:
     assert assignment.deterministic_priority == 10
 
 
+def test_unknown_shift_identifier_is_valid_without_fallback() -> None:
+    assignment = _assignment(shift_identifier=None)
+
+    assert assignment.shift_identifier is None
+    assert assignment.model_dump()["shift_identifier"] is None
+
+
 @pytest.mark.parametrize("origin", tuple(ProposedShiftAssignmentOrigin))
 def test_all_origins_are_representable(
     origin: ProposedShiftAssignmentOrigin,
@@ -107,13 +114,18 @@ def test_deterministic_priority_is_a_non_negative_strict_integer(
         "assignment_id",
         "organization_id",
         "workforce_member_id",
-        "shift_identifier",
         "capability_or_workload",
     ),
 )
 def test_required_identifiers_cannot_be_empty(field: str) -> None:
     with pytest.raises(ValidationError):
         _assignment(**{field: " "})
+
+
+@pytest.mark.parametrize("value", ("", " ", "   "))
+def test_known_shift_identifier_cannot_be_empty(value: str) -> None:
+    with pytest.raises(ValidationError):
+        _assignment(shift_identifier=value)
 
 
 @pytest.mark.parametrize("field", ("code", "message"))
