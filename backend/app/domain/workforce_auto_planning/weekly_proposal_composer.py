@@ -10,6 +10,9 @@ from app.domain.workforce_auto_planning.coverage_gap import CoverageGap
 from app.domain.workforce_auto_planning.planning_preference import (
     WorkforcePlanningPreferenceSet,
 )
+from app.domain.workforce_auto_planning.operational_demand_trace import (
+    compute_operational_demand_trace_id,
+)
 from app.domain.workforce_auto_planning.proposed_shift_assignment import (
     ProposedShiftAssignment,
 )
@@ -92,13 +95,31 @@ def _validate_member(
         )
 
 
+def _validate_demand_trace(
+    *,
+    demand_trace_id: str,
+    snapshot_demand_trace_ids: frozenset[str],
+    subject: str,
+) -> None:
+    if demand_trace_id not in snapshot_demand_trace_ids:
+        raise WeeklyProposalCompositionError(
+            f"{subject} demand trace is not present in snapshot"
+        )
+
+
 def _validate_decision(
     *,
     decision: WorkforceEligibilityDecision,
     snapshot: WeeklyPlanningInputSnapshot,
     snapshot_member_ids: frozenset[str],
+    snapshot_demand_trace_ids: frozenset[str],
     subject: str = "eligibility decision",
 ) -> None:
+    _validate_demand_trace(
+        demand_trace_id=decision.demand_trace_id,
+        snapshot_demand_trace_ids=snapshot_demand_trace_ids,
+        subject=subject,
+    )
     _validate_organization(
         actual=decision.organization_id,
         expected=snapshot.organization_id,
@@ -127,8 +148,14 @@ def _validate_preference_set(
     preference_set: WorkforcePlanningPreferenceSet,
     snapshot: WeeklyPlanningInputSnapshot,
     snapshot_member_ids: frozenset[str],
+    snapshot_demand_trace_ids: frozenset[str],
     subject: str = "preference set",
 ) -> None:
+    _validate_demand_trace(
+        demand_trace_id=preference_set.demand_trace_id,
+        snapshot_demand_trace_ids=snapshot_demand_trace_ids,
+        subject=subject,
+    )
     _validate_period(
         actual=preference_set.operational_date,
         period_start=snapshot.period_start,
@@ -151,7 +178,16 @@ def _validate_generation_result(
         candidate.workforce_member_id
         for candidate in snapshot.workforce_candidates
     )
+    snapshot_demand_trace_ids = frozenset(
+        compute_operational_demand_trace_id(demand)
+        for demand in snapshot.demands
+    )
     for assignment in generation_result.assignments:
+        _validate_demand_trace(
+            demand_trace_id=assignment.demand_trace_id,
+            snapshot_demand_trace_ids=snapshot_demand_trace_ids,
+            subject="assignment",
+        )
         _validate_organization(
             actual=assignment.organization_id,
             expected=snapshot.organization_id,
@@ -175,6 +211,11 @@ def _validate_generation_result(
         )
 
     for gap in generation_result.coverage_gaps:
+        _validate_demand_trace(
+            demand_trace_id=gap.demand_trace_id,
+            snapshot_demand_trace_ids=snapshot_demand_trace_ids,
+            subject="coverage gap",
+        )
         _validate_organization(
             actual=gap.organization_id,
             expected=snapshot.organization_id,
@@ -197,6 +238,7 @@ def _validate_generation_result(
             decision=decision,
             snapshot=snapshot,
             snapshot_member_ids=snapshot_member_ids,
+            snapshot_demand_trace_ids=snapshot_demand_trace_ids,
         )
 
     for preference_set in generation_result.preference_sets:
@@ -204,9 +246,15 @@ def _validate_generation_result(
             preference_set=preference_set,
             snapshot=snapshot,
             snapshot_member_ids=snapshot_member_ids,
+            snapshot_demand_trace_ids=snapshot_demand_trace_ids,
         )
 
     for ranked in generation_result.ranked_candidates:
+        _validate_demand_trace(
+            demand_trace_id=ranked.demand_trace_id,
+            snapshot_demand_trace_ids=snapshot_demand_trace_ids,
+            subject="ranked candidate",
+        )
         _validate_member(
             workforce_member_id=ranked.workforce_member_id,
             snapshot_member_ids=snapshot_member_ids,
@@ -225,12 +273,14 @@ def _validate_generation_result(
             decision=ranked.eligibility_decision,
             snapshot=snapshot,
             snapshot_member_ids=snapshot_member_ids,
+            snapshot_demand_trace_ids=snapshot_demand_trace_ids,
             subject="ranked candidate eligibility decision",
         )
         _validate_preference_set(
             preference_set=ranked.preference_set,
             snapshot=snapshot,
             snapshot_member_ids=snapshot_member_ids,
+            snapshot_demand_trace_ids=snapshot_demand_trace_ids,
             subject="ranked candidate preference set",
         )
 

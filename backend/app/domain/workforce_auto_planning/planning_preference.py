@@ -28,6 +28,7 @@ class PlanningPreferenceEvaluation(BaseModel):
 class WorkforcePlanningPreferenceSet(BaseModel):
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
+    demand_trace_id: str = Field(min_length=1)
     workforce_member_id: str = Field(min_length=1)
     operational_date: CalendarDate
     evaluations: tuple[PlanningPreferenceEvaluation, ...] = Field(

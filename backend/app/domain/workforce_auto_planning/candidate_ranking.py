@@ -58,6 +58,13 @@ class WorkforceCandidateRankingInput(BaseModel):
             raise ValueError(
                 "preference set operational date does not match ranking context"
             )
+        if (
+            self.preference_set.demand_trace_id
+            != self.eligibility_decision.demand_trace_id
+        ):
+            raise ValueError(
+                "eligibility decision and preference set demand traces differ"
+            )
         seen: set[tuple[int, str]] = set()
         for evaluation in self.preference_set.evaluations:
             identifier = (evaluation.priority, evaluation.code)
@@ -72,6 +79,7 @@ class WorkforceCandidateRankingInput(BaseModel):
 class RankedWorkforceCandidate(BaseModel):
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
+    demand_trace_id: str = Field(min_length=1)
     workforce_member_id: str = Field(min_length=1)
     rank: int = Field(ge=1, strict=True)
     candidate: WorkforceCandidateSnapshot
@@ -158,6 +166,7 @@ def rank_eligible_workforce_candidates(
     )
     return tuple(
         RankedWorkforceCandidate(
+            demand_trace_id=item.eligibility_decision.demand_trace_id,
             workforce_member_id=item.candidate.workforce_member_id,
             rank=rank,
             candidate=item.candidate,

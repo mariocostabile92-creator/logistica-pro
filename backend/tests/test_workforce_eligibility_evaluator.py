@@ -32,6 +32,7 @@ from app.domain.workforce_auto_planning import (
     WorkforceCandidateAvailabilitySnapshot,
     WorkforceCandidateSnapshot,
     WorkloadCapabilityMapping,
+    compute_operational_demand_trace_id,
     evaluate_workforce_candidate_eligibility,
 )
 
@@ -227,6 +228,20 @@ def test_all_seven_hard_constraints_pass():
     assert (
         decision.capability_or_workload
         == demand.capability_or_workload
+    )
+
+
+def test_eligibility_decision_uses_canonical_demand_trace():
+    demand = _demand()
+
+    decision = evaluate_workforce_candidate_eligibility(
+        candidate=_candidate(),
+        demand=demand,
+        capability_mappings=CAPABILITY_MAPPINGS,
+    )
+
+    assert decision.demand_trace_id == compute_operational_demand_trace_id(
+        demand
     )
 
 

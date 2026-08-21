@@ -18,6 +18,9 @@ from app.domain.workforce_auto_planning.contract_date_eligibility import (
 from app.domain.workforce_auto_planning.operational_demand import (
     OperationalDemand,
 )
+from app.domain.workforce_auto_planning.operational_demand_trace import (
+    compute_operational_demand_trace_id,
+)
 from app.domain.workforce_auto_planning.planning_policy import (
     WorkloadCapabilityMapping,
 )
@@ -400,6 +403,7 @@ def evaluate_workforce_candidate_eligibility(
         if not evaluation.passed
     )
     return WorkforceEligibilityDecision(
+        demand_trace_id=compute_operational_demand_trace_id(demand),
         organization_id=demand.organization_id,
         workforce_member_id=candidate.workforce_member_id,
         operational_date=demand.date,

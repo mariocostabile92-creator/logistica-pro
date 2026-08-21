@@ -35,6 +35,7 @@ def _evaluation(*, passed: bool = True) -> ConstraintEvaluation:
 
 def _decision(**updates) -> WorkforceEligibilityDecision:
     payload = {
+        "demand_trace_id": "demand-trace-one",
         "organization_id": "organization-one",
         "workforce_member_id": "opaque-member-42",
         "operational_date": date(2026, 8, 24),
@@ -164,6 +165,7 @@ def test_non_eligible_decision_without_exclusion_reasons_remains_valid():
     ("field", "value"),
     [
         ("organization_id", " "),
+        ("demand_trace_id", " "),
         ("workforce_member_id", " "),
         ("capability_or_workload", " "),
     ],

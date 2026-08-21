@@ -28,6 +28,7 @@ def _reason(**overrides: object) -> ProposedAssignmentReason:
 def _assignment(**overrides: object) -> ProposedShiftAssignment:
     values: dict[str, object] = {
         "assignment_id": "assignment-2026-08-24-member-42",
+        "demand_trace_id": "demand-trace-one",
         "organization_id": "organization-one",
         "workforce_member_id": "member-42",
         "date": date(2026, 8, 24),
@@ -112,6 +113,7 @@ def test_deterministic_priority_is_a_non_negative_strict_integer(
     "field",
     (
         "assignment_id",
+        "demand_trace_id",
         "organization_id",
         "workforce_member_id",
         "capability_or_workload",

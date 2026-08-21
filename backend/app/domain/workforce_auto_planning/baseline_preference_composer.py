@@ -15,6 +15,9 @@ from app.domain.workforce_auto_planning.lower_weekly_load_preference import (
 from app.domain.workforce_auto_planning.operational_demand import (
     OperationalDemand,
 )
+from app.domain.workforce_auto_planning.operational_demand_trace import (
+    compute_operational_demand_trace_id,
+)
 from app.domain.workforce_auto_planning.planning_preference import (
     PlanningPreferenceEvaluation,
     PlanningPreferenceOutcome,
@@ -172,8 +175,10 @@ def build_baseline_workforce_preference_sets(
     if len(member_ids) != len(set(member_ids)):
         raise ValueError("duplicate workforce member in preference cohort")
 
+    demand_trace_id = compute_operational_demand_trace_id(demand)
     return tuple(
         WorkforcePlanningPreferenceSet(
+            demand_trace_id=demand_trace_id,
             workforce_member_id=candidate.workforce_member_id,
             operational_date=demand.date,
             evaluations=(

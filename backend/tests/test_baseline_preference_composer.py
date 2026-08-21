@@ -19,6 +19,7 @@ from app.domain.workforce_auto_planning import (
     PlanningPreferenceOutcome,
     WorkforceCandidateSnapshot,
     build_baseline_workforce_preference_sets,
+    compute_operational_demand_trace_id,
 )
 from app.domain.workforce_auto_planning import baseline_preference_composer
 
@@ -199,6 +200,21 @@ def test_each_candidate_receives_exactly_three_ordered_unique_evaluations():
             "continuity",
         ]
         assert len(identities) == len(set(identities)) == 3
+
+
+def test_all_preference_sets_use_the_canonical_demand_trace():
+    demand = _demand()
+    result = build_baseline_workforce_preference_sets(
+        candidates=(_candidate("member-a"), _candidate("member-b")),
+        demand=demand,
+        existing_assignment_stability_priority=0,
+        lower_weekly_load_priority=1,
+        continuity_priority=2,
+    )
+
+    assert {item.demand_trace_id for item in result} == {
+        compute_operational_demand_trace_id(demand)
+    }
 
 
 def test_input_order_does_not_change_output_or_evidence():

@@ -20,6 +20,9 @@ from app.domain.workforce_auto_planning.coverage_gap import (
 from app.domain.workforce_auto_planning.operational_demand import (
     OperationalDemand,
 )
+from app.domain.workforce_auto_planning.operational_demand_trace import (
+    compute_operational_demand_trace_id,
+)
 from app.domain.workforce_auto_planning.planning_policy import (
     WorkloadCapabilityMapping,
 )
@@ -210,6 +213,7 @@ def generate_weekly_proposal_baseline(
     all_ranked_candidates: list[RankedWorkforceCandidate] = []
 
     for demand in demands:
+        demand_trace_id = compute_operational_demand_trace_id(demand)
         decisions = tuple(
             evaluate_workforce_candidate_eligibility(
                 candidate=candidate,
@@ -293,6 +297,7 @@ def generate_weekly_proposal_baseline(
                     capability_or_workload=demand.capability_or_workload,
                     deterministic_priority=ranked.rank,
                 ),
+                demand_trace_id=demand_trace_id,
                 organization_id=demand.organization_id,
                 workforce_member_id=ranked.workforce_member_id,
                 date=demand.date,
@@ -321,6 +326,7 @@ def generate_weekly_proposal_baseline(
             excluded_categories.add("intra-run-conflict")
         coverage_gaps.append(
             CoverageGap(
+                demand_trace_id=demand_trace_id,
                 organization_id=demand.organization_id,
                 date=demand.date,
                 operational_unit=demand.operational_unit,

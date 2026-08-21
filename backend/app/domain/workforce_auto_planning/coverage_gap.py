@@ -21,6 +21,7 @@ class CoverageGapReason(BaseModel):
 class CoverageGap(BaseModel):
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
+    demand_trace_id: str = Field(min_length=1)
     organization_id: str = Field(min_length=1)
     date: CalendarDate
     operational_unit: OperationalUnit

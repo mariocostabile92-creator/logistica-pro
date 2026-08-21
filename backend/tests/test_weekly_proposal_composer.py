@@ -27,6 +27,7 @@ from app.domain.workforce_auto_planning import (
     WorkforceCandidateAvailabilitySnapshot,
     WorkforceCandidateSnapshot,
     WorkloadCapabilityMapping,
+    compute_operational_demand_trace_id,
     compose_weekly_workforce_proposal,
     generate_weekly_proposal_baseline,
 )
@@ -192,6 +193,52 @@ def test_generation_content_and_order_are_preserved_without_copying_semantics():
     assert composed.eligibility_decisions == generated.eligibility_decisions
     assert composed.preference_sets == generated.preference_sets
     assert composed.ranked_candidates == generated.ranked_candidates
+
+
+def test_composer_accepts_only_canonical_snapshot_demand_traces():
+    snapshot = _snapshot()
+    generated = _generation_result(snapshot)
+    expected_trace = compute_operational_demand_trace_id(snapshot.demands[0])
+
+    composed = _compose(snapshot=snapshot, generation_result=generated)
+
+    collections = (
+        composed.assignments,
+        composed.coverage_gaps,
+        composed.eligibility_decisions,
+        composed.preference_sets,
+        composed.ranked_candidates,
+    )
+    assert all(
+        item.demand_trace_id == expected_trace
+        for collection in collections
+        for item in collection
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "subject"),
+    (
+        ("assignments", "assignment demand trace"),
+        ("coverage_gaps", "coverage gap demand trace"),
+        ("eligibility_decisions", "eligibility decision demand trace"),
+        ("preference_sets", "preference set demand trace"),
+        ("ranked_candidates", "ranked candidate demand trace"),
+    ),
+)
+def test_composer_rejects_artifact_trace_not_present_in_snapshot(
+    field,
+    subject,
+):
+    snapshot = _snapshot()
+    generated = _generation_result(snapshot)
+    artifact = getattr(generated, field)[0].model_copy(
+        update={"demand_trace_id": "unknown-demand-trace"}
+    )
+    invalid_result = generated.model_copy(update={field: (artifact,)})
+
+    with pytest.raises(WeeklyProposalCompositionError, match=subject):
+        _compose(snapshot=snapshot, generation_result=invalid_result)
 
 
 @pytest.mark.parametrize(

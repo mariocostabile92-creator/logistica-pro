@@ -26,6 +26,7 @@ from app.domain.workforce_auto_planning import (
 OPERATION_DATE = date(2026, 8, 24)
 UNIT = OperationalUnit(external_identifier="unit-one")
 WINDOW = TimeWindow(external_identifier="window-one")
+DEMAND_TRACE_ID = "demand-trace-one"
 
 
 def _candidate(member_id: str) -> WorkforceCandidateSnapshot:
@@ -50,8 +51,10 @@ def _decision(
     *,
     eligible: bool = True,
     operational_date: date = OPERATION_DATE,
+    demand_trace_id: str = DEMAND_TRACE_ID,
 ) -> WorkforceEligibilityDecision:
     return WorkforceEligibilityDecision(
+        demand_trace_id=demand_trace_id,
         organization_id="organization-one",
         workforce_member_id=member_id,
         operational_date=operational_date,
@@ -83,6 +86,8 @@ def _input(
     preference_member_id: str | None = None,
     preference_date: date = OPERATION_DATE,
     decision_date: date = OPERATION_DATE,
+    decision_trace_id: str = DEMAND_TRACE_ID,
+    preference_trace_id: str = DEMAND_TRACE_ID,
 ) -> WorkforceCandidateRankingInput:
     return WorkforceCandidateRankingInput(
         candidate=_candidate(member_id),
@@ -90,8 +95,10 @@ def _input(
             member_id,
             eligible=eligible,
             operational_date=decision_date,
+            demand_trace_id=decision_trace_id,
         ),
         preference_set=WorkforcePlanningPreferenceSet(
+            demand_trace_id=preference_trace_id,
             workforce_member_id=preference_member_id or member_id,
             operational_date=preference_date,
             evaluations=evaluations,
@@ -231,6 +238,23 @@ def test_preference_set_operational_date_mismatch_is_rejected():
             "member-one",
             preference_date=date(2026, 8, 25),
         )
+
+
+def test_eligibility_and_preference_trace_mismatch_is_rejected():
+    with pytest.raises(ValidationError, match="demand traces differ"):
+        _input(
+            "member-one",
+            decision_trace_id="trace-one",
+            preference_trace_id="trace-two",
+        )
+
+
+def test_ranked_candidate_propagates_validated_demand_trace():
+    ranked = rank_eligible_workforce_candidates(
+        candidates=(_input("member-one"),)
+    )
+
+    assert ranked[0].demand_trace_id == DEMAND_TRACE_ID
 
 
 def test_rank_starts_at_one_and_is_sequential():

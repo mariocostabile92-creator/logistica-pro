@@ -18,6 +18,7 @@ class EligibilityDecisionNotice(BaseModel):
 class WorkforceEligibilityDecision(BaseModel):
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
+    demand_trace_id: str = Field(min_length=1)
     organization_id: str = Field(min_length=1)
     workforce_member_id: str = Field(min_length=1)
     operational_date: CalendarDate

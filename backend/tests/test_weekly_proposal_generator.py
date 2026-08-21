@@ -29,6 +29,7 @@ from app.domain.workforce_auto_planning import (
     WorkforceCandidateSnapshot,
     WorkforceEligibilityDecision,
     WorkloadCapabilityMapping,
+    compute_operational_demand_trace_id,
     generate_weekly_proposal_baseline,
 )
 from app.domain.workforce_auto_planning import weekly_proposal_generator
@@ -319,6 +320,46 @@ def test_assignment_contract_and_identity_are_populated_from_selection():
     assert factory.call_args.kwargs["deterministic_priority"] == 1
 
 
+def test_all_generated_artifacts_share_their_authoritative_demand_trace():
+    first = _demand(source="source-one")
+    second = _demand(source="source-two")
+    snapshot = _snapshot(
+        demands=(first, second),
+        candidates=_three_candidates()[:2],
+    )
+
+    result = _generate(snapshot)
+    expected = {
+        compute_operational_demand_trace_id(first),
+        compute_operational_demand_trace_id(second),
+    }
+
+    assert {item.demand_trace_id for item in result.assignments} == expected
+    assert {item.demand_trace_id for item in result.coverage_gaps} == expected
+    assert {
+        item.demand_trace_id for item in result.eligibility_decisions
+    } == expected
+    assert {item.demand_trace_id for item in result.preference_sets} == expected
+    assert {
+        item.demand_trace_id for item in result.ranked_candidates
+    } == expected
+
+
+def test_demand_trace_depends_on_source_but_not_quantities():
+    demand = _demand(target_quantity=1, source="source-one")
+    different_source = demand.model_copy(update={"source": "source-two"})
+    different_quantities = demand.model_copy(
+        update={"base_quantity": 7, "target_quantity": 9}
+    )
+
+    assert compute_operational_demand_trace_id(demand) != (
+        compute_operational_demand_trace_id(different_source)
+    )
+    assert compute_operational_demand_trace_id(demand) == (
+        compute_operational_demand_trace_id(different_quantities)
+    )
+
+
 def test_candidate_is_not_duplicated_for_the_same_demand():
     result = _generate(
         _snapshot(
@@ -415,6 +456,10 @@ def test_unknown_intra_run_conflict_is_fail_closed():
 
     def force_eligible(*, candidate, demand, capability_mappings):
         return WorkforceEligibilityDecision(
+            demand_trace_id=(
+                weekly_proposal_generator
+                .compute_operational_demand_trace_id(demand)
+            ),
             organization_id=demand.organization_id,
             workforce_member_id=candidate.workforce_member_id,
             operational_date=demand.date,

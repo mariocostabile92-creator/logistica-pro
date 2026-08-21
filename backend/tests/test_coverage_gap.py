@@ -20,6 +20,7 @@ def _reason(**overrides: object) -> CoverageGapReason:
 
 def _gap(**overrides: object) -> CoverageGap:
     values: dict[str, object] = {
+        "demand_trace_id": "demand-trace-one",
         "organization_id": "organization-one",
         "date": date(2026, 8, 24),
         "operational_unit": OperationalUnit(
@@ -153,7 +154,7 @@ def test_organization_id_is_preserved() -> None:
 
 @pytest.mark.parametrize(
     "field",
-    ("organization_id", "capability_or_workload"),
+    ("demand_trace_id", "organization_id", "capability_or_workload"),
 )
 def test_required_identifiers_cannot_be_empty(field: str) -> None:
     with pytest.raises(ValidationError):

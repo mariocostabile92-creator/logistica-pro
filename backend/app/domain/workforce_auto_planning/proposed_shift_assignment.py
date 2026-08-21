@@ -28,6 +28,7 @@ class ProposedShiftAssignment(BaseModel):
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
     assignment_id: str = Field(min_length=1)
+    demand_trace_id: str = Field(min_length=1)
     organization_id: str = Field(min_length=1)
     workforce_member_id: str = Field(min_length=1)
     date: CalendarDate

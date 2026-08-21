@@ -94,6 +94,7 @@ def test_evidence_reuses_existing_constraint_evidence():
 def test_preference_set_and_nested_collections_are_immutable():
     evaluation = _evaluation()
     preference_set = WorkforcePlanningPreferenceSet(
+        demand_trace_id="demand-trace-one",
         workforce_member_id="opaque-member-42",
         operational_date=date(2026, 8, 24),
         evaluations=(evaluation,),
@@ -107,6 +108,15 @@ def test_preference_set_and_nested_collections_are_immutable():
         preference_set.workforce_member_id = "changed"
     with pytest.raises(TypeError):
         preference_set.evaluations[0] = evaluation
+
+
+def test_preference_set_requires_non_empty_demand_trace() -> None:
+    with pytest.raises(ValidationError):
+        WorkforcePlanningPreferenceSet(
+            demand_trace_id=" ",
+            workforce_member_id="opaque-member-42",
+            operational_date=date(2026, 8, 24),
+        )
 
 
 def test_deprioritized_is_only_an_outcome_and_does_not_change_eligibility():
