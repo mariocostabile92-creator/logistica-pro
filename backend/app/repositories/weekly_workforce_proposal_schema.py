@@ -1,4 +1,49 @@
+from app.core.config import SETTINGS
 from app.core.database import db_session
+from app.core.tenant_schema import ensure_column
+
+
+_ASSIGNMENTS_TABLE = "weekly_workforce_proposal_assignments"
+_GAPS_TABLE = "weekly_workforce_proposal_gaps"
+
+
+def _column_names(conn, table: str) -> set[str]:
+    if SETTINGS.database_backend == "postgresql":
+        rows = conn.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema() AND table_name = ?
+            """,
+            (table,),
+        ).fetchall()
+        return {row["column_name"] for row in rows}
+    return {
+        row["name"]
+        for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+    }
+
+
+def _evolve_existing_schema(conn) -> None:
+    assignment_columns = _column_names(conn, _ASSIGNMENTS_TABLE)
+    if "demand_trace_id" not in assignment_columns:
+        row = conn.execute(
+            f"SELECT COUNT(*) AS total FROM {_ASSIGNMENTS_TABLE}"
+        ).fetchone()
+        if row["total"]:
+            raise RuntimeError(
+                "cannot add assignment demand_trace_id: existing rows have "
+                "no authoritative demand trace"
+            )
+        ensure_column(
+            conn,
+            _ASSIGNMENTS_TABLE,
+            "demand_trace_id",
+            "TEXT NOT NULL",
+        )
+
+    ensure_column(conn, _GAPS_TABLE, "starts_at", "TEXT")
+    ensure_column(conn, _GAPS_TABLE, "ends_at", "TEXT")
 
 
 def init_schema() -> None:
@@ -48,6 +93,7 @@ def init_schema() -> None:
                 proposal_id TEXT NOT NULL,
                 proposal_version INTEGER NOT NULL,
                 assignment_id TEXT NOT NULL,
+                demand_trace_id TEXT NOT NULL,
                 workforce_member_id TEXT NOT NULL,
                 operational_date TEXT NOT NULL,
                 operational_unit_identifier TEXT NOT NULL,
@@ -83,6 +129,8 @@ def init_schema() -> None:
                 operational_unit_identifier TEXT NOT NULL,
                 operational_unit_name TEXT,
                 time_window_identifier TEXT NOT NULL,
+                starts_at TEXT,
+                ends_at TEXT,
                 capability_or_workload TEXT NOT NULL,
                 required_quantity INTEGER NOT NULL,
                 proposed_quantity INTEGER NOT NULL,
@@ -171,3 +219,4 @@ def init_schema() -> None:
                 );
             """
         )
+        _evolve_existing_schema(conn)

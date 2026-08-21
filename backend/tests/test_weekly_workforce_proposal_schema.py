@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import contextmanager
 from inspect import getsource
 
 import pytest
@@ -128,18 +129,20 @@ def _insert_assignment(
             """
             INSERT INTO weekly_workforce_proposal_assignments (
                 organization_id, proposal_id, proposal_version,
-                assignment_id, workforce_member_id, operational_date,
+                assignment_id, demand_trace_id, workforce_member_id,
+                operational_date,
                 operational_unit_identifier, operational_unit_name,
                 time_window_identifier, starts_at, ends_at,
                 capability_or_workload, shift_identifier, origin, status,
                 deterministic_priority, locked, reasons_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 "organization-one",
                 "proposal-one",
                 version,
                 assignment_id,
+                "demand-trace-one",
                 "member-one",
                 "2026-08-24",
                 "unit-north",
@@ -158,6 +161,71 @@ def _insert_assignment(
         )
 
 
+def _legacy_c3d_connection() -> sqlite3.Connection:
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript(
+        """
+        CREATE TABLE weekly_workforce_proposal_assignments (
+            organization_id TEXT NOT NULL,
+            proposal_id TEXT NOT NULL,
+            proposal_version INTEGER NOT NULL,
+            assignment_id TEXT NOT NULL,
+            workforce_member_id TEXT NOT NULL,
+            operational_date TEXT NOT NULL,
+            operational_unit_identifier TEXT NOT NULL,
+            operational_unit_name TEXT,
+            time_window_identifier TEXT NOT NULL,
+            starts_at TEXT,
+            ends_at TEXT,
+            capability_or_workload TEXT NOT NULL,
+            shift_identifier TEXT,
+            origin TEXT NOT NULL,
+            status TEXT NOT NULL,
+            deterministic_priority INTEGER NOT NULL,
+            locked INTEGER NOT NULL,
+            reasons_json TEXT NOT NULL,
+            PRIMARY KEY (
+                organization_id, proposal_id, proposal_version, assignment_id
+            )
+        );
+
+        CREATE TABLE weekly_workforce_proposal_gaps (
+            organization_id TEXT NOT NULL,
+            proposal_id TEXT NOT NULL,
+            proposal_version INTEGER NOT NULL,
+            demand_trace_id TEXT NOT NULL,
+            operational_date TEXT NOT NULL,
+            operational_unit_identifier TEXT NOT NULL,
+            operational_unit_name TEXT,
+            time_window_identifier TEXT NOT NULL,
+            capability_or_workload TEXT NOT NULL,
+            required_quantity INTEGER NOT NULL,
+            proposed_quantity INTEGER NOT NULL,
+            gap_quantity INTEGER NOT NULL,
+            reasons_json TEXT NOT NULL,
+            PRIMARY KEY (
+                organization_id, proposal_id, proposal_version, demand_trace_id
+            )
+        );
+        """
+    )
+    return conn
+
+
+def _bind_schema_connection(monkeypatch, conn: sqlite3.Connection) -> None:
+    @contextmanager
+    def legacy_session():
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
+    monkeypatch.setattr(schema_module, "db_session", legacy_session)
+
+
 def test_bootstrap_creates_all_tables_and_is_idempotent() -> None:
     init_schema()
     init_schema()
@@ -168,6 +236,125 @@ def test_bootstrap_creates_all_tables_and_is_idempotent() -> None:
         ).fetchall()
 
     assert set(TABLES).issubset({row["name"] for row in rows})
+
+
+def test_new_schema_contains_round_trip_columns() -> None:
+    with db_session() as conn:
+        assignment_columns = {
+            row["name"]: row
+            for row in conn.execute(
+                "PRAGMA table_info(weekly_workforce_proposal_assignments)"
+            ).fetchall()
+        }
+        gap_columns = {
+            row["name"]: row
+            for row in conn.execute(
+                "PRAGMA table_info(weekly_workforce_proposal_gaps)"
+            ).fetchall()
+        }
+
+    demand_trace = assignment_columns["demand_trace_id"]
+    assert demand_trace["notnull"] == 1
+    assert demand_trace["dflt_value"] is None
+    assert gap_columns["starts_at"]["notnull"] == 0
+    assert gap_columns["ends_at"]["notnull"] == 0
+
+
+def test_legacy_empty_schema_is_upgraded_idempotently_and_preserves_gap_data(
+    monkeypatch,
+) -> None:
+    conn = _legacy_c3d_connection()
+    conn.execute(
+        """
+        INSERT INTO weekly_workforce_proposal_gaps (
+            organization_id, proposal_id, proposal_version, demand_trace_id,
+            operational_date, operational_unit_identifier,
+            operational_unit_name, time_window_identifier,
+            capability_or_workload, required_quantity, proposed_quantity,
+            gap_quantity, reasons_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "organization-one", "proposal-one", 1, "trace-one",
+            "2026-08-24", "unit-north", "North depot", "window-one",
+            "parcel-delivery", 2, 1, 1, '{"code":"shortage"}',
+        ),
+    )
+    conn.commit()
+    _bind_schema_connection(monkeypatch, conn)
+
+    init_schema()
+    init_schema()
+
+    assignment_columns = {
+        row["name"]: row
+        for row in conn.execute(
+            "PRAGMA table_info(weekly_workforce_proposal_assignments)"
+        ).fetchall()
+    }
+    gap_columns = {
+        row["name"]: row
+        for row in conn.execute(
+            "PRAGMA table_info(weekly_workforce_proposal_gaps)"
+        ).fetchall()
+    }
+    preserved = conn.execute(
+        """
+        SELECT demand_trace_id, required_quantity, starts_at, ends_at
+        FROM weekly_workforce_proposal_gaps
+        """
+    ).fetchone()
+
+    assert assignment_columns["demand_trace_id"]["notnull"] == 1
+    assert assignment_columns["demand_trace_id"]["dflt_value"] is None
+    assert {"starts_at", "ends_at"}.issubset(gap_columns)
+    assert dict(preserved) == {
+        "demand_trace_id": "trace-one",
+        "required_quantity": 2,
+        "starts_at": None,
+        "ends_at": None,
+    }
+    conn.close()
+
+
+def test_legacy_assignment_rows_block_non_authoritative_trace_migration(
+    monkeypatch,
+) -> None:
+    conn = _legacy_c3d_connection()
+    conn.execute(
+        """
+        INSERT INTO weekly_workforce_proposal_assignments (
+            organization_id, proposal_id, proposal_version, assignment_id,
+            workforce_member_id, operational_date,
+            operational_unit_identifier, time_window_identifier,
+            capability_or_workload, origin, status,
+            deterministic_priority, locked, reasons_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "organization-one", "proposal-one", 1, "assignment-one",
+            "member-one", "2026-08-24", "unit-north", "window-one",
+            "parcel-delivery", "AUTOMATIC", "PROPOSED", 0, 0, "[]",
+        ),
+    )
+    conn.commit()
+    _bind_schema_connection(monkeypatch, conn)
+
+    with pytest.raises(RuntimeError, match="no authoritative demand trace"):
+        init_schema()
+
+    columns = {
+        row["name"]
+        for row in conn.execute(
+            "PRAGMA table_info(weekly_workforce_proposal_assignments)"
+        ).fetchall()
+    }
+    preserved = conn.execute(
+        "SELECT assignment_id FROM weekly_workforce_proposal_assignments"
+    ).fetchall()
+    assert "demand_trace_id" not in columns
+    assert [row["assignment_id"] for row in preserved] == ["assignment-one"]
+    conn.close()
 
 
 def test_organization_is_not_null_and_has_no_default_in_every_table() -> None:
@@ -206,6 +393,46 @@ def test_assignment_identity_is_unique_only_inside_one_revision() -> None:
         _insert_assignment(version=1)
 
 
+def test_assignment_requires_authoritative_demand_trace() -> None:
+    _seed_revision()
+    with pytest.raises(sqlite3.IntegrityError):
+        with db_session() as conn:
+            conn.execute(
+                """
+                INSERT INTO weekly_workforce_proposal_assignments (
+                    organization_id, proposal_id, proposal_version,
+                    assignment_id, workforce_member_id, operational_date,
+                    operational_unit_identifier, time_window_identifier,
+                    capability_or_workload, origin, status,
+                    deterministic_priority, locked, reasons_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "organization-one", "proposal-one", 1,
+                    "assignment-without-trace", "member-one", "2026-08-24",
+                    "unit-north", "morning-window", "parcel-delivery",
+                    "AUTOMATIC", "PROPOSED", 0, 0, "[]",
+                ),
+            )
+
+
+def test_assignment_with_demand_trace_is_persisted() -> None:
+    _seed_revision()
+    _insert_assignment()
+
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT demand_trace_id
+            FROM weekly_workforce_proposal_assignments
+            WHERE organization_id = ? AND proposal_id = ?
+            """,
+            ("organization-one", "proposal-one"),
+        ).fetchone()
+
+    assert row["demand_trace_id"] == "demand-trace-one"
+
+
 def test_gap_demand_trace_is_unique_inside_one_revision() -> None:
     _seed_revision()
     statement = """
@@ -213,20 +440,70 @@ def test_gap_demand_trace_is_unique_inside_one_revision() -> None:
             organization_id, proposal_id, proposal_version, demand_trace_id,
             operational_date, operational_unit_identifier,
             operational_unit_name, time_window_identifier,
+            starts_at, ends_at,
             capability_or_workload, required_quantity, proposed_quantity,
             gap_quantity, reasons_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     values = (
         "organization-one", "proposal-one", 1, "demand-trace-one",
         "2026-08-24", "unit-north", None, "morning-window",
-        "parcel-delivery", 3, 2, 1, json.dumps({"code": "shortage"}),
+        "08:00", "16:00", "parcel-delivery", 3, 2, 1,
+        json.dumps({"code": "shortage"}),
     )
     with db_session() as conn:
         conn.execute(statement, values)
     with pytest.raises(sqlite3.IntegrityError):
         with db_session() as conn:
             conn.execute(statement, values)
+
+    with db_session() as conn:
+        persisted = conn.execute(
+            """
+            SELECT starts_at, ends_at
+            FROM weekly_workforce_proposal_gaps
+            WHERE organization_id = ? AND proposal_id = ?
+            """,
+            ("organization-one", "proposal-one"),
+        ).fetchone()
+    assert (persisted["starts_at"], persisted["ends_at"]) == (
+        "08:00",
+        "16:00",
+    )
+
+
+def test_gap_time_window_bounds_accept_null() -> None:
+    _seed_revision()
+    with db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO weekly_workforce_proposal_gaps (
+                organization_id, proposal_id, proposal_version,
+                demand_trace_id, operational_date,
+                operational_unit_identifier, time_window_identifier,
+                starts_at, ends_at, capability_or_workload,
+                required_quantity, proposed_quantity, gap_quantity,
+                reasons_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "organization-one", "proposal-one", 1, "trace-null-window",
+                "2026-08-24", "unit-north", "window-unknown", None, None,
+                "parcel-delivery", 1, 0, 1, '{"code":"shortage"}',
+            ),
+        )
+
+    with db_session() as conn:
+        row = conn.execute(
+            """
+            SELECT starts_at, ends_at
+            FROM weekly_workforce_proposal_gaps
+            WHERE demand_trace_id = ?
+            """,
+            ("trace-null-window",),
+        ).fetchone()
+    assert row["starts_at"] is None
+    assert row["ends_at"] is None
 
 
 def test_explainability_ordinal_is_unique_per_trace_and_artifact() -> None:
