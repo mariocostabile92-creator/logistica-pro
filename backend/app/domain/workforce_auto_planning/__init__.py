@@ -23,6 +23,9 @@ from app.domain.workforce_auto_planning.contract_date_eligibility import (
     ContractDateEligibilityStatus,
     evaluate_contract_date_eligibility,
 )
+from app.domain.workforce_auto_planning.lower_weekly_load_preference import (
+    evaluate_lower_weekly_load_preference,
+)
 from app.domain.workforce_auto_planning.coverage_gap import (
     CoverageGap,
     CoverageGapReason,
@@ -147,6 +150,7 @@ __all__ = [
     "evaluate_approved_assignment_conflict",
     "evaluate_capability_compatibility",
     "evaluate_contract_date_eligibility",
+    "evaluate_lower_weekly_load_preference",
     "evaluate_weekly_hours_capacity",
     "evaluate_workforce_candidate_eligibility",
     "WeeklyWorkforceProposal",
