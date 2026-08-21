@@ -203,6 +203,22 @@ class SqlWeeklyWorkforceProposalRepository:
         snapshot: WeeklyPlanningInputSnapshot,
         aggregate: ComposedWeeklyWorkforceProposal,
     ) -> ComposedWeeklyWorkforceProposal:
+        with db_session() as conn:
+            return self._save_revision_with_connection(
+                conn=conn,
+                organization_id=organization_id,
+                snapshot=snapshot,
+                aggregate=aggregate,
+            )
+
+    def _save_revision_with_connection(
+        self,
+        *,
+        conn: Any,
+        organization_id: str,
+        snapshot: WeeklyPlanningInputSnapshot,
+        aggregate: ComposedWeeklyWorkforceProposal,
+    ) -> ComposedWeeklyWorkforceProposal:
         organization_id = _required_identifier(
             organization_id,
             field="organization_id",
@@ -216,31 +232,30 @@ class SqlWeeklyWorkforceProposalRepository:
         _required_identifier(proposal.proposal_id, field="proposal_id")
         _positive_version(proposal.version)
 
-        with db_session() as conn:
-            duplicate = conn.execute(
-                """
-                SELECT 1
-                FROM weekly_workforce_proposals
-                WHERE organization_id = ?
-                  AND proposal_id = ?
-                  AND version = ?
-                """,
-                (organization_id, proposal.proposal_id, proposal.version),
-            ).fetchone()
-            if duplicate is not None:
-                raise WeeklyWorkforceProposalRevisionAlreadyExistsError(
-                    "proposal revision already exists"
-                )
-
-            self._persist_or_validate_snapshot(conn, snapshot=snapshot)
-            self._insert_proposal(conn, proposal=proposal)
-            self._insert_assignments(conn, proposal=proposal, aggregate=aggregate)
-            self._insert_gaps(conn, proposal=proposal, aggregate=aggregate)
-            self._insert_explainability(
-                conn,
-                proposal=proposal,
-                aggregate=aggregate,
+        duplicate = conn.execute(
+            """
+            SELECT 1
+            FROM weekly_workforce_proposals
+            WHERE organization_id = ?
+              AND proposal_id = ?
+              AND version = ?
+            """,
+            (organization_id, proposal.proposal_id, proposal.version),
+        ).fetchone()
+        if duplicate is not None:
+            raise WeeklyWorkforceProposalRevisionAlreadyExistsError(
+                "proposal revision already exists"
             )
+
+        self._persist_or_validate_snapshot(conn, snapshot=snapshot)
+        self._insert_proposal(conn, proposal=proposal)
+        self._insert_assignments(conn, proposal=proposal, aggregate=aggregate)
+        self._insert_gaps(conn, proposal=proposal, aggregate=aggregate)
+        self._insert_explainability(
+            conn,
+            proposal=proposal,
+            aggregate=aggregate,
+        )
         return aggregate
 
     def get_revision(

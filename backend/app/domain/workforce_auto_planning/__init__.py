@@ -158,6 +158,15 @@ from app.domain.workforce_auto_planning.weekly_proposal_repository import (
     WeeklyWorkforceProposalRevisionNotFoundError,
     WeeklyWorkforceProposalSnapshotMismatchError,
 )
+from app.domain.workforce_auto_planning.weekly_proposal_event import (
+    WeeklyWorkforceProposalEvent,
+)
+from app.domain.workforce_auto_planning.weekly_proposal_event_repository import (
+    WeeklyWorkforceProposalEventAlreadyExistsError,
+    WeeklyWorkforceProposalEventOrganizationMismatchError,
+    WeeklyWorkforceProposalEventRepository,
+    WeeklyWorkforceProposalEventRepositoryError,
+)
 from app.domain.workforce_auto_planning.weekly_proposal_revision import (
     WeeklyProposalRevisionCompositionError,
     compose_next_weekly_proposal_revision,
@@ -288,6 +297,11 @@ __all__ = [
     "WeeklyWorkforceProposalRevisionAlreadyExistsError",
     "WeeklyWorkforceProposalRevisionNotFoundError",
     "WeeklyWorkforceProposalSnapshotMismatchError",
+    "WeeklyWorkforceProposalEvent",
+    "WeeklyWorkforceProposalEventAlreadyExistsError",
+    "WeeklyWorkforceProposalEventOrganizationMismatchError",
+    "WeeklyWorkforceProposalEventRepository",
+    "WeeklyWorkforceProposalEventRepositoryError",
     "WeeklyHoursCapacityEvaluation",
     "WeeklyHoursCapacityStatus",
     "WorkforceCandidateAvailabilitySnapshot",
