@@ -18,6 +18,11 @@ from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvidenceValue,
     ConstraintRemediation,
 )
+from app.domain.workforce_auto_planning.contract_date_eligibility import (
+    ContractDateEligibilityEvaluation,
+    ContractDateEligibilityStatus,
+    evaluate_contract_date_eligibility,
+)
 from app.domain.workforce_auto_planning.coverage_gap import (
     CoverageGap,
     CoverageGapReason,
@@ -99,6 +104,8 @@ __all__ = [
     "CapabilityCompatibilityReason",
     "CapabilityCompatibilityStatus",
     "ContractStateSourceKind",
+    "ContractDateEligibilityEvaluation",
+    "ContractDateEligibilityStatus",
     "ConstraintEvaluation",
     "ConstraintEvaluationCategory",
     "ConstraintEvidence",
@@ -126,6 +133,7 @@ __all__ = [
     "compute_weekly_planning_input_fingerprint",
     "evaluate_approved_assignment_conflict",
     "evaluate_capability_compatibility",
+    "evaluate_contract_date_eligibility",
     "evaluate_workforce_candidate_eligibility",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
