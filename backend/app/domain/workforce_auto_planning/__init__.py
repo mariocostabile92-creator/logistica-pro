@@ -72,6 +72,11 @@ from app.domain.workforce_auto_planning.weekly_planning_input_snapshot import (
     WorkforceCandidateAvailabilitySnapshot,
     WorkforceCandidateSnapshot,
 )
+from app.domain.workforce_auto_planning.weekly_hours_capacity import (
+    WeeklyHoursCapacityEvaluation,
+    WeeklyHoursCapacityStatus,
+    evaluate_weekly_hours_capacity,
+)
 from app.domain.workforce_auto_planning.weekly_snapshot_fingerprint import (
     compute_weekly_planning_input_fingerprint,
 )
@@ -134,11 +139,14 @@ __all__ = [
     "evaluate_approved_assignment_conflict",
     "evaluate_capability_compatibility",
     "evaluate_contract_date_eligibility",
+    "evaluate_weekly_hours_capacity",
     "evaluate_workforce_candidate_eligibility",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
     "WeeklyPlanningInputSnapshot",
     "WeeklyPlanningInputSnapshotComposer",
+    "WeeklyHoursCapacityEvaluation",
+    "WeeklyHoursCapacityStatus",
     "WorkforceCandidateAvailabilitySnapshot",
     "WorkforceCandidateSnapshot",
     "WorkforceCandidateSnapshotProvider",
