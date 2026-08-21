@@ -18,6 +18,9 @@ from app.domain.workforce_auto_planning.candidate_ranking import (
     WorkforceCandidateRankingInput,
     rank_eligible_workforce_candidates,
 )
+from app.domain.workforce_auto_planning.baseline_preference_composer import (
+    build_baseline_workforce_preference_sets,
+)
 from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvaluation,
     ConstraintEvaluationCategory,
@@ -124,6 +127,7 @@ __all__ = [
     "AssignedTimeSnapshot",
     "AssignedTimeStatus",
     "AssignedTimeUnit",
+    "build_baseline_workforce_preference_sets",
     "CandidateOperationalUnitScope",
     "CandidateOperationalUnitScopeStatus",
     "DeterministicCandidateRankingKey",
