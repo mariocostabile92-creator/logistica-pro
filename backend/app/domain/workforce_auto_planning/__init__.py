@@ -68,6 +68,18 @@ from app.domain.workforce_auto_planning.continuity_preference import (
 from app.domain.workforce_auto_planning.lower_weekly_load_preference import (
     evaluate_lower_weekly_load_preference,
 )
+from app.domain.workforce_auto_planning.locked_assignment_preservation import (
+    LockedAssignmentConflict,
+    LockedAssignmentConflictReason,
+    LockedAssignmentConflictStatus,
+    LockedAssignmentDuplicateIdentityError,
+    LockedAssignmentPreservationError,
+    LockedAssignmentPreservationSet,
+    LockedAssignmentScopeMismatchError,
+    LockedAssignmentUnknownDemandTraceError,
+    LockedDemandCoverage,
+    build_locked_assignment_preservation_set,
+)
 from app.domain.workforce_auto_planning.coverage_gap import (
     CoverageGap,
     CoverageGapReason,
@@ -182,6 +194,7 @@ __all__ = [
     "apply_dispatcher_assignment_lock",
     "apply_dispatcher_weekly_edit",
     "build_baseline_workforce_preference_sets",
+    "build_locked_assignment_preservation_set",
     "CandidateOperationalUnitScope",
     "CandidateOperationalUnitScopeStatus",
     "ComposedWeeklyWorkforceProposal",
@@ -216,6 +229,15 @@ __all__ = [
     "DispatcherWeeklyEditScopeMismatchError",
     "DispatcherWeeklyEditUnknownDemandTraceError",
     "EligibilityDecisionNotice",
+    "LockedAssignmentConflict",
+    "LockedAssignmentConflictReason",
+    "LockedAssignmentConflictStatus",
+    "LockedAssignmentDuplicateIdentityError",
+    "LockedAssignmentPreservationError",
+    "LockedAssignmentPreservationSet",
+    "LockedAssignmentScopeMismatchError",
+    "LockedAssignmentUnknownDemandTraceError",
+    "LockedDemandCoverage",
     "OperationalBufferPolicy",
     "OperationalDemand",
     "OperationalDemandProvider",
