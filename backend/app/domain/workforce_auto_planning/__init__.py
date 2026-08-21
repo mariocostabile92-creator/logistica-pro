@@ -1,3 +1,9 @@
+from app.domain.workforce_auto_planning.approved_assignment_conflict import (
+    ApprovedAssignmentConflictEvaluation,
+    ApprovedAssignmentConflictReason,
+    ApprovedAssignmentConflictStatus,
+    evaluate_approved_assignment_conflict,
+)
 from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvaluation,
     ConstraintEvaluationCategory,
@@ -70,6 +76,9 @@ from app.domain.workforce_auto_planning.workforce_eligibility_evaluator import (
 
 
 __all__ = [
+    "ApprovedAssignmentConflictEvaluation",
+    "ApprovedAssignmentConflictReason",
+    "ApprovedAssignmentConflictStatus",
     "AppliedPolicyAttribute",
     "AppliedPolicyMetadata",
     "ApprovedAssignmentSnapshot",
@@ -104,6 +113,7 @@ __all__ = [
     "WorkforcePlanningPolicyProvider",
     "WorkloadCapabilityMapping",
     "compute_weekly_planning_input_fingerprint",
+    "evaluate_approved_assignment_conflict",
     "evaluate_workforce_candidate_eligibility",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
