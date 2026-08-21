@@ -32,6 +32,15 @@ from app.domain.workforce_auto_planning.dispatcher_manual_override import (
     DispatcherManualOverride,
     DispatcherOverrideOperationType,
 )
+from app.domain.workforce_auto_planning.dispatcher_weekly_edit import (
+    DispatcherWeeklyEditAssignmentNotFoundError,
+    DispatcherWeeklyEditCommand,
+    DispatcherWeeklyEditCommandMismatchError,
+    DispatcherWeeklyEditError,
+    DispatcherWeeklyEditScopeMismatchError,
+    DispatcherWeeklyEditUnknownDemandTraceError,
+    apply_dispatcher_weekly_edit,
+)
 from app.domain.workforce_auto_planning.contract_date_eligibility import (
     ContractDateEligibilityEvaluation,
     ContractDateEligibilityStatus,
@@ -157,6 +166,7 @@ __all__ = [
     "AssignedTimeStatus",
     "AssignedTimeUnit",
     "AssignmentIdFactory",
+    "apply_dispatcher_weekly_edit",
     "build_baseline_workforce_preference_sets",
     "CandidateOperationalUnitScope",
     "CandidateOperationalUnitScopeStatus",
@@ -178,6 +188,12 @@ __all__ = [
     "CurrentMemberContractStateSnapshot",
     "DispatcherManualOverride",
     "DispatcherOverrideOperationType",
+    "DispatcherWeeklyEditAssignmentNotFoundError",
+    "DispatcherWeeklyEditCommand",
+    "DispatcherWeeklyEditCommandMismatchError",
+    "DispatcherWeeklyEditError",
+    "DispatcherWeeklyEditScopeMismatchError",
+    "DispatcherWeeklyEditUnknownDemandTraceError",
     "EligibilityDecisionNotice",
     "OperationalBufferPolicy",
     "OperationalDemand",
