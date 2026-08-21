@@ -28,6 +28,10 @@ from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvidenceValue,
     ConstraintRemediation,
 )
+from app.domain.workforce_auto_planning.dispatcher_manual_override import (
+    DispatcherManualOverride,
+    DispatcherOverrideOperationType,
+)
 from app.domain.workforce_auto_planning.contract_date_eligibility import (
     ContractDateEligibilityEvaluation,
     ContractDateEligibilityStatus,
@@ -172,6 +176,8 @@ __all__ = [
     "CoverageGap",
     "CoverageGapReason",
     "CurrentMemberContractStateSnapshot",
+    "DispatcherManualOverride",
+    "DispatcherOverrideOperationType",
     "EligibilityDecisionNotice",
     "OperationalBufferPolicy",
     "OperationalDemand",
