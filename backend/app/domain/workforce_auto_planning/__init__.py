@@ -45,6 +45,11 @@ from app.domain.workforce_auto_planning.planning_operational_unit_binding import
     PlanningOperationalUnitBinding,
     PlanningOperationalUnitBindingProvider,
 )
+from app.domain.workforce_auto_planning.planning_preference import (
+    PlanningPreferenceEvaluation,
+    PlanningPreferenceOutcome,
+    WorkforcePlanningPreferenceSet,
+)
 from app.domain.workforce_auto_planning.proposed_shift_assignment import (
     ProposedAssignmentReason,
     ProposedShiftAssignment,
@@ -124,6 +129,8 @@ __all__ = [
     "OperationalDemand",
     "OperationalDemandProvider",
     "PlanningPriorityOrPreference",
+    "PlanningPreferenceEvaluation",
+    "PlanningPreferenceOutcome",
     "PlanningOperationalUnitBinding",
     "PlanningOperationalUnitBindingProvider",
     "PlanningRuleDescriptor",
@@ -134,6 +141,7 @@ __all__ = [
     "ProposedShiftAssignmentStatus",
     "ShiftCatalogueEntry",
     "WorkforcePlanningPolicyProvider",
+    "WorkforcePlanningPreferenceSet",
     "WorkloadCapabilityMapping",
     "compute_weekly_planning_input_fingerprint",
     "evaluate_approved_assignment_conflict",
