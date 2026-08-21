@@ -23,6 +23,9 @@ from app.domain.workforce_auto_planning.contract_date_eligibility import (
     ContractDateEligibilityStatus,
     evaluate_contract_date_eligibility,
 )
+from app.domain.workforce_auto_planning.existing_assignment_stability_preference import (
+    evaluate_existing_assignment_stability_preference,
+)
 from app.domain.workforce_auto_planning.continuity_preference import (
     evaluate_continuity_preference,
 )
@@ -153,6 +156,7 @@ __all__ = [
     "evaluate_approved_assignment_conflict",
     "evaluate_capability_compatibility",
     "evaluate_contract_date_eligibility",
+    "evaluate_existing_assignment_stability_preference",
     "evaluate_continuity_preference",
     "evaluate_lower_weekly_load_preference",
     "evaluate_weekly_hours_capacity",
