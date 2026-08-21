@@ -254,6 +254,7 @@ def compose_weekly_workforce_proposal(
         period_end=snapshot.period_end,
         operational_unit=snapshot.operational_unit,
         version=version,
+        input_snapshot_id=snapshot.snapshot_id,
         input_fingerprint=snapshot.fingerprint,
         policy_set_identifier=snapshot.policy_set_identifier,
         policy_set_version=snapshot.policy_set_version,

@@ -22,7 +22,8 @@ class WeeklyWorkforceProposal(BaseModel):
     period_start: CalendarDate
     period_end: CalendarDate
     operational_unit: OperationalUnit
-    version: int = Field(gt=0)
+    version: int = Field(gt=0, strict=True)
+    input_snapshot_id: str = Field(min_length=1)
     input_fingerprint: str = Field(min_length=1)
     policy_set_identifier: str = Field(min_length=1)
     policy_set_version: str = Field(min_length=1)

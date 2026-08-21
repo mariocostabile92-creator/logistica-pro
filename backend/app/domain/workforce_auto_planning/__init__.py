@@ -51,6 +51,9 @@ from app.domain.workforce_auto_planning.operational_demand import (
     AppliedPolicyMetadata,
     OperationalDemand,
 )
+from app.domain.workforce_auto_planning.operational_demand_trace import (
+    compute_operational_demand_trace_id,
+)
 from app.domain.workforce_auto_planning.planning_policy import (
     OperationalBufferPolicy,
     PlanningPriorityOrPreference,
@@ -179,6 +182,7 @@ __all__ = [
     "WorkforcePlanningPreferenceSet",
     "WorkloadCapabilityMapping",
     "compute_weekly_planning_input_fingerprint",
+    "compute_operational_demand_trace_id",
     "compose_weekly_workforce_proposal",
     "evaluate_approved_assignment_conflict",
     "evaluate_capability_compatibility",

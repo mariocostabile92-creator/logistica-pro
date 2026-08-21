@@ -16,7 +16,7 @@ from app.domain.workforce_auto_planning import (
 
 def _proposal(**overrides: object) -> WeeklyWorkforceProposal:
     values: dict[str, object] = {
-        "proposal_id": "proposal-2026-w35-v1",
+        "proposal_id": "proposal-2026-w35",
         "organization_id": "organization-one",
         "period_start": date(2026, 8, 24),
         "period_end": date(2026, 8, 30),
@@ -25,6 +25,7 @@ def _proposal(**overrides: object) -> WeeklyWorkforceProposal:
             name="North depot",
         ),
         "version": 1,
+        "input_snapshot_id": "snapshot-2026-w35",
         "input_fingerprint": "input-snapshot-fingerprint",
         "policy_set_identifier": "standard-weekly-policy",
         "policy_set_version": "v1",
@@ -38,11 +39,12 @@ def _proposal(**overrides: object) -> WeeklyWorkforceProposal:
 def test_valid_weekly_proposal_can_be_created() -> None:
     proposal = _proposal()
 
-    assert proposal.proposal_id == "proposal-2026-w35-v1"
+    assert proposal.proposal_id == "proposal-2026-w35"
     assert proposal.period_start == date(2026, 8, 24)
     assert proposal.period_end == date(2026, 8, 30)
     assert proposal.operational_unit.external_identifier == "unit-north"
     assert proposal.status is WeeklyWorkforceProposalStatus.DRAFT
+    assert proposal.input_snapshot_id == "snapshot-2026-w35"
 
 
 def test_organization_identity_keeps_proposals_distinct() -> None:
@@ -64,8 +66,8 @@ def test_period_end_cannot_precede_period_start() -> None:
         )
 
 
-@pytest.mark.parametrize("version", (0, -1))
-def test_version_must_be_positive(version: int) -> None:
+@pytest.mark.parametrize("version", (0, -1, True))
+def test_version_must_be_strict_positive(version: object) -> None:
     with pytest.raises(ValidationError):
         _proposal(version=version)
 
@@ -75,6 +77,7 @@ def test_version_must_be_positive(version: int) -> None:
     (
         "proposal_id",
         "organization_id",
+        "input_snapshot_id",
         "input_fingerprint",
         "policy_set_identifier",
         "policy_set_version",
@@ -90,6 +93,51 @@ def test_operational_unit_cannot_be_empty() -> None:
         _proposal(
             operational_unit=OperationalUnit(external_identifier=" ")
         )
+
+
+def test_input_snapshot_id_is_required() -> None:
+    values = _proposal().model_dump()
+    values.pop("input_snapshot_id")
+
+    with pytest.raises(ValidationError):
+        WeeklyWorkforceProposal.model_validate(values)
+
+
+def test_input_fingerprint_remains_required() -> None:
+    values = _proposal().model_dump()
+    values.pop("input_fingerprint")
+
+    with pytest.raises(ValidationError):
+        WeeklyWorkforceProposal.model_validate(values)
+
+
+def test_same_proposal_identity_supports_distinct_versions() -> None:
+    first = _proposal(version=1)
+    second = _proposal(version=2)
+
+    assert first.organization_id == second.organization_id
+    assert first.proposal_id == second.proposal_id
+    assert first.version != second.version
+
+
+def test_distinct_proposal_ids_can_share_scope_and_period() -> None:
+    first = _proposal(proposal_id="proposal-one")
+    second = _proposal(proposal_id="proposal-two")
+
+    assert first.organization_id == second.organization_id
+    assert first.operational_unit == second.operational_unit
+    assert first.period_start == second.period_start
+    assert first.period_end == second.period_end
+    assert first.proposal_id != second.proposal_id
+
+
+def test_proposal_contract_has_no_currentness_fields() -> None:
+    fields = WeeklyWorkforceProposal.model_fields
+
+    assert "is_current" not in fields
+    assert "current" not in fields
+    assert "previous_version" not in fields
+    assert "supersedes" not in fields
 
 
 @pytest.mark.parametrize("status", tuple(WeeklyWorkforceProposalStatus))

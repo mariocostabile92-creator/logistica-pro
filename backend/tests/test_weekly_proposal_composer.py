@@ -160,9 +160,26 @@ def test_valid_inputs_produce_generated_proposal_with_preserved_header():
     assert proposal.period_start == snapshot.period_start
     assert proposal.period_end == snapshot.period_end
     assert proposal.operational_unit == snapshot.operational_unit
+    assert proposal.input_snapshot_id == snapshot.snapshot_id
     assert proposal.input_fingerprint == snapshot.fingerprint
     assert proposal.policy_set_identifier == snapshot.policy_set_identifier
     assert proposal.policy_set_version == snapshot.policy_set_version
+
+
+def test_snapshot_reference_changes_only_with_snapshot_id():
+    first_snapshot = _snapshot()
+    second_snapshot = first_snapshot.model_copy(
+        update={"snapshot_id": "snapshot-two"}
+    )
+
+    first = _compose(snapshot=first_snapshot).proposal
+    second = _compose(snapshot=second_snapshot).proposal
+
+    assert first.input_snapshot_id == "snapshot-one"
+    assert second.input_snapshot_id == "snapshot-two"
+    assert first.input_snapshot_id != second.input_snapshot_id
+    assert first.input_fingerprint == second.input_fingerprint
+    assert first.input_snapshot_id != first.input_fingerprint
 
 
 def test_generation_content_and_order_are_preserved_without_copying_semantics():
