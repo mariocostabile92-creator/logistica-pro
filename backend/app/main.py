@@ -76,6 +76,9 @@ from app.repositories.planning_confirmation_repository import (
 from app.repositories.planning_publication_repository import (
     init_schema as init_planning_publication_schema,
 )
+from app.repositories.weekly_workforce_proposal_schema import (
+    init_schema as init_weekly_workforce_proposal_schema,
+)
 from app.workspace.repository import init_schema as init_workspace_schema
 from app.workspace.router import router as workspace_router
 
@@ -111,6 +114,7 @@ async def lifespan(app: FastAPI):
         init_planning_draft_schema()
         init_planning_confirmation_schema()
         init_planning_publication_schema()
+        init_weekly_workforce_proposal_schema()
         init_authority_schema()
         init_execution_intent_schema()
         init_execution_attempt_schema()
