@@ -1,3 +1,7 @@
+from app.domain.workforce_auto_planning.approved_assignment_conflict import (
+    ApprovedAssignmentConflictStatus,
+    evaluate_approved_assignment_conflict,
+)
 from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvaluation,
     ConstraintEvaluationCategory,
@@ -175,6 +179,94 @@ def _daily_callability_evaluation(
     )
 
 
+def _approved_assignment_conflict_evaluation(
+    candidate: WorkforceCandidateSnapshot,
+    demand: OperationalDemand,
+) -> ConstraintEvaluation:
+    assignments = tuple(sorted(
+        candidate.already_approved_assignments,
+        key=lambda assignment: (
+            assignment.date,
+            assignment.assignment_reference,
+            assignment.time_window.external_identifier,
+            assignment.shift_identifier or "",
+        ),
+    ))
+    results = tuple(
+        (
+            assignment,
+            evaluate_approved_assignment_conflict(
+                assignment=assignment,
+                demand=demand,
+            ),
+        )
+        for assignment in assignments
+    )
+    statuses = {result.status for _assignment, result in results}
+    if ApprovedAssignmentConflictStatus.CONFLICT in statuses:
+        aggregate_status = ApprovedAssignmentConflictStatus.CONFLICT
+        passed = False
+        message = "An approved assignment has a confirmed time conflict."
+    elif ApprovedAssignmentConflictStatus.UNKNOWN in statuses:
+        aggregate_status = ApprovedAssignmentConflictStatus.UNKNOWN
+        passed = False
+        message = (
+            "Approved assignment conflict status cannot be determined."
+        )
+    else:
+        aggregate_status = ApprovedAssignmentConflictStatus.NO_CONFLICT
+        passed = True
+        message = (
+            "Approved assignments do not conflict with the demand."
+            if results
+            else "Candidate has no approved assignments."
+        )
+
+    evidence = [
+        ConstraintEvidence(
+            key="approved-assignment-count",
+            value=len(results),
+        ),
+        ConstraintEvidence(
+            key="aggregate-conflict-status",
+            value=aggregate_status.value,
+        ),
+    ]
+    for index, (assignment, result) in enumerate(results, start=1):
+        prefix = f"approved-assignment-{index}"
+        evidence.extend(
+            (
+                ConstraintEvidence(
+                    key=f"{prefix}:reference",
+                    value=assignment.assignment_reference,
+                ),
+                ConstraintEvidence(
+                    key=f"{prefix}:status",
+                    value=result.status.value,
+                ),
+                ConstraintEvidence(
+                    key=f"{prefix}:reason-code",
+                    value=result.reason.code,
+                ),
+            )
+        )
+        evidence.extend(
+            ConstraintEvidence(
+                key=f"{prefix}:{item.key}",
+                value=item.value,
+            )
+            for item in result.evidence
+        )
+    return ConstraintEvaluation(
+        code="approved-assignment-conflict",
+        category=ConstraintEvaluationCategory.HARD_CONSTRAINT,
+        passed=passed,
+        message=message,
+        evidence=tuple(evidence),
+        rule_origin=_RULE_ORIGIN,
+    )
+
+
 def evaluate_workforce_candidate_eligibility(
     *,
     candidate: WorkforceCandidateSnapshot,
@@ -184,6 +276,7 @@ def evaluate_workforce_candidate_eligibility(
         _organization_evaluation(candidate, demand),
         _operational_unit_evaluation(candidate),
         _daily_callability_evaluation(candidate, demand),
+        _approved_assignment_conflict_evaluation(candidate, demand),
     )
     exclusion_reasons = tuple(
         EligibilityDecisionNotice(

@@ -11,6 +11,7 @@ from app.domain.core_language import (
 )
 from app.domain.workforce_auto_planning import (
     AppliedPolicyMetadata,
+    ApprovedAssignmentSnapshot,
     AssignedTimeSnapshot,
     AssignedTimeStatus,
     AssignedTimeUnit,
@@ -78,6 +79,7 @@ def _candidate(
     callable_value: bool = True,
     observed_state: str | None = "available",
     include_readiness: bool = True,
+    assignments: tuple[ApprovedAssignmentSnapshot, ...] = (),
 ) -> WorkforceCandidateSnapshot:
     availability = (
         (
@@ -111,7 +113,7 @@ def _candidate(
         ),
         operational_unit_scope=_unit_scope(unit_status),
         recent_consecutivity=99,
-        already_approved_assignments=(),
+        already_approved_assignments=assignments,
         already_assigned_minutes_or_hours=AssignedTimeSnapshot(
             status=AssignedTimeStatus.KNOWN,
             value=Decimal("0"),
@@ -128,6 +130,36 @@ def _candidate(
     )
 
 
+def _assignment(
+    reference: str,
+    *,
+    operation_date: date = OPERATION_DATE,
+    start: str | None = "12:00",
+    end: str | None = "16:00",
+) -> ApprovedAssignmentSnapshot:
+    assigned_time = (
+        AssignedTimeSnapshot(
+            status=AssignedTimeStatus.KNOWN,
+            value=Decimal("240"),
+            unit=AssignedTimeUnit.MINUTES,
+        )
+        if start is not None and end is not None
+        else AssignedTimeSnapshot(status=AssignedTimeStatus.UNKNOWN)
+    )
+    return ApprovedAssignmentSnapshot(
+        assignment_reference=reference,
+        date=operation_date,
+        operational_unit=UNIT,
+        shift_identifier="generic-shift",
+        time_window=TimeWindow(
+            external_identifier=f"{reference}-window",
+            starts_at=start,
+            ends_at=end,
+        ),
+        assigned_time=assigned_time,
+    )
+
+
 def _evaluate(**candidate_updates):
     return evaluate_workforce_candidate_eligibility(
         candidate=_candidate(**candidate_updates),
@@ -139,7 +171,7 @@ def _evaluation(decision, code: str) -> ConstraintEvaluation:
     return next(item for item in decision.evaluations if item.code == code)
 
 
-def test_all_three_hard_constraints_pass():
+def test_all_four_hard_constraints_pass():
     candidate = _candidate()
     demand = _demand()
 
@@ -149,6 +181,7 @@ def test_all_three_hard_constraints_pass():
     )
 
     assert decision.eligible is True
+    assert len(decision.evaluations) == 4
     assert all(item.passed for item in decision.evaluations)
     assert decision.exclusion_reasons == ()
     assert decision.warnings == ()
@@ -226,6 +259,124 @@ def test_missing_daily_readiness_fails_closed():
     assert evidence["readiness-present"] is False
 
 
+def test_no_approved_assignment_makes_fourth_constraint_pass():
+    decision = _evaluate(assignments=())
+    conflict = _evaluation(decision, "approved-assignment-conflict")
+
+    assert conflict.passed is True
+    assert conflict.message == "Candidate has no approved assignments."
+    assert "approved-assignment-conflict" not in {
+        item.code for item in decision.exclusion_reasons
+    }
+
+
+def test_approved_assignment_on_another_date_passes():
+    decision = _evaluate(
+        assignments=(
+            _assignment(
+                "other-date",
+                operation_date=date(2026, 8, 23),
+                start="08:00",
+                end="12:00",
+            ),
+        )
+    )
+
+    assert _evaluation(
+        decision, "approved-assignment-conflict"
+    ).passed is True
+
+
+def test_non_overlapping_approved_assignment_passes():
+    decision = _evaluate(
+        assignments=(_assignment("no-overlap", start="12:00", end="16:00"),)
+    )
+
+    assert _evaluation(
+        decision, "approved-assignment-conflict"
+    ).passed is True
+
+
+def test_confirmed_overlap_fails_with_one_exclusion_reason():
+    decision = _evaluate(
+        assignments=(_assignment("overlap", start="10:00", end="14:00"),)
+    )
+    conflict = _evaluation(decision, "approved-assignment-conflict")
+
+    assert decision.eligible is False
+    assert conflict.passed is False
+    assert "confirmed time conflict" in conflict.message
+    assert [
+        item.code
+        for item in decision.exclusion_reasons
+        if item.code == "approved-assignment-conflict"
+    ] == ["approved-assignment-conflict"]
+
+
+def test_unknown_conflict_status_fails_closed():
+    decision = _evaluate(
+        assignments=(_assignment("unknown", start=None, end=None),)
+    )
+    conflict = _evaluation(decision, "approved-assignment-conflict")
+    evidence = {item.key: item.value for item in conflict.evidence}
+
+    assert decision.eligible is False
+    assert conflict.passed is False
+    assert "cannot be determined" in conflict.message
+    assert evidence["aggregate-conflict-status"] == "UNKNOWN"
+
+
+def test_confirmed_conflict_takes_precedence_over_unknown():
+    decision = _evaluate(
+        assignments=(
+            _assignment("unknown", start=None, end=None),
+            _assignment("conflict", start="10:00", end="14:00"),
+        )
+    )
+    conflict = _evaluation(decision, "approved-assignment-conflict")
+    evidence = {item.key: item.value for item in conflict.evidence}
+
+    assert conflict.passed is False
+    assert evidence["aggregate-conflict-status"] == "CONFLICT"
+    assert "confirmed time conflict" in conflict.message
+    assert {value for key, value in evidence.items() if key.endswith(":status")} == {
+        "CONFLICT",
+        "UNKNOWN",
+    }
+
+
+def test_multiple_no_conflict_assignments_pass():
+    decision = _evaluate(
+        assignments=(
+            _assignment("later", start="12:00", end="16:00"),
+            _assignment(
+                "other-date",
+                operation_date=date(2026, 8, 23),
+                start="08:00",
+                end="12:00",
+            ),
+        )
+    )
+
+    assert decision.eligible is True
+    assert _evaluation(
+        decision, "approved-assignment-conflict"
+    ).passed is True
+
+
+def test_callability_and_conflict_failures_produce_two_exclusion_reasons():
+    decision = _evaluate(
+        callable_value=False,
+        observed_state="rest",
+        assignments=(_assignment("conflict", start="10:00", end="14:00"),),
+    )
+
+    assert [item.code for item in decision.exclusion_reasons] == [
+        "daily-callability",
+        "approved-assignment-conflict",
+    ]
+
+
 def test_two_simultaneous_failures_produce_two_exclusion_reasons():
     decision = _evaluate(
         organization_id="organization-two",
@@ -252,13 +403,14 @@ def test_three_failures_produce_three_exclusion_reasons():
     ]
 
 
-def test_evaluations_are_always_three_hard_constraints_in_stable_order():
+def test_evaluations_are_always_four_hard_constraints_in_stable_order():
     decision = _evaluate(include_readiness=False)
 
     assert [item.code for item in decision.evaluations] == [
         "organization-match",
         "operational-unit-match",
         "daily-callability",
+        "approved-assignment-conflict",
     ]
     assert all(
         item.category == ConstraintEvaluationCategory.HARD_CONSTRAINT
@@ -310,11 +462,14 @@ def test_evaluator_has_no_out_of_scope_rules_or_dependencies():
     forbidden_fragments = (
         "candidate.capabilities",
         "recent_consecutivity",
-        "already_approved_assignments",
         "applicable_contract_state",
         "plugins.workforce",
         "repository",
         "sqlalchemy",
         "fastapi",
+        "time.fromisoformat",
+        ".starts_at",
+        ".ends_at",
     )
     assert all(fragment not in source for fragment in forbidden_fragments)
+    assert source.count("evaluate_approved_assignment_conflict(") == 1
