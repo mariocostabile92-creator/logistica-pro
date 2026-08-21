@@ -239,7 +239,7 @@ def test_output_is_deterministic_and_immutable():
         first.evidence[0] = first.evidence[0]
 
 
-def test_module_is_pure_neutral_and_not_integrated_into_evaluator():
+def test_module_is_pure_and_neutral():
     domain_path = (
         Path(__file__).resolve().parents[1]
         / "app"
@@ -249,10 +249,6 @@ def test_module_is_pure_neutral_and_not_integrated_into_evaluator():
     source = (domain_path / "weekly_hours_capacity.py").read_text(
         encoding="utf-8"
     ).casefold()
-    evaluator_source = (
-        domain_path / "workforce_eligibility_evaluator.py"
-    ).read_text(encoding="utf-8").casefold()
-
     forbidden_fragments = (
         "amazon",
         "dsp",
@@ -271,4 +267,3 @@ def test_module_is_pure_neutral_and_not_integrated_into_evaluator():
         "scoring",
     )
     assert all(fragment not in source for fragment in forbidden_fragments)
-    assert "evaluate_weekly_hours_capacity" not in evaluator_source

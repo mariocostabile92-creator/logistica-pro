@@ -97,6 +97,8 @@ def _candidate(
     capabilities: tuple[str, ...] = ("uninterpreted-capability",),
     contract_start: date | None = None,
     contract_end: date | None = None,
+    weekly_hours: Decimal | None = Decimal("40"),
+    assigned_time: AssignedTimeSnapshot | None = None,
 ) -> WorkforceCandidateSnapshot:
     availability = (
         (
@@ -127,16 +129,20 @@ def _candidate(
             employment_type="uninterpreted-contract",
             contract_start=contract_start,
             contract_end=contract_end,
-            weekly_hours=Decimal("40"),
+            weekly_hours=weekly_hours,
             is_reserve=False,
         ),
         operational_unit_scope=_unit_scope(unit_status),
         recent_consecutivity=99,
         already_approved_assignments=assignments,
-        already_assigned_minutes_or_hours=AssignedTimeSnapshot(
-            status=AssignedTimeStatus.KNOWN,
-            value=Decimal("0"),
-            unit=AssignedTimeUnit.MINUTES,
+        already_assigned_minutes_or_hours=(
+            assigned_time
+            if assigned_time is not None
+            else AssignedTimeSnapshot(
+                status=AssignedTimeStatus.KNOWN,
+                value=Decimal("0"),
+                unit=AssignedTimeUnit.MINUTES,
+            )
         ),
         evidence=(
             ConstraintEvidence(
@@ -184,11 +190,12 @@ def _evaluate(
     capability_mappings: tuple[
         WorkloadCapabilityMapping, ...
     ] = CAPABILITY_MAPPINGS,
+    demand: OperationalDemand | None = None,
     **candidate_updates,
 ):
     return evaluate_workforce_candidate_eligibility(
         candidate=_candidate(**candidate_updates),
-        demand=_demand(),
+        demand=demand if demand is not None else _demand(),
         capability_mappings=capability_mappings,
     )
 
@@ -197,7 +204,7 @@ def _evaluation(decision, code: str) -> ConstraintEvaluation:
     return next(item for item in decision.evaluations if item.code == code)
 
 
-def test_all_six_hard_constraints_pass():
+def test_all_seven_hard_constraints_pass():
     candidate = _candidate()
     demand = _demand()
 
@@ -208,7 +215,7 @@ def test_all_six_hard_constraints_pass():
     )
 
     assert decision.eligible is True
-    assert len(decision.evaluations) == 6
+    assert len(decision.evaluations) == 7
     assert all(item.passed for item in decision.evaluations)
     assert decision.exclusion_reasons == ()
     assert decision.warnings == ()
@@ -539,6 +546,97 @@ def test_contract_date_integration_does_not_change_first_five_constraints():
     assert all(item.passed for item in eligible.evaluations[:5])
 
 
+def test_sufficient_weekly_capacity_makes_seventh_constraint_pass():
+    decision = _evaluate()
+    capacity = _evaluation(decision, "weekly-hours-capacity")
+    evidence = {item.key: item.value for item in capacity.evidence}
+
+    assert decision.eligible is True
+    assert capacity.passed is True
+    assert evidence["weekly-hours-capacity-status"] == "SUFFICIENT"
+    assert "weekly-hours-capacity" not in {
+        item.code for item in decision.exclusion_reasons
+    }
+
+
+def test_insufficient_weekly_capacity_fails_with_one_exclusion_reason():
+    decision = _evaluate(
+        assigned_time=AssignedTimeSnapshot(
+            status=AssignedTimeStatus.KNOWN,
+            value=Decimal("2220"),
+            unit=AssignedTimeUnit.MINUTES,
+        )
+    )
+    capacity = _evaluation(decision, "weekly-hours-capacity")
+    evidence = {item.key: item.value for item in capacity.evidence}
+
+    assert decision.eligible is False
+    assert capacity.passed is False
+    assert evidence["weekly-hours-capacity-status"] == "INSUFFICIENT"
+    assert evidence["weekly-hours-capacity-reason-code"] == (
+        "weekly-hours-capacity-insufficient"
+    )
+    assert [item.code for item in decision.exclusion_reasons] == [
+        "weekly-hours-capacity"
+    ]
+
+
+def test_unknown_weekly_hours_fail_closed():
+    decision = _evaluate(weekly_hours=None)
+    capacity = _evaluation(decision, "weekly-hours-capacity")
+    evidence = {item.key: item.value for item in capacity.evidence}
+
+    assert decision.eligible is False
+    assert capacity.passed is False
+    assert evidence["weekly-hours-capacity-status"] == "UNKNOWN"
+    assert evidence["weekly-hours-capacity-reason-code"] == (
+        "weekly-hours-not-defined"
+    )
+
+
+def test_unknown_assigned_time_fails_closed():
+    decision = _evaluate(
+        assigned_time=AssignedTimeSnapshot(status=AssignedTimeStatus.UNKNOWN)
+    )
+    capacity = _evaluation(decision, "weekly-hours-capacity")
+
+    assert decision.eligible is False
+    assert capacity.passed is False
+    assert capacity.message == "Assigned time is not authoritatively known."
+
+
+def test_unknown_demand_duration_fails_closed():
+    demand = _demand().model_copy(
+        update={
+            "time_window": TimeWindow(
+                external_identifier="unknown-window",
+                starts_at=None,
+                ends_at=None,
+            )
+        }
+    )
+    decision = _evaluate(demand=demand)
+    capacity = _evaluation(decision, "weekly-hours-capacity")
+
+    assert decision.eligible is False
+    assert capacity.passed is False
+    assert capacity.message == "Demand duration cannot be determined."
+
+
+def test_weekly_capacity_integration_does_not_change_first_six_constraints():
+    sufficient = _evaluate()
+    insufficient = _evaluate(
+        assigned_time=AssignedTimeSnapshot(
+            status=AssignedTimeStatus.KNOWN,
+            value=Decimal("2220"),
+            unit=AssignedTimeUnit.MINUTES,
+        )
+    )
+
+    assert sufficient.evaluations[:6] == insufficient.evaluations[:6]
+    assert all(item.passed for item in sufficient.evaluations[:6])
+
+
 def test_two_simultaneous_failures_produce_two_exclusion_reasons():
     decision = _evaluate(
         organization_id="organization-two",
@@ -565,7 +663,7 @@ def test_three_failures_produce_three_exclusion_reasons():
     ]
 
 
-def test_evaluations_are_always_six_hard_constraints_in_stable_order():
+def test_evaluations_are_always_seven_hard_constraints_in_stable_order():
     decision = _evaluate(include_readiness=False)
 
     assert [item.code for item in decision.evaluations] == [
@@ -575,6 +673,7 @@ def test_evaluations_are_always_six_hard_constraints_in_stable_order():
         "approved-assignment-conflict",
         "capability-compatibility",
         "contract-date-validity",
+        "weekly-hours-capacity",
     ]
     assert all(
         item.category == ConstraintEvaluationCategory.HARD_CONSTRAINT
@@ -635,7 +734,7 @@ def test_evaluator_has_no_out_of_scope_rules_or_dependencies():
         "time.fromisoformat",
         ".starts_at",
         ".ends_at",
-        "weekly_hours",
+        "applicable_contract_state.weekly_hours",
         "employment_type",
         "is_reserve",
     )
@@ -675,6 +774,26 @@ def test_contract_date_integration_reuses_a5a_without_new_contract_rules():
         "contract_end",
         "part-time",
         "full-time",
+        "ranking",
+        "scoring",
+    )
+    assert all(fragment not in source for fragment in forbidden_fragments)
+
+
+def test_weekly_capacity_integration_reuses_a6a_without_new_capacity_rules():
+    source = inspect.getsource(
+        evaluator_module._weekly_hours_capacity_evaluation
+    ).casefold()
+
+    assert source.count("evaluate_weekly_hours_capacity(") == 1
+    forbidden_fragments = (
+        "overtime",
+        "employment_type",
+        "is_reserve",
+        "part-time",
+        "full-time",
+        "minimum_rest",
+        "daily_hours",
         "ranking",
         "scoring",
     )

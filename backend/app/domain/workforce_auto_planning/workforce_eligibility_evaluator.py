@@ -25,6 +25,10 @@ from app.domain.workforce_auto_planning.weekly_planning_input_snapshot import (
     CandidateOperationalUnitScopeStatus,
     WorkforceCandidateSnapshot,
 )
+from app.domain.workforce_auto_planning.weekly_hours_capacity import (
+    WeeklyHoursCapacityStatus,
+    evaluate_weekly_hours_capacity,
+)
 from app.domain.workforce_auto_planning.workforce_eligibility_decision import (
     EligibilityDecisionNotice,
     WorkforceEligibilityDecision,
@@ -338,6 +342,36 @@ def _contract_date_validity_evaluation(
     )
 
 
+def _weekly_hours_capacity_evaluation(
+    candidate: WorkforceCandidateSnapshot,
+    demand: OperationalDemand,
+) -> ConstraintEvaluation:
+    result = evaluate_weekly_hours_capacity(
+        contract_state=candidate.applicable_contract_state,
+        assigned_time=candidate.already_assigned_minutes_or_hours,
+        demand=demand,
+    )
+    evidence = (
+        ConstraintEvidence(
+            key="weekly-hours-capacity-status",
+            value=result.status.value,
+        ),
+        ConstraintEvidence(
+            key="weekly-hours-capacity-reason-code",
+            value=result.reason.code,
+        ),
+        *result.evidence,
+    )
+    return ConstraintEvaluation(
+        code="weekly-hours-capacity",
+        category=ConstraintEvaluationCategory.HARD_CONSTRAINT,
+        passed=result.status == WeeklyHoursCapacityStatus.SUFFICIENT,
+        message=result.reason.message,
+        evidence=evidence,
+        rule_origin=_RULE_ORIGIN,
+    )
+
+
 def evaluate_workforce_candidate_eligibility(
     *,
     candidate: WorkforceCandidateSnapshot,
@@ -355,6 +389,7 @@ def evaluate_workforce_candidate_eligibility(
             capability_mappings,
         ),
         _contract_date_validity_evaluation(candidate, demand),
+        _weekly_hours_capacity_evaluation(candidate, demand),
     )
     exclusion_reasons = tuple(
         EligibilityDecisionNotice(
