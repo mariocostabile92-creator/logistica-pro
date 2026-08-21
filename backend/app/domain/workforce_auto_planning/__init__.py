@@ -96,6 +96,11 @@ from app.domain.workforce_auto_planning.weekly_planning_input_snapshot import (
     WorkforceCandidateAvailabilitySnapshot,
     WorkforceCandidateSnapshot,
 )
+from app.domain.workforce_auto_planning.weekly_proposal_generator import (
+    AssignmentIdFactory,
+    WeeklyProposalGenerationResult,
+    generate_weekly_proposal_baseline,
+)
 from app.domain.workforce_auto_planning.weekly_hours_capacity import (
     WeeklyHoursCapacityEvaluation,
     WeeklyHoursCapacityStatus,
@@ -127,6 +132,7 @@ __all__ = [
     "AssignedTimeSnapshot",
     "AssignedTimeStatus",
     "AssignedTimeUnit",
+    "AssignmentIdFactory",
     "build_baseline_workforce_preference_sets",
     "CandidateOperationalUnitScope",
     "CandidateOperationalUnitScopeStatus",
@@ -180,6 +186,7 @@ __all__ = [
     "WeeklyWorkforceProposalStatus",
     "WeeklyPlanningInputSnapshot",
     "WeeklyPlanningInputSnapshotComposer",
+    "WeeklyProposalGenerationResult",
     "WeeklyHoursCapacityEvaluation",
     "WeeklyHoursCapacityStatus",
     "WorkforceCandidateAvailabilitySnapshot",
@@ -187,4 +194,5 @@ __all__ = [
     "WorkforceCandidateSnapshotProvider",
     "WorkforceCandidateRankingInput",
     "WorkforceEligibilityDecision",
+    "generate_weekly_proposal_baseline",
 ]
