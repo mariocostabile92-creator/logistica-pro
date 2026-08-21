@@ -184,6 +184,12 @@ class WeeklyPlanningInputSnapshot(_ImmutableSnapshotModel):
         if not self.operational_unit.external_identifier.strip():
             raise ValueError("operational_unit cannot be empty")
 
+        demand_identities: set[
+            tuple[str, str, CalendarDate, str, str, str]
+        ] = set()
+        time_window_definitions: dict[
+            str, tuple[str | None, str | None]
+        ] = {}
         for demand in self.demands:
             if demand.organization_id != self.organization_id:
                 raise ValueError(
@@ -198,6 +204,37 @@ class WeeklyPlanningInputSnapshot(_ImmutableSnapshotModel):
                 )
             if not self.period_start <= demand.date <= self.period_end:
                 raise ValueError("all demands must fall within the snapshot period")
+
+            time_window_identifier = demand.time_window.external_identifier
+            time_window_definition = (
+                demand.time_window.starts_at,
+                demand.time_window.ends_at,
+            )
+            if (
+                time_window_identifier in time_window_definitions
+                and time_window_definitions[time_window_identifier]
+                != time_window_definition
+            ):
+                raise ValueError(
+                    "the same time window identifier must have one consistent "
+                    "definition within the snapshot"
+                )
+            time_window_definitions[time_window_identifier] = time_window_definition
+
+            demand_identity = (
+                demand.organization_id,
+                demand.operational_unit.external_identifier,
+                demand.date,
+                time_window_identifier,
+                demand.capability_or_workload,
+                demand.source,
+            )
+            if demand_identity in demand_identities:
+                raise ValueError(
+                    "operational demand logical identity must be unique within "
+                    "the snapshot"
+                )
+            demand_identities.add(demand_identity)
 
         for candidate in self.workforce_candidates:
             if candidate.organization_id != self.organization_id:

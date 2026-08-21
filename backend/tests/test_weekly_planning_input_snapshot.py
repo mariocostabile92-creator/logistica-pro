@@ -13,6 +13,8 @@ from app.domain.core_language import (
     TimeWindow,
 )
 from app.domain.workforce_auto_planning import (
+    AppliedPolicyAttribute,
+    AppliedPolicyMetadata,
     ApprovedAssignmentSnapshot,
     AssignedTimeSnapshot,
     AssignedTimeStatus,
@@ -26,6 +28,7 @@ from app.domain.workforce_auto_planning import (
     WeeklyPlanningInputSnapshot,
     WorkforceCandidateAvailabilitySnapshot,
     WorkforceCandidateSnapshot,
+    compute_weekly_planning_input_fingerprint,
 )
 
 
@@ -44,16 +47,23 @@ def _demand(
     organization_id: str = "org-1",
     day: date = PERIOD_START,
     operational_unit: OperationalUnit = UNIT,
+    time_window: TimeWindow = WINDOW,
+    capability_or_workload: str = "parcel-delivery",
+    base_quantity: int = 8,
+    target_quantity: int = 9,
+    source: str = "weekly-forecast",
+    applied_policy: AppliedPolicyMetadata | None = None,
 ):
     return OperationalDemand(
         organization_id=organization_id,
         operational_unit=operational_unit,
         date=day,
-        time_window=WINDOW,
-        capability_or_workload="parcel-delivery",
-        base_quantity=8,
-        target_quantity=9,
-        source="weekly-forecast",
+        time_window=time_window,
+        capability_or_workload=capability_or_workload,
+        base_quantity=base_quantity,
+        target_quantity=target_quantity,
+        source=source,
+        applied_policy=applied_policy,
     )
 
 
@@ -244,6 +254,155 @@ def test_candidate_organization_mismatch_is_rejected():
 def test_demand_outside_snapshot_period_is_rejected():
     with pytest.raises(ValidationError, match="within the snapshot period"):
         _snapshot(demands=(_demand(day=date(2026, 8, 24)),))
+
+
+def test_distinct_demand_logical_identities_are_accepted():
+    snapshot = _snapshot(
+        demands=(
+            _demand(),
+            _demand(day=date(2026, 8, 18)),
+            _demand(capability_or_workload="returns"),
+        )
+    )
+
+    assert len(snapshot.demands) == 3
+
+
+def test_complete_duplicate_demand_is_rejected():
+    demand = _demand()
+
+    with pytest.raises(ValidationError, match="logical identity must be unique"):
+        _snapshot(demands=(demand, demand.model_copy()))
+
+
+@pytest.mark.parametrize(
+    "changed_content",
+    [
+        {"base_quantity": 10},
+        {"target_quantity": 10},
+        {
+            "applied_policy": AppliedPolicyMetadata(
+                identifier="capacity-policy",
+                version="2",
+                attributes=(AppliedPolicyAttribute(key="mode", value="strict"),),
+            )
+        },
+    ],
+)
+def test_same_demand_identity_with_different_content_is_rejected(changed_content):
+    first = _demand()
+    second = first.model_copy(update=changed_content)
+
+    with pytest.raises(ValidationError, match="logical identity must be unique"):
+        _snapshot(demands=(first, second))
+
+
+def test_different_source_creates_a_distinct_demand_identity():
+    snapshot = _snapshot(
+        demands=(_demand(), _demand(source="manual-requirement"))
+    )
+
+    assert len(snapshot.demands) == 2
+
+
+def test_different_date_creates_a_distinct_demand_identity():
+    snapshot = _snapshot(
+        demands=(_demand(), _demand(day=date(2026, 8, 18)))
+    )
+
+    assert len(snapshot.demands) == 2
+
+
+def test_different_capability_creates_a_distinct_demand_identity():
+    snapshot = _snapshot(
+        demands=(_demand(), _demand(capability_or_workload="returns"))
+    )
+
+    assert len(snapshot.demands) == 2
+
+
+def test_same_time_window_identifier_and_definition_is_accepted():
+    same_definition = TimeWindow(
+        external_identifier=WINDOW.external_identifier,
+        starts_at=WINDOW.starts_at,
+        ends_at=WINDOW.ends_at,
+    )
+    snapshot = _snapshot(
+        demands=(
+            _demand(),
+            _demand(day=date(2026, 8, 18), time_window=same_definition),
+        )
+    )
+
+    assert len(snapshot.demands) == 2
+
+
+@pytest.mark.parametrize(
+    "conflicting_window",
+    [
+        TimeWindow(
+            external_identifier=WINDOW.external_identifier,
+            starts_at="09:00",
+            ends_at=WINDOW.ends_at,
+        ),
+        TimeWindow(
+            external_identifier=WINDOW.external_identifier,
+            starts_at=WINDOW.starts_at,
+            ends_at="17:00",
+        ),
+        TimeWindow(
+            external_identifier=WINDOW.external_identifier,
+            starts_at=None,
+            ends_at=WINDOW.ends_at,
+        ),
+        TimeWindow(
+            external_identifier=WINDOW.external_identifier,
+            starts_at=WINDOW.starts_at,
+            ends_at=None,
+        ),
+    ],
+)
+def test_conflicting_time_window_definition_is_rejected(conflicting_window):
+    with pytest.raises(ValidationError, match="one consistent definition"):
+        _snapshot(
+            demands=(
+                _demand(),
+                _demand(
+                    day=date(2026, 8, 18),
+                    time_window=conflicting_window,
+                ),
+            )
+        )
+
+
+def test_demand_validation_is_independent_of_input_order():
+    first = _demand()
+    duplicate = first.model_copy(update={"target_quantity": 11})
+
+    for demands in ((first, duplicate), (duplicate, first)):
+        with pytest.raises(
+            ValidationError, match="logical identity must be unique"
+        ):
+            _snapshot(demands=demands)
+
+
+def test_quantity_change_still_changes_fingerprint_for_valid_snapshots():
+    first = _snapshot(demands=(_demand(base_quantity=8, target_quantity=9),))
+    changed = _snapshot(demands=(_demand(base_quantity=9, target_quantity=10),))
+
+    def fingerprint(snapshot):
+        return compute_weekly_planning_input_fingerprint(
+            organization_id=snapshot.organization_id,
+            period_start=snapshot.period_start,
+            period_end=snapshot.period_end,
+            operational_unit=snapshot.operational_unit,
+            demands=snapshot.demands,
+            workforce_candidates=snapshot.workforce_candidates,
+            policy_set_identifier=snapshot.policy_set_identifier,
+            policy_set_version=snapshot.policy_set_version,
+        )
+
+    assert fingerprint(first) != fingerprint(changed)
 
 
 @pytest.mark.parametrize("fingerprint", ["", "   "])
