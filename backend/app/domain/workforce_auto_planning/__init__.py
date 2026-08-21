@@ -32,6 +32,12 @@ from app.domain.workforce_auto_planning.dispatcher_manual_override import (
     DispatcherManualOverride,
     DispatcherOverrideOperationType,
 )
+from app.domain.workforce_auto_planning.dispatcher_manual_override_revalidation import (
+    DispatcherManualOverrideCandidateNotFoundError,
+    DispatcherManualOverrideDemandNotFoundError,
+    DispatcherManualOverrideRevalidationError,
+    revalidate_dispatcher_manual_override,
+)
 from app.domain.workforce_auto_planning.dispatcher_weekly_edit import (
     DispatcherWeeklyEditAssignmentNotFoundError,
     DispatcherWeeklyEditCommand,
@@ -187,6 +193,9 @@ __all__ = [
     "CoverageGapReason",
     "CurrentMemberContractStateSnapshot",
     "DispatcherManualOverride",
+    "DispatcherManualOverrideCandidateNotFoundError",
+    "DispatcherManualOverrideDemandNotFoundError",
+    "DispatcherManualOverrideRevalidationError",
     "DispatcherOverrideOperationType",
     "DispatcherWeeklyEditAssignmentNotFoundError",
     "DispatcherWeeklyEditCommand",
@@ -227,6 +236,7 @@ __all__ = [
     "evaluate_lower_weekly_load_preference",
     "evaluate_weekly_hours_capacity",
     "rank_eligible_workforce_candidates",
+    "revalidate_dispatcher_manual_override",
     "evaluate_workforce_candidate_eligibility",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
