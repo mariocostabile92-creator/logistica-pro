@@ -109,6 +109,13 @@ from app.domain.workforce_auto_planning.weekly_proposal_composer import (
     WeeklyProposalCompositionError,
     compose_weekly_workforce_proposal,
 )
+from app.domain.workforce_auto_planning.weekly_proposal_repository import (
+    WeeklyWorkforceProposalOrganizationMismatchError,
+    WeeklyWorkforceProposalRepository,
+    WeeklyWorkforceProposalRepositoryError,
+    WeeklyWorkforceProposalRevisionAlreadyExistsError,
+    WeeklyWorkforceProposalRevisionNotFoundError,
+)
 from app.domain.workforce_auto_planning.weekly_hours_capacity import (
     WeeklyHoursCapacityEvaluation,
     WeeklyHoursCapacityStatus,
@@ -199,6 +206,11 @@ __all__ = [
     "WeeklyPlanningInputSnapshotComposer",
     "WeeklyProposalGenerationResult",
     "WeeklyProposalCompositionError",
+    "WeeklyWorkforceProposalOrganizationMismatchError",
+    "WeeklyWorkforceProposalRepository",
+    "WeeklyWorkforceProposalRepositoryError",
+    "WeeklyWorkforceProposalRevisionAlreadyExistsError",
+    "WeeklyWorkforceProposalRevisionNotFoundError",
     "WeeklyHoursCapacityEvaluation",
     "WeeklyHoursCapacityStatus",
     "WorkforceCandidateAvailabilitySnapshot",
