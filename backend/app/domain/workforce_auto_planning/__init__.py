@@ -4,6 +4,13 @@ from app.domain.workforce_auto_planning.approved_assignment_conflict import (
     ApprovedAssignmentConflictStatus,
     evaluate_approved_assignment_conflict,
 )
+from app.domain.workforce_auto_planning.capability_compatibility import (
+    AmbiguousCapabilityMappingError,
+    CapabilityCompatibilityEvaluation,
+    CapabilityCompatibilityReason,
+    CapabilityCompatibilityStatus,
+    evaluate_capability_compatibility,
+)
 from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvaluation,
     ConstraintEvaluationCategory,
@@ -76,6 +83,7 @@ from app.domain.workforce_auto_planning.workforce_eligibility_evaluator import (
 
 
 __all__ = [
+    "AmbiguousCapabilityMappingError",
     "ApprovedAssignmentConflictEvaluation",
     "ApprovedAssignmentConflictReason",
     "ApprovedAssignmentConflictStatus",
@@ -87,6 +95,9 @@ __all__ = [
     "AssignedTimeUnit",
     "CandidateOperationalUnitScope",
     "CandidateOperationalUnitScopeStatus",
+    "CapabilityCompatibilityEvaluation",
+    "CapabilityCompatibilityReason",
+    "CapabilityCompatibilityStatus",
     "ContractStateSourceKind",
     "ConstraintEvaluation",
     "ConstraintEvaluationCategory",
@@ -114,6 +125,7 @@ __all__ = [
     "WorkloadCapabilityMapping",
     "compute_weekly_planning_input_fingerprint",
     "evaluate_approved_assignment_conflict",
+    "evaluate_capability_compatibility",
     "evaluate_workforce_candidate_eligibility",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
