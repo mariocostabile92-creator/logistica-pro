@@ -28,6 +28,13 @@ from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvidenceValue,
     ConstraintRemediation,
 )
+from app.domain.workforce_auto_planning.dispatcher_assignment_lock import (
+    DispatcherAssignmentLockAssignmentNotFoundError,
+    DispatcherAssignmentLockCommand,
+    DispatcherAssignmentLockError,
+    DispatcherAssignmentLockScopeMismatchError,
+    apply_dispatcher_assignment_lock,
+)
 from app.domain.workforce_auto_planning.dispatcher_manual_override import (
     DispatcherManualOverride,
     DispatcherOverrideOperationType,
@@ -172,6 +179,7 @@ __all__ = [
     "AssignedTimeStatus",
     "AssignedTimeUnit",
     "AssignmentIdFactory",
+    "apply_dispatcher_assignment_lock",
     "apply_dispatcher_weekly_edit",
     "build_baseline_workforce_preference_sets",
     "CandidateOperationalUnitScope",
@@ -192,6 +200,10 @@ __all__ = [
     "CoverageGap",
     "CoverageGapReason",
     "CurrentMemberContractStateSnapshot",
+    "DispatcherAssignmentLockAssignmentNotFoundError",
+    "DispatcherAssignmentLockCommand",
+    "DispatcherAssignmentLockError",
+    "DispatcherAssignmentLockScopeMismatchError",
     "DispatcherManualOverride",
     "DispatcherManualOverrideCandidateNotFoundError",
     "DispatcherManualOverrideDemandNotFoundError",
