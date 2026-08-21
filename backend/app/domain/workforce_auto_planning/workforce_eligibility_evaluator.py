@@ -11,6 +11,10 @@ from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvaluationCategory,
     ConstraintEvidence,
 )
+from app.domain.workforce_auto_planning.contract_date_eligibility import (
+    ContractDateEligibilityStatus,
+    evaluate_contract_date_eligibility,
+)
 from app.domain.workforce_auto_planning.operational_demand import (
     OperationalDemand,
 )
@@ -305,6 +309,35 @@ def _capability_compatibility_evaluation(
     )
 
 
+def _contract_date_validity_evaluation(
+    candidate: WorkforceCandidateSnapshot,
+    demand: OperationalDemand,
+) -> ConstraintEvaluation:
+    result = evaluate_contract_date_eligibility(
+        contract_state=candidate.applicable_contract_state,
+        operational_date=demand.date,
+    )
+    evidence = (
+        ConstraintEvidence(
+            key="contract-date-eligibility-status",
+            value=result.status.value,
+        ),
+        ConstraintEvidence(
+            key="contract-date-eligibility-reason-code",
+            value=result.reason.code,
+        ),
+        *result.evidence,
+    )
+    return ConstraintEvaluation(
+        code="contract-date-validity",
+        category=ConstraintEvaluationCategory.HARD_CONSTRAINT,
+        passed=result.status == ContractDateEligibilityStatus.ELIGIBLE,
+        message=result.reason.message,
+        evidence=evidence,
+        rule_origin=_RULE_ORIGIN,
+    )
+
+
 def evaluate_workforce_candidate_eligibility(
     *,
     candidate: WorkforceCandidateSnapshot,
@@ -321,6 +354,7 @@ def evaluate_workforce_candidate_eligibility(
             demand,
             capability_mappings,
         ),
+        _contract_date_validity_evaluation(candidate, demand),
     )
     exclusion_reasons = tuple(
         EligibilityDecisionNotice(

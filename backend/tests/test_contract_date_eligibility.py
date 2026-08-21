@@ -187,7 +187,7 @@ def test_result_is_deterministic_and_immutable():
         first.evidence[0] = first.evidence[0]
 
 
-def test_module_is_pure_neutral_and_not_integrated_into_eligibility_evaluator():
+def test_module_is_pure_and_neutral():
     domain_path = (
         Path(__file__).resolve().parents[1]
         / "app"
@@ -197,10 +197,6 @@ def test_module_is_pure_neutral_and_not_integrated_into_eligibility_evaluator():
     source = (domain_path / "contract_date_eligibility.py").read_text(
         encoding="utf-8"
     ).casefold()
-    evaluator_source = (
-        domain_path / "workforce_eligibility_evaluator.py"
-    ).read_text(encoding="utf-8").casefold()
-
     forbidden_fragments = (
         "amazon",
         "dsp",
@@ -214,4 +210,3 @@ def test_module_is_pure_neutral_and_not_integrated_into_eligibility_evaluator():
         "is_reserve",
     )
     assert all(fragment not in source for fragment in forbidden_fragments)
-    assert "evaluate_contract_date_eligibility" not in evaluator_source

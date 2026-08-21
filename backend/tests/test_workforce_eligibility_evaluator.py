@@ -95,6 +95,8 @@ def _candidate(
     include_readiness: bool = True,
     assignments: tuple[ApprovedAssignmentSnapshot, ...] = (),
     capabilities: tuple[str, ...] = ("uninterpreted-capability",),
+    contract_start: date | None = None,
+    contract_end: date | None = None,
 ) -> WorkforceCandidateSnapshot:
     availability = (
         (
@@ -123,6 +125,8 @@ def _candidate(
         availability=availability,
         applicable_contract_state=CurrentMemberContractStateSnapshot(
             employment_type="uninterpreted-contract",
+            contract_start=contract_start,
+            contract_end=contract_end,
             weekly_hours=Decimal("40"),
             is_reserve=False,
         ),
@@ -193,7 +197,7 @@ def _evaluation(decision, code: str) -> ConstraintEvaluation:
     return next(item for item in decision.evaluations if item.code == code)
 
 
-def test_all_five_hard_constraints_pass():
+def test_all_six_hard_constraints_pass():
     candidate = _candidate()
     demand = _demand()
 
@@ -204,7 +208,7 @@ def test_all_five_hard_constraints_pass():
     )
 
     assert decision.eligible is True
-    assert len(decision.evaluations) == 5
+    assert len(decision.evaluations) == 6
     assert all(item.passed for item in decision.evaluations)
     assert decision.exclusion_reasons == ()
     assert decision.warnings == ()
@@ -467,6 +471,74 @@ def test_ambiguous_capability_mapping_error_propagates():
         _evaluate(capability_mappings=mappings)
 
 
+def test_contract_date_without_limits_makes_sixth_constraint_pass():
+    decision = _evaluate()
+    contract_date = _evaluation(decision, "contract-date-validity")
+    evidence = {item.key: item.value for item in contract_date.evidence}
+
+    assert contract_date.passed is True
+    assert evidence["contract-date-eligibility-status"] == "ELIGIBLE"
+    assert evidence["contract-date-eligibility-reason-code"] == (
+        "no-contract-date-limits"
+    )
+    assert "contract-date-validity" not in {
+        item.code for item in decision.exclusion_reasons
+    }
+
+
+def test_date_before_contract_start_fails_with_one_exclusion_reason():
+    decision = _evaluate(contract_start=date(2026, 8, 25))
+    contract_date = _evaluation(decision, "contract-date-validity")
+
+    assert decision.eligible is False
+    assert contract_date.passed is False
+    assert [
+        item.code
+        for item in decision.exclusion_reasons
+        if item.code == "contract-date-validity"
+    ] == ["contract-date-validity"]
+
+
+def test_date_after_contract_end_fails_with_one_exclusion_reason():
+    decision = _evaluate(contract_end=date(2026, 8, 23))
+    contract_date = _evaluation(decision, "contract-date-validity")
+    evidence = {item.key: item.value for item in contract_date.evidence}
+
+    assert decision.eligible is False
+    assert contract_date.passed is False
+    assert evidence["contract-date-eligibility-reason-code"] == (
+        "after-contract-end"
+    )
+    assert [item.code for item in decision.exclusion_reasons] == [
+        "contract-date-validity"
+    ]
+
+
+def test_contract_start_boundary_is_inclusive():
+    decision = _evaluate(contract_start=OPERATION_DATE)
+
+    assert decision.eligible is True
+    assert _evaluation(decision, "contract-date-validity").passed is True
+
+
+def test_contract_end_boundary_is_inclusive():
+    decision = _evaluate(contract_end=OPERATION_DATE)
+
+    assert decision.eligible is True
+    assert _evaluation(decision, "contract-date-validity").passed is True
+
+
+def test_contract_date_integration_does_not_change_first_five_constraints():
+    eligible = _evaluate(
+        contract_start=OPERATION_DATE,
+        contract_end=OPERATION_DATE,
+    )
+    ineligible = _evaluate(contract_start=date(2026, 8, 25))
+
+    assert eligible.evaluations[:5] == ineligible.evaluations[:5]
+    assert all(item.passed for item in eligible.evaluations[:5])
+
+
 def test_two_simultaneous_failures_produce_two_exclusion_reasons():
     decision = _evaluate(
         organization_id="organization-two",
@@ -493,7 +565,7 @@ def test_three_failures_produce_three_exclusion_reasons():
     ]
 
 
-def test_evaluations_are_always_five_hard_constraints_in_stable_order():
+def test_evaluations_are_always_six_hard_constraints_in_stable_order():
     decision = _evaluate(include_readiness=False)
 
     assert [item.code for item in decision.evaluations] == [
@@ -502,6 +574,7 @@ def test_evaluations_are_always_five_hard_constraints_in_stable_order():
         "daily-callability",
         "approved-assignment-conflict",
         "capability-compatibility",
+        "contract-date-validity",
     ]
     assert all(
         item.category == ConstraintEvaluationCategory.HARD_CONSTRAINT
@@ -555,7 +628,6 @@ def test_evaluator_has_no_out_of_scope_rules_or_dependencies():
     forbidden_fragments = (
         "candidate.capabilities",
         "recent_consecutivity",
-        "applicable_contract_state",
         "plugins.workforce",
         "repository",
         "sqlalchemy",
@@ -563,6 +635,9 @@ def test_evaluator_has_no_out_of_scope_rules_or_dependencies():
         "time.fromisoformat",
         ".starts_at",
         ".ends_at",
+        "weekly_hours",
+        "employment_type",
+        "is_reserve",
     )
     assert all(fragment not in source for fragment in forbidden_fragments)
     assert source.count("evaluate_approved_assignment_conflict(") == 1
@@ -582,5 +657,25 @@ def test_capability_integration_reuses_a4_without_new_matching_logic():
         "weekly_hours",
         "contract_start",
         "contract_end",
+    )
+    assert all(fragment not in source for fragment in forbidden_fragments)
+
+
+def test_contract_date_integration_reuses_a5a_without_new_contract_rules():
+    source = inspect.getsource(
+        evaluator_module._contract_date_validity_evaluation
+    ).casefold()
+
+    assert source.count("evaluate_contract_date_eligibility(") == 1
+    forbidden_fragments = (
+        "weekly_hours",
+        "employment_type",
+        "is_reserve",
+        "contract_start",
+        "contract_end",
+        "part-time",
+        "full-time",
+        "ranking",
+        "scoring",
     )
     assert all(fragment not in source for fragment in forbidden_fragments)
