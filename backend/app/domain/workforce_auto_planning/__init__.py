@@ -101,6 +101,11 @@ from app.domain.workforce_auto_planning.weekly_proposal_generator import (
     WeeklyProposalGenerationResult,
     generate_weekly_proposal_baseline,
 )
+from app.domain.workforce_auto_planning.weekly_proposal_composer import (
+    ComposedWeeklyWorkforceProposal,
+    WeeklyProposalCompositionError,
+    compose_weekly_workforce_proposal,
+)
 from app.domain.workforce_auto_planning.weekly_hours_capacity import (
     WeeklyHoursCapacityEvaluation,
     WeeklyHoursCapacityStatus,
@@ -136,6 +141,7 @@ __all__ = [
     "build_baseline_workforce_preference_sets",
     "CandidateOperationalUnitScope",
     "CandidateOperationalUnitScopeStatus",
+    "ComposedWeeklyWorkforceProposal",
     "DeterministicCandidateRankingKey",
     "CapabilityCompatibilityEvaluation",
     "CapabilityCompatibilityReason",
@@ -173,6 +179,7 @@ __all__ = [
     "WorkforcePlanningPreferenceSet",
     "WorkloadCapabilityMapping",
     "compute_weekly_planning_input_fingerprint",
+    "compose_weekly_workforce_proposal",
     "evaluate_approved_assignment_conflict",
     "evaluate_capability_compatibility",
     "evaluate_contract_date_eligibility",
@@ -187,6 +194,7 @@ __all__ = [
     "WeeklyPlanningInputSnapshot",
     "WeeklyPlanningInputSnapshotComposer",
     "WeeklyProposalGenerationResult",
+    "WeeklyProposalCompositionError",
     "WeeklyHoursCapacityEvaluation",
     "WeeklyHoursCapacityStatus",
     "WorkforceCandidateAvailabilitySnapshot",
