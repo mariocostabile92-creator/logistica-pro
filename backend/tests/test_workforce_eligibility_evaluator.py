@@ -1,7 +1,13 @@
 from datetime import date
 from decimal import Decimal
+import inspect
 from pathlib import Path
 
+import pytest
+
+from app.domain.workforce_auto_planning import (
+    workforce_eligibility_evaluator as evaluator_module,
+)
 from app.domain.core_language import (
     HumanResource,
     OperationalUnit,
@@ -10,6 +16,7 @@ from app.domain.core_language import (
     TimeWindow,
 )
 from app.domain.workforce_auto_planning import (
+    AmbiguousCapabilityMappingError,
     AppliedPolicyMetadata,
     ApprovedAssignmentSnapshot,
     AssignedTimeSnapshot,
@@ -24,6 +31,7 @@ from app.domain.workforce_auto_planning import (
     OperationalDemand,
     WorkforceCandidateAvailabilitySnapshot,
     WorkforceCandidateSnapshot,
+    WorkloadCapabilityMapping,
     evaluate_workforce_candidate_eligibility,
 )
 
@@ -35,6 +43,12 @@ WINDOW = TimeWindow(
     external_identifier="morning-window",
     starts_at="08:00",
     ends_at="12:00",
+)
+CAPABILITY_MAPPINGS = (
+    WorkloadCapabilityMapping(
+        workload_identifier="generic-delivery-capability",
+        required_capabilities=("uninterpreted-capability",),
+    ),
 )
 
 
@@ -80,6 +94,7 @@ def _candidate(
     observed_state: str | None = "available",
     include_readiness: bool = True,
     assignments: tuple[ApprovedAssignmentSnapshot, ...] = (),
+    capabilities: tuple[str, ...] = ("uninterpreted-capability",),
 ) -> WorkforceCandidateSnapshot:
     availability = (
         (
@@ -103,7 +118,7 @@ def _candidate(
         human_resource=HumanResource(
             external_identifier="opaque-member-42",
             display_name="Driver Example",
-            capabilities=("uninterpreted-capability",),
+            capabilities=capabilities,
         ),
         availability=availability,
         applicable_contract_state=CurrentMemberContractStateSnapshot(
@@ -160,10 +175,17 @@ def _assignment(
     )
 
 
-def _evaluate(**candidate_updates):
+def _evaluate(
+    *,
+    capability_mappings: tuple[
+        WorkloadCapabilityMapping, ...
+    ] = CAPABILITY_MAPPINGS,
+    **candidate_updates,
+):
     return evaluate_workforce_candidate_eligibility(
         candidate=_candidate(**candidate_updates),
         demand=_demand(),
+        capability_mappings=capability_mappings,
     )
 
 
@@ -171,17 +193,18 @@ def _evaluation(decision, code: str) -> ConstraintEvaluation:
     return next(item for item in decision.evaluations if item.code == code)
 
 
-def test_all_four_hard_constraints_pass():
+def test_all_five_hard_constraints_pass():
     candidate = _candidate()
     demand = _demand()
 
     decision = evaluate_workforce_candidate_eligibility(
         candidate=candidate,
         demand=demand,
+        capability_mappings=CAPABILITY_MAPPINGS,
     )
 
     assert decision.eligible is True
-    assert len(decision.evaluations) == 4
+    assert len(decision.evaluations) == 5
     assert all(item.passed for item in decision.evaluations)
     assert decision.exclusion_reasons == ()
     assert decision.warnings == ()
@@ -377,6 +400,73 @@ def test_callability_and_conflict_failures_produce_two_exclusion_reasons():
     ]
 
 
+def test_compatible_capability_makes_fifth_constraint_pass():
+    decision = _evaluate()
+    capability = _evaluation(decision, "capability-compatibility")
+
+    assert capability.passed is True
+    assert "capability-compatibility" not in {
+        item.code for item in decision.exclusion_reasons
+    }
+
+
+def test_incompatible_capability_fails_with_one_exclusion_reason():
+    decision = _evaluate(
+        capability_mappings=(
+            WorkloadCapabilityMapping(
+                workload_identifier="generic-delivery-capability",
+                required_capabilities=("different-capability",),
+            ),
+        )
+    )
+    capability = _evaluation(decision, "capability-compatibility")
+    evidence = {item.key: item.value for item in capability.evidence}
+
+    assert decision.eligible is False
+    assert capability.passed is False
+    assert evidence["capability-compatibility-status"] == "INCOMPATIBLE"
+    assert [
+        item.code
+        for item in decision.exclusion_reasons
+        if item.code == "capability-compatibility"
+    ] == ["capability-compatibility"]
+
+
+def test_unknown_capability_mapping_fails_closed():
+    decision = _evaluate(capability_mappings=())
+    capability = _evaluation(decision, "capability-compatibility")
+    evidence = {item.key: item.value for item in capability.evidence}
+
+    assert decision.eligible is False
+    assert capability.passed is False
+    assert evidence["capability-compatibility-status"] == "UNKNOWN"
+    assert capability.message == (
+        "No authoritative capability mapping is available."
+    )
+
+
+def test_empty_candidate_capabilities_with_mapping_fail():
+    decision = _evaluate(capabilities=())
+
+    assert decision.eligible is False
+    assert _evaluation(
+        decision, "capability-compatibility"
+    ).passed is False
+
+
+def test_ambiguous_capability_mapping_error_propagates():
+    mappings = (
+        *CAPABILITY_MAPPINGS,
+        WorkloadCapabilityMapping(
+            workload_identifier="generic-delivery-capability",
+            required_capabilities=("another-capability",),
+        ),
+    )
+
+    with pytest.raises(AmbiguousCapabilityMappingError):
+        _evaluate(capability_mappings=mappings)
+
+
 def test_two_simultaneous_failures_produce_two_exclusion_reasons():
     decision = _evaluate(
         organization_id="organization-two",
@@ -403,7 +493,7 @@ def test_three_failures_produce_three_exclusion_reasons():
     ]
 
 
-def test_evaluations_are_always_four_hard_constraints_in_stable_order():
+def test_evaluations_are_always_five_hard_constraints_in_stable_order():
     decision = _evaluate(include_readiness=False)
 
     assert [item.code for item in decision.evaluations] == [
@@ -411,6 +501,7 @@ def test_evaluations_are_always_four_hard_constraints_in_stable_order():
         "operational-unit-match",
         "daily-callability",
         "approved-assignment-conflict",
+        "capability-compatibility",
     ]
     assert all(
         item.category == ConstraintEvaluationCategory.HARD_CONSTRAINT
@@ -439,10 +530,12 @@ def test_same_input_is_deterministic_and_evaluator_has_no_side_effects():
     first = evaluate_workforce_candidate_eligibility(
         candidate=candidate,
         demand=demand,
+        capability_mappings=CAPABILITY_MAPPINGS,
     )
     second = evaluate_workforce_candidate_eligibility(
         candidate=candidate,
         demand=demand,
+        capability_mappings=CAPABILITY_MAPPINGS,
     )
 
     assert first == second
@@ -473,3 +566,21 @@ def test_evaluator_has_no_out_of_scope_rules_or_dependencies():
     )
     assert all(fragment not in source for fragment in forbidden_fragments)
     assert source.count("evaluate_approved_assignment_conflict(") == 1
+
+
+def test_capability_integration_reuses_a4_without_new_matching_logic():
+    source = inspect.getsource(
+        evaluator_module._capability_compatibility_evaluation
+    ).casefold()
+
+    assert source.count("evaluate_capability_compatibility(") == 1
+    forbidden_fragments = (
+        "casefold",
+        "startswith",
+        "endswith",
+        "substring",
+        "weekly_hours",
+        "contract_start",
+        "contract_end",
+    )
+    assert all(fragment not in source for fragment in forbidden_fragments)

@@ -2,6 +2,10 @@ from app.domain.workforce_auto_planning.approved_assignment_conflict import (
     ApprovedAssignmentConflictStatus,
     evaluate_approved_assignment_conflict,
 )
+from app.domain.workforce_auto_planning.capability_compatibility import (
+    CapabilityCompatibilityStatus,
+    evaluate_capability_compatibility,
+)
 from app.domain.workforce_auto_planning.constraint_evaluation import (
     ConstraintEvaluation,
     ConstraintEvaluationCategory,
@@ -9,6 +13,9 @@ from app.domain.workforce_auto_planning.constraint_evaluation import (
 )
 from app.domain.workforce_auto_planning.operational_demand import (
     OperationalDemand,
+)
+from app.domain.workforce_auto_planning.planning_policy import (
+    WorkloadCapabilityMapping,
 )
 from app.domain.workforce_auto_planning.weekly_planning_input_snapshot import (
     CandidateOperationalUnitScopeStatus,
@@ -267,16 +274,53 @@ def _approved_assignment_conflict_evaluation(
     )
 
 
+def _capability_compatibility_evaluation(
+    candidate: WorkforceCandidateSnapshot,
+    demand: OperationalDemand,
+    capability_mappings: tuple[WorkloadCapabilityMapping, ...],
+) -> ConstraintEvaluation:
+    result = evaluate_capability_compatibility(
+        required_capability=demand.capability_or_workload,
+        candidate_capabilities=candidate.human_resource.capabilities,
+        mappings=capability_mappings,
+    )
+    evidence = (
+        ConstraintEvidence(
+            key="capability-compatibility-status",
+            value=result.status.value,
+        ),
+        ConstraintEvidence(
+            key="capability-compatibility-reason-code",
+            value=result.reason.code,
+        ),
+        *result.evidence,
+    )
+    return ConstraintEvaluation(
+        code="capability-compatibility",
+        category=ConstraintEvaluationCategory.HARD_CONSTRAINT,
+        passed=result.status == CapabilityCompatibilityStatus.COMPATIBLE,
+        message=result.reason.message,
+        evidence=evidence,
+        rule_origin=_RULE_ORIGIN,
+    )
+
+
 def evaluate_workforce_candidate_eligibility(
     *,
     candidate: WorkforceCandidateSnapshot,
     demand: OperationalDemand,
+    capability_mappings: tuple[WorkloadCapabilityMapping, ...],
 ) -> WorkforceEligibilityDecision:
     evaluations = (
         _organization_evaluation(candidate, demand),
         _operational_unit_evaluation(candidate),
         _daily_callability_evaluation(candidate, demand),
         _approved_assignment_conflict_evaluation(candidate, demand),
+        _capability_compatibility_evaluation(
+            candidate,
+            demand,
+            capability_mappings,
+        ),
     )
     exclusion_reasons = tuple(
         EligibilityDecisionNotice(
