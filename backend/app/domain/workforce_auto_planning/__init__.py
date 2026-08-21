@@ -60,6 +60,9 @@ from app.domain.workforce_auto_planning.weekly_snapshot_fingerprint import (
 from app.domain.workforce_auto_planning.weekly_snapshot_composer import (
     WeeklyPlanningInputSnapshotComposer,
 )
+from app.domain.workforce_auto_planning.workforce_eligibility_decision import (
+    EligibilityDecisionNotice,
+    WorkforceEligibilityDecision,
 
 
 __all__ = [
@@ -80,6 +83,7 @@ __all__ = [
     "CoverageGap",
     "CoverageGapReason",
     "CurrentMemberContractStateSnapshot",
+    "EligibilityDecisionNotice",
     "OperationalBufferPolicy",
     "OperationalDemand",
     "OperationalDemandProvider",
@@ -103,4 +107,5 @@ __all__ = [
     "WorkforceCandidateAvailabilitySnapshot",
     "WorkforceCandidateSnapshot",
     "WorkforceCandidateSnapshotProvider",
+    "WorkforceEligibilityDecision",
 ]
