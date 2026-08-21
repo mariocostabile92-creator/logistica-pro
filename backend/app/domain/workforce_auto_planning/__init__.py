@@ -63,6 +63,10 @@ from app.domain.workforce_auto_planning.weekly_snapshot_composer import (
 from app.domain.workforce_auto_planning.workforce_eligibility_decision import (
     EligibilityDecisionNotice,
     WorkforceEligibilityDecision,
+)
+from app.domain.workforce_auto_planning.workforce_eligibility_evaluator import (
+    evaluate_workforce_candidate_eligibility,
+)
 
 
 __all__ = [
@@ -100,6 +104,7 @@ __all__ = [
     "WorkforcePlanningPolicyProvider",
     "WorkloadCapabilityMapping",
     "compute_weekly_planning_input_fingerprint",
+    "evaluate_workforce_candidate_eligibility",
     "WeeklyWorkforceProposal",
     "WeeklyWorkforceProposalStatus",
     "WeeklyPlanningInputSnapshot",
