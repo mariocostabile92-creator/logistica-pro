@@ -10,6 +10,7 @@ from app.domain.planning_drafts import (
     PlanningDraftChangeMetadata,
     PlanningDraftHistory,
     PlanningDraftMetadata,
+    PlanningDraftNotFoundError,
     PlanningDraftScope,
     PlanningDraftSnapshot,
     PlanningDraftState,
@@ -206,7 +207,22 @@ def _insert_change(conn, change: PlanningDraftChange) -> None:
 
 
 class SqlPlanningDraftRepository:
+    def __init__(self, *, organization_id: str | None = None) -> None:
+        # Internal callers may still supply explicit scopes. HTTP callers must
+        # use the request-local, tenant-bound instance from the API dependency.
+        if organization_id is not None and not organization_id.strip():
+            raise ValueError("organization_id cannot be empty")
+        self._organization_id = organization_id
+
+    def _require_scope(self, scope: PlanningDraftScope) -> None:
+        if (
+            self._organization_id is not None
+            and scope.organization_id != self._organization_id
+        ):
+            raise PlanningDraftNotFoundError("Draft non disponibile.")
+
     def get_active(self, scope: PlanningDraftScope) -> PlanningDraft | None:
+        self._require_scope(scope)
         with db_session() as conn:
             row = conn.execute(
                 """
@@ -230,8 +246,9 @@ class SqlPlanningDraftRepository:
     def get_by_id(self, draft_id: str) -> PlanningDraft | None:
         with db_session() as conn:
             row = conn.execute(
-                "SELECT * FROM planning_drafts WHERE draft_id = ?",
-                (draft_id,),
+                """SELECT * FROM planning_drafts WHERE draft_id = ?
+                   AND (CAST(? AS TEXT) IS NULL OR organization_id = ?)""",
+                (draft_id, self._organization_id, self._organization_id),
             ).fetchone()
         return _draft_from_row(row) if row else None
 
@@ -245,8 +262,12 @@ class SqlPlanningDraftRepository:
                 """
                 SELECT * FROM planning_draft_versions
                 WHERE draft_id = ? AND version = ?
+                  AND draft_id IN (
+                      SELECT draft_id FROM planning_drafts
+                      WHERE (CAST(? AS TEXT) IS NULL OR organization_id = ?)
+                  )
                 """,
-                (draft_id, version),
+                (draft_id, version, self._organization_id, self._organization_id),
             ).fetchone()
         return _snapshot_from_row(row) if row else None
 
@@ -263,34 +284,50 @@ class SqlPlanningDraftRepository:
                 SELECT COUNT(*) AS total
                 FROM planning_draft_changes
                 WHERE draft_id = ?
+                  AND draft_id IN (
+                      SELECT draft_id FROM planning_drafts
+                      WHERE (CAST(? AS TEXT) IS NULL OR organization_id = ?)
+                  )
                 """,
-                (draft_id,),
+                (draft_id, self._organization_id, self._organization_id),
             ).fetchone()
             version_count = conn.execute(
                 """
                 SELECT COUNT(*) AS total
                 FROM planning_draft_versions
                 WHERE draft_id = ?
+                  AND draft_id IN (
+                      SELECT draft_id FROM planning_drafts
+                      WHERE (CAST(? AS TEXT) IS NULL OR organization_id = ?)
+                  )
                 """,
-                (draft_id,),
+                (draft_id, self._organization_id, self._organization_id),
             ).fetchone()
             changes = conn.execute(
                 """
                 SELECT * FROM planning_draft_changes
                 WHERE draft_id = ?
+                  AND draft_id IN (
+                      SELECT draft_id FROM planning_drafts
+                      WHERE (CAST(? AS TEXT) IS NULL OR organization_id = ?)
+                  )
                 ORDER BY occurred_at DESC, to_version DESC
                 LIMIT ?
                 """,
-                (draft_id, bounded_limit),
+                (draft_id, self._organization_id, self._organization_id, bounded_limit),
             ).fetchall()
             snapshots = conn.execute(
                 """
                 SELECT * FROM planning_draft_versions
                 WHERE draft_id = ?
+                  AND draft_id IN (
+                      SELECT draft_id FROM planning_drafts
+                      WHERE (CAST(? AS TEXT) IS NULL OR organization_id = ?)
+                  )
                 ORDER BY version DESC
                 LIMIT ?
                 """,
-                (draft_id, bounded_limit),
+                (draft_id, self._organization_id, self._organization_id, bounded_limit),
             ).fetchall()
         return PlanningDraftHistory(
             draft_id=draft_id,
@@ -306,6 +343,7 @@ class SqlPlanningDraftRepository:
         snapshot: PlanningDraftSnapshot,
         change: PlanningDraftChange,
     ) -> None:
+        self._require_scope(draft.scope)
         try:
             with db_session() as conn:
                 conn.execute(
@@ -352,6 +390,7 @@ class SqlPlanningDraftRepository:
         *,
         expected_version: int,
     ) -> bool:
+        self._require_scope(draft.scope)
         with db_session() as conn:
             updated = conn.execute(
                 """
@@ -360,6 +399,7 @@ class SqlPlanningDraftRepository:
                     version_created_at = ?, version_created_by = ?,
                     restored_from_version = ?, updated_at = ?, deleted_at = ?
                 WHERE draft_id = ?
+                  AND organization_id = ?
                   AND version = ?
                   AND deleted_at IS NULL
                 RETURNING draft_id
@@ -375,6 +415,7 @@ class SqlPlanningDraftRepository:
                     draft.updated_at.isoformat(),
                     draft.deleted_at.isoformat() if draft.deleted_at else None,
                     draft.draft_id,
+                    draft.scope.organization_id,
                     expected_version,
                 ),
             ).fetchone()

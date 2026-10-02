@@ -213,7 +213,7 @@ def test_delete_is_logical_keeps_history_and_removes_the_active_draft():
 def test_draft_api_supports_the_full_non_operational_lifecycle():
     client = TestClient(app)
     scope = {
-        "organization_id": "organization-api",
+        "organization_id": "test-organization",
         "operational_unit_id": "unit-api",
         "planning_date": OPERATION_DATE.isoformat(),
     }
@@ -256,7 +256,7 @@ def test_draft_api_supports_the_full_non_operational_lifecycle():
 def test_api_reports_typed_conflicts_and_payload_remains_compact():
     client = TestClient(app)
     payload = {
-        "organization_id": "organization-conflict",
+        "organization_id": "test-organization",
         "operational_unit_id": "unit-conflict",
         "planning_date": OPERATION_DATE.isoformat(),
         "name": "Draft",

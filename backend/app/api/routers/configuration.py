@@ -1,4 +1,9 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from app.api.dependencies.organization_scope import (
+    authenticated_organization_id,
+    authorize_organization_scope,
+)
 
 from app.core.configuration.models import Configuration, ConfigurationScope
 from app.core.configuration.service import (
@@ -26,9 +31,10 @@ def _scope(
     organization_id: str,
     operational_unit_id: str | None,
     adapter_id: str | None,
+    tenant_id: str,
 ) -> ConfigurationScope:
     return ConfigurationScope(
-        organization_id=organization_id,
+        organization_id=authorize_organization_scope(organization_id, tenant_id),
         operational_unit_id=operational_unit_id,
         adapter_id=adapter_id,
     )
@@ -39,12 +45,14 @@ def current(
     organization_id: str = Query(default="default", min_length=1),
     operational_unit_id: str | None = Query(default=None),
     adapter_id: str | None = Query(default=None),
+    tenant_id: str = Depends(authenticated_organization_id),
 ) -> Configuration:
     return get_current_configuration(
         _scope(
             organization_id,
             operational_unit_id,
             adapter_id,
+            tenant_id,
         )
     )
 
@@ -54,11 +62,13 @@ def versions(
     organization_id: str = Query(default="default", min_length=1),
     operational_unit_id: str | None = Query(default=None),
     adapter_id: str | None = Query(default=None),
+    tenant_id: str = Depends(authenticated_organization_id),
 ) -> ConfigurationVersionsResponse:
     scope = _scope(
         organization_id,
         operational_unit_id,
         adapter_id,
+        tenant_id,
     )
     return ConfigurationVersionsResponse(
         scope=scope,
@@ -72,6 +82,7 @@ def versions(
 )
 def validate(
     request: ConfigurationValidationRequest,
+    tenant_id: str = Depends(authenticated_organization_id),
 ) -> ConfigurationValidationResponse:
     result = validate_configuration(
         [
@@ -82,6 +93,7 @@ def validate(
             request.organization_id,
             request.operational_unit_id,
             request.adapter_id,
+            tenant_id,
         ),
     )
     return ConfigurationValidationResponse(**result.model_dump())
@@ -94,6 +106,7 @@ def validate(
 )
 def create_version(
     request: ConfigurationVersionCreateRequest,
+    tenant_id: str = Depends(authenticated_organization_id),
 ) -> Configuration:
     try:
         return create_configuration_version(
@@ -101,6 +114,7 @@ def create_version(
                 request.organization_id,
                 request.operational_unit_id,
                 request.adapter_id,
+                tenant_id,
             ),
             raw_sections=[
                 section.model_dump(mode="json")

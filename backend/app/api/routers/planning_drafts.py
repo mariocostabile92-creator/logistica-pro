@@ -3,7 +3,11 @@ from typing import Annotated, Callable, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.dependencies.planning_drafts import get_planning_draft_runtime
+from app.api.dependencies.organization_scope import (
+    authenticated_organization_id,
+    authorize_organization_scope,
+)
+from app.api.dependencies.planning_drafts import get_tenant_planning_draft_runtime
 from app.domain.core_language import OperationalUnit
 from app.domain.planning_drafts import (
     PlanningDraftAlreadyExistsError,
@@ -69,10 +73,11 @@ def current(
         Query(min_length=1, max_length=120),
     ] = "default",
     planning_date: date | None = Query(default=None),
-    runtime: PlanningDraftRuntime = Depends(get_planning_draft_runtime),
+    runtime: PlanningDraftRuntime = Depends(get_tenant_planning_draft_runtime),
+    tenant_id: str = Depends(authenticated_organization_id),
 ) -> PlanningDraftWorkspace:
     return runtime.current(
-        organization_id=organization_id,
+        organization_id=authorize_organization_scope(organization_id, tenant_id),
         operational_unit=OperationalUnit(
             external_identifier=operational_unit_id
         ),
@@ -83,11 +88,14 @@ def current(
 @router.post("", response_model=PlanningDraftWorkspace, status_code=201)
 def create(
     request: PlanningDraftCreateRequest,
-    runtime: PlanningDraftRuntime = Depends(get_planning_draft_runtime),
+    runtime: PlanningDraftRuntime = Depends(get_tenant_planning_draft_runtime),
+    tenant_id: str = Depends(authenticated_organization_id),
 ) -> PlanningDraftWorkspace:
     return _execute(
         lambda: runtime.create(
-            organization_id=request.organization_id,
+            organization_id=authorize_organization_scope(
+                request.organization_id, tenant_id
+            ),
             operational_unit=OperationalUnit(
                 external_identifier=request.operational_unit_id,
                 name=request.operational_unit_name,
@@ -105,7 +113,7 @@ def create(
 def update_metadata(
     draft_id: str,
     request: PlanningDraftMetadataUpdateRequest,
-    runtime: PlanningDraftRuntime = Depends(get_planning_draft_runtime),
+    runtime: PlanningDraftRuntime = Depends(get_tenant_planning_draft_runtime),
 ) -> PlanningDraftWorkspace:
     changes = request.model_dump(
         include={"name", "note"},
@@ -124,7 +132,7 @@ def update_metadata(
 def save(
     draft_id: str,
     request: PlanningDraftVersionRequest,
-    runtime: PlanningDraftRuntime = Depends(get_planning_draft_runtime),
+    runtime: PlanningDraftRuntime = Depends(get_tenant_planning_draft_runtime),
 ) -> PlanningDraftWorkspace:
     return _execute(
         lambda: runtime.save(
@@ -138,7 +146,7 @@ def save(
 def restore(
     draft_id: str,
     request: PlanningDraftRestoreRequest,
-    runtime: PlanningDraftRuntime = Depends(get_planning_draft_runtime),
+    runtime: PlanningDraftRuntime = Depends(get_tenant_planning_draft_runtime),
 ) -> PlanningDraftWorkspace:
     return _execute(
         lambda: runtime.restore(
@@ -153,7 +161,7 @@ def restore(
 def delete(
     draft_id: str,
     expected_version: Annotated[int, Query(ge=1)],
-    runtime: PlanningDraftRuntime = Depends(get_planning_draft_runtime),
+    runtime: PlanningDraftRuntime = Depends(get_tenant_planning_draft_runtime),
 ) -> PlanningDraftWorkspace:
     return _execute(
         lambda: runtime.delete(
@@ -166,6 +174,6 @@ def delete(
 @router.get("/{draft_id}/history", response_model=PlanningDraftHistory)
 def history(
     draft_id: str,
-    runtime: PlanningDraftRuntime = Depends(get_planning_draft_runtime),
+    runtime: PlanningDraftRuntime = Depends(get_tenant_planning_draft_runtime),
 ) -> PlanningDraftHistory:
     return _execute(lambda: runtime.history(draft_id))

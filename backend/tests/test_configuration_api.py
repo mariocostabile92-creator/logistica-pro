@@ -37,7 +37,7 @@ def test_validate_does_not_persist_invalid_configuration():
     response = client.post(
         f"{BASE_URL}/validate",
         json={
-            "organization_id": "org-api",
+            "organization_id": "test-organization",
             "sections": [
                 section("reserve_policy", default_threshold=-1)
             ],
@@ -47,7 +47,7 @@ def test_validate_does_not_persist_invalid_configuration():
     assert response.status_code == 200
     assert response.json()["valid"] is False
     assert client.get(
-        f"{BASE_URL}/versions?organization_id=org-api"
+        f"{BASE_URL}/versions?organization_id=test-organization"
     ).json()["items"] == []
 
 
@@ -55,7 +55,7 @@ def test_create_current_and_list_organization_version():
     created = client.post(
         f"{BASE_URL}/versions",
         json={
-            "organization_id": "org-api",
+            "organization_id": "test-organization",
             "created_by": "integration_test",
             "note": "Organization vocabulary",
             "sections": [
@@ -68,11 +68,11 @@ def test_create_current_and_list_organization_version():
     assert created.json()["version"]["number"] == 1
     assert (
         created.json()["metadata"]["resolved_scope"]["organization_id"]
-        == "org-api"
+        == "test-organization"
     )
 
     current = client.get(
-        f"{BASE_URL}/current?organization_id=org-api"
+        f"{BASE_URL}/current?organization_id=test-organization"
     )
     nomenclature = next(
         item
@@ -91,7 +91,7 @@ def test_create_current_and_list_organization_version():
     }
 
     versions = client.get(
-        f"{BASE_URL}/versions?organization_id=org-api"
+        f"{BASE_URL}/versions?organization_id=test-organization"
     )
     assert [item["number"] for item in versions.json()["items"]] == [1]
 
@@ -100,7 +100,7 @@ def test_create_rejects_invalid_configuration():
     response = client.post(
         f"{BASE_URL}/versions",
         json={
-            "organization_id": "org-invalid",
+            "organization_id": "test-organization",
             "sections": [
                 section(
                     "generic_mappings",
@@ -112,7 +112,7 @@ def test_create_rejects_invalid_configuration():
 
     assert response.status_code == 422
     assert client.get(
-        f"{BASE_URL}/versions?organization_id=org-invalid"
+        f"{BASE_URL}/versions?organization_id=test-organization"
     ).json()["items"] == []
 
 
@@ -120,7 +120,7 @@ def test_operational_unit_falls_back_to_organization():
     client.post(
         f"{BASE_URL}/versions",
         json={
-            "organization_id": "org-fallback",
+            "organization_id": "test-organization",
             "sections": [
                 section("nomenclature", task_label="Work Item")
             ],
@@ -129,7 +129,7 @@ def test_operational_unit_falls_back_to_organization():
 
     response = client.get(
         f"{BASE_URL}/current"
-        "?organization_id=org-fallback"
+        "?organization_id=test-organization"
         "&operational_unit_id=unit-one"
     )
 
