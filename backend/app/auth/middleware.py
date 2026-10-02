@@ -3,6 +3,7 @@ import re
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
+from starlette._utils import get_route_path
 
 from app.auth import repository
 from app.auth.domain import AuthenticatedUser, Role
@@ -59,7 +60,7 @@ MAINTENANCE_ROUTES = {
 
 def _public_journal_path(request: Request) -> bool:
     return any(
-        request.method in methods and pattern.fullmatch(request.url.path)
+        request.method in methods and pattern.fullmatch(get_route_path(request.scope))
         for methods, pattern in PUBLIC_JOURNAL_ROUTES
     )
 
@@ -80,7 +81,7 @@ def _required_permission(path: str, method: str) -> str:
 
 
 def public_path(request: Request) -> bool:
-    path = request.url.path
+    path = get_route_path(request.scope)
     if path in PUBLIC_EXACT or path.startswith("/app/assets/"):
         return True
     if path.startswith("/app/driver-shifts") or path.startswith("/api/public/driver-shifts/"):
@@ -93,7 +94,8 @@ def public_path(request: Request) -> bool:
 
 
 async def enforce_authentication(request: Request, call_next):
-    path = request.url.path
+    # Use the router's ASGI path (including root_path handling), never Host-derived URL data.
+    path = get_route_path(request.scope)
     auth_optional = path in {"/api/auth/session", "/api/auth/logout"}
     if path == "/app/login.html" and repository.bootstrap_required():
         return RedirectResponse("/app/bootstrap.html", status_code=303)
